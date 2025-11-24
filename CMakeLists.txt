@@ -1,3 +1,11 @@
+# ------------------------------------------------------------------------------
+# Project: Aetherion
+# Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+#
+# SPDX-License-Identifier: MIT
+# License-Filename: LICENSE
+# ------------------------------------------------------------------------------
+
 cmake_minimum_required(VERSION 3.26)
 
 project(Aetherion VERSION 1.0 LANGUAGES CXX)
