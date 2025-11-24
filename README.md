@@ -94,7 +94,21 @@ The library includes a complete test suite:
 
 This ensures consistency across symbolic, AD, and numeric implementations.
 
-# Dependencies
+## Dependencies
+
+Catch2 v3 is required for testing. 
+
+## Development
+
+### Bug Tracker
+
+- [Github Issues](https://github.com/onurtuncer/Aetherion/issues)
+
+
+### Forums and Discussions
+
+- [Github Discussions](https://github.com/onurtuncer/Aetherion/discussions/)
+
 
 # Build & Installation
 
