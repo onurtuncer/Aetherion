@@ -1,0 +1,88 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 26,
+    "patch": 0
+  },
+
+  "configurePresets": [
+    {
+      "name": "debug",
+      "displayName": "Debug",
+      "description": "Debug build with full symbols and no optimizations",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/windows-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+
+    {
+      "name": "release",
+      "displayName": "Release",
+      "description": "Fully optimized Release build",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/windows-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+
+    {
+      "name": "debug-with-relinfo",
+      "displayName": "RelWithDebInfo",
+      "description": "Optimized build with debug symbols (ideal for profiling)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/windows-relwithdebinfo",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_CXX_STANDARD": "20",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug"
+    },
+    {
+      "name": "release",
+      "configurePreset": "release"
+    },
+    {
+      "name": "debug-with-relinfo",
+      "configurePreset": "debug-with-relinfo"
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "output": {
+        "shortProgress": true
+      }
+    },
+    {
+      "name": "release",
+      "configurePreset": "release",
+      "output": {
+        "shortProgress": true
+      }
+    },
+    {
+      "name": "debug-with-relinfo",
+      "configurePreset": "debug-with-relinfo",
+      "output": {
+        "shortProgress": true
+      }
+    }
+  ]
+}
