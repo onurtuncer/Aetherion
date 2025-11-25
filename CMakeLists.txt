@@ -33,6 +33,12 @@ find_package(fmu4cpp REQUIRED)
 find_package(libode REQUIRED)
 find_package(CppAD REQUIRED)
 
+add_executable(aetherion
+    src/main.cpp
+    # add other .cpp files here
+)
+
+
 
 target_link_libraries(aetherion
     PRIVATE
@@ -44,5 +50,5 @@ target_link_libraries(aetherion
 # Only include tests if enabled
 if(BUILD_TESTING)
     include(CTest)        # Defines BUILD_TESTING, adds test target
-    add_subdirectory(tests)
+    add_subdirectory(test)
 endif()
