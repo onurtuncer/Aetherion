@@ -1,5 +1,7 @@
 ﻿# ΑETHERION — Flight Dynamics Library
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 <p align="center">
   <img src="assets/logo.svg" width="180" alt="AETHERION Monogram"/>
 </p>
