@@ -48,35 +48,49 @@ endif()
 #FetchContent_MakeAvailable(ecos)
 
 
+
+# ==============================================================================
+# CppAD - header-only, NO subbuild, we just want include/ and a target
+# ==============================================================================
+
 FetchContent_Declare(
     cppad
     GIT_REPOSITORY https://github.com/coin-or/CppAD.git
-    GIT_TAG        master
+    GIT_TAG        master          # pin if you like
+    GIT_SHALLOW    TRUE
 )
 
 FetchContent_GetProperties(cppad)
 if(NOT cppad_POPULATED)
-    FetchContent_Populate(cppad)
+    FetchContent_Populate(cppad)  # <-- JUST downloads; no SOURCE_SUBDIR
+    # Create an INTERFACE target with the proper include dir
+    if(NOT TARGET CppAD::cppad)
+        add_library(CppAD::cppad INTERFACE IMPORTED)
+        target_include_directories(CppAD::cppad INTERFACE
+            "${cppad_SOURCE_DIR}/include"
+        )
+    endif()
 endif()
 
-# Expose include dir for our FindCppAD module:
-set(CPPAD_INCLUDE_DIR "${cppad_SOURCE_DIR}/include" CACHE PATH "CppAD include dir")
 
-# ---- Eigen (header-only linear algebra) --------------------------------------
-
-include(FetchContent)
+# ==============================================================================
+# Eigen - header-only, same pattern
+# ==============================================================================
 
 FetchContent_Declare(
     eigen
     GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-    GIT_TAG        3.4.0
+    GIT_TAG        3.4.0           # pick a tag you like
     GIT_SHALLOW    TRUE
 )
 
 FetchContent_GetProperties(eigen)
 if(NOT eigen_POPULATED)
     FetchContent_Populate(eigen)
-
-    # Eigen is header-only, so expose include directory:
-    set(EIGEN_INCLUDE_DIR "${eigen_SOURCE_DIR}" CACHE PATH "Eigen include dir")
+    if(NOT TARGET Eigen::Eigen)
+        add_library(Eigen::Eigen INTERFACE IMPORTED)
+        target_include_directories(Eigen::Eigen INTERFACE
+            "${eigen_SOURCE_DIR}"
+        )
+    endif()
 endif()

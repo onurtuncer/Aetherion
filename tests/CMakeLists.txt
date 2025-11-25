@@ -30,10 +30,28 @@ target_link_libraries(test_libode
         libode::libode
 )
 
-# if you have libode_SOURCE_DIR from FetchContent_GetProperties(libode)
-#target_include_directories(test_libode
-#    PRIVATE
-#        "${libode_SOURCE_DIR}/include"
-#)
-
 add_test(NAME libode_basic_test COMMAND test_libode)
+
+add_executable(test_cppad
+    test_cppad.cpp
+)
+
+target_link_libraries(test_cppad
+    PRIVATE
+        Catch2::Catch2WithMain
+        CppAD::cppad      
+)
+
+add_test(NAME cppad_basic_test COMMAND test_cppad)
+
+add_executable(test_eigen
+    test_eigen.cpp
+)
+
+target_link_libraries(test_eigen
+    PRIVATE
+        Catch2::Catch2WithMain
+        Eigen::Eigen       
+)
+
+add_test(NAME eigen_basic_test COMMAND test_eigen)

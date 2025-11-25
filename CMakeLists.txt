@@ -22,7 +22,7 @@ if (WIN32)
     set(include_eigen OFF CACHE BOOL "Disable Eigen support in CppAD" FORCE)
 endif()
 
-set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 include(Dependencies)
 
