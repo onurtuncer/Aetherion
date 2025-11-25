@@ -96,7 +96,12 @@ This ensures consistency across symbolic, AD, and numeric implementations.
 
 ## Dependencies
 
-Catch2 v3 is required for testing. 
+- Eigen for linear algebra.
+- libode for ODE integration.
+- fmu4cpp for FMI building.
+- ecos for simulation.
+- cppad for algorithmic differentiation.
+- Catch2 v3 is required for testing. 
 
 ## Development
 
@@ -111,4 +116,37 @@ Catch2 v3 is required for testing.
 
 
 # Build & Installation
+
+First you need to dowload the files or clone the repository.
+
+## Windows Build Using Visual Studio
+
+1. Open **Visual Studio**
+2. Click **Open Folder…**
+3. Select the **Aetherion** directory
+4. Let Visual Studio configure CMake automatically
+5. Choose a configuration (e.g. **x64-Release**)
+6. Build the project via **Build > Build All**
+7. Run the executable
+
+
+   ## Linux with GCC
+   1. Clone the repository:
+   ```bash
+   git clone <repository_url>
+   ```
+   2. Create a build directory and navigate into it:
+   ```bash
+   mkdir build
+   cd build
+   ```
+   3. Configure the project with CMake:
+   ```bash
+   cmake .. -DCMAKE_BUILD_TYPE=Release
+   ```
+   4. Build the project:
+   ```bash
+   make -j$(nproc)
+   ```
+
 

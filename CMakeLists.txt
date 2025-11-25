@@ -10,6 +10,18 @@ cmake_minimum_required(VERSION 3.26)
 
 project(Aetherion VERSION 1.0 LANGUAGES CXX)
 
+# ---- Hack for CppAD on Windows: it *requires* PkgConfig just to probe Eigen ----
+if (WIN32)
+    # Point PKG_CONFIG_EXECUTABLE at cmake.exe as a dummy.
+    # FindPkgConfig only checks that the program exists; CppAD's Eigen
+    # support is optional, so failed pkg-config calls will just mean
+    # "no Eigen", which is fine for us.
+    set(PKG_CONFIG_EXECUTABLE "${CMAKE_COMMAND}" CACHE FILEPATH "Dummy pkg-config for CppAD" FORCE)
+
+    # Be explicit that we don't want Eigen support in CppAD anyway
+    set(include_eigen OFF CACHE BOOL "Disable Eigen support in CppAD" FORCE)
+endif()
+
 set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 include(Dependencies)

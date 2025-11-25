@@ -6,6 +6,19 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
+#include <iostream>
+#include <print>
+
 int main() {
-	return 0;
+
+	try {
+
+	}
+	catch (const std::exception& e) {
+		std::print("Exception: {}\n", e.what());
+		return 1;
+	}
+
+
+	return EXIT_SUCCESS;
 }
