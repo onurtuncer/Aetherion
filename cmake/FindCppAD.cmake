@@ -5,42 +5,36 @@
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
+
 # FindCppAD.cmake
 #
 # Usage:
 #   find_package(CppAD REQUIRED)
-# Exposes:
+#
+# Provides:
 #   CppAD_FOUND
-#   CppAD_LIBRARIES           -> CppAD::cppad
-#   CppAD_INCLUDE_DIRS (opt.) -> include path if we create the target
+#   CppAD_INCLUDE_DIRS
+#   CppAD::cppad  (INTERFACE imported target)
 
 include(FindPackageHandleStandardArgs)
 
-set(CppAD_TARGET "")
+set(CPPAD_INCLUDE_DIRS "")
 
-# Case 1: Dependencies.cmake already added CppAD with an imported target
-if(TARGET CppAD::cppad)
-    set(CppAD_TARGET CppAD::cppad)
-
-# Case 2: Header-only fallback using FetchContent variables
-elseif(DEFINED cppad_SOURCE_DIR)
-    # CppAD headers live under ${cppad_SOURCE_DIR}/include/cppad
-    set(CPPAD_INCLUDE_DIR "${cppad_SOURCE_DIR}/include")
-
-    add_library(CppAD::cppad INTERFACE IMPORTED)
-    set_target_properties(CppAD::cppad PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES "${CPPAD_INCLUDE_DIR}"
-    )
-
-    set(CppAD_TARGET CppAD::cppad)
-    set(CppAD_INCLUDE_DIRS "${CPPAD_INCLUDE_DIR}")
+# Prefer the include dir we set in Dependencies.cmake
+if(NOT CPPAD_INCLUDE_DIRS AND DEFINED CPPAD_INCLUDE_DIR)
+    set(CPPAD_INCLUDE_DIRS "${CPPAD_INCLUDE_DIR}")
+elseif(NOT CPPAD_INCLUDE_DIRS AND DEFINED cppad_SOURCE_DIR)
+    set(CPPAD_INCLUDE_DIRS "${cppad_SOURCE_DIR}/include")
 endif()
 
 find_package_handle_standard_args(
     CppAD
-    REQUIRED_VARS CppAD_TARGET
+    REQUIRED_VARS CPPAD_INCLUDE_DIRS
 )
 
-if(CppAD_FOUND)
-    set(CppAD_LIBRARIES "${CppAD_TARGET}")
+if(CppAD_FOUND AND NOT TARGET CppAD::cppad)
+    add_library(CppAD::cppad INTERFACE IMPORTED)
+    set_target_properties(CppAD::cppad PROPERTIES
+        INTERFACE_INCLUDE_DIRECTORIES "${CPPAD_INCLUDE_DIRS}"
+    )
 endif()

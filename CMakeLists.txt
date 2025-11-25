@@ -26,8 +26,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/")
 
 include(Dependencies)
 
-# Enable testing option
-option(BUILD_TESTING "Build unit tests" ON)
+
 
 find_package(fmu4cpp REQUIRED)
 find_package(libode REQUIRED)
@@ -43,12 +42,15 @@ add_executable(aetherion
 target_link_libraries(aetherion
     PRIVATE
         fmu4cpp::fmu4cpp
-        libode          # header-only, INTERFACE
+        libode::libode         # header-only, INTERFACE
 )
+
+# ---- Tests ------------------------------------------------------
+option(AETHERION_BUILD_TESTS "Build tests for Aetherion" ON)
 
 
 # Only include tests if enabled
-if(BUILD_TESTING)
+if(AETHERION_BUILD_TESTS)
     include(CTest)        # Defines BUILD_TESTING, adds test target
-    add_subdirectory(test)
+    add_subdirectory(tests)
 endif()

@@ -1,5 +1,12 @@
-#define CATCH_CONFIG_MAIN
-#include <catch2/catch.hpp>
+// ------------------------------------------------------------------------------
+// Project: Aetherion
+// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+//
+// SPDX - License - Identifier: MIT
+// License - Filename: LICENSE
+// ------------------------------------------------------------------------------
+
+#include <catch2/catch_all.hpp>
 #include <cppad/cppad.hpp>
 #include <cmath>
 

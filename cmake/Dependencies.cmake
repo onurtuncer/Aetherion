@@ -27,19 +27,25 @@ FetchContent_Declare(
     GIT_TAG        2d8ac5b
 )
 
-FetchContent_MakeAvailable(libode)
+FetchContent_GetProperties(libode)
+if(NOT libode_POPULATED)
+    FetchContent_Populate(libode)
 
-set(ECOS_BUILD_CLI OFF)     # Set to ON for building ecos command-line-interface
-set(ECOS_BUILD_CLIB OFF)    # Set to ON for building C API
-set(ECOS_WITH_PROXYFMU OFF) # Set to ON for remoting
+    # Header-only: just expose include dir (ode/ode_rk_4.h lives here)
+    set(LIBODE_INCLUDE_DIR "${libode_SOURCE_DIR}" CACHE PATH "libode include dir")
+endif()
 
-FetchContent_Declare(
-        ecos
-        GIT_REPOSITORY https://github.com/Ecos-platform/ecos.git
-        GIT_TAG master
-)
-
-FetchContent_MakeAvailable(ecos)
+#set(ECOS_BUILD_CLI OFF)     # Set to ON for building ecos command-line-interface
+#set(ECOS_BUILD_CLIB OFF)    # Set to ON for building C API
+#set(ECOS_WITH_PROXYFMU OFF) # Set to ON for remoting
+#
+#FetchContent_Declare(
+#        ecos
+#        GIT_REPOSITORY https://github.com/Ecos-platform/ecos.git
+#        GIT_TAG master
+#)
+#
+#FetchContent_MakeAvailable(ecos)
 
 
 FetchContent_Declare(
@@ -48,7 +54,13 @@ FetchContent_Declare(
     GIT_TAG        master
 )
 
-FetchContent_MakeAvailable(cppad)
+FetchContent_GetProperties(cppad)
+if(NOT cppad_POPULATED)
+    FetchContent_Populate(cppad)
+endif()
+
+# Expose include dir for our FindCppAD module:
+set(CPPAD_INCLUDE_DIR "${cppad_SOURCE_DIR}/include" CACHE PATH "CppAD include dir")
 
 # ---- Eigen (header-only linear algebra) --------------------------------------
 
@@ -61,4 +73,10 @@ FetchContent_Declare(
     GIT_SHALLOW    TRUE
 )
 
-FetchContent_MakeAvailable(eigen)
+FetchContent_GetProperties(eigen)
+if(NOT eigen_POPULATED)
+    FetchContent_Populate(eigen)
+
+    # Eigen is header-only, so expose include directory:
+    set(EIGEN_INCLUDE_DIR "${eigen_SOURCE_DIR}" CACHE PATH "Eigen include dir")
+endif()
