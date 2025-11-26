@@ -45,12 +45,21 @@ target_link_libraries(aetherion
         libode::libode         # header-only, INTERFACE
 )
 
-# ---- Tests ------------------------------------------------------
-option(AETHERION_BUILD_TESTS "Build tests for Aetherion" ON)
-
-
-# Only include tests if enabled
-if(AETHERION_BUILD_TESTS)
-    include(CTest)        # Defines BUILD_TESTING, adds test target
-    add_subdirectory(tests)
+if (BUILD_DOCS)
+  add_subdirectory(doc)
 endif()
+
+if (ENABLE_STATIC_ANALYSIS)
+  include(cppcheck)
+endif()
+
+if(BUILD_TESTS)
+	include(CTest)
+	add_subdirectory(tests)
+endif()
+
+## Only include tests if enabled
+#if(AETHERION_BUILD_TESTS)
+#    include(CTest)        # Defines BUILD_TESTING, adds test target
+#    add_subdirectory(tests)
+#endif()

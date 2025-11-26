@@ -8,41 +8,148 @@
 
   "configurePresets": [
     {
+      "name": "windows-base",
+      "hidden": true,
+      "displayName": "Windows Base",
+      "generator": "Ninja",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+        "BUILD_TESTS":  "ON"
+      }
+    },
+    {
       "name": "debug",
       "displayName": "Debug",
       "description": "Debug build with full symbols and no optimizations",
-      "generator": "Ninja",
+      "inherits": [ "windows-base" ],
       "binaryDir": "${sourceDir}/out/build/windows-debug",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_CXX_STANDARD": "23",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     },
-
     {
       "name": "release",
       "displayName": "Release",
       "description": "Fully optimized Release build",
-      "generator": "Ninja",
+      "inherits": [ "windows-base" ],
       "binaryDir": "${sourceDir}/out/build/windows-release",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_CXX_STANDARD": "23",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_BUILD_TYPE": "Release"
       }
     },
-
     {
       "name": "debug-with-relinfo",
       "displayName": "RelWithDebInfo",
       "description": "Optimized build with debug symbols (ideal for profiling)",
-      "generator": "Ninja",
+      "inherits": [ "windows-base" ],
       "binaryDir": "${sourceDir}/out/build/windows-relwithdebinfo",
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo"
+      }
+    },
+
+    {
+      "name": "linux-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "installDir": "${sourceDir}/install/${presetName}",
+      "cacheVariables": {
         "CMAKE_CXX_STANDARD": "23",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_CXX_EXTENSIONS": "OFF",
+        "BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "gcc-release",
+      "displayName": "GCC Release",
+      "inherits": [ "linux-base" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_FLAGS": "-march=native -ffloat-store"
+      },
+      "environment": {
+        "CXXFLAGS": "-Wall -Wextra -Wpedantic -Wconversion -Wcast-align -Wcast-qual -Wdeprecated-declarations -Wformat -Wformat-security -Winit-self -Wmissing-declarations -Wmissing-field-initializers -Wmissing-include-dirs -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wpointer-arith -Wshadow -Wsign-compare -Wstrict-aliasing -Wstrict-overflow -Wswitch -Wuninitialized -Wunused -Wunused-value -Wvla -Wwrite-strings -Wdeprecated -Wdeprecated-copy -Wdeprecated-enum-enum-conversion -Warray-bounds -Wnull-dereference -Wreturn-type"
+      }
+    },
+    {
+      "name": "gcc-debug",
+      "displayName": "GCC Debug (Tests + Sanitizers)",
+      "inherits": [ "linux-base" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "g++",
+        "CMAKE_CXX_FLAGS": "--coverage -ggdb3 -fno-omit-frame-pointer -fno-optimize-sibling-calls",
+        "CMAKE_EXE_LINKER_FLAGS": "--coverage",
+        "CMAKE_SHARED_LINKER_FLAGS": "--coverage"
+      }
+    },
+    {
+      "name": "clang-debug",
+      "displayName": "Clang Debug",
+      "inherits": [ "linux-base" ],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "CMAKE_CXX_FLAGS": "-fstandalone-debug -Rpass=.*"
+      }
+    },
+    {
+      "name": "gcc-asan",
+      "displayName": "AddressSanitizer",
+      "inherits": [ "linux-base" ],
+      "description": "Enable AddressSanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "AddressSanitizer",
+        "CMAKE_CXX_FLAGS": "-O1 -g3 -fsanitize=address -fno-omit-frame-pointer -fno-common -fno-optimize-sibling-calls",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=address",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=address",
+        "CMAKE_MODULE_LINKER_FLAGS": "-fsanitize=address"
+      },
+      "environment": {
+        "ASAN_OPTIONS": "check_initialization_order=1:detect_stack_use_after_return=1"
+      }
+    },
+    {
+      "name": "gcc-msan",
+      "displayName": "MemorySanitizer",
+      "inherits": [ "linux-base" ],
+      "description": "Enable MemorySanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "MemorySanitizer",
+        "CMAKE_CXX_FLAGS": "-O1 -g3 -fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-common -fno-optimize-sibling-calls",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=memory",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=memory",
+        "CMAKE_MODULE_LINKER_FLAGS": "-fsanitize=memory"
+      }
+    },
+    {
+      "name": "gcc-tsan",
+      "displayName": "ThreadSanitizer",
+      "inherits": [ "linux-base" ],
+      "description": "Enable ThreadSanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "ThreadSanitizer",
+        "CMAKE_CXX_FLAGS": "-g3 -fsanitize=thread",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=thread",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=thread",
+        "CMAKE_MODULE_LINKER_FLAGS": "-fsanitize=thread"
+      }
+    },
+    {
+      "name": "gcc-ubsan",
+      "displayName": "UndefinedBehaviorSanitizer",
+      "inherits": [ "linux-base" ],
+      "description": "Enable UndefinedBehaviorSanitizer",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "UndefinedBehaviorSanitizer",
+        "CMAKE_CXX_FLAGS": "-g3 -fsanitize=alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound -fno-sanitize-recover=bounds,null",
+        "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined",
+        "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined",
+        "CMAKE_MODULE_LINKER_FLAGS": "-fsanitize=undefined"
       }
     }
   ],
@@ -59,30 +166,74 @@
     {
       "name": "debug-with-relinfo",
       "configurePreset": "debug-with-relinfo"
+    },
+
+    {
+      "name": "gcc-release",
+      "configurePreset": "gcc-release",
+      "jobs": 8
+    },
+    {
+      "name": "gcc-debug",
+      "configurePreset": "gcc-debug",
+      "jobs": 4
+    },
+    {
+      "name": "clang-debug",
+      "configurePreset": "clang-debug"
+    },
+    {
+      "name": "gcc-asan",
+      "configurePreset": "gcc-asan"
+    },
+    {
+      "name": "gcc-msan",
+      "configurePreset": "gcc-msan"
+    },
+    {
+      "name": "gcc-tsan",
+      "configurePreset": "gcc-tsan"
+    },
+    {
+      "name": "gcc-ubsan",
+      "configurePreset": "gcc-ubsan"
     }
   ],
 
   "testPresets": [
     {
-      "name": "debug",
-      "configurePreset": "debug",
+      "name": "test-base",
+      "hidden": true,
       "output": {
         "shortProgress": true
       }
+    },
+    {
+      "name": "debug",
+      "configurePreset": "debug",
+      "inherits": [ "test-base" ]
     },
     {
       "name": "release",
       "configurePreset": "release",
-      "output": {
-        "shortProgress": true
-      }
+      "inherits": [ "test-base" ]
     },
     {
       "name": "debug-with-relinfo",
       "configurePreset": "debug-with-relinfo",
+      "inherits": [ "test-base" ]
+    },
+    {
+      "name": "gcc-test",
+      "configurePreset": "gcc-debug",
       "output": {
-        "shortProgress": true
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": false
       }
     }
   ]
 }
+
