@@ -1,0 +1,58 @@
+//-------------------------------------------------------------------------------
+// Copyright (c) 2018-2019, Arm Limited and Contributors. All rights reserved.
+//
+// SPDX-License-Identifier: BSD-3-Clause
+//
+//-------------------------------------------------------------------------------
+
+//This file contains suppression rules for CppCheck.
+//C style comments can be used.
+//
+//Each line has three parts separated by ":"
+//<message id>:<file>:<line num> 
+//Where:
+//   <message id> is the message id to suppress. This equals to the "id" filed
+//                of the XML message record.
+//   <file>       Is a file name. cppcheck understands the following wildcards:
+//                   * matches any number of any characters
+//                   ? a single character
+//                Note: please use '/' as directory separator.
+//   <line num>   The line number for which the message shall be ignored.
+//
+//Example to convert an XML record to a line in this file:
+// <error id="invalidPrintfArgType_sint" severity="warning" msg="%d in format string (no. 1) requires &apos;int&apos; but the argument type is &apos;unsigned int&apos;." verbose="%d in format string (no. 1) requires &apos;int&apos; but the argument type is &apos;unsigned int&apos;." cwe="686">
+//       <location file0="C:\work\tf-m\test\framework\test_framework.c" file="C:\work\tf-m\test\framework\test_framework.c" line="150"/>
+// </error>
+// to
+//invalidPrintfArgType_sint:*/tf-m/test/framework/test_framework.c:150
+//
+
+//This rule conflicts the our coding style document.
+variableScope
+
+//CppCheck fails to understand macro definitions in compile_commands.json, which
+//have \ characters escaping the opening and closing ". As a result we get the
+//following false alarms.
+
+//CppCheck ignores macros defined on the command line when using a project file
+//(e.g. compile_commands.json). As a result we ca not set compiler specific
+//macros and need to suppress the following error.
+preprocessorErrorDirective:*/cmsis_compiler.h:320
+
+//While cppcheck states to work fine with missing standard library files, it
+//still reports a lot of errors regarding those.
+//So, ignore these.
+missingIncludeSystem
+
+//Stos cppcheck report errors regarding supression rules. These seem to be
+//buggy.
+unmatchedSuppression
+
+//arm_cmse.h is a special system include, stop complaining about it.
+missingInclude:*/tfm_core.h:11
+missingInclude:*/tfm_secure_api.h:11
+
+//Exclude external qcbor code which does not comply with guidelines
+*:*/lib/ext/qcbor/*
+*:*/bl2/ext/*
+*:*/platform/ext/*

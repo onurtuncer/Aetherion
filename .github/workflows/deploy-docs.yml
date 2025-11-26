@@ -1,0 +1,89 @@
+name: Build & Deploy Docs to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]  # change if default branch is different
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python (for Sphinx, safe even if unused)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+      
+      - name: Install Sphinx (for CMake)
+        run: |
+          python -m pip install --upgrade pip
+          pip install sphinx sphinx-rtd-theme
+
+      - name: Set SPHINX_EXECUTABLE for CMake
+        run: echo "SPHINX_EXECUTABLE=$(which sphinx-build)" >> $GITHUB_ENV
+
+      - name: Install extensions
+        run: pip install -r doc/requirements.txt
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz cmake ninja-build make gcc g++ cppcheck
+
+      - name: Build documentation via Makefile
+        run: make documents
+
+      - name: Build static analysis via Makefile
+        run: make static-analysis
+      
+      - name: List Cppcheck HTML report contents before copying
+        run: |
+          echo "Listing original static_analysis directory"
+          find build/static_analysis/static_analysis -type f
+
+      - name: Dump XML report to check findings
+        run: |
+          echo "Dumping static_analysis_report.xml"
+          cat build/static_analysis/static_analysis/static_analysis_report.xml
+
+      - name: Copy static analysis html files into a folder under sphinx directory
+        run: |
+          mkdir -p build/doc/sphinx/static_analysis
+          cp -r build/static_analysis/static_analysis/* build/doc/sphinx/static_analysis
+      
+      - name: List final Sphinx output
+        run: ls -R build/doc/sphinx
+
+      - name: Upload HTML docs to GitHub Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/doc/sphinx
+
+  deploy:
+    needs: build-docs
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

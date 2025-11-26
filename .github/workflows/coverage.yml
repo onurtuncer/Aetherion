@@ -1,0 +1,32 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  upload-coverage:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: sudo apt update && sudo apt install -y lcov gcovr gcc-13 g++-13 catch2
+
+    - name: Configure compiler alternatives
+      run: |
+        sudo update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-13 100
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+    - name: Generate coverage
+      run: make coverage
+
+    - name: Upload coverage reports to Codecov
+      uses: codecov/codecov-action@v5
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        slug: onurtuncer1/Hermes
