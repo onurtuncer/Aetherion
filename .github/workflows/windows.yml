@@ -29,6 +29,6 @@ jobs:
             -DBUILD_TESTS=OFF `
             -DBUILD_DOCS=OFF
 
-      - name: Build the static library in Release mode
+      - name: Build in Release mode
         run: |
           cmake --build build --config Release
