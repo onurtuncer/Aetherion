@@ -8,8 +8,12 @@
 
 #pragma once
 
-#include <cppad/cppad.hpp>
+
 #include <Eigen/Dense>
+
+#define CPPAD_CPPAD_HPP_ALREADY_INCLUDED
+
+#include <cppad/cppad.hpp>
 
 namespace Aetherion::Spatial {
 
