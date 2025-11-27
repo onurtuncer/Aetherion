@@ -1,0 +1,3 @@
+[submodule "vendor/CppAD"]
+	path = vendor/CppAD
+	url = https://github.com/coin-or/CppAD.git

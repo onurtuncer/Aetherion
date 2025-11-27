@@ -10,6 +10,7 @@ cmake_minimum_required(VERSION 3.26)
 
 project(Aetherion VERSION 1.0 LANGUAGES CXX)
 
+
 # ---- Hack for CppAD on Windows: it *requires* PkgConfig just to probe Eigen ----
 if (WIN32)
     # Point PKG_CONFIG_EXECUTABLE at cmake.exe as a dummy.
@@ -24,13 +25,24 @@ endif()
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
-include(Dependencies)
+# === CppAD via add_subdirectory ===
+set(CPPAD_TESTS OFF CACHE BOOL "Disable CppAD tests")
+set(CPPAD_EXAMPLES OFF CACHE BOOL "Disable CppAD examples")
+set(CPPAD_DOXYGEN OFF CACHE BOOL "Disable CppAD docs")
+set(CPPAD_IPOPT OFF CACHE BOOL "Disable Ipopt solver")
+set(CPPAD_PKGCONFIG OFF CACHE BOOL "Disable pkgconfig")
+set(CPPAD_BOOSTVECTOR OFF CACHE BOOL "Disable boost vector")
+set(CPPAD_EIGENVECTOR ON CACHE BOOL "Enable Eigen vector (optional)")
+set(CPPAD_CXX_STANDARD 20 CACHE STRING "Use C++20")
 
+add_subdirectory(vendor/cppad)
+
+
+include(Dependencies)
 
 
 find_package(fmu4cpp REQUIRED)
 find_package(libode REQUIRED)
-find_package(CppAD REQUIRED)
 
 add_executable(aetherion
     src/main.cpp
@@ -53,8 +65,7 @@ if (ENABLE_STATIC_ANALYSIS)
   include(cppcheck)
 endif()
 
-if(BUILD_TESTS)
-	include(CTest)
+if(AETHERION_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
 

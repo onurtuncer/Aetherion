@@ -13,6 +13,14 @@ endif()
 
 include(FetchContent)
 
+# Prevent CMake from adding CppAD's CMakeLists.txt as a project
+set(CMAKE_IGNORE_PATH
+    ${CMAKE_IGNORE_PATH}
+    "${CMAKE_SOURCE_DIR}/_deps/cppad-src"
+    "${CMAKE_BINARY_DIR}/_deps/cppad-src"
+)
+
+
 FetchContent_Declare(
     fmu4cpp
     GIT_REPOSITORY https://github.com/Ecos-platform/fmu4cpp.git
@@ -46,31 +54,6 @@ endif()
 #)
 #
 #FetchContent_MakeAvailable(ecos)
-
-
-
-# ==============================================================================
-# CppAD - header-only, NO subbuild, we just want include/ and a target
-# ==============================================================================
-
-FetchContent_Declare(
-    cppad
-    GIT_REPOSITORY https://github.com/coin-or/CppAD.git
-    GIT_TAG        master          # pin if you like
-    GIT_SHALLOW    TRUE
-)
-
-FetchContent_GetProperties(cppad)
-if(NOT cppad_POPULATED)
-    FetchContent_Populate(cppad)  # <-- JUST downloads; no SOURCE_SUBDIR
-    # Create an INTERFACE target with the proper include dir
-    if(NOT TARGET CppAD::cppad)
-        add_library(CppAD::cppad INTERFACE IMPORTED)
-        target_include_directories(CppAD::cppad INTERFACE
-            "${cppad_SOURCE_DIR}/include"
-        )
-    endif()
-endif()
 
 
 # ==============================================================================
