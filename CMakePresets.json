@@ -15,7 +15,7 @@
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "23",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "BUILD_TESTS":  "ON"
+        "AETHERION_BUILD_TESTS":  "ON"
       }
     },
     {
@@ -59,7 +59,7 @@
         "CMAKE_CXX_STANDARD": "23",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",
         "CMAKE_CXX_EXTENSIONS": "OFF",
-        "BUILD_TESTS": "ON"
+        "AETHERION_BUILD_TESTS": "ON"
       }
     },
     {

@@ -6,10 +6,6 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-# -----------------------
-# Catch2 via FetchContent
-# -----------------------
-
 FetchContent_Declare(
     catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
@@ -17,9 +13,14 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(catch2)
 
-# -----------------------
-# Test executable
-# -----------------------
+# Tell CMake where to look for the installed package
+#list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/vendor/catch2)
+#
+#find_package(Catch2 3 CONFIG REQUIRED)
+
+
+include(CTest)
+
 add_executable(test_libode
     test_libode.cpp
 )
@@ -32,18 +33,6 @@ target_link_libraries(test_libode
 
 add_test(NAME libode_basic_test COMMAND test_libode)
 
-add_executable(test_cppad
-    test_cppad.cpp
-)
-
-target_link_libraries(test_cppad
-    PRIVATE
-        Catch2::Catch2WithMain
-        CppAD::cppad      
-)
-
-add_test(NAME cppad_basic_test COMMAND test_cppad)
-
 add_executable(test_eigen
     test_eigen.cpp
 )
@@ -51,7 +40,26 @@ add_executable(test_eigen
 target_link_libraries(test_eigen
     PRIVATE
         Catch2::Catch2WithMain
-        Eigen::Eigen       
+        Eigen3::Eigen       
 )
 
+target_include_directories(test_eigen PRIVATE "${CMAKE_SOURCE_DIR}/vendor/eigen")
+
 add_test(NAME eigen_basic_test COMMAND test_eigen)
+
+add_executable(test_cppad
+    test_cppad.cpp
+)
+
+target_link_libraries(test_cppad
+    PRIVATE
+        Catch2::Catch2WithMain
+        CppAD::cppad  
+        Eigen3::Eigen
+)
+
+target_include_directories(test_cppad PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+add_test(NAME cppad_basic_test COMMAND test_cppad)
+
+

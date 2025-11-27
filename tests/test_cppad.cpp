@@ -6,10 +6,11 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include <catch2/catch_test_macros.hpp>
-#include <cppad/cppad.hpp>
 #include <vector>
 #include <cmath>
+
+#include <catch2/catch_test_macros.hpp>
+#include <cppad/cppad.hpp>
 
 TEST_CASE("CppAD: derivative of x^2 at x = 3", "[cppad]") {
     using CppAD::AD;

@@ -13,13 +13,6 @@ endif()
 
 include(FetchContent)
 
-# Prevent CMake from adding CppAD's CMakeLists.txt as a project
-set(CMAKE_IGNORE_PATH
-    ${CMAKE_IGNORE_PATH}
-    "${CMAKE_SOURCE_DIR}/_deps/cppad-src"
-    "${CMAKE_BINARY_DIR}/_deps/cppad-src"
-)
-
 
 FetchContent_Declare(
     fmu4cpp
@@ -56,24 +49,3 @@ endif()
 #FetchContent_MakeAvailable(ecos)
 
 
-# ==============================================================================
-# Eigen - header-only, same pattern
-# ==============================================================================
-
-FetchContent_Declare(
-    eigen
-    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-    GIT_TAG        3.4.0           # pick a tag you like
-    GIT_SHALLOW    TRUE
-)
-
-FetchContent_GetProperties(eigen)
-if(NOT eigen_POPULATED)
-    FetchContent_Populate(eigen)
-    if(NOT TARGET Eigen::Eigen)
-        add_library(Eigen::Eigen INTERFACE IMPORTED)
-        target_include_directories(Eigen::Eigen INTERFACE
-            "${eigen_SOURCE_DIR}"
-        )
-    endif()
-endif()
