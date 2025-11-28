@@ -1,8 +1,8 @@
 ﻿# ΑETHERION — Flight Dynamics Library
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![ci](https://github.com/onurtuncer1/Hermes/actions/workflows/linux.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml)
-[![ci](https://github.com/onurtuncer1/Hermes/actions/workflows/windows.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml)
+[![ci](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml)
+[![ci](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml)
 [![codecov](https://codecov.io/gh/onurtuncer1/Aetherion/branch/main/graph/badge.svg)](https://codecov.io/gh/onurtuncer/Aetherion)
 
 <p align="center">
@@ -122,7 +122,8 @@ This ensures consistency across symbolic, AD, and numeric implementations.
 
 # Build & Installation
 
-First you need to dowload the files or clone the repository.
+First you need to dowload the files or clone the repository, then initialize and update the submodules.
+
 
 ## Windows Build Using Visual Studio
 
@@ -134,24 +135,8 @@ First you need to dowload the files or clone the repository.
 6. Build the project via **Build > Build All**
 7. Run the executable
 
-
-   ## Linux with GCC
-   1. Clone the repository:
-   ```bash
-   git clone <repository_url>
-   ```
-   2. Create a build directory and navigate into it:
-   ```bash
-   mkdir build
-   cd build
-   ```
-   3. Configure the project with CMake:
-   ```bash
-   cmake .. -DCMAKE_BUILD_TYPE=Release
-   ```
-   4. Build the project:
-   ```bash
-   make -j$(nproc)
-   ```
+<p align="left">
+  <img src="assets/itu_logo.png" width="180" alt="Istanbul Technical University"/>
+</p>
 
 
