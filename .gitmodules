@@ -1,3 +1,6 @@
 [submodule "vendor/libode"]
 	path = vendor/libode
 	url = https://github.com/markmbaum/libode.git
+[submodule "vendor/vcpkg"]
+	path = vendor/vcpkg
+	url = https://github.com/microsoft/vcpkg.git
