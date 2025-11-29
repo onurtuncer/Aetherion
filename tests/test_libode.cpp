@@ -7,7 +7,8 @@
 // ------------------------------------------------------------------------------
 
 #include <catch2/catch_test_macros.hpp>
-#include <ode/ode_rk_4.h>
+#include <ode/ode_rk_4.h>  
+
 #include <type_traits>
 
 TEST_CASE("libode headers are available and types exist", "[libode]") {

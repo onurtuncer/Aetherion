@@ -28,7 +28,12 @@ add_executable(test_libode
 target_link_libraries(test_libode
     PRIVATE
         Catch2::Catch2WithMain
-        libode::libode
+        ode::ode
+)
+
+target_include_directories(test_libode
+    PRIVATE
+        "${LIBODE_INCLUDE_DIR}"
 )
 
 add_test(NAME libode_basic_test COMMAND test_libode)

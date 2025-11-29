@@ -32,20 +32,54 @@ set_target_properties(CppAD::cppad PROPERTIES
         "${CPPAD_VENDOR_ROOT}/x64-Release/include"
 )
 
-# --- Eigen as submodule ---
-block(SCOPE_FOR VARIABLES)
-    # Disable Eigen tests
-    set(EIGEN_BUILD_TESTING OFF)
-    set(EIGEN_TESTING OFF)          # for older Eigen versions
-    set(BUILD_TESTING OFF)          # prevent CTest integration inside Eigen
+   # Fallback to vendored header-only Eigen
+    set(EIGEN3_VENDOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/eigen")
 
-    add_subdirectory(vendor/eigen)
-endblock()
+    if (EXISTS "${EIGEN3_VENDOR_DIR}/Eigen/Dense")
+        message(STATUS "Using vendored Eigen headers in ${EIGEN3_VENDOR_DIR}")
+
+        # Create a normal interface target
+        add_library(eigen3_vendor INTERFACE)
+        target_include_directories(eigen3_vendor
+            INTERFACE
+                "${EIGEN3_VENDOR_DIR}"
+        )
+
+        # Provide the standard Eigen3::Eigen alias
+        add_library(Eigen3::Eigen ALIAS eigen3_vendor)
+    else()
+        message(FATAL_ERROR
+            "Eigen3 not found: vendored headers at "
+            "${EIGEN3_VENDOR_DIR}/Eigen/Dense"
+        )
+    endif()
 
 include(Dependencies)
 
+# libode as a vendored submodule
+set(LIBODE_SUBMODULE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libode")
+
+if (EXISTS "${LIBODE_SUBMODULE_DIR}/CMakeLists.txt")
+    message(STATUS "Using vendored libode in ${LIBODE_SUBMODULE_DIR}")
+
+    set(ODE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(ODE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(ODE_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
+    set(ODE_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+
+    add_subdirectory("${LIBODE_SUBMODULE_DIR}" EXCLUDE_FROM_ALL)
+
+    set(LIBODE_INCLUDE_DIR "${LIBODE_SUBMODULE_DIR}/include" CACHE PATH "libode include root")
+else()
+    message(FATAL_ERROR
+        "libode submodule not found at ${LIBODE_SUBMODULE_DIR}. "
+        "Did you run: git submodule update --init --recursive ?"
+    )
+endif()
+
 find_package(fmu4cpp REQUIRED)
-find_package(libode REQUIRED)
+
+
 
 add_executable(aetherion
     src/main.cpp
@@ -55,7 +89,7 @@ add_executable(aetherion
 target_link_libraries(aetherion
     PRIVATE
         fmu4cpp::fmu4cpp
-        libode::libode         # header-only, INTERFACE
+        ode::ode        
 )
 
 if (BUILD_DOCS)
