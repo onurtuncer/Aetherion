@@ -45,25 +45,7 @@ jobs:
 
       - name: Build documentation via Makefile
         run: make documents
-
-      - name: Build static analysis via Makefile
-        run: make static-analysis
-      
-      - name: List Cppcheck HTML report contents before copying
-        run: |
-          echo "Listing original static_analysis directory"
-          find build/static_analysis/static_analysis -type f
-
-      - name: Dump XML report to check findings
-        run: |
-          echo "Dumping static_analysis_report.xml"
-          cat build/static_analysis/static_analysis/static_analysis_report.xml
-
-      - name: Copy static analysis html files into a folder under sphinx directory
-        run: |
-          mkdir -p build/doc/sphinx/static_analysis
-          cp -r build/static_analysis/static_analysis/* build/doc/sphinx/static_analysis
-      
+     
       - name: List final Sphinx output
         run: ls -R build/doc/sphinx
 
