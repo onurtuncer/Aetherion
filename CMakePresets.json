@@ -98,7 +98,7 @@
         "CMAKE_CXX_FLAGS": "-march=native -ffloat-store"
       },
       "environment": {
-        "CXXFLAGS": "-Wall -Wextra -Wpedantic -Wconversion -Wcast-align -Wcast-qual -Wdeprecated-declarations -Wformat -Wformat-security -Winit-self -Wmissing-declarations -Wmissing-field-initializers -Wmissing-include-dirs -Wnon-virtual-dtor -Wold-style-cast -Woverloaded-virtual -Wpointer-arith -Wshadow -Wsign-compare -Wstrict-aliasing -Wstrict-overflow -Wswitch -Wuninitialized -Wunused -Wunused-value -Wvla -Wwrite-strings -Wdeprecated -Wdeprecated-copy -Wdeprecated-enum-enum-conversion -Warray-bounds -Wnull-dereference -Wreturn-type"
+        "CXXFLAGS": ""
       }
     },
     {
