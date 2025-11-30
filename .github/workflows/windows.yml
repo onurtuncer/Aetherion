@@ -22,9 +22,7 @@ jobs:
         uses: seanmiddleditch/gha-setup-ninja@v3
 
       - name: Configure (CMake preset: release)
-        run: |
-          cmake --preset release
+        run: cmake --preset release
 
       - name: Build (CMake preset: release)
-        run: |
-          cmake --build --preset release
+        run: cmake --build --preset release
