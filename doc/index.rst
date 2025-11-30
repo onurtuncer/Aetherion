@@ -12,15 +12,30 @@
 
 .. _mainpage:
 
-Aetherion C++ API Documentation
-============================
+.. Flight Dynamics with Spatial Vector Algebra documentation master file
 
-Welcome to the Aetherion documentation!
+Flight Dynamics with Spatial Vector Algebra
+===========================================
+
+.. raw:: html
+
+   <p><strong>Author:</strong> Onur Tuncer, PhD<br>
+   Istanbul Technical University, Dept. of Aeronautical Engineering<br>
+   Maslak, Istanbul, Türkiye<br>
+   <a href="mailto:tuncero@itu.edu.tr">tuncero@itu.edu.tr</a><br>
+   <strong>Version:</strong> 0.1 (November 24th, 2025)</p>
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Contents
+   :caption: Contents
 
-   api
+   intro
+   sva_basics
+   frames_notation
+   kinematics_forces_dynamics
+   launch_initialization
+   software_impl
+   appendices
+
 
 :ref:`genindex`

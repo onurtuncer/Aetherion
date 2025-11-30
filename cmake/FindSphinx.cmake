@@ -5,11 +5,6 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-if (WIN32)
-    message(STATUS "Skipping sphinx executable search on Windows")
-    return()
-endif()
-
 #Look for an executable called sphinx-build
 find_program(SPHINX_EXECUTABLE
              NAMES sphinx-build
