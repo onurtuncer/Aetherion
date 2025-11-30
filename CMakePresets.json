@@ -14,15 +14,19 @@
       "generator": "Ninja",
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_CXX_EXTENSIONS": "OFF",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "AETHERION_BUILD_TESTS":  "ON"
+        "AETHERION_BUILD_TESTS": "ON"
       }
     },
     {
       "name": "debug",
       "displayName": "Debug",
       "description": "Debug build with full symbols and no optimizations",
-      "inherits": [ "windows-base" ],
+      "inherits": [
+        "windows-base"
+      ],
       "binaryDir": "${sourceDir}/out/build/windows-debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
@@ -32,7 +36,9 @@
       "name": "release",
       "displayName": "Release",
       "description": "Fully optimized Release build",
-      "inherits": [ "windows-base" ],
+      "inherits": [
+        "windows-base"
+      ],
       "binaryDir": "${sourceDir}/out/build/windows-release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
@@ -42,7 +48,9 @@
       "name": "debug-with-relinfo",
       "displayName": "RelWithDebInfo",
       "description": "Optimized build with debug symbols (ideal for profiling)",
-      "inherits": [ "windows-base" ],
+      "inherits": [
+        "windows-base"
+      ],
       "binaryDir": "${sourceDir}/out/build/windows-relwithdebinfo",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo"
@@ -65,7 +73,9 @@
     {
       "name": "gcc-release",
       "displayName": "GCC Release",
-      "inherits": [ "linux-base" ],
+      "inherits": [
+        "linux-base"
+      ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_COMPILER": "g++",
@@ -78,7 +88,9 @@
     {
       "name": "gcc-debug",
       "displayName": "GCC Debug (Tests + Sanitizers)",
-      "inherits": [ "linux-base" ],
+      "inherits": [
+        "linux-base"
+      ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "g++",
@@ -90,7 +102,9 @@
     {
       "name": "clang-debug",
       "displayName": "Clang Debug",
-      "inherits": [ "linux-base" ],
+      "inherits": [
+        "linux-base"
+      ],
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "clang++",
@@ -100,7 +114,9 @@
     {
       "name": "gcc-asan",
       "displayName": "AddressSanitizer",
-      "inherits": [ "linux-base" ],
+      "inherits": [
+        "linux-base"
+      ],
       "description": "Enable AddressSanitizer",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "AddressSanitizer",
@@ -116,7 +132,9 @@
     {
       "name": "gcc-msan",
       "displayName": "MemorySanitizer",
-      "inherits": [ "linux-base" ],
+      "inherits": [
+        "linux-base"
+      ],
       "description": "Enable MemorySanitizer",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "MemorySanitizer",
@@ -129,7 +147,9 @@
     {
       "name": "gcc-tsan",
       "displayName": "ThreadSanitizer",
-      "inherits": [ "linux-base" ],
+      "inherits": [
+        "linux-base"
+      ],
       "description": "Enable ThreadSanitizer",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "ThreadSanitizer",
@@ -142,7 +162,9 @@
     {
       "name": "gcc-ubsan",
       "displayName": "UndefinedBehaviorSanitizer",
-      "inherits": [ "linux-base" ],
+      "inherits": [
+        "linux-base"
+      ],
       "description": "Enable UndefinedBehaviorSanitizer",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "UndefinedBehaviorSanitizer",
@@ -167,7 +189,6 @@
       "name": "debug-with-relinfo",
       "configurePreset": "debug-with-relinfo"
     },
-
     {
       "name": "gcc-release",
       "configurePreset": "gcc-release",
@@ -211,17 +232,23 @@
     {
       "name": "debug",
       "configurePreset": "debug",
-      "inherits": [ "test-base" ]
+      "inherits": [
+        "test-base"
+      ]
     },
     {
       "name": "release",
       "configurePreset": "release",
-      "inherits": [ "test-base" ]
+      "inherits": [
+        "test-base"
+      ]
     },
     {
       "name": "debug-with-relinfo",
       "configurePreset": "debug-with-relinfo",
-      "inherits": [ "test-base" ]
+      "inherits": [
+        "test-base"
+      ]
     },
     {
       "name": "gcc-test",
@@ -236,4 +263,3 @@
     }
   ]
 }
-

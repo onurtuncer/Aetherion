@@ -6,17 +6,13 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
+
 FetchContent_Declare(
     catch2
     GIT_REPOSITORY https://github.com/catchorg/Catch2.git
     GIT_TAG        v3.5.2
 )
 FetchContent_MakeAvailable(catch2)
-
-# Tell CMake where to look for the installed package
-#list(APPEND CMAKE_PREFIX_PATH ${CMAKE_SOURCE_DIR}/vendor/catch2)
-#
-#find_package(Catch2 3 CONFIG REQUIRED)
 
 
 include(CTest)
