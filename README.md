@@ -135,6 +135,12 @@ First you need to dowload the files or clone the repository, then initialize and
 6. Build the project via **Build > Build All**
 7. Run the executable
 
+## 👤 Author
+
+**Prof.Dr. Onur Tuncer**  
+Aerospace Engineer, Researcher & C++ Systems Developer  
+Email: **onur.tuncer@itu.edu.tr**
+
 <p align="left">
   <img src="assets/itu_logo.png" width="180" alt="Istanbul Technical University"/>
 </p>

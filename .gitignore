@@ -3,6 +3,8 @@ out/*
 
 .vs/*
 
+__pycache__/*
+
 # Prerequisites
 *.d
 
