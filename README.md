@@ -108,6 +108,10 @@ This ensures consistency across symbolic, AD, and numeric implementations.
 - cppad for algorithmic differentiation.
 - Catch2 v3 is required for testing. 
 
+## 📚 Documentation
+
+- [Detailed Documentation](https://onurtuncer.github.io/Aetherion/)
+
 ## Development
 
 ### Bug Tracker
