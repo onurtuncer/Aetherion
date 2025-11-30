@@ -12,6 +12,11 @@ project(Aetherion VERSION 1.0 LANGUAGES CXX)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
+if (BUILD_DOCS)
+  add_subdirectory(doc)
+  return()
+endif()
+
 # Path to the installed CppAD binaries in the repo
 set(CPPAD_VENDOR_ROOT "${CMAKE_SOURCE_DIR}/vendor/cppad")
 
@@ -77,7 +82,11 @@ else()
     )
 endif()
 
-find_package(fmu4cpp REQUIRED)
+
+if(NOT BUILD_DOCS)
+   find_package(fmu4cpp REQUIRED)
+endif()
+
 
 
 
@@ -86,15 +95,15 @@ add_executable(aetherion
     # add other .cpp files here
 )
 
+
+
 target_link_libraries(aetherion
     PRIVATE
         fmu4cpp::fmu4cpp
         ode::ode        
 )
 
-if (BUILD_DOCS)
-  add_subdirectory(doc)
-endif()
+
 
 if (ENABLE_STATIC_ANALYSIS)
   include(cppcheck)

@@ -21,6 +21,22 @@
       }
     },
     {
+      "name": "windows-docs-unixmake",
+      "displayName": "Windows Docs (Unix Makefiles)",
+      "description": "Build documentation on Windows using Unix Makefiles and Chocolatey make.",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_CXX_STANDARD": "23",
+        "CMAKE_CXX_STANDARD_REQUIRED": "ON",
+        "CMAKE_CXX_EXTENSIONS": "OFF",
+        "BUILD_DOCS": "ON",
+        "BUILD_TESTS": "OFF",
+        "CMAKE_MAKE_PROGRAM": "C:/Users/otunc/AppData/Local/UniGetUI/Chocolatey/lib/make/tools/install/bin/make.exe",
+        "CMAKE_CXX_COMPILER_WORKS": "TRUE"
+      }
+    },
+    {
       "name": "debug",
       "displayName": "Debug",
       "description": "Debug build with full symbols and no optimizations",
@@ -184,6 +200,13 @@
     {
       "name": "release",
       "configurePreset": "release"
+    },
+    {
+      "name": "windows-docs-unixmake-build",
+      "displayName": "Build docs (Windows, Unix Makefiles)",
+      "configurePreset": "windows-docs-unixmake",
+      "targets": [ "_Docs_Sphinx" ],
+      "inheritConfigureEnvironment": true
     },
     {
       "name": "debug-with-relinfo",

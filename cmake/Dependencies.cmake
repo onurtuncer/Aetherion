@@ -6,6 +6,10 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
+if(BUILD_DOCS)
+    return()
+endif()
+
 # Guard against multiple inclusion
 if(TARGET fmu4cpp::fmu4cpp)
     return()
