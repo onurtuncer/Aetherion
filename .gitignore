@@ -5,6 +5,10 @@ out/*
 
 __pycache__/*
 
+*.log
+*.aux
+*.pdf 
+
 # Prerequisites
 *.d
 

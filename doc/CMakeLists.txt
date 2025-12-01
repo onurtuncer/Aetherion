@@ -15,10 +15,8 @@ find_package(Sphinx REQUIRED)
 
 set(PROJECT_DOC_NAME ${CMAKE_CURRENT_PROJECT_NAME}_Docs)
 
-set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tikz)
 
-find_package(Doxygen REQUIRED)
-find_package(Sphinx REQUIRED)
 
 set(PROJECT_DOC_NAME ${CMAKE_CURRENT_PROJECT_NAME}_Docs)
 
@@ -80,7 +78,7 @@ add_custom_command(OUTPUT ${SPHINX_INDEX_FILE}
     COMMENT "Generating ${PROJECT_DOC_NAME} documentation with Sphinx")
 
 # Nice named target so we can run the job easily
-add_custom_target(${PROJECT_DOC_NAME}_Sphinx ALL DEPENDS ${SPHINX_INDEX_FILE})
+add_custom_target(${PROJECT_DOC_NAME}_Sphinx ALL DEPENDS ${SPHINX_INDEX_FILE} tikz_figures)
 
 include(GNUInstallDirs)
 install(DIRECTORY ${SPHINX_BUILD}
