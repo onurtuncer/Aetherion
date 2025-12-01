@@ -6,13 +6,7 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-# src/FMU/CMakeLists.txt
-
-# assume generate_fmu() is already available from top-level include
-
-# Identity FMU (your FeedThrough model)
-generateFMU(
-    TARGET FeedThrough
+generateFMU(FeedThrough
     FMI_VERSIONS fmi2
     SOURCES
         FeedThrough/FeedThrough.cpp

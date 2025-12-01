@@ -8,14 +8,45 @@
 
 cmake_minimum_required(VERSION 3.26)
 
-project(Aetherion VERSION 1.0 LANGUAGES CXX)
+#project(Aetherion VERSION 1.0 LANGUAGES CXX)
+
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" projectVersion)
+project(Aetherion VERSION ${projectVersion} LANGUAGES CXX)
+
+option(FMU4CPP_BUILD_TESTS "Build internal tests" ON)
+option(FMU4CPP_MSVC_STATIC_CRT "Use static MSVC runtime library" ON)
+
+set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+#set(CMAKE_CXX_STANDARD 17)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+
+list(APPEND FMU_TARGETS FeedThrough)
+
 
 if (BUILD_DOCS)
   add_subdirectory(doc)
   return()
 endif()
+
+#if (POLICY CMP0091)
+#    cmake_policy(SET CMP0091 NEW)
+#    if (WIN32)
+#        if (FMU4CPP_MSVC_STATIC_CRT)
+#            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+#        else ()
+#            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+#        endif ()
+#    endif ()
+#endif ()
+
+
+include("cmake/generate_fmu.cmake")
+
+add_subdirectory(${CMAKE_SOURCE_DIR}/export)
+
 
 # Path to the installed CppAD binaries in the repo
 set(CPPAD_VENDOR_ROOT "${CMAKE_SOURCE_DIR}/vendor/cppad")
@@ -61,6 +92,8 @@ set_target_properties(CppAD::cppad PROPERTIES
 
 include(Dependencies)
 
+#TODO move libode stuff into dependencies
+
 # libode as a vendored submodule
 set(LIBODE_SUBMODULE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libode")
 
@@ -83,26 +116,29 @@ else()
 endif()
 
 
+#if(NOT BUILD_DOCS)
+#   find_package(fmu4cpp REQUIRED)
+#endif()
+#
+#message(STATUS "fmu4cpp source dir: ${fmu4cpp_SOURCE_DIR}")
+#
+#include(generate_FMU)
+
+add_subdirectory(src/FMU)
+
 if(NOT BUILD_DOCS)
-   find_package(fmu4cpp REQUIRED)
-endif()
-
-
-
 
 add_executable(aetherion
     src/main.cpp
     # add other .cpp files here
-)
-
+ )
 
 
 target_link_libraries(aetherion
     PRIVATE
-        fmu4cpp::fmu4cpp
+       # fmu4cpp::fmu4cpp
         ode::ode        
 )
-
 
 
 if (ENABLE_STATIC_ANALYSIS)
@@ -112,5 +148,7 @@ endif()
 if(AETHERION_BUILD_TESTS)
    
 	add_subdirectory(tests)
+endif()
+
 endif()
 
