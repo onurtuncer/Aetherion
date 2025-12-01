@@ -8,8 +8,6 @@
 
 cmake_minimum_required(VERSION 3.26)
 
-#project(Aetherion VERSION 1.0 LANGUAGES CXX)
-
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" projectVersion)
 project(Aetherion VERSION ${projectVersion} LANGUAGES CXX)
 
@@ -19,110 +17,20 @@ option(FMU4CPP_MSVC_STATIC_CRT "Use static MSVC runtime library" ON)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-#set(CMAKE_CXX_STANDARD 17)
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-
-list(APPEND FMU_TARGETS FeedThrough)
-
 
 if (BUILD_DOCS)
   add_subdirectory(doc)
   return()
 endif()
 
-#if (POLICY CMP0091)
-#    cmake_policy(SET CMP0091 NEW)
-#    if (WIN32)
-#        if (FMU4CPP_MSVC_STATIC_CRT)
-#            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-#        else ()
-#            set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-#        endif ()
-#    endif ()
-#endif ()
-
-
 include("cmake/generate_fmu.cmake")
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/export)
 
 
-# Path to the installed CppAD binaries in the repo
-set(CPPAD_VENDOR_ROOT "${CMAKE_SOURCE_DIR}/vendor/cppad")
-
-# Imported CppAD library target with Debug/Release locations
-add_library(CppAD::cppad STATIC IMPORTED GLOBAL)
-
-set_target_properties(CppAD::cppad PROPERTIES
-    IMPORTED_CONFIGURATIONS "Debug;Release"
-
-    IMPORTED_LOCATION_DEBUG
-        "${CPPAD_VENDOR_ROOT}/x64-Debug/lib/cppad_lib.lib"
-
-    IMPORTED_LOCATION_RELEASE
-        "${CPPAD_VENDOR_ROOT}/x64-Release/lib/cppad_lib.lib"
-
-    # Headers — same for both configs
-    INTERFACE_INCLUDE_DIRECTORIES
-        "${CPPAD_VENDOR_ROOT}/x64-Release/include"
-)
-
-   # Fallback to vendored header-only Eigen
-    set(EIGEN3_VENDOR_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/eigen")
-
-    if (EXISTS "${EIGEN3_VENDOR_DIR}/Eigen/Dense")
-        message(STATUS "Using vendored Eigen headers in ${EIGEN3_VENDOR_DIR}")
-
-        # Create a normal interface target
-        add_library(eigen3_vendor INTERFACE)
-        target_include_directories(eigen3_vendor
-            INTERFACE
-                "${EIGEN3_VENDOR_DIR}"
-        )
-
-        # Provide the standard Eigen3::Eigen alias
-        add_library(Eigen3::Eigen ALIAS eigen3_vendor)
-    else()
-        message(FATAL_ERROR
-            "Eigen3 not found: vendored headers at "
-            "${EIGEN3_VENDOR_DIR}/Eigen/Dense"
-        )
-    endif()
 
 include(Dependencies)
-
-#TODO move libode stuff into dependencies
-
-# libode as a vendored submodule
-set(LIBODE_SUBMODULE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libode")
-
-if (EXISTS "${LIBODE_SUBMODULE_DIR}/CMakeLists.txt")
-    message(STATUS "Using vendored libode in ${LIBODE_SUBMODULE_DIR}")
-
-    set(ODE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(ODE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(ODE_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
-    set(ODE_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
-
-    add_subdirectory("${LIBODE_SUBMODULE_DIR}" EXCLUDE_FROM_ALL)
-
-    set(LIBODE_INCLUDE_DIR "${LIBODE_SUBMODULE_DIR}/include" CACHE PATH "libode include root")
-else()
-    message(FATAL_ERROR
-        "libode submodule not found at ${LIBODE_SUBMODULE_DIR}. "
-        "Did you run: git submodule update --init --recursive ?"
-    )
-endif()
-
-
-#if(NOT BUILD_DOCS)
-#   find_package(fmu4cpp REQUIRED)
-#endif()
-#
-#message(STATUS "fmu4cpp source dir: ${fmu4cpp_SOURCE_DIR}")
-#
-#include(generate_FMU)
 
 add_subdirectory(src/FMU)
 

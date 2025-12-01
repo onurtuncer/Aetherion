@@ -15,19 +15,12 @@ find_package(Sphinx REQUIRED)
 
 set(PROJECT_DOC_NAME ${CMAKE_CURRENT_PROJECT_NAME}_Docs)
 
-cmake_minimum_required(VERSION 3.26)
-
 set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH};${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 find_package(Doxygen REQUIRED)
 find_package(Sphinx REQUIRED)
 
 set(PROJECT_DOC_NAME ${CMAKE_CURRENT_PROJECT_NAME}_Docs)
-
-# ------------------------------------------------------------------------------
-# DO NOT use the 'aetherion' target in documentation-only mode
-# Instead, point directly to the public include directory
-# ------------------------------------------------------------------------------
 
 set(PROJECT_PUBLIC_HEADER_DIR "${PROJECT_SOURCE_DIR}/Aetherion")
 
@@ -41,10 +34,6 @@ set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen)
 set(DOXYGEN_INDEX_FILE ${DOXYGEN_OUTPUT_DIR}/xml/index.xml)
 set(DOXYFILE_IN        ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in)
 set(DOXYFILE_OUT       ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile)
-
-# Find all the public headers
-#get_target_property(PROJECT_PUBLIC_HEADER_DIR aetherion INTERFACE_INCLUDE_DIRECTORIES)
-#file(GLOB_RECURSE PROJECT_PUBLIC_HEADERS ${PROJECT_PUBLIC_HEADER_DIR}/*.h)
 
 set(DOXYGEN_INPUT_DIR  ${PROJECT_SOURCE_DIR}/src)
 set(DOXYGEN_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/doxygen)

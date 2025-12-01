@@ -6,6 +6,7 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
+include(FetchContent)
 
 FetchContent_Declare(
     catch2
