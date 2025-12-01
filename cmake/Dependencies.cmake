@@ -10,20 +10,24 @@ if(BUILD_DOCS)
     return()
 endif()
 
-# Guard against multiple inclusion
-if(TARGET fmu4cpp::fmu4cpp)
-    return()
-endif()
+
 
 include(FetchContent)
 
-FetchContent_Declare(
-    fmu4cpp
-    GIT_REPOSITORY https://github.com/Ecos-platform/fmu4cpp.git
-    GIT_TAG        master
-)
+#FetchContent_Declare(
+#    fmu4cpp
+#    GIT_REPOSITORY https://github.com/Ecos-platform/fmu4cpp.git
+#    GIT_TAG        master
+#)
+#
+#FetchContent_MakeAvailable(fmu4cpp)
 
-FetchContent_MakeAvailable(fmu4cpp)
+
+#if(COMMAND generate_fmu)
+#    message(STATUS "generate_fmu() is available after include")
+#else()
+#    message(FATAL_ERROR "generate_fmu() is NOT available after include")
+#endif()
 
 #set(ECOS_BUILD_CLI OFF)     # Set to ON for building ecos command-line-interface
 #set(ECOS_BUILD_CLIB OFF)    # Set to ON for building C API
