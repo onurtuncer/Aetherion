@@ -64,4 +64,6 @@ target_include_directories(test_cppad PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/
 
 add_test(NAME cppad_basic_test COMMAND test_cppad)
 
+add_subdirectory("Environment")
+
 

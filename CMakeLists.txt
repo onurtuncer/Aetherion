@@ -36,6 +36,14 @@ add_subdirectory(src/FMU)
 
 if(NOT BUILD_DOCS)
 
+add_library(Aetherion INTERFACE)
+    
+target_include_directories(Aetherion
+    INTERFACE
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
+      #  $<INSTALL_INTERFACE:include>
+)
+
 add_executable(aetherion
     src/main.cpp
     # add other .cpp files here

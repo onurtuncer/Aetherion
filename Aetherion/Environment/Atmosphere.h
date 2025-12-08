@@ -12,7 +12,7 @@
 #include <cmath>
 #include <cstddef>
 
-namespace Aetherion::Atmospehere {
+namespace Aetherion::Environment {
 
     /// Result of the atmosphere call
     template <class Scalar>
@@ -27,19 +27,19 @@ namespace Aetherion::Atmospehere {
 
         // ADL-friendly wrappers so this works for double, CppAD::AD<>, etc.
         template <class S>
-        inline S my_pow(const S& x, const S& y) {
+        inline S Power(const S& x, const S& y) {
             using std::pow;
             return pow(x, y);
         }
 
         template <class S>
-        inline S my_exp(const S& x) {
+        inline S Exponential(const S& x) {
             using std::exp;
             return exp(x);
         }
 
         template <class S>
-        inline S my_sqrt(const S& x) {
+        inline S SquareRoot(const S& x) {
             using std::sqrt;
             return sqrt(x);
         }
@@ -57,11 +57,11 @@ namespace Aetherion::Atmospehere {
     ///   corresponding to the evaluation altitude. This is fine as long as you don't differentiate
     ///   *through* layer boundaries.
     template <class Scalar>
-    inline Us1976State<Scalar> US1976(const Scalar& altitude_m_in)
+    inline Us1976State<Scalar> US1976Atmosphere(const Scalar& altitude_m_in)
     {
-        using detail::my_exp;
-        using detail::my_pow;
-        using detail::my_sqrt;
+        using detail::Exponential;
+        using detail::Power;
+        using detail::SquareRoot;
 
         // ---- Physical constants (US1976) ---------------------------------------
         const Scalar g0 = Scalar(9.80665);    // [m/s^2]
@@ -161,24 +161,24 @@ namespace Aetherion::Atmospehere {
             // Isothermal layer
             T = Tb;
             const Scalar exponent = -g0 * (H - Hb) / (R * Tb);
-            p = Pb * my_exp(exponent);
+            p = Pb * Exponential(exponent);
         }
         else {
             // Gradient layer (linear temperature profile)
             T = Tb + Lb * (H - Hb);
             const Scalar theta = T / Tb;
             const Scalar exponent = -g0 / (Lb * R);
-            p = Pb * my_pow(theta, exponent);
+            p = Pb * Power(theta, exponent);
         }
 
         // Ideal gas: rho = p / (R T)
         const Scalar rho = p / (R * T);
 
         // Speed of sound
-        const Scalar a = my_sqrt(gamma * R * T);
+        const Scalar a = SquareRoot(gamma * R * T);
 
         Us1976State<Scalar> out{ T, p, rho, a };
         return out;
     }
 
-} // namespace 
+} // namespace Aetherion::Environment
