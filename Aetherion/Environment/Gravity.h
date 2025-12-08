@@ -12,7 +12,7 @@
 #include <cstddef>
 #include <cmath>
 
-namespace Aetherion::Gravity {
+namespace Aetherion::Environment {
 
     template <class Scalar>
     using Vec3 = std::array<Scalar, 3>;
@@ -20,7 +20,7 @@ namespace Aetherion::Gravity {
     namespace detail {
 
         template <class S>
-        inline S my_sqrt(const S& x) {
+        inline S SquareRoot(const S& x) {
             using std::sqrt;
             return sqrt(x);
         }
@@ -37,18 +37,18 @@ namespace Aetherion::Gravity {
     /// Output:
     ///   g_W  : gravitational acceleration [m/s^2] in frame W.
     template <class Scalar>
-    inline Vec3<Scalar> gravity_central(
+    inline Vec3<Scalar> CentralGravity(
         const Vec3<Scalar>& r_W,
         const Scalar& mu = Scalar(3.986004418e14)) // [m^3/s^2]
     {
-        using detail::my_sqrt;
+        using detail::SquareRoot;
 
         const Scalar x = r_W[0];
         const Scalar y = r_W[1];
         const Scalar z = r_W[2];
 
         const Scalar r2 = x * x + y * y + z * z;
-        const Scalar r = my_sqrt(r2);
+        const Scalar r = SquareRoot(r2);
         const Scalar r3 = r2 * r;         // r^3
         const Scalar inv_r3 = Scalar(1) / r3;
 
@@ -74,14 +74,14 @@ namespace Aetherion::Gravity {
         const Scalar& Re = Scalar(6378137.0),
         const Scalar& J2 = Scalar(1.08262668e-3))
     {
-        using detail::my_sqrt;
+        using detail::SquareRoot;
 
         const Scalar x = r_W[0];
         const Scalar y = r_W[1];
         const Scalar z = r_W[2];
 
         const Scalar r2 = x * x + y * y + z * z;
-        const Scalar r = my_sqrt(r2);
+        const Scalar r = SquareRoot(r2);
         const Scalar r3 = r2 * r;
         const Scalar r5 = r3 * r2;
         const Scalar inv_r3 = Scalar(1) / r3;
@@ -108,4 +108,4 @@ namespace Aetherion::Gravity {
         return Vec3<Scalar>{gx, gy, gz};
     }
 
-} // namespace aetherion::grav
+} // namespace Aetherion::Environment

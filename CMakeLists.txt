@@ -66,5 +66,5 @@ if(AETHERION_BUILD_TESTS)
 	add_subdirectory(tests)
 endif()
 
-endif()
+endif() # Build docs
 
