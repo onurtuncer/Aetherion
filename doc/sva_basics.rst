@@ -179,7 +179,7 @@ Spatial inertias transform by the co-adjoint sandwich
    {}_A X_B^* \, \mathbb{I}_B \, ({}_A X_B).
 
 
-Newton–Euler Equations in Spatial Form
+Newton Euler Equations in Spatial Form
 --------------------------------------
 
 The rigid-body equations of motion are
@@ -301,4 +301,3 @@ GNC and EKF Pipeline Diagram
    SVA provides a smooth, unified 6-D dynamics model compatible with
    algorithmic differentiation and real-time GNC implementation.
 
-*(Export your TikZ figure as a PDF/PNG and place it under ``_static/`` with this name.)*

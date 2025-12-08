@@ -15,14 +15,17 @@
 #include <numbers>
 #include <vector>
 
-#include <Aetherion/Coordinate/FrameConversions.h>
+#include <Aetherion/Coordinate/LocalToInertial.h>
 
 using Catch::Approx;
+
 using Aetherion::Coordinate::Vec3;
 using Aetherion::Coordinate::Quat;
+namespace detail = Aetherion::Coordinate::detail;
+
 using Aetherion::Coordinate::GeodeticToECEF;
-using Aetherion::Coordinate::DirectionNEUFromAzimuthZenith;
-using Aetherion::Coordinate::NEUToECEF;
+using Aetherion::Coordinate::DirectionNEDFromAzimuthZenith;
+using Aetherion::Coordinate::NEDToECEF;
 using Aetherion::Coordinate::ECEFToECI;
 using Aetherion::Coordinate::LaunchStateECI;
 using Aetherion::Coordinate::MakeLaunchStateECI;
@@ -110,24 +113,24 @@ TEST_CASE("GeodeticToECEF - north pole", "[coordinate][geodetic]")
 }
 
 // ============================================================================
-// 2. Direction NEU -> ECEF -> ECI sanity
+// 2. Direction NED -> ECEF -> ECI sanity
 // ============================================================================
 
-TEST_CASE("DirectionNEUFromAzimuthZenith - straight up at equator", "[coordinate][direction]")
+TEST_CASE("DirectionNEDFromAzimuthZenith - straight up at equator", "[coordinate][direction]")
 {
     const double lat = 0.0;
     const double lon = 0.0;
-    const double theta = 0.0;       // Earth rotation angle
-    const double az = 0.0;       // azimuth doesn't matter for zenith=0
-    const double zen = 0.0;       // zenith = 0 => along +Up
+    const double theta = 0.0;   // Earth rotation angle
+    const double az = 0.0;   // azimuth doesn't matter for zenith=0
+    const double zen = 0.0;   // zenith = 0 => along Up, which is D = -1 in NED
 
-    Vec3<double> dir_neu = DirectionNEUFromAzimuthZenith(az, zen);
-    REQUIRE(dir_neu[0] == Approx(0.0).margin(1e-14)); // N
-    REQUIRE(dir_neu[1] == Approx(0.0).margin(1e-14)); // E
-    REQUIRE(dir_neu[2] == Approx(1.0).margin(1e-14)); // U
+    Vec3<double> dir_ned = DirectionNEDFromAzimuthZenith(az, zen);
+    REQUIRE(dir_ned[0] == Approx(0.0).margin(1e-14));  // N
+    REQUIRE(dir_ned[1] == Approx(0.0).margin(1e-14));  // E
+    REQUIRE(dir_ned[2] == Approx(-1.0).margin(1e-14)); // D (Down; Up corresponds to D = -1)
 
-    Vec3<double> dir_ecef = NEUToECEF(dir_neu, lat, lon);
-    // At lat=0, lon=0: Up = [1,0,0] in ECEF
+    Vec3<double> dir_ecef = NEDToECEF(dir_ned, lat, lon);
+    // At lat=0, lon=0: Up = [1,0,0] in ECEF, so NED [0,0,-1] must map to [1,0,0].
     REQUIRE(dir_ecef[0] == Approx(1.0).margin(1e-14));
     REQUIRE(dir_ecef[1] == Approx(0.0).margin(1e-14));
     REQUIRE(dir_ecef[2] == Approx(0.0).margin(1e-14));
@@ -312,7 +315,6 @@ TEST_CASE("MakeLaunchStateECI - CppAD derivatives of dir0_eci w.r.t azimuth, zen
 
     auto state_az_p = MakeLaunchStateECI(lat0, lon0, h0, az0 + dh, zen0, roll0, theta0);
     auto state_az_m = MakeLaunchStateECI(lat0, lon0, h0, az0 - dh, zen0, roll0, theta0);
-
     auto state_zen_p = MakeLaunchStateECI(lat0, lon0, h0, az0, zen0 + dh, roll0, theta0);
     auto state_zen_m = MakeLaunchStateECI(lat0, lon0, h0, az0, zen0 - dh, roll0, theta0);
 
@@ -335,4 +337,3 @@ TEST_CASE("MakeLaunchStateECI - CppAD derivatives of dir0_eci w.r.t azimuth, zen
     REQUIRE(J_ad[4] == Approx(ddir_daz_fd[2]).epsilon(1e-5));  // d(dir_z)/daz
     REQUIRE(J_ad[5] == Approx(ddir_dzen_fd[2]).epsilon(1e-5)); // d(dir_z)/dzen
 }
-

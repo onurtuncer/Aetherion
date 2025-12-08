@@ -8,7 +8,8 @@
 
 add_executable(test_coordinate
                     test_coordinate.cpp  
-                    test_inertial_to_local.cpp)
+                    test_QuaterniontoNED.cpp)
+                 #   test_inertial_to_local.cpp)
 
 target_link_libraries(test_coordinate
     PRIVATE

@@ -24,7 +24,7 @@ where :math:`\boldsymbol{\omega}_\oplus` is Earth's rotation and
 Frame Relationship Figure
 -------------------------
 
-.. figure:: _static/eci_ecef_frames.png
+.. figure:: _static/eci_ecef_frames.pdf
    :alt: Relationship between Earth-fixed frame E and inertial frame W
    :align: center
 

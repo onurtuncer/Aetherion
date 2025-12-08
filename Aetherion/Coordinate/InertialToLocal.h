@@ -47,6 +47,8 @@ namespace Aetherion::Coordinate {
         using Aetherion::Coordinate::detail::Cross;
         using Aetherion::Coordinate::detail::Normalize;
         using Aetherion::Coordinate::detail::RotationMatrixToQuaternion;
+        using Aetherion::Coordinate::detail::NEDToNEU;
+        using Aetherion::Coordinate::detail::NEUToNED;
 
     } // namespace detail
 
@@ -73,6 +75,7 @@ namespace Aetherion::Coordinate {
                 v_eci[2]
         };
     }
+
 
     // (ECEFToECI is already in LaunchStateECI.hpp as ECEFToECI.)
 
@@ -314,7 +317,7 @@ namespace Aetherion::Coordinate {
         Quat<Scalar> q_NB;   // body->NEU quaternion
     };
 
-    template <class Scalar>
+    /*template <class Scalar>
     inline LocalStateNEU<Scalar> InvertLaunchStateToLocalNEU(
         const LaunchStateECI<Scalar>& state_eci,
         const Scalar& earth_rotation_angle_rad)
@@ -344,6 +347,124 @@ namespace Aetherion::Coordinate {
             earth_rotation_angle_rad);
 
         return out;
+    }*/
+
+    template <class Scalar>
+    struct LocalStateNEU {
+        Scalar lat_rad;
+        Scalar lon_rad;
+        Scalar h_m;
+        Vec3<Scalar> dir_neu; // unit direction in NEU (interface)
+        Quat<Scalar> q_NB;    // body -> NEU (interface)
+    };
+
+    /// Invert launch state in ECI back to WGS-84 + local NEU.
+    /// Internally:
+    ///   - all local-frame math done in NED (North-East-Down)
+    ///   - NEU only at the interface (dir_neu, q_NB)
+    template <class Scalar>
+    inline LocalStateNEU<Scalar> InvertLaunchStateToLocalNEU(
+        const LaunchStateECI<Scalar>& state,
+        const Scalar& earth_rotation_angle_rad)
+    {
+        using detail::Sine;
+        using detail::Cosine;
+        using detail::Dot;
+        using detail::Normalize;
+        using detail::NEDToNEU;
+
+        // 1) ECI position -> ECEF -> WGS-84 (lat, lon, h)
+        const Vec3<Scalar> r_ecef =
+            ECIToECEF(state.r0, earth_rotation_angle_rad);
+
+        Scalar lat_rad{};
+        Scalar lon_rad{};
+        Scalar h_m{};
+        ECEFToGeodeticWGS84(r_ecef, lat_rad, lon_rad, h_m);
+
+        // 2) Build NEU basis in ECEF at (lat, lon)
+        const Scalar sLat = Sine(lat_rad);
+        const Scalar cLat = Cosine(lat_rad);
+        const Scalar sLon = Sine(lon_rad);
+        const Scalar cLon = Cosine(lon_rad);
+
+        const Vec3<Scalar> N_ecef{
+            -sLat * cLon,
+            -sLat * sLon,
+             cLat
+        };
+        const Vec3<Scalar> E_ecef{
+            -sLon,
+             cLon,
+             Scalar(0)
+        };
+        const Vec3<Scalar> U_ecef{
+             cLat * cLon,
+             cLat * sLon,
+             sLat
+        };
+
+        // 3) NED basis in ECEF: D = -U
+        const Vec3<Scalar> D_ecef{
+            -U_ecef[0],
+            -U_ecef[1],
+            -U_ecef[2]
+        };
+
+        // 4) NED basis in ECI
+        const Vec3<Scalar> N_eci = ECEFToECI(N_ecef, earth_rotation_angle_rad);
+        const Vec3<Scalar> E_eci = ECEFToECI(E_ecef, earth_rotation_angle_rad);
+        const Vec3<Scalar> D_eci = ECEFToECI(D_ecef, earth_rotation_angle_rad);
+
+        // 5) Direction: body +x in ECI (state.dir0_eci) -> NED components
+        Vec3<Scalar> dir_ned{
+            Dot(N_eci, state.dir0_eci),
+            Dot(E_eci, state.dir0_eci),
+            Dot(D_eci, state.dir0_eci)
+        };
+        dir_ned = Normalize(dir_ned);
+
+        // Convert back to NEU for interface
+        const Vec3<Scalar> dir_neu = NEDToNEU(dir_ned);
+
+        // 6) Orientation: q_EB (body -> ECI) -> body axes in ECI
+        Vec3<Scalar> x_b_eci, y_b_eci, z_b_eci;
+        QuaternionToAxesECI(state.q_EB, x_b_eci, y_b_eci, z_b_eci);
+
+        // 7) Express body axes in NED
+        const Vec3<Scalar> x_b_ned{
+            Dot(N_eci, x_b_eci),
+            Dot(E_eci, x_b_eci),
+            Dot(D_eci, x_b_eci)
+        };
+        const Vec3<Scalar> y_b_ned{
+            Dot(N_eci, y_b_eci),
+            Dot(E_eci, y_b_eci),
+            Dot(D_eci, y_b_eci)
+        };
+        const Vec3<Scalar> z_b_ned{
+            Dot(N_eci, z_b_eci),
+            Dot(E_eci, z_b_eci),
+            Dot(D_eci, z_b_eci)
+        };
+
+        // 8) Convert these axes to NEU coordinates for the interface
+        const Vec3<Scalar> x_b_neu = NEDToNEU(x_b_ned);
+        const Vec3<Scalar> y_b_neu = NEDToNEU(y_b_ned);
+        const Vec3<Scalar> z_b_neu = NEDToNEU(z_b_ned);
+
+        // 9) Build body -> NEU quaternion for interface
+        const Quat<Scalar> q_NB =
+            detail::RotationMatrixToQuaternion(x_b_neu, y_b_neu, z_b_neu);
+
+        LocalStateNEU<Scalar> out;
+        out.lat_rad = lat_rad;
+        out.lon_rad = lon_rad;
+        out.h_m = h_m;
+        out.dir_neu = dir_neu;
+        out.q_NB = q_NB;
+        return out;
     }
+
 
 } // namespace Aetherion::Coordinate
