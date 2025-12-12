@@ -3,101 +3,11 @@
 #include <array>
 #include <cmath>
 
+#include "Aetherion/Coordinate/Math.h"
+
 namespace Aetherion::Coordinate {
 
-    template <class Scalar>
-    using Vec3 = std::array<Scalar, 3>;
-
-    template <class Scalar>
-    using Quat = std::array<Scalar, 4>; // [w, x, y, z], body->ECI or body->inertial
-
-    template <class Scalar>
-    using Mat3 = std::array<Scalar, 9>; // row-major, m[3*r + c]
-
-    namespace detail {
-
-        template <class S>
-        inline S Sine(const S& x) {
-            using std::sin;
-            return sin(x);
-        }
-
-        template <class S>
-        inline S Cosine(const S& x) {
-            using std::cos;
-            return cos(x);
-        }
-
-        template <class S>
-        inline S SquareRoot(const S& x) {
-            using std::sqrt;
-            return sqrt(x);
-        }
-
-        template <class S>
-        inline S ArcTangent2(const S& y, const S& x) {
-            using std::atan2;
-            return atan2(y, x);
-        }
-
-        template <class S>
-        inline S ArcCos(const S& x) {
-            using std::acos;
-            return acos(x);
-        }
-
-        // Quaternion -> 3x3 rotation matrix (row-major), AD-friendly.
-        // q_AB: rotates frame B into frame A, v^A = R(q_AB) v^B.
-        template <class S>
-        inline Mat3<S> QuaternionToRotationMatrix(const Quat<S>& q_in) {
-            S w = q_in[0];
-            S x = q_in[1];
-            S y = q_in[2];
-            S z = q_in[3];
-
-            // Normalize to guard against drift (smooth and AD-friendly).
-            const S n2 = w * w + x * x + y * y + z * z;
-            const S inv_n = S(1) / SquareRoot(n2);
-            w *= inv_n;
-            x *= inv_n;
-            y *= inv_n;
-            z *= inv_n;
-
-            const S two = S(2);
-
-            const S xx = x * x;
-            const S yy = y * y;
-            const S zz = z * z;
-            const S xy = x * y;
-            const S xz = x * z;
-            const S yz = y * z;
-            const S wx = w * x;
-            const S wy = w * y;
-            const S wz = w * z;
-
-            Mat3<S> R{};
-
-            // Row 0
-            R[0] = S(1) - two * (yy + zz);
-            R[1] = two * (xy - wz);
-            R[2] = two * (xz + wy);
-
-            // Row 1
-            R[3] = two * (xy + wz);
-            R[4] = S(1) - two * (xx + zz);
-            R[5] = two * (yz - wx);
-
-            // Row 2
-            R[6] = two * (xz - wy);
-            R[7] = two * (yz + wx);
-            R[8] = S(1) - two * (xx + yy);
-
-            return R;
-        }
-
-    } // namespace detail
-
-    // -------------------------------------------------------------------------
+      // -------------------------------------------------------------------------
     // Output type: local NED azimuth, zenith, roll (all in radians)
     // -------------------------------------------------------------------------
     template <class Scalar>

@@ -36,13 +36,21 @@ add_subdirectory(src/FMU)
 
 if(NOT BUILD_DOCS)
 
-add_library(Aetherion INTERFACE)
-    
-target_include_directories(Aetherion
-    INTERFACE
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}>
-      #  $<INSTALL_INTERFACE:include>
+add_library(Aetherion STATIC)
+
+target_sources(Aetherion PRIVATE
+  #  src/Coordinate/ECEFToGeodetic.cpp
+    src/Coordinate/InertialToLocal.cpp
 )
+
+target_include_directories(Aetherion
+    PUBLIC
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+    #    $<INSTALL_INTERFACE:include>
+)
+
+target_compile_features(Aetherion PUBLIC cxx_std_23)
+
 
 add_executable(aetherion
     src/main.cpp

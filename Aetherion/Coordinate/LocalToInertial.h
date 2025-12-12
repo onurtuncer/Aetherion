@@ -8,123 +8,14 @@
 
 #pragma once
 
+#include <Aetherion/Coordinate/Math.h>
+
 // ------------------------------------------------------------------------------
 // Launch geometry: WGS-84 + NED -> ECI position and attitude (quaternion).
 // Local frame is right-handed North–East–Down.
 // ------------------------------------------------------------------------------
 
-#include <array>
-#include <cmath>
-
-namespace Aetherion::Coordinate {
-
-    template <class Scalar>
-    using Vec3 = std::array<Scalar, 3>;
-
-    template <class Scalar>
-    using Quat = std::array<Scalar, 4>; // [w, x, y, z], body->ECI
-
-    template <class Scalar>
-    using Mat3 = std::array<Scalar, 9>; // row-major 3x3
-
-    namespace detail {
-
-        template <class S>
-        inline S Sine(const S& x) {
-            using std::sin;
-            return sin(x);
-        }
-
-        template <class S>
-        inline S Cosine(const S& x) {
-            using std::cos;
-            return cos(x);
-        }
-
-        template <class S>
-        inline S SquareRoot(const S& x) {
-            using std::sqrt;
-            return sqrt(x);
-        }
-
-        template <class S>
-        inline Vec3<S> Cross(const Vec3<S>& a, const Vec3<S>& b) {
-            return Vec3<S>{
-                a[1] * b[2] - a[2] * b[1],
-                    a[2] * b[0] - a[0] * b[2],
-                    a[0] * b[1] - a[1] * b[0]
-            };
-        }
-
-        template <class S>
-        inline Vec3<S> Normalize(const Vec3<S>& v) {
-            const S n2 = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
-            const S inv_n = S(1) / SquareRoot(n2);
-            return Vec3<S>{ v[0] * inv_n, v[1] * inv_n, v[2] * inv_n };
-        }
-
-        /// Convert rotation matrix (columns = body axes in some world frame)
-        /// to quaternion q_WB (body->world), robust for all rotations.
-        template <class S>
-        inline Quat<S> RotationMatrixToQuaternion(
-            const Vec3<S>& x_b, // column 0
-            const Vec3<S>& y_b, // column 1
-            const Vec3<S>& z_b  // column 2
-        )
-        {
-            using detail::SquareRoot;
-
-            const S m00 = x_b[0], m01 = y_b[0], m02 = z_b[0];
-            const S m10 = x_b[1], m11 = y_b[1], m12 = z_b[1];
-            const S m20 = x_b[2], m21 = y_b[2], m22 = z_b[2];
-
-            const S one = S(1);
-
-            const S trace = m00 + m11 + m22;
-
-            S w, x, y, z;
-
-            if (trace > S(0)) {
-                // trace is positive: use w as the primary
-                const S S4 = SquareRoot(trace + one) * S(2); // 4*w
-                w = S4 * S(0.25);
-                x = (m21 - m12) / S4;
-                y = (m02 - m20) / S4;
-                z = (m10 - m01) / S4;
-            }
-            else if (m00 > m11 && m00 > m22) {
-                // m00 is largest on diagonal: use x as the primary
-                const S S4 = SquareRoot(one + m00 - m11 - m22) * S(2); // 4*x
-                w = (m21 - m12) / S4;
-                x = S4 * S(0.25);
-                y = (m01 + m10) / S4;
-                z = (m02 + m20) / S4;
-            }
-            else if (m11 > m22) {
-                // m11 is largest: use y as the primary
-                const S S4 = SquareRoot(one + m11 - m00 - m22) * S(2); // 4*y
-                w = (m02 - m20) / S4;
-                x = (m01 + m10) / S4;
-                y = S4 * S(0.25);
-                z = (m12 + m21) / S4;
-            }
-            else {
-                // m22 is largest: use z as the primary
-                const S S4 = SquareRoot(one + m22 - m00 - m11) * S(2); // 4*z
-                w = (m10 - m01) / S4;
-                x = (m02 + m20) / S4;
-                y = (m12 + m21) / S4;
-                z = S4 * S(0.25);
-            }
-
-            // Final normalize to clean up numerical drift
-            const S norm2 = w * w + x * x + y * y + z * z;
-            const S inv_n = one / SquareRoot(norm2);
-
-            return Quat<S>{ w* inv_n, x* inv_n, y* inv_n, z* inv_n };
-        }
-
-    } // namespace detail
+namespace Aetherion::Coordinate{
 
     // ---------------------- 1. WGS-84 geodetic -> ECEF ------------------------
 
@@ -383,6 +274,43 @@ namespace Aetherion::Coordinate {
     }
 
     // NED -> ECI rotation matrix (frame NED to frame ECI).
+// v^ECI = R_IN * v^NED
+template <class Scalar>
+inline Mat3<Scalar> NEDToInertialRotationMatrix(
+    const Scalar& lat_rad,
+    const Scalar& lon_rad,
+    const Scalar& theta_era_rad)
+{
+    using detail::Sine;
+    using detail::Cosine;
+
+    const Scalar sLat = Sine(lat_rad);
+    const Scalar cLat = Cosine(lat_rad);
+    const Scalar sLon = Sine(lon_rad);
+    const Scalar cLon = Cosine(lon_rad);
+
+    // NED basis expressed in ECEF (matches your NEDToECEF() basis)
+    const Vec3<Scalar> N_ecef{ -sLat * cLon, -sLat * sLon,  cLat };
+    const Vec3<Scalar> E_ecef{ -sLon,         cLon,         Scalar(0) };
+    const Vec3<Scalar> D_ecef{ -cLat * cLon, -cLat * sLon, -sLat }; // Down
+
+    // Transform each basis vector ECEF -> ECI using the SAME convention as ECEFToECI()
+    const Vec3<Scalar> N_eci = ECEFToECI(N_ecef, theta_era_rad);
+    const Vec3<Scalar> E_eci = ECEFToECI(E_ecef, theta_era_rad);
+    const Vec3<Scalar> D_eci = ECEFToECI(D_ecef, theta_era_rad);
+
+    // Assemble R_IN with columns [N_eci | E_eci | D_eci] in row-major storage.
+    Mat3<Scalar> R_IN{};
+    R_IN[0] = N_eci[0];  R_IN[1] = E_eci[0];  R_IN[2] = D_eci[0];
+    R_IN[3] = N_eci[1];  R_IN[4] = E_eci[1];  R_IN[5] = D_eci[1];
+    R_IN[6] = N_eci[2];  R_IN[7] = E_eci[2];  R_IN[8] = D_eci[2];
+
+    return R_IN;
+}
+
+
+    /*
+    // NED -> ECI rotation matrix (frame NED to frame ECI).
     // v^ECI = R_IN * v^NED
     template <class Scalar>
     Mat3<Scalar>
@@ -465,7 +393,7 @@ namespace Aetherion::Coordinate {
         }
 
         return R_IN;
-    }
+    } */
 
     // NED -> ECI orientation quaternion.
     // Returns q_ned_to_inertial such that v^ECI = R(q) * v^NED.
