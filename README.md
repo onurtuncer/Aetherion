@@ -45,9 +45,9 @@ referring to the upper atmosphere — the pristine realm of celestial motion.
 
 Equation of motion:
 
-\[
-\mathbf{I}\mathbf{a} + \mathbf{v} \times^* (\mathbf{I}\mathbf{v}) = \mathbf{f}
-\]
+<p align="center">
+  <img src="assets/equation_of_motion.svg" width="180" alt="Equation of Motion"/>
+</p>
 
 Control surfaces can be modeled as rigidly attached bodies.
 
@@ -63,11 +63,9 @@ Control surfaces can be modeled as rigidly attached bodies.
 
 All transformations follow:
 
-\[
-^{A}\mathbf{T}_{B}
-\quad\text{and}\quad
-^{A}\mathbf{X}_{B}
-\]
+<p align="center">
+  <img src="assets/equation_of_motion.svg" width="180" alt="Transform equation"/>
+</p>
 
 notation for transforms and spatial transforms.
 
