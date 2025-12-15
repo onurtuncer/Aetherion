@@ -66,5 +66,6 @@ add_test(NAME cppad_basic_test COMMAND test_cppad)
 
 add_subdirectory("Environment")
 add_subdirectory("Coordinate")
+add_subdirectory("ODE")
 
 
