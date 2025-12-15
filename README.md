@@ -29,7 +29,8 @@ referring to the upper atmosphere — the pristine realm of celestial motion.
 - **Rotating atmosphere support** via air-relative velocity only  
 - **AD-friendly equations** for CppAD, dual numbers, and other libraries 
 - **US1976 Standard Atmosphere** and clean gravity models  
-- **Integrator-agnostic** (libode, self-built, etc.)  
+- **Lie structure preserving Runge-Kutta-Munthe-Kaas integrator** (with a fully implicit RADAU-IIA solver implementation)  
+- **Discrete extended Kalman filter on a product manifold containing Lie groups** for state estimation
 - **Post-modern C++23 design**
 
 ---
@@ -100,7 +101,6 @@ This ensures consistency across symbolic, AD, and numeric implementations.
 ## Dependencies
 
 - Eigen for linear algebra.
-- libode for ODE integration.
 - fmu4cpp for FMI building.
 - ecos for simulation.
 - cppad for algorithmic differentiation.

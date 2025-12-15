@@ -22,8 +22,8 @@ Flight Dynamics with Spatial Vector Algebra
    <p><strong>Author:</strong> Onur Tuncer, PhD<br>
    Istanbul Technical University, Dept. of Aeronautical Engineering<br>
    Maslak, Istanbul, Türkiye<br>
-   <a href="mailto:tuncero@itu.edu.tr">tuncero@itu.edu.tr</a><br>
-   <strong>Version:</strong> 0.1 (November 24th, 2025)</p>
+   <a href="mailto:onur.tuncer@itu.edu.tr">onur.tuncer@itu.edu.tr</a><br>
+   <strong>Version:</strong> 0.1.1 (December 15th, 2025)</p>
 
 .. toctree::
    :maxdepth: 2
@@ -35,7 +35,10 @@ Flight Dynamics with Spatial Vector Algebra
    kinematics_forces_dynamics
    launch_initialization
    software_impl
+   product_manifolds
+   group_exp_log
+   rkmk
+   unified_notation
    appendices
-
 
 :ref:`genindex`
