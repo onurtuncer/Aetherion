@@ -36,3 +36,18 @@ target_include_directories(test_concepts PRIVATE "${CMAKE_SOURCE_DIR}/vendor/Cpp
                                                
 add_test(NAME concepts_tests COMMAND test_concepts)
 
+add_executable(test_se3
+                      test_SE3.cpp)
+
+target_link_libraries(test_se3
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad  
+        Eigen3::Eigen
+)
+
+target_include_directories(test_se3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+                                               
+add_test(NAME se3_tests COMMAND test_se3)
+
