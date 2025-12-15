@@ -7,7 +7,7 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_scalar
-                    test_Scalar.cpp )
+                    test_Scalar.cpp)
 
 target_link_libraries(test_scalar
     PRIVATE
@@ -20,4 +20,19 @@ target_link_libraries(test_scalar
 target_include_directories(test_scalar PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
                                                
 add_test(NAME scalar_tests COMMAND test_scalar)
+
+add_executable(test_concepts
+                      test_Concepts.cpp)
+
+target_link_libraries(test_concepts
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad  
+        Eigen3::Eigen
+)
+
+target_include_directories(test_concepts PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+                                               
+add_test(NAME concepts_tests COMMAND test_concepts)
 
