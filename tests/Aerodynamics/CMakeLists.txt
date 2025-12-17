@@ -6,3 +6,17 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
+add_executable(test_aero
+                    test_MachNumber.cpp)
+
+target_link_libraries(test_aero
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad  
+        Eigen3::Eigen
+)
+
+target_include_directories(test_aero PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+                                               
+add_test(NAME aero_tests COMMAND test_aero)

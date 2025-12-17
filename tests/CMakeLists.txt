@@ -18,10 +18,10 @@ FetchContent_MakeAvailable(catch2)
 
 include(CTest)
 
-
 add_subdirectory("ThirdPartyIntegration")
 add_subdirectory("Environment")
 add_subdirectory("Coordinate")
 add_subdirectory("ODE")
+add_subdirectory("Aerodynamics")
 
 
