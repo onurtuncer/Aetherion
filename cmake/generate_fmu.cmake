@@ -1,7 +1,34 @@
 
+#set(_fmu4cpp_cmake_dir "${CMAKE_CURRENT_LIST_DIR}")
+#get_filename_component(_fmu4cpp_root "${_fmu4cpp_cmake_dir}/.." ABSOLUTE)
+#set(_fmu4cpp_root "${_fmu4cpp_root}" CACHE INTERNAL "")
+
+##############################################################################
+
 set(_fmu4cpp_cmake_dir "${CMAKE_CURRENT_LIST_DIR}")
-get_filename_component(_fmu4cpp_root "${_fmu4cpp_cmake_dir}/.." ABSOLUTE)
+get_filename_component(_aetherion_root "${_fmu4cpp_cmake_dir}/.." ABSOLUTE)
+
+# New layout (vendored)
+set(_candidate_vendor "${_aetherion_root}/vendor/fmu4cpp")
+# Old layout (historical)
+set(_candidate_legacy "${_aetherion_root}")
+
+if (EXISTS "${_candidate_vendor}/export/src/fmu4cpp/model_identifier.cpp.in")
+    set(_fmu4cpp_root "${_candidate_vendor}")
+elseif (EXISTS "${_candidate_legacy}/export/src/fmu4cpp/model_identifier.cpp.in")
+    set(_fmu4cpp_root "${_candidate_legacy}")
+else()
+    message(FATAL_ERROR
+        "Cannot locate fmu4cpp export templates.\n"
+        "Tried:\n"
+        "  ${_candidate_vendor}/export/src/fmu4cpp/model_identifier.cpp.in\n"
+        "  ${_candidate_legacy}/export/src/fmu4cpp/model_identifier.cpp.in\n"
+        "Check your vendor/fmu4cpp checkout (must contain export/...).")
+endif()
+
 set(_fmu4cpp_root "${_fmu4cpp_root}" CACHE INTERNAL "")
+
+####################################################################3
 
 
 function(generateFMU modelIdentifier)

@@ -26,7 +26,14 @@ endif()
 
 include("cmake/generate_fmu.cmake")
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/export)
+# --- fmu4cpp vendor integration ---
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(FMU4CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(FMU4CPP_TESTS OFF CACHE BOOL "" FORCE)
+
+add_subdirectory(vendor/fmu4cpp/export EXCLUDE_FROM_ALL)
+
+#add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export)
 
 
 
