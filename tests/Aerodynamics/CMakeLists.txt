@@ -7,7 +7,8 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_aero
-                    test_MachNumber.cpp)
+                    test_MachNumber.cpp 
+                    test_AerodynamicAngles.cpp)
 
 target_link_libraries(test_aero
     PRIVATE
