@@ -61,7 +61,39 @@ namespace Aetherion::ODE::RKMK::Lie {
             }
         }
 
-        // --- the exact API you asked for ---
+        // Must appear BEFORE extract_q_double/extract_p_double
+        template<class QLike>
+        [[nodiscard]] inline Eigen::Quaterniond cast_quat_double(const QLike& q) {
+            return Eigen::Quaterniond(
+                static_cast<double>(q.w()),
+                static_cast<double>(q.x()),
+                static_cast<double>(q.y()),
+                static_cast<double>(q.z())
+            );
+        }
+
+        // Must appear BEFORE extract_q_double/extract_p_double
+        template<class VLike>
+        [[nodiscard]] inline Eigen::Vector3d cast_vec3_double(const VLike& v) {
+            if constexpr (requires { v(0); v(1); v(2); }) {
+                return Eigen::Vector3d(
+                    static_cast<double>(v(0)),
+                    static_cast<double>(v(1)),
+                    static_cast<double>(v(2))
+                );
+            }
+            else if constexpr (requires { v[0]; v[1]; v[2]; }) {
+                return Eigen::Vector3d(
+                    static_cast<double>(v[0]),
+                    static_cast<double>(v[1]),
+                    static_cast<double>(v[2])
+                );
+            }
+            else {
+                static_assert(always_false_v<VLike>, "Cannot cast translation vector to Eigen::Vector3d.");
+            }
+        }
+
         template<class G>
         [[nodiscard]] inline Eigen::Quaterniond extract_q_double(const G& g) {
             if constexpr (requires { g.q(); })          return cast_quat_double(g.q());
