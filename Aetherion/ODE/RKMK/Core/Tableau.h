@@ -75,7 +75,7 @@ namespace Aetherion::ODE::RKMK::Core {
             A(0, 0) = (Scalar(88) - Scalar(7) * s6) / Scalar(360);
             A(0, 1) = (Scalar(296) - Scalar(169) * s6) / Scalar(1800);
             A(0, 2) = (Scalar(-2) + Scalar(3) * s6) / Scalar(225);
-
+             
             A(1, 0) = (Scalar(296) + Scalar(169) * s6) / Scalar(1800);
             A(1, 1) = (Scalar(88) + Scalar(7) * s6) / Scalar(360);
             A(1, 2) = (Scalar(-2) - Scalar(3) * s6) / Scalar(225);

@@ -91,3 +91,20 @@ target_include_directories(test_stage_pack PRIVATE "${CMAKE_SOURCE_DIR}/vendor/C
                                                
 add_test(NAME stage_pack_tests COMMAND test_stage_pack)
 
+add_executable(test_radauiia_se3
+                      test_RadauIIA_SE3.cpp)
+
+target_compile_options(test_radauiia_se3  PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_link_libraries(test_radauiia_se3
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad  
+        Eigen3::Eigen
+)
+
+target_include_directories(test_radauiia_se3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+                                               
+add_test(NAME radauiia_se3_tests COMMAND test_radauiia_se3)
+
