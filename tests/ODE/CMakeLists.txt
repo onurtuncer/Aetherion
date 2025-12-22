@@ -74,3 +74,20 @@ target_include_directories(test_newton PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD
                                                
 add_test(NAME newton_tests COMMAND test_newton)
 
+add_executable(test_stage_pack
+                      test_StagePack.cpp)
+
+target_compile_options(test_stage_pack  PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_link_libraries(test_stage_pack
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad  
+        Eigen3::Eigen
+)
+
+target_include_directories(test_stage_pack PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+                                               
+add_test(NAME stage_pack_tests COMMAND test_stage_pack)
+
