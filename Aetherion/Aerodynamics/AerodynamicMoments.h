@@ -40,26 +40,10 @@
 #include <array>
 #include <cppad/cppad.hpp>
 
-#include <Aetherion/Aerodynamics/AerodynamicAngles.h>
+#include "Aetherion/Aerodynamics/Math.h"
+#include "Aetherion/Aerodynamics/AerodynamicAngles.h"
 
 namespace Aetherion::Aerodynamics {
-
-    template <class Scalar>
-    inline Vec3<Scalar> Cross(const Vec3<Scalar>& a, const Vec3<Scalar>& b)
-    {
-        return Vec3<Scalar>{
-            a[1] * b[2] - a[2] * b[1],
-                a[2] * b[0] - a[0] * b[2],
-                a[0] * b[1] - a[1] * b[0]
-        };
-    }
-
-    // Dynamic pressure: q = 0.5 * rho * V^2
-    template <class Scalar>
-    inline Scalar DynamicPressure(const Scalar& density_kg_m3, const Scalar& speed_m_s)
-    {
-        return Scalar(0.5) * density_kg_m3 * speed_m_s * speed_m_s;
-    }
 
     // --- Moments from nondimensional moment coefficients --------------------------
     //

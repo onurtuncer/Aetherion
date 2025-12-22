@@ -39,29 +39,10 @@
 #include <array>
 #include <cppad/cppad.hpp>
 
+#include "Aetherion/Aerodynamics/Math.h"
 #include <Aetherion/Aerodynamics/AerodynamicAngles.h>
 
 namespace Aetherion::Aerodynamics {
-
-    template <class Scalar>
-    using Mat3 = std::array<std::array<Scalar, 3>, 3>;
-
-    template <class Scalar>
-    inline Vec3<Scalar> MatVecMul(const Mat3<Scalar>& A, const Vec3<Scalar>& x)
-    {
-        return Vec3<Scalar>{
-            A[0][0] * x[0] + A[0][1] * x[1] + A[0][2] * x[2],
-                A[1][0] * x[0] + A[1][1] * x[1] + A[1][2] * x[2],
-                A[2][0] * x[0] + A[2][1] * x[1] + A[2][2] * x[2],
-        };
-    }
-
-    // Dynamic pressure: q = 0.5 * rho * V^2
-    template <class Scalar>
-    inline Scalar DynamicPressure(const Scalar& density_kg_m3, const Scalar& speed_m_s)
-    {
-        return Scalar(0.5) * density_kg_m3 * speed_m_s * speed_m_s;
-    }
 
     // Wind->Body DCM (C_b_w) consistent with alpha,beta definitions in AerodynamicAngles.h.
     // We use: C_b_w = R_y(alpha) * R_z(beta)
