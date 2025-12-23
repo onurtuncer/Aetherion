@@ -48,29 +48,17 @@ add_library(Aetherion STATIC)
 target_sources(Aetherion PRIVATE
   #  src/Coordinate/ECEFToGeodetic.cpp
     src/Coordinate/InertialToLocal.cpp
+    src/ODE/RKMK/Lie/SE3.cpp
 )
 
 target_include_directories(Aetherion
     PUBLIC
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
+        ${CMAKE_SOURCE_DIR}/vendor/eigen
     #    $<INSTALL_INTERFACE:include>
 )
 
 target_compile_features(Aetherion PUBLIC cxx_std_23)
-
-
-add_executable(aetherion
-    src/main.cpp
-    # add other .cpp files here
- )
-
-
-target_link_libraries(aetherion
-    PRIVATE
-       # fmu4cpp::fmu4cpp
-        ode::ode        
-)
-
 
 if (ENABLE_STATIC_ANALYSIS)
   include(cppcheck)

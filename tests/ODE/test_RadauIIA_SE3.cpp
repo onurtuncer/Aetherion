@@ -32,7 +32,7 @@ namespace {
     using Vec6 = Eigen::Matrix<S, 6, 1>;
 
   
-   /* template<class S>
+   template<class S>
     [[nodiscard]] Lie::SE3<S> make_se3(const Eigen::Quaternion<S>& q,
         const Eigen::Matrix<S, 3, 1>& p) {
         using G = Lie::SE3<S>;
@@ -41,7 +41,7 @@ namespace {
         if constexpr (requires { G::FromQuatTranslation(q, p); }) return G::FromQuatTranslation(q, p);
         if constexpr (requires { G::from_quat_translation(q, p); }) return G::from_quat_translation(q, p);
         static_assert(always_false_v<S>, "Cannot construct SE3 from (quat, p).");
-    }
+    } 
 
     template<class G>
     [[nodiscard]] G compose(const G& a, const G& b) {
@@ -57,9 +57,9 @@ namespace {
         if constexpr (requires { G::Exp(xi); }) return G::Exp(xi);
         if constexpr (requires { G::exp(xi); }) return G::exp(xi);
         static_assert(always_false_v<S>, "SE3 must provide Exp/exp.");
-    } */
+    } 
 
-  /* template<class G>
+    template<class G>
     [[nodiscard]] Eigen::Quaterniond get_q(const G& g) {
         if constexpr (requires { g.q(); }) {
             const auto q = g.q();
@@ -74,7 +74,7 @@ namespace {
             return Eigen::Quaterniond((double)q.w(), (double)q.x(), (double)q.y(), (double)q.z());
         }
         static_assert(always_false_v<G>, "Cannot extract quaternion.");
-    } */
+    } 
 
 
        inline double so3_angle_error(const Eigen::Quaterniond& qa, const Eigen::Quaterniond& qb) {
