@@ -1,4 +1,4 @@
-// ------------------------------------------------------------------------------
+﻿// ------------------------------------------------------------------------------
 // Project: Aetherion
 // SPDX - License - Identifier: MIT
 // License - Filename: LICENSE
@@ -76,6 +76,74 @@ namespace {
         static_assert(always_false_v<G>, "Cannot extract quaternion.");
     } 
 
+    template<class G>
+    [[nodiscard]] Eigen::Vector3d get_p(const G& g) {
+        if constexpr (requires { g.p(); }) {
+            const auto p = g.p();
+            return Eigen::Vector3d((double)p(0), (double)p(1), (double)p(2));
+        }
+        if constexpr (requires { g.translation(); }) {
+            const auto p = g.translation();
+            return Eigen::Vector3d((double)p(0), (double)p(1), (double)p(2));
+        }
+        if constexpr (requires { g.p; }) {
+            const auto p = g.p;
+            return Eigen::Vector3d((double)p(0), (double)p(1), (double)p(2));
+        }
+        static_assert(always_false_v<G>, "Cannot extract translation (need p()/translation() or member p).");
+    }
+
+   
+    [[nodiscard]] Eigen::Quaterniond quat_close_sign(const Eigen::Quaterniond& qa,
+        const Eigen::Quaterniond& qb)
+    {
+        // q and -q represent the same rotation
+        return (qa.dot(qb) < 0.0)
+            ? Eigen::Quaterniond(-qb.w(), -qb.x(), -qb.y(), -qb.z())
+            : qb;
+    }
+
+    [[nodiscard]] Core::NewtonOptions tight_newton() {
+        Core::NewtonOptions opt;
+        opt.max_iters = 40;
+        opt.throw_on_fail = true;
+        return opt;
+    }
+
+    // Field: xi(t,g) = 0
+    struct ZeroField final {
+        template<class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+            return Vec6<S>::Zero();
+        }
+    };
+
+    // Field: xi(t,g) = [0; v] (pure translation), constant v
+    struct PureTranslationConstant final {
+        Eigen::Vector3d v = Eigen::Vector3d::Zero();
+
+        template<class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+            Vec6<S> xi = Vec6<S>::Zero();
+            xi.template segment<3>(3) = v.template cast<S>();
+            return xi;
+        }
+    };
+
+    // Field: xi(t,g) = [0; v0 + a*t] (pure translation), time varying
+    struct PureTranslationAffine final {
+        Eigen::Vector3d v0 = Eigen::Vector3d::Zero();
+        Eigen::Vector3d a = Eigen::Vector3d::Zero();
+
+        template<class S>
+        Vec6<S> operator()(S t, const Lie::SE3<S>& /*g*/) const {
+            Vec6<S> xi = Vec6<S>::Zero();
+            const Eigen::Matrix<S, 3, 1> v = v0.template cast<S>() + a.template cast<S>() * t;
+            xi.template segment<3>(3) = v;
+            return xi;
+        }
+    };
+
 
        inline double so3_angle_error(const Eigen::Quaterniond& qa, const Eigen::Quaterniond& qb) {
         // relative rotation q_rel = qa * qb^{-1}
@@ -88,19 +156,6 @@ namespace {
     }
 
    
-    template<class G>
-    [[nodiscard]] Eigen::Matrix4d to_T(const G& g) {
-        Eigen::Quaterniond q = get_q(g);
-        q.normalize();
-        const Eigen::Matrix3d R = q.toRotationMatrix();
-        const Eigen::Vector3d p = get_p(g);
-
-        Eigen::Matrix4d T = Eigen::Matrix4d::Identity();
-        T.block<3, 3>(0, 0) = R;
-        T.block<3, 1>(0, 3) = p;
-        return T;
-    } 
-
     struct ConstantTwistField final {
         Vec6<double> xi = Vec6<double>::Zero();
 
@@ -154,4 +209,106 @@ TEST_CASE("RadauIIA_RKMK_SE3 constant twist matches g0*Exp(h*xi)", "[rkmk][radau
         const auto xi_i = pack.xi(res.stage_xi, i);
         REQUIRE((xi_i - hxi).norm() == Approx(0.0).margin(1e-10));
     }
+}
+
+TEST_CASE("RadauIIA_RKMK_SE3: zero twist returns identity step", "[rkmk][radau][se3]") {
+    using SE3d = Lie::SE3<double>;
+
+    const Eigen::Quaterniond q0 = Eigen::Quaterniond::Identity();
+    const Eigen::Vector3d    p0(1.0, -2.0, 0.5);
+    const SE3d g0(q0, p0);
+
+    ZeroField f;
+
+    const double t0 = 0.0;
+    const double h = 0.25;
+
+    Int::RadauIIA_RKMK_SE3<ZeroField> stepper(f);
+    const auto res = stepper.step(t0, g0, h, tight_newton());
+
+    REQUIRE(res.converged);
+    REQUIRE(res.residual_norm == Approx(0.0).margin(1e-12));
+
+    const auto g1 = Lie::to_qp(res.g1);
+    const auto g0qp = Lie::to_qp(g0);
+
+    const auto q1_aligned = quat_close_sign(g0qp.q, g1.q);
+    REQUIRE(std::abs(q1_aligned.w() - g0qp.q.w()) == Approx(0.0).margin(1e-12));
+    REQUIRE((q1_aligned.vec() - g0qp.q.vec()).norm() == Approx(0.0).margin(1e-12));
+    REQUIRE((g1.p - g0qp.p).norm() == Approx(0.0).margin(1e-12));
+}
+
+TEST_CASE("RadauIIA_RKMK_SE3: pure translation constant velocity matches p0 + h*v", "[rkmk][radau][se3]") {
+    using SE3d = Lie::SE3<double>;
+
+   // const Eigen::Quaterniond q0 = Eigen::AngleAxisd(0.4, Eigen::Vector3d(0.2, -0.5, 0.1).normalized());
+    const Eigen::Quaterniond q0(Eigen::AngleAxisd(0.4, Eigen::Vector3d(0.2, -0.5, 0.1).normalized()));
+
+    const Eigen::Vector3d    p0(-3.0, 0.2, 5.0);
+    const SE3d g0(q0, p0);
+
+    PureTranslationConstant f;
+    f.v = Eigen::Vector3d(1.2, -0.7, 0.4);
+
+    const double t0 = 0.0;
+    const double h = 0.1;
+
+    Int::RadauIIA_RKMK_SE3<PureTranslationConstant> stepper(f);
+    const auto res = stepper.step(t0, g0, h, tight_newton());
+
+    REQUIRE(res.converged);
+    REQUIRE(res.residual_norm == Approx(0.0).margin(1e-10));
+
+    const auto g1 = Lie::to_qp(res.g1);
+
+    const Eigen::Matrix3d R0 = q0.normalized().toRotationMatrix();
+    const Eigen::Vector3d p_ref = p0 + h * (R0 * f.v);   // <-- key fix
+
+    REQUIRE((g1.p - p_ref).norm() == Approx(0.0).margin(1e-10));
+
+    // Orientation unchanged
+    Eigen::Quaterniond q_ref = q0.normalized();
+    const auto q1_aligned = quat_close_sign(q_ref, g1.q);
+    REQUIRE(std::abs(q1_aligned.w() - q_ref.w()) == Approx(0.0).margin(1e-10));
+    REQUIRE((q1_aligned.vec() - q_ref.vec()).norm() == Approx(0.0).margin(1e-10));
+
+}
+
+TEST_CASE("RadauIIA_RKMK_SE3: pure translation with v(t)=v0+a*t matches analytic integral", "[rkmk][radau][se3]") {
+    using SE3d = Lie::SE3<double>;
+
+    const Eigen::Quaterniond q0 = Eigen::Quaterniond::Identity();
+    const Eigen::Vector3d    p0(0.5, -1.0, 2.0);
+    const SE3d g0(q0, p0);
+
+    PureTranslationAffine f;
+    f.v0 = Eigen::Vector3d(0.2, -0.1, 0.05);
+    f.a = Eigen::Vector3d(1.0, 0.3, -0.4);
+
+    const double t0 = 1.5;
+    const double h = 0.2;
+    const double t1 = t0 + h;
+
+    Int::RadauIIA_RKMK_SE3<PureTranslationAffine> stepper(f);
+    const auto res = stepper.step(t0, g0, h, tight_newton());
+
+    REQUIRE(res.converged);
+    REQUIRE(res.residual_norm == Approx(0.0).margin(1e-10));
+
+    const auto g1 = Lie::to_qp(res.g1);
+
+    // p1 = p0 + R0 * ∫(v0 + a t) dt
+    const Eigen::Matrix3d R0 = q0.normalized().toRotationMatrix();
+    const Eigen::Vector3d integral =
+        f.v0 * h + 0.5 * f.a * (t1 * t1 - t0 * t0);
+
+    const Eigen::Vector3d p_ref = p0 + R0 * integral;
+
+    REQUIRE((g1.p - p_ref).norm() == Approx(0.0).margin(5e-9));
+
+    // Still pure translation => orientation unchanged.
+    const Eigen::Quaterniond q_ref = q0.normalized();
+    const auto q1_aligned = quat_close_sign(q_ref, g1.q);
+    REQUIRE(std::abs(q1_aligned.w() - q_ref.w()) == Approx(0.0).margin(1e-12));
+    REQUIRE((q1_aligned.vec() - q_ref.vec()).norm() == Approx(0.0).margin(1e-12));
 }

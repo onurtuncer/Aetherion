@@ -23,6 +23,9 @@
 
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
+//*****
+#include <Aetherion/ODE/RKMK/Core/NewtonOptions.h>
+
 namespace {
     using Catch::Approx;
 
@@ -98,7 +101,57 @@ namespace {
         out.noalias() += (1.0 / 720.0) * A5v;
         return out;
     }
+
+    //**********************************************************************
+
+    namespace Core = Aetherion::ODE::RKMK::Core;
+
+    template<class S>
+    using Vec6 = Eigen::Matrix<S, 6, 1>;
+
+    Core::NewtonOptions tight_newton() {
+        Core::NewtonOptions opt;
+        opt.max_iters = 40;
+        opt.throw_on_fail = true;
+        return opt;
+    }
+
+    // Field: xi(t,g) = 0
+    struct ZeroField final {
+        template<class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+            return Vec6<S>::Zero();
+        }
+    };
+
+    // Field: xi(t,g) = [0; v] (pure translation), constant v
+    struct PureTranslationConstant final {
+        Eigen::Vector3d v = Eigen::Vector3d::Zero();
+
+        template<class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+            Vec6<S> xi = Vec6<S>::Zero();
+            xi.template segment<3>(3) = v.template cast<S>();
+            return xi;
+        }
+    };
+
+    // Field: xi(t,g) = [0; v0 + a*t] (pure translation), time varying
+    struct PureTranslationAffine final {
+        Eigen::Vector3d v0 = Eigen::Vector3d::Zero();
+        Eigen::Vector3d a = Eigen::Vector3d::Zero();
+
+        template<class S>
+        Vec6<S> operator()(S t, const Lie::SE3<S>& /*g*/) const {
+            Vec6<S> xi = Vec6<S>::Zero();
+            const Eigen::Matrix<S, 3, 1> v = v0.template cast<S>() + a.template cast<S>() * t;
+            xi.template segment<3>(3) = v;
+            return xi;
+        }
+    };
 } // namespace
+
+
 
 TEST_CASE("SE3.Identity and composition", "[se3]") {
     const auto I = SE3d::Identity();
