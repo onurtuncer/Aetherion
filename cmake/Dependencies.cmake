@@ -30,27 +30,6 @@ set_target_properties(CppAD::cppad PROPERTIES
         "${CPPAD_VENDOR_ROOT}/x64-Release/include"
 )
 
-# libode as a vendored submodule
-set(LIBODE_SUBMODULE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/vendor/libode")
-
-if (EXISTS "${LIBODE_SUBMODULE_DIR}/CMakeLists.txt")
-    message(STATUS "Using vendored libode in ${LIBODE_SUBMODULE_DIR}")
-
-    set(ODE_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(ODE_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(ODE_BUILD_BENCHMARKS OFF CACHE BOOL "" FORCE)
-    set(ODE_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
-
-    add_subdirectory("${LIBODE_SUBMODULE_DIR}" EXCLUDE_FROM_ALL)
-
-    set(LIBODE_INCLUDE_DIR "${LIBODE_SUBMODULE_DIR}/include" CACHE PATH "libode include root")
-else()
-    message(FATAL_ERROR
-        "libode submodule not found at ${LIBODE_SUBMODULE_DIR}. "
-        "Did you run: git submodule update --init --recursive ?"
-    )
-endif()
-
 set(EIGEN3_VENDOR_DIR "${CMAKE_SOURCE_DIR}/vendor/eigen")
 
 if (EXISTS "${EIGEN3_VENDOR_DIR}/Eigen/Dense")
@@ -69,6 +48,19 @@ else()
         "${EIGEN3_VENDOR_DIR}/Eigen/Dense"
     )
 endif()
+
+add_library(nlohmann_json INTERFACE)
+
+target_include_directories(nlohmann_json
+    INTERFACE
+        ${CMAKE_CURRENT_SOURCE_DIR}/vendor
+)
+
+target_compile_definitions(nlohmann_json
+    INTERFACE
+        NLOHMANN_JSON_HEADER_ONLY
+)
+
 
 #set(ECOS_BUILD_CLI OFF)     # Set to ON for building ecos command-line-interface
 #set(ECOS_BUILD_CLIB OFF)    # Set to ON for building C API
