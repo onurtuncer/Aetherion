@@ -6,23 +6,6 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-add_executable(test_libode
-    test_libode.cpp
-)
-
-target_link_libraries(test_libode
-    PRIVATE
-        Catch2::Catch2WithMain
-        ode::ode
-)
-
-target_include_directories(test_libode
-    PRIVATE
-        "${LIBODE_INCLUDE_DIR}"
-)
-
-add_test(NAME libode_basic_test COMMAND test_libode)
-
 add_executable(test_eigen
     test_eigen.cpp
 )

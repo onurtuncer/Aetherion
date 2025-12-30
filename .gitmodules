@@ -1,3 +1,0 @@
-[submodule "vendor/libode"]
-	path = vendor/libode
-	url = https://github.com/markmbaum/libode.git
