@@ -8,7 +8,7 @@
 
 add_executable(test_json
                     test_JsonConfig.cpp 
-                                    )
+                                     "test_InitialPoseFromJsonString.cpp")
 
 target_link_libraries(test_json
     PRIVATE

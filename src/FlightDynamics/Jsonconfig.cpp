@@ -11,7 +11,7 @@
 
 namespace Aetherion::FlightDynamics {
 
-    Vec3 parse_vec3(const Json& parent, std::string_view key)
+ /*   Vec3 parse_vec3(const Json& parent, std::string_view key)
     {
         const Json a = json_at(parent, key);          // OK: Json is complete in this TU
         const std::size_t n = json_array_size(a);
@@ -22,13 +22,13 @@ namespace Aetherion::FlightDynamics {
             json_get_number(json_array_at(a, 1)),
             json_get_number(json_array_at(a, 2))
         };
-    }
+    } */
 
-    InitialConditions load_initial_conditions(const std::filesystem::path& path) {
+    InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path) {
 
         const Json root = parse_json_file(path);
-        InitialConditions ls{};
-        ls.t0 = json_get_or<double>(root, "t0", ls.t0, [](const Json& j) { return json_get_number(j); });
+        InitialPoseWGS84_NED ls{};
+      //  ls.t0 = json_get_or<double>(root, "t0", ls.t0, [](const Json& j) { return json_get_number(j); });
 
         if (!json_has(root, "launch")) {
             throw ConfigError("initial_conditions.json must contain object 'launch'.");

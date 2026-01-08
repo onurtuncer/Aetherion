@@ -16,8 +16,6 @@
 // Adjust include paths to your project layout
 #include "Aetherion/FlightDynamics/JsonConfig.h"
 
-// If you parse with nlohmann::json in your adapter, include it here.
-// If your project wraps JSON parsing elsewhere, adapt the second test accordingly.
 #include <vendor/nlohmann/json.hpp>
 
 namespace Aetherion::FlightDynamics::Tests {
@@ -34,33 +32,33 @@ namespace Aetherion::FlightDynamics::Tests {
     template <typename T, typename = void> struct has_alt_m : std::false_type {};
     template <typename T> struct has_alt_m<T, std::void_t<decltype(std::declval<T&>().alt_m)>> : std::true_type {};
 
+    template <typename T, typename = void> struct has_azimuth_deg : std::false_type {};
+    template <typename T> struct has_azimuth_deg<T, std::void_t<decltype(std::declval<T&>().azimuth_deg)>> : std::true_type {};
+
+    template <typename T, typename = void> struct has_zenith_deg : std::false_type {};
+    template <typename T> struct has_zenith_deg<T, std::void_t<decltype(std::declval<T&>().zenith_deg)>> : std::true_type {};
+
     template <typename T, typename = void> struct has_roll_deg : std::false_type {};
     template <typename T> struct has_roll_deg<T, std::void_t<decltype(std::declval<T&>().roll_deg)>> : std::true_type {};
 
-    template <typename T, typename = void> struct has_pitch_deg : std::false_type {};
-    template <typename T> struct has_pitch_deg<T, std::void_t<decltype(std::declval<T&>().pitch_deg)>> : std::true_type {};
-
-    template <typename T, typename = void> struct has_yaw_deg : std::false_type {};
-    template <typename T> struct has_yaw_deg<T, std::void_t<decltype(std::declval<T&>().yaw_deg)>> : std::true_type {};
-
     TEST_CASE("InitialConditions exposes Geo/Euler convenience fields", "[flightdynamics][jsonconfig][api]") {
-        using IC = Aetherion::FlightDynamics::InitialConditions;
+        using IC = Aetherion::FlightDynamics::InitialPoseWGS84_NED;
      
         STATIC_REQUIRE(has_lat_deg<IC>::value);
         STATIC_REQUIRE(has_lon_deg<IC>::value);
         STATIC_REQUIRE(has_alt_m<IC>::value);
+        STATIC_REQUIRE(has_azimuth_deg<IC>::value);
+        STATIC_REQUIRE(has_zenith_deg<IC>::value);
         STATIC_REQUIRE(has_roll_deg<IC>::value);
-        STATIC_REQUIRE(has_pitch_deg<IC>::value);
-        STATIC_REQUIRE(has_yaw_deg<IC>::value);
 
         // Also sanity-check defaults (optional but nice)
         IC ic{};
         REQUIRE(ic.lat_deg == Approx(0.0));
         REQUIRE(ic.lon_deg == Approx(0.0));
         REQUIRE(ic.alt_m == Approx(0.0));
+        REQUIRE(ic.azimuth_deg == Approx(0.0));
+        REQUIRE(ic.zenith_deg == Approx(0.0));
         REQUIRE(ic.roll_deg == Approx(0.0));
-        REQUIRE(ic.pitch_deg == Approx(0.0));
-        REQUIRE(ic.yaw_deg == Approx(0.0));
     }
 
     // ---- Runtime parsing test ----
@@ -70,23 +68,23 @@ namespace Aetherion::FlightDynamics::Tests {
     // I’m providing two variants: enable the one that matches your codebase.
 
     TEST_CASE("JSON parsing fills InitialConditions Geo/Euler fields", "[flightdynamics][jsonconfig][parse]") {
-        using IC = Aetherion::FlightDynamics::InitialConditions;
+        using IC = Aetherion::FlightDynamics::InitialPoseWGS84_NED;
 
         // Example JSON shape. Adjust keys/structure to match your actual schema.
         // If your JSON nests initial conditions, update accordingly.
         const nlohmann::json j = {
-            {"t0", 1.25},
+         //   {"t0", 1.25},
             {"lat_deg", 41.015137},
             {"lon_deg", 28.979530},
             {"alt_m",  35.0},
-            {"roll_deg",  10.0},
-            {"pitch_deg", -2.0},
-            {"yaw_deg",  170.0},
+            {"azimuth_deg",  10.0},
+            {"zenith_deg", -2.0},
+            {"roll_deg",  170.0}
 
             // include these only if your schema supports them
-            {"omegaB", {0.1, 0.2, 0.3}},
-            {"vB",     {1.0, 2.0, 3.0}},
-            {"m",      12.5}
+         //   {"omegaB", {0.1, 0.2, 0.3}},
+           // {"vB",     {1.0, 2.0, 3.0}},
+            //{"m",      12.5}
         };
 
         IC ic{};
@@ -101,24 +99,24 @@ namespace Aetherion::FlightDynamics::Tests {
 
         // --- TEMP fallback: minimal direct extraction (use ONLY if you don't have an API yet)
         // Remove once you wire in your real parser.
-        ic.t0 = j.at("t0").get<double>();
+       // ic.t0 = j.at("t0").get<double>();
         ic.lat_deg = j.at("lat_deg").get<double>();
         ic.lon_deg = j.at("lon_deg").get<double>();
         ic.alt_m = j.at("alt_m").get<double>();
+        ic.azimuth_deg = j.at("azimuth_deg").get<double>();
+        ic.zenith_deg = j.at("zenith_deg").get<double>();
         ic.roll_deg = j.at("roll_deg").get<double>();
-        ic.pitch_deg = j.at("pitch_deg").get<double>();
-        ic.yaw_deg = j.at("yaw_deg").get<double>();
-        ic.m = j.at("m").get<double>();
+    //   ic.m = j.at("m").get<double>();
         // End TEMP fallback
 
-        REQUIRE(ic.t0 == Approx(1.25));
+    //    REQUIRE(ic.t0 == Approx(1.25));
         REQUIRE(ic.lat_deg == Approx(41.015137));
         REQUIRE(ic.lon_deg == Approx(28.979530));
         REQUIRE(ic.alt_m == Approx(35.0));
-        REQUIRE(ic.roll_deg == Approx(10.0));
-        REQUIRE(ic.pitch_deg == Approx(-2.0));
-        REQUIRE(ic.yaw_deg == Approx(170.0));
-        REQUIRE(ic.m == Approx(12.5));
+        REQUIRE(ic.azimuth_deg == Approx(10.0));
+        REQUIRE(ic.zenith_deg == Approx(-2.0));
+        REQUIRE(ic.roll_deg == Approx(170.0));
+       // REQUIRE(ic.m == Approx(12.5));
     }
 
 } // namespace Aetherion::FlightDynamics::Tests
