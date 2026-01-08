@@ -7,10 +7,22 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/FlightDynamics/JsonConfig.h"
-//#include "Aetherion/FlightDynamics/JsonAdapter.h"
 #include "Aetherion/FlightDynamics/JsonConfigNlohmannAdapter.h" // defines Json + functions
 
 namespace Aetherion::FlightDynamics {
+
+    Vec3 parse_vec3(const Json& parent, std::string_view key)
+    {
+        const Json a = json_at(parent, key);          // OK: Json is complete in this TU
+        const std::size_t n = json_array_size(a);
+        if (n != 3) throw ConfigError("Expected array size 3 for '" + std::string(key) + "'");
+
+        return Vec3{
+            json_get_number(json_array_at(a, 0)),
+            json_get_number(json_array_at(a, 1)),
+            json_get_number(json_array_at(a, 2))
+        };
+    }
 
     InitialConditions load_initial_conditions(const std::filesystem::path& path) {
 

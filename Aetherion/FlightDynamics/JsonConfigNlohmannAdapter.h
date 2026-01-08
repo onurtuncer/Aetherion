@@ -75,6 +75,22 @@ namespace Aetherion::FlightDynamics {
         }
     };
 
+
+    inline std::size_t json_array_size(const Json& j)
+    {
+        const auto& v = j.j();
+        if (!v.is_array()) throw ConfigError("Json adapter: expected array.");
+        return v.size();
+    }
+
+    inline Json json_array_at(const Json& j, std::size_t i)
+    {
+        const auto& v = j.j();
+        if (!v.is_array()) throw ConfigError("Json adapter: expected array.");
+        if (i >= v.size()) throw ConfigError("Json adapter: array index out of range.");
+        return Json{ &v.at(i), j.owner };
+    }
+
     // ============================================================================
     // Helpers
     // ============================================================================

@@ -60,6 +60,7 @@ target_include_directories(Aetherion
     #    $<INSTALL_INTERFACE:include>
 )
 
+
 target_compile_features(Aetherion PUBLIC cxx_std_23)
 
 if (ENABLE_STATIC_ANALYSIS)

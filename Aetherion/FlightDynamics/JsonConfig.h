@@ -89,12 +89,9 @@ namespace Aetherion::FlightDynamics {
         return getter(json_at(parent, key));
     }
 
-    inline Vec3 parse_vec3(const Json& j) {
-        const auto arr = json_get_array(j);
-        if (arr.size() != 3) throw ConfigError("Vec3 must be [x,y,z].");
-        return Vec3{ json_get_number(arr[0]), json_get_number(arr[1]), json_get_number(arr[2]) };
-    }
-
+    
+    Vec3 parse_vec3(const Json& j, std::string_view key);
+    
     InitialConditions load_initial_conditions(const std::filesystem::path& path);
 
   
