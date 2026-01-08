@@ -31,12 +31,17 @@
 #include <string_view>
 #include <vector>
 
-#include "JsonConfig.h" // for Aetherion::Cfg::Json declaration + ConfigError
+#include <memory>
+
+
+#include "Aetherion/FlightDynamics/JsonAdapter.h"
+
+#include "Aetherion/FlightDynamics/JsonConfig.h" // for Aetherion::Cfg::Json declaration + ConfigError
 
 // ---- nlohmann json ----
-#include <nlohmann/json.hpp>
+#include <vendor/nlohmann/json.hpp> //TODO fix this later: should not specify vendor directory explicitly
 
-namespace Aetherion::Cfg {
+namespace Aetherion::FlightDynamics {
 
     // ============================================================================
     // Json opaque handle implementation
@@ -162,4 +167,4 @@ namespace Aetherion::Cfg {
         return out;
     }
 
-} // namespace Aetherion::Cfg
+} // namespace Aetherion::FlightDynamics

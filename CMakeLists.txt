@@ -47,9 +47,10 @@ add_library(Aetherion STATIC)
 
 target_sources(Aetherion PRIVATE
   #  src/Coordinate/ECEFToGeodetic.cpp
-    src/Coordinate/InertialToLocal.cpp
-    src/ODE/RKMK/Lie/SE3.cpp
- 
+   src/Coordinate/InertialToLocal.cpp
+   src/ODE/RKMK/Lie/SE3.cpp
+   src/FlightDynamics/Jsonconfig.cpp 
+   src/FlightDynamics/JsonConfigNlohmannAdapter.cpp
 )
 
 target_include_directories(Aetherion

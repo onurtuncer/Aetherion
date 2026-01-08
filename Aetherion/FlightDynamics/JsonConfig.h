@@ -13,6 +13,14 @@
 // using your chosen JSON library (nlohmann/json, rapidjson, etc).
 //
 
+// ------------------------------------------------------------------------------
+// Project: Aetherion
+// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+//
+// SPDX - License - Identifier: MIT
+// License - Filename: LICENSE
+// ------------------------------------------------------------------------------
+
 #pragma once
 
 #include <cmath>
@@ -24,7 +32,12 @@
 #include <utility>
 #include <vector>
 
-namespace Aetherion::Cfg {
+#include "JsonAdapter.h"
+
+
+namespace Aetherion::FlightDynamics {
+
+    struct Json;
 
     // ============================================================================
     // Errors
@@ -45,11 +58,21 @@ namespace Aetherion::Cfg {
         double w{ 1 }, x{ 0 }, y{ 0 }, z{ 0 }; // (w,x,y,z)
     };
 
-   
-    // Expanded initial conditions used by the dynamics
+    // NOTE: lat/lon/alt + r/p/y are "input conveniences" (e.g., from JSON).
+   // Dynamics should primarily use pW and qWB; conversion can be done after parsing.
+
     struct InitialConditions {
         double t0{ 0.0 };
 
+        // --- Geo/Euler (JSON input convenience) ---
+        double lat_deg{ 0.0 };
+        double lon_deg{ 0.0 };
+        double alt_m{ 0.0 };
+        double roll_deg{ 0.0 };
+        double pitch_deg{ 0.0 };
+        double yaw_deg{ 0.0 };
+
+        // --- Expanded initial conditions used by the dynamics ---
         Vec3     pW{ 0,0,0 };        // ECI position
         QuatWxyz qWB{ 1,0,0,0 };     // body->ECI quaternion
 
@@ -58,19 +81,7 @@ namespace Aetherion::Cfg {
         double m{ 1.0 };
     };
 
-    // ============================================================================
-    // JSON adapter interface (implement elsewhere)
-    // ============================================================================
-    struct Json; // opaque handle
 
-    Json parse_json_file(const std::filesystem::path& path);
-
-    bool        json_has(const Json& j, std::string_view key);
-    Json        json_at(const Json& j, std::string_view key);
-    double      json_get_number(const Json& j);
-    bool        json_get_bool(const Json& j);
-    std::string json_get_string(const Json& j);
-    std::vector<Json> json_get_array(const Json& j);
 
     template <class T, class Fn>
     T json_get_or(const Json& parent, std::string_view key, T default_value, Fn getter) {
@@ -84,12 +95,10 @@ namespace Aetherion::Cfg {
         return Vec3{ json_get_number(arr[0]), json_get_number(arr[1]), json_get_number(arr[2]) };
     }
 
-   
+    InitialConditions load_initial_conditions(const std::filesystem::path& path);
 
   
-
-   
-
+    // TODO: move this to .cpp file
     // ============================================================================
     // Loaders
     // ============================================================================
@@ -110,48 +119,5 @@ namespace Aetherion::Cfg {
     // }
     //
     // You pass theta_g_fn from your existing Aetherion gravity/frames module.
-    inline LaunchSiteInit load_launch_site_init(const std::filesystem::path& path) {
-        const Json root = parse_json_file(path);
-
-        LaunchSiteInit ls{};
-        ls.t0 = json_get_or<double>(root, "t0", ls.t0, [](const Json& j) { return json_get_number(j); });
-
-        if (!json_has(root, "launch")) {
-            throw ConfigError("initial_conditions.json must contain object 'launch'.");
-        }
-        const Json launch = json_at(root, "launch");
-
-        ls.lat_deg = json_get_or<double>(launch, "lat_deg", 0.0, [](const Json& j) { return json_get_number(j); });
-        ls.lon_deg = json_get_or<double>(launch, "lon_deg", 0.0, [](const Json& j) { return json_get_number(j); });
-        ls.alt_m = json_get_or<double>(launch, "alt_m", 0.0, [](const Json& j) { return json_get_number(j); });
-        ls.roll_deg = json_get_or<double>(launch, "roll_deg", 0.0, [](const Json& j) { return json_get_number(j); });
-
-        // Validate rough ranges
-        if (!(ls.lat_deg >= -90.0 && ls.lat_deg <= 90.0)) throw ConfigError("lat_deg must be in [-90,90].");
-        if (!(ls.lon_deg >= -180.0 && ls.lon_deg <= 180.0)) throw ConfigError("lon_deg must be in [-180,180].");
-        if (!is_finite(ls.alt_m)) throw ConfigError("alt_m must be finite.");
-        if (!is_finite(ls.roll_deg)) throw ConfigError("roll_deg must be finite.");
-
-        return ls;
-    }
-
-    // Expanded IC loader (uses launch site init + your sidereal-angle function)
-    inline InitialConditions load_initial_conditions(const std::filesystem::path& path,
-        SiderealAngleFn theta_g_fn,
-        const Wgs84& wgs = Wgs84{})
-    {
-        const Json root = parse_json_file(path);
-
-        const LaunchSiteInit ls = load_launch_site_init(path);
-        InitialConditions ic = expand_launch_site_init(ls, wgs, theta_g_fn);
-
-        // Allow overrides for twist + mass in the same file
-        ic.omegaB = json_get_or<Vec3>(root, "omegaB", ic.omegaB, [](const Json& j) { return parse_vec3(j); });
-        ic.vB = json_get_or<Vec3>(root, "vB", ic.vB, [](const Json& j) { return parse_vec3(j); });
-        ic.m = json_get_or<double>(root, "m", ic.m, [](const Json& j) { return json_get_number(j); });
-
-        if (!(ic.m > 0.0)) throw ConfigError("Initial mass m must be > 0.");
-        return ic;
-    }
-
-} // namespace Aetherion::Cfg
+    
+} // namespace Aetherion::FlightDynamics
