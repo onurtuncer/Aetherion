@@ -1,19 +1,20 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
 // SPDX - License - Identifier: MIT
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/FlightDynamics/JsonConfig.h"
-#include "Aetherion/FlightDynamics/JsonConfigNlohmannAdapter.h" // defines Json + functions
+#include <filesystem>
 
-namespace Aetherion::FlightDynamics {
+#include "Aetherion/FlightDynamics/Serialization/JsonConfig.h"
+#include "Aetherion/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.h" // defines Json + functions
+
+namespace Aetherion::FlightDynamics::Serialization {
 
 
-
-    InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path) {
+    FlightDynamics::InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path) {
 
         const Json root = parse_json_file(path);
         InitialPoseWGS84_NED ls{};
@@ -36,6 +37,4 @@ namespace Aetherion::FlightDynamics {
         return ls;
     }
 
-
-
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::FlightDynamics::Serialization

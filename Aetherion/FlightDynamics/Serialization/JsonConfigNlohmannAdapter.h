@@ -10,13 +10,7 @@
 //   - Vendor nlohmann/json.hpp (recommended) or use package manager.
 //   - Include this header in exactly ONE translation unit OR make it a .cpp.
 //
-// Option A (header-only, simplest):
-//   #define AETHERION_JSONCFG_NLOHMANN_HEADER_ONLY
-//   #include "JsonConfig_NlohmannAdapter.h"
 //
-// Option B (recommended, compile once):
-//   Create JsonConfig_NlohmannAdapter.cpp that includes this header
-//   (WITHOUT defining AETHERION_JSONCFG_NLOHMANN_HEADER_ONLY) and compile it.
 //
 // This implements:
 //   Json parse_json_file(...)
@@ -33,15 +27,13 @@
 
 #include <memory>
 
-
-#include "Aetherion/FlightDynamics/JsonAdapter.h"
-
-#include "Aetherion/FlightDynamics/JsonConfig.h" // for Aetherion::Cfg::Json declaration + ConfigError
+#include "Aetherion/FlightDynamics/Serialization/JsonAdapter.h"
+#include "Aetherion/FlightDynamics/Serialization/JsonConfig.h" // for Aetherion::Cfg::Json declaration + ConfigError
 
 // ---- nlohmann json ----
 #include <vendor/nlohmann/json.hpp> //TODO fix this later: should not specify vendor directory explicitly
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::FlightDynamics::Serialization {
 
     // ============================================================================
     // Json opaque handle implementation
@@ -183,4 +175,4 @@ namespace Aetherion::FlightDynamics {
         return out;
     }
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::FlightDynamics::Serialization

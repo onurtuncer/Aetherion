@@ -13,7 +13,7 @@
 #include <string_view>
 #include <vector>
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::FlightDynamics::Serialization {
 
 	struct Json; 
 
@@ -26,4 +26,4 @@ namespace Aetherion::FlightDynamics {
 	std::string json_get_string(const Json& j);
 	std::vector<Json> json_get_array(const Json& j);
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::FlightDynamics::Serialization

@@ -24,10 +24,10 @@
 #include <utility>
 #include <vector>
 
-#include "Aetherion/FlightDynamics/JsonAdapter.h"
+#include "Aetherion/FlightDynamics/Serialization/JsonAdapter.h"
 #include "Aetherion/FlightDynamics/InitialPoseWGS84_NED.h"
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::FlightDynamics::Serialization {
 
     struct Json;
 
@@ -46,8 +46,7 @@ namespace Aetherion::FlightDynamics {
         if (!json_has(parent, key)) return default_value;
         return getter(json_at(parent, key));
     }
-
+  
+    FlightDynamics::InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path); //TODO remove this!
     
-    InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path); //TODO remove this!
-    
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::FlightDynamics::Serialization

@@ -35,8 +35,6 @@ add_subdirectory(vendor/fmu4cpp/export EXCLUDE_FROM_ALL)
 
 #add_subdirectory(${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export)
 
-
-
 include(Dependencies)
 
 add_subdirectory(src/FMU)
@@ -49,8 +47,8 @@ target_sources(Aetherion PRIVATE
   #  src/Coordinate/ECEFToGeodetic.cpp
    src/Coordinate/InertialToLocal.cpp
    src/ODE/RKMK/Lie/SE3.cpp
-   src/FlightDynamics/Jsonconfig.cpp 
-   src/FlightDynamics/JsonConfigNlohmannAdapter.cpp
+   src/FlightDynamics/Serialization/Jsonconfig.cpp 
+   src/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.cpp
    src/FlightDynamics/Serialization/InertialParametersJson.cpp
 )
 

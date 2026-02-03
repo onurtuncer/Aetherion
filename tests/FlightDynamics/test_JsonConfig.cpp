@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD,
+// Copyright(c) 2025-2026, Onur Tuncer, PhD,
 // Istanbul Technical University
 //
 // SPDX-License-Identifier: MIT
@@ -14,7 +14,7 @@
 #include <type_traits>
 
 // Adjust include paths to your project layout
-#include "Aetherion/FlightDynamics/JsonConfig.h"
+#include "Aetherion/FlightDynamics/Serialization/JsonConfig.h"
 
 #include <vendor/nlohmann/json.hpp>
 
@@ -73,50 +73,29 @@ namespace Aetherion::FlightDynamics::Tests {
         // Example JSON shape. Adjust keys/structure to match your actual schema.
         // If your JSON nests initial conditions, update accordingly.
         const nlohmann::json j = {
-         //   {"t0", 1.25},
             {"lat_deg", 41.015137},
             {"lon_deg", 28.979530},
             {"alt_m",  35.0},
             {"azimuth_deg",  10.0},
             {"zenith_deg", -2.0},
             {"roll_deg",  170.0}
-
-            // include these only if your schema supports them
-         //   {"omegaB", {0.1, 0.2, 0.3}},
-           // {"vB",     {1.0, 2.0, 3.0}},
-            //{"m",      12.5}
         };
 
         IC ic{};
-        // --- Variant A: if you have from_json/to_json overloads for InitialConditions
-        // Uncomment if applicable:
-        // ic = j.get<IC>();
-
-        // --- Variant B: if you have an adapter function/class
-        // Replace with your real API, e.g.:
-        // Aetherion::FlightDynamics::JsonConfigNlohmannAdapter adapter;
-        // adapter.read_initial_conditions(j, ic);
-
-        // --- TEMP fallback: minimal direct extraction (use ONLY if you don't have an API yet)
-        // Remove once you wire in your real parser.
-       // ic.t0 = j.at("t0").get<double>();
+     
         ic.lat_deg = j.at("lat_deg").get<double>();
         ic.lon_deg = j.at("lon_deg").get<double>();
         ic.alt_m = j.at("alt_m").get<double>();
         ic.azimuth_deg = j.at("azimuth_deg").get<double>();
         ic.zenith_deg = j.at("zenith_deg").get<double>();
         ic.roll_deg = j.at("roll_deg").get<double>();
-    //   ic.m = j.at("m").get<double>();
-        // End TEMP fallback
 
-    //    REQUIRE(ic.t0 == Approx(1.25));
         REQUIRE(ic.lat_deg == Approx(41.015137));
         REQUIRE(ic.lon_deg == Approx(28.979530));
         REQUIRE(ic.alt_m == Approx(35.0));
         REQUIRE(ic.azimuth_deg == Approx(10.0));
         REQUIRE(ic.zenith_deg == Approx(-2.0));
-        REQUIRE(ic.roll_deg == Approx(170.0));
-    
+        REQUIRE(ic.roll_deg == Approx(170.0));   
     }
 
 } // namespace Aetherion::FlightDynamics::Tests
