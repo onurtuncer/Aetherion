@@ -116,7 +116,7 @@ namespace Aetherion::FlightDynamics::Tests {
         REQUIRE(ic.azimuth_deg == Approx(10.0));
         REQUIRE(ic.zenith_deg == Approx(-2.0));
         REQUIRE(ic.roll_deg == Approx(170.0));
-       // REQUIRE(ic.m == Approx(12.5));
+    
     }
 
 } // namespace Aetherion::FlightDynamics::Tests

@@ -11,18 +11,7 @@
 
 namespace Aetherion::FlightDynamics {
 
- /*   Vec3 parse_vec3(const Json& parent, std::string_view key)
-    {
-        const Json a = json_at(parent, key);          // OK: Json is complete in this TU
-        const std::size_t n = json_array_size(a);
-        if (n != 3) throw ConfigError("Expected array size 3 for '" + std::string(key) + "'");
 
-        return Vec3{
-            json_get_number(json_array_at(a, 0)),
-            json_get_number(json_array_at(a, 1)),
-            json_get_number(json_array_at(a, 2))
-        };
-    } */
 
     InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path) {
 
@@ -47,21 +36,6 @@ namespace Aetherion::FlightDynamics {
         return ls;
     }
 
-   /* static InitialConditions load_initial_conditions(const std::filesystem::path& path,
-        SiderealAngleFn theta_g_fn,
-        const Wgs84& wgs)
-    {
-        const Json root = parse_json_file(path);
 
-        const LaunchSiteInit ls = load_launch_site_init(path);
-        InitialConditions ic = expand_launch_site_init(ls, wgs, theta_g_fn);
-
-        ic.omegaB = json_get_or<Vec3>(root, "omegaB", ic.omegaB, [](const Json& j) { return parse_vec3(j); });
-        ic.vB = json_get_or<Vec3>(root, "vB", ic.vB, [](const Json& j) { return parse_vec3(j); });
-        ic.m = json_get_or<double>(root, "m", ic.m, [](const Json& j) { return json_get_number(j); });
-
-        if (!(ic.m > 0.0)) throw ConfigError("Initial mass m must be > 0.");
-        return ic;
-    } */
 
 } // namespace Aetherion::FlightDynamics

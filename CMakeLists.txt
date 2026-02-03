@@ -51,6 +51,7 @@ target_sources(Aetherion PRIVATE
    src/ODE/RKMK/Lie/SE3.cpp
    src/FlightDynamics/Jsonconfig.cpp 
    src/FlightDynamics/JsonConfigNlohmannAdapter.cpp
+   src/FlightDynamics/Serialization/InertialParametersJson.cpp
 )
 
 target_include_directories(Aetherion
