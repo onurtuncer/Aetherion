@@ -10,11 +10,12 @@
 
 #include "Aetherion/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.h"
 
-// #include <nlohmann/json.hpp>
+namespace Aetherion::FlightDynamics {
+    struct InertialParameters;
+}
 
 namespace Aetherion::FlightDynamics::Serialization {
 
-    struct FlightDynamics::InertialParameters;
 
     void from_json(const nlohmann::json& j, FlightDynamics::InertialParameters& ip);
     void to_json(nlohmann::json& j, const FlightDynamics::InertialParameters& ip);

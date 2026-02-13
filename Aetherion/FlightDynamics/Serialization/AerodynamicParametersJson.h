@@ -10,16 +10,14 @@
 
 #include "Aetherion/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.h"
 
-namespace Aetherion::FlightDynamics{
-
-    struct InitialPoseWGS84_NED;
-} // namespace Aetherion::FlightDynamics
+namespace Aetherion::FlightDynamics {
+    struct AerodynamicParameters;
+}
 
 namespace Aetherion::FlightDynamics::Serialization {
 
-    struct FlightDynamics::InitialPoseWGS84_NED;
 
-    void from_json(const nlohmann::json& j, FlightDynamics::InitialPoseWGS84_NED& pose);
-    void to_json(nlohmann::json& j, const FlightDynamics::InitialPoseWGS84_NED& pose);
+    void from_json(const nlohmann::json& j, FlightDynamics::AerodynamicParameters& ip);
+    void to_json(nlohmann::json& j, const FlightDynamics::AerodynamicParameters& ip);
 
 } // namespace Aetherion::FlightDynamics::Serialization
