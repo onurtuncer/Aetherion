@@ -50,6 +50,7 @@ target_sources(Aetherion PRIVATE
    src/FlightDynamics/Serialization/Jsonconfig.cpp 
    src/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.cpp
    src/FlightDynamics/Serialization/InertialParametersJson.cpp
+   src/FlightDynamics/Serialization/InitialPoseWGS84_NEDJson.cpp
 )
 
 target_include_directories(Aetherion
@@ -58,7 +59,6 @@ target_include_directories(Aetherion
         ${CMAKE_SOURCE_DIR}/vendor/eigen
     #    $<INSTALL_INTERFACE:include>
 )
-
 
 target_compile_features(Aetherion PUBLIC cxx_std_23)
 

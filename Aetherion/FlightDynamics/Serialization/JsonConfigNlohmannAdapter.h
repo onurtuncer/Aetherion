@@ -6,16 +6,11 @@
 // JsonConfig_NlohmannAdapter.h
 // Implements the Json adapter declared in JsonConfig.h using nlohmann::json.
 //
-// Usage:
-//   - Vendor nlohmann/json.hpp (recommended) or use package manager.
-//   - Include this header in exactly ONE translation unit OR make it a .cpp.
-//
 //
 //
 // This implements:
 //   Json parse_json_file(...)
 //   json_has, json_at, json_get_number, json_get_bool, json_get_string, json_get_array
-//
 
 #pragma once
 
