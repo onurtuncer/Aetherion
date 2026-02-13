@@ -12,7 +12,7 @@
 
 namespace Aetherion::FlightDynamics::Serialization {
 
-    inline void from_json(const nlohmann::json& j, FlightDynamics::InertialParameters& ip)
+    void from_json(const nlohmann::json& j, FlightDynamics::InertialParameters& ip)
     {
         ip.mass_kg = j.at("mass_kg").get<double>();
 
@@ -30,7 +30,7 @@ namespace Aetherion::FlightDynamics::Serialization {
         ip.zbar_m = r.at("z").get<double>();
     }
 
-    inline void to_json(nlohmann::json& j, const FlightDynamics::InertialParameters& ip)
+    void to_json(nlohmann::json& j, const FlightDynamics::InertialParameters& ip)
     {
         j = {
             {"mass_kg", ip.mass_kg},

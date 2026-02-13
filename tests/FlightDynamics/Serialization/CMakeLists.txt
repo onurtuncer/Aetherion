@@ -8,7 +8,8 @@
 
 add_executable(test_json
                   #  test_JsonConfig.cpp 
-                    test_InitialPoseWGS84_NEDJson.cpp)
+                    test_InitialPoseWGS84_NEDJson.cpp
+                    test_InertialParametersJson.cpp)
 
 target_link_libraries(test_json
     PRIVATE
