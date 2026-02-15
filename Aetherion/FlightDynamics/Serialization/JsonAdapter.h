@@ -24,6 +24,6 @@ namespace Aetherion::FlightDynamics::Serialization {
 	double      json_get_number(const Json& j);
 	bool        json_get_bool(const Json& j);
 	std::string json_get_string(const Json& j);
-	std::vector<Json> json_get_array(const Json& j);
+	std::vector<Json> json_get_array(const Json& j); 
 
 } // namespace Aetherion::FlightDynamics::Serialization
