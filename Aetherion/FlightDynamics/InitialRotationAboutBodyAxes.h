@@ -10,10 +10,10 @@
 
 namespace Aetherion::FlightDynamics {
 
-	struct InitialVelocityNED
+	struct InitialRotationAboutBodyAxes
 	{
-		double north_mps{ 0.0 };
-		double east_mps{ 0.0 };
-		double down_mps{ 0.0 };
+		double roll_rad_s{ 0.0 };
+		double pitch_rad_s{ 0.0 };
+		double yaw_rad_s{ 0.0 };
 	};
 } // namespace Aetherion::FlightDynamics
