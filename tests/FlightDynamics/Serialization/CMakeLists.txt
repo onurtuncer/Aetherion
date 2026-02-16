@@ -11,7 +11,8 @@ add_executable(test_json
                     test_InitialPoseWGS84_NEDJson.cpp
                     test_InertialParametersJson.cpp 
                     test_SimulationParametersJson.cpp
-                    test_AerodynamicParametersJson.cpp)
+                    test_AerodynamicParametersJson.cpp 
+                    test_FlightSimulationConfigJson.cpp)
 
 target_link_libraries(test_json
     PRIVATE
