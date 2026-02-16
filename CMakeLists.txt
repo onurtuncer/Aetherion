@@ -52,6 +52,7 @@ target_sources(Aetherion PRIVATE
    src/FlightDynamics/Serialization/InitialPoseWGS84_NEDJson.cpp
    src/FlightDynamics/Serialization/AerodynamicParametersJson.cpp
    src/FlightDynamics/Serialization/SimulationParametersJson.cpp
+   src/FlightDynamics/Serialization/FlightSimulationConfigJson.cpp
 )
 
 target_include_directories(Aetherion
