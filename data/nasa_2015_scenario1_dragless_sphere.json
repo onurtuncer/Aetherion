@@ -1,0 +1,54 @@
+{
+  "simulation": {
+    "startTime": 0.0,
+    "duration": 30.0
+  },
+
+  "initialPose": {
+    "lat_deg": 0.0,
+    "lon_deg": 0.0,
+    "alt_m": 9144.0,
+
+    "azimuth_deg": 0.0,
+    "zenith_deg": 0.0,
+    "roll_deg": 0.0
+  },
+
+  "initialVelocityNED": {
+    "vn_mps": 0.0,
+    "ve_mps": 0.0,
+    "vd_mps": 0.0
+  },
+
+  "initialRotationAboutBodyAxes": {
+    "p_deg_s": -0.004178073,
+    "q_deg_s": 0.0,
+    "r_deg_s": 0.0
+  },
+
+  "inertialParameters": { //all these need correction
+    "mass_kg": 1.0,
+
+    "Ixx": 1.0,
+    "Iyy": 1.0,
+    "Izz": 1.0,
+    "Ixy": 0.0,
+    "Iyz": 0.0,
+    "Ixz": 0.0,
+
+    "xbar_m": 0.0,
+    "ybar_m": 0.0,
+    "zbar_m": 0.0
+  },
+
+  "aerodynamicParameters": {
+    "S": 1.0, // this needs correction
+
+    "CL": 0.0,
+    "CD": 0.0,
+    "CY": 0.0,
+    "Cl": 0.0,
+    "Cm": 0.0,
+    "Cn": 0.0
+  }
+}
