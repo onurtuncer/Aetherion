@@ -12,6 +12,8 @@
 #include "InitialPoseWGS84_NED.h"
 #include "InertialParameters.h"
 #include "AerodynamicParameters.h"
+#include "InitialVelocityNED.h"
+#include "InitialRotationAboutBodyAxes.h"
 
 namespace Aetherion::FlightDynamics {
 
@@ -19,6 +21,8 @@ namespace Aetherion::FlightDynamics {
     {
         SimulationParameters simulation;
         InitialPoseWGS84_NED initialPose;
+        InitialVelocityNED initialVelocityNED;
+        InitialRotationAboutBodyAxes initialRotationAboutBodyAxes;
         InertialParameters inertialParameters;
         AerodynamicParameters aerodynamicParameters;
     };

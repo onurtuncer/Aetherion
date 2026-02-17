@@ -33,6 +33,18 @@ TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json
     in.initialPose.zenith_deg = 5.5;
     in.initialPose.roll_deg = -2.0;
 
+    // --- InitialVelocityNED ---
+
+    in.initialVelocityNED.north_mps = 0.0;
+    in.initialVelocityNED.east_mps = 0.0;
+    in.initialVelocityNED.down_mps = 0.0;
+
+    // --- InitialRotationAboutBodyAxes ---
+
+    in.initialRotationAboutBodyAxes.roll_rad_s = 0.0;
+    in.initialRotationAboutBodyAxes.pitch_rad_s = 0.0;
+    in.initialRotationAboutBodyAxes.yaw_rad_s = 0.0;
+
     // --- InertialParameters ---
     in.inertialParameters.mass_kg = 12.5;
 
@@ -64,6 +76,8 @@ TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json
     // Top-level key sanity
     REQUIRE(j.contains("simulation"));
     REQUIRE(j.contains("initialPose"));
+    REQUIRE(j.contains("initialVelocityNED"));
+    REQUIRE(j.contains("initialRotationAboutBodyAxes"));
     REQUIRE(j.contains("inertialParameters"));
     REQUIRE(j.contains("aerodynamicParameters"));
 
@@ -81,6 +95,14 @@ TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json
     REQUIRE(out.initialPose.azimuth_deg == Catch::Approx(in.initialPose.azimuth_deg));
     REQUIRE(out.initialPose.zenith_deg == Catch::Approx(in.initialPose.zenith_deg));
     REQUIRE(out.initialPose.roll_deg == Catch::Approx(in.initialPose.roll_deg));
+
+    REQUIRE(out.initialVelocityNED.north_mps == Catch::Approx(in.initialVelocityNED.north_mps));
+    REQUIRE(out.initialVelocityNED.east_mps == Catch::Approx(in.initialVelocityNED.east_mps));
+    REQUIRE(out.initialVelocityNED.down_mps == Catch::Approx(in.initialVelocityNED.down_mps));
+
+    REQUIRE(out.initialRotationAboutBodyAxes.roll_rad_s == Catch::Approx(in.initialRotationAboutBodyAxes.roll_rad_s));
+    REQUIRE(out.initialRotationAboutBodyAxes.pitch_rad_s == Catch::Approx(in.initialRotationAboutBodyAxes.pitch_rad_s));
+    REQUIRE(out.initialRotationAboutBodyAxes.yaw_rad_s == Catch::Approx(in.initialRotationAboutBodyAxes.yaw_rad_s));
 
     REQUIRE(out.inertialParameters.mass_kg == Catch::Approx(in.inertialParameters.mass_kg));
 
