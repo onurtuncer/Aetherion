@@ -3,8 +3,12 @@ out/*
 
 .vs/*
 
-__pycache__/*
+# Python related files
+.venv/
+__pycache__/
+*.pyc
 
+# Latex related files
 *.log
 *.aux
 *.pdf 
@@ -33,19 +37,13 @@ __pycache__/*
 *.dylib
 *.dll
 
-# Fortran module files
-*.mod
-*.smod
-
 # Compiled Static libraries
 *.lai
 *.la
 
-
 # Executables
 *.exe
 *.out
-*.app
 
 # debug information files
 *.dwo
