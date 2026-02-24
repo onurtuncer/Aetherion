@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # Project: Aetherion
-# Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
@@ -24,5 +24,6 @@ add_subdirectory("Coordinate")
 add_subdirectory("ODE")
 add_subdirectory("Aerodynamics")
 add_subdirectory("FlightDynamics/Serialization")
+add_subdirectory("Spatial")
 
 
