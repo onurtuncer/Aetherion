@@ -23,3 +23,12 @@ target_link_libraries(test_json
 #target_include_directories(test_json PRIVATE "${CMAKE_SOURCE_DIR}")
                                                
 add_test(NAME json_tests COMMAND test_json)
+
+add_executable(test_load_file test_LoadFlightSimulationFromFile.cpp)
+
+target_link_libraries(test_load_file 
+    PRIVATE
+        Aetherion
+        Catch2::Catch2)
+
+add_test(NAME config_tests COMMAND test_load_file)
