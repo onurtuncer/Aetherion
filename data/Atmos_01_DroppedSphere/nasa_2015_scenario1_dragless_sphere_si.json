@@ -1,0 +1,45 @@
+{
+  "simulation": {
+    "startTime": 0.0,
+    "duration": 30.0
+  },
+  "initialPose": {
+    "lat_degree": 0.0,
+    "lon_degree": 0.0,
+    "azimuth_degree": 0.0,
+    "zenith_degree": 0.0,
+    "roll_degree": 0.0,
+    "alt_m": 9144.0
+  },
+  "initialVelocityNED": {
+    "vn_mps": 0.0,
+    "ve_mps": 0.0,
+    "vd_mps": 0.0
+  },
+  "initialRotationAboutBodyAxes": {
+    "p_rad_s": -7.292113023867705e-05,
+    "q_rad_s": 0.0,
+    "r_rad_s": 0.0
+  },
+  "inertialParameters": {
+    "mass_kg": 14.5939029372,
+    "Ixx": 1.355817948330809,
+    "Iyy": 1.355817948330809,
+    "Izz": 1.355817948330809,
+    "Ixy": 0.0,
+    "Iyz": 0.0,
+    "Ixz": 0.0,
+    "xbar_m": 0.0,
+    "ybar_m": 0.0,
+    "zbar_m": 0.0
+  },
+  "aerodynamicParameters": {
+    "CL": 0.0,
+    "CD": 0.0,
+    "CY": 0.0,
+    "Cl": 0.0,
+    "Cm": 0.0,
+    "Cn": 0.0,
+    "S": 0.09290304
+  }
+}

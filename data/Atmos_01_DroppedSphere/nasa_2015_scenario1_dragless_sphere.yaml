@@ -1,0 +1,46 @@
+simulation:
+  startTime: 0.0 # seconds
+  duration: 30.0 # seconds
+
+initialPose:
+  lat_degree: 0.0    # degree
+  lon_degree: 0.0    # degree
+  alt_ft: 30000  # feet
+
+  azimuth_degree: 0.0 # degree
+  zenith_degree: 0.0  # degree
+  roll_degree: 0.0    # degree
+
+initialVelocityNED:
+  vn_fps: 0.0 # feet/s
+  ve_fps: 0.0 # feet/s
+  vd_fps: 0.0 # feet/s
+
+initialRotationAboutBodyAxes:
+  p_deg_s: -0.004178073 # degree/s
+  q_deg_s: 0.0          # degree/s    
+  r_deg_s: 0.0          # degree/s
+
+inertialParameters:
+  mass_slug: 1.0 # slug
+
+  Ixx_slug_ft2: 1.0 # slug*ft^2
+  Iyy_slug_ft2: 1.0 # slug*ft^2
+  Izz_slug_ft2: 1.0 # slug*ft^2
+  Ixy_slug_ft2: 0.0 # slug*ft^2
+  Iyz_slug_ft2: 0.0 # slug*ft^2
+  Ixz_slug_ft2: 0.0 # slug*ft^2
+
+  xbar_ft: 0.0 # feet
+  ybar_ft: 0.0 # feet
+  zbar_ft: 0.0 # feet
+
+aerodynamicParameters:
+  S_ft2: 1.0   # feet^2
+
+  CL: 0.0
+  CD: 0.0
+  CY: 0.0
+  Cl: 0.0
+  Cm: 0.0
+  Cn: 0.0

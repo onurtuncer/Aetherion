@@ -1,5 +1,6 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 // SPDX-License-Identifier: MIT
 // ------------------------------------------------------------------------------
 //
@@ -9,7 +10,7 @@
 //   - Geometric manifold state (SE3 × R6 × R)
 //   - Single RKMK step
 //
-// You provide:
+// Provide:
 //   - StateLayout: IDX_* and N
 //   - GeomState type (SE3, nu, m)
 //   - pack/unpack between flat and geom
