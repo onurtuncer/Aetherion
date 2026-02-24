@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # Project: Aetherion
-# Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
@@ -55,6 +55,7 @@ target_sources(Aetherion PRIVATE
    src/FlightDynamics/Serialization/FlightSimulationConfigJson.cpp
    src/FlightDynamics/Serialization/InitialVelocityNEDJson.cpp 
    src/FlightDynamics/Serialization/InitialRotationAboutBodyAxesJson.cpp
+   src/FlightDynamics/Serialization/LoadFlightSimulationConfigFromFile.cpp 
 )
 
 target_include_directories(Aetherion
