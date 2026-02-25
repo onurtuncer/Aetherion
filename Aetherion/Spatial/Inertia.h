@@ -8,21 +8,23 @@
 
 #pragma once
 
+#include "Aetherion/FlightDynamics/InertialParameters.h"
+
 namespace Aetherion::Spatial {
 
 	template<typename Scalar>
-	struct SpatialInertia {
+	struct Inertia {
 		Scalar mass; // [kg]
-		Eigen::Matrix<Scalar, 3, 3> I_com; // Ağırlık merkezine göre [kg·m²]
-		Eigen::Matrix<Scalar, 3, 1> c; // CG ofset [m]
-		Eigen::Matrix<Scalar, 6, 6> M; // Uzaysal eylemsizlik [kg·m²]
-		SpatialInertia(Scalar m,
+		Eigen::Matrix<Scalar, 3, 3> I_com; // W.r.t c.o.g [kg·m²]
+		Eigen::Matrix<Scalar, 3, 1> c; // CG offset [m]
+		Eigen::Matrix<Scalar, 6, 6> M; // Spatial inertia [kg·m²]
+		Inertia(Scalar m,
 			const Eigen::Matrix<Scalar, 3, 3>& I_C,
 			const Eigen::Matrix<Scalar, 3, 1>& c_C)
 			: mass(m), I_com(I_C), c(c_C) {
 			build6x6();
 		}
-		// 6x6 eylemsizlik matrisini oluşturur (paralel eksen teoremi)
+		// Constructs 6x6 spatial inertia matrix (parallel axis theorem)
 		void build6x6() {
 			Eigen::Matrix<Scalar, 3, 3> C = skew(c);
 			Eigen::Matrix<Scalar, 3, 3> I_part = I_com + mass * C * C.transpose();
@@ -40,12 +42,12 @@ namespace Aetherion::Spatial {
 			M.bottomLeftCorner<3,3>(), M.bottomRightCorner<3,3>() };
 		}
 
-		// Uzaysal dönüşüm X (6x6) uygulama: M = X * M * X^T
+		// Apply spatial transform X (6x6): M = X * M * X^T
 		void applyTransform(const Eigen::Matrix<Scalar, 6, 6>& X) {
 			M = X * M * X.transpose();
 		}
 
-		// Uzaysal momentum: p = M * v
+		// Spatial momentum: p = M * v
 		Eigen::Matrix<Scalar, 6, 1> operator*(const Eigen::Matrix<Scalar, 6, 1>& v)
 			const {
 			return M * v;

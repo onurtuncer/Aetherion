@@ -6,6 +6,7 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
+#pragma once
 
 namespace Aetherion::Spatial {
 
