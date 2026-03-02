@@ -6,6 +6,7 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
+/*
 #pragma once
 
 namespace Aetherion::Spatial {
@@ -16,3 +17,4 @@ namespace Aetherion::Spatial {
 	};
 
 } // namespace Aetherion::Spatial
+*/
