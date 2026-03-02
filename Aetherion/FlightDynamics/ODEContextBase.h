@@ -24,7 +24,7 @@ namespace Aetherion::FlightDynamics {
 		
 		double mdot; // [kg/s] Mass flow rate (due to fuel burn) //TODO this needs to be a function pointer
 
-		ODEContextBase(InertialParameters ip) {
+		ODEContextBase(InertialParameters inetialParams, AeroDynamicParameters aeroParams,) {
 
 		}
 

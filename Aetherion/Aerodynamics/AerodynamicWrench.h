@@ -18,6 +18,125 @@
 // - Force:  F_body_N  [N]
 // - Moment: M_body_Nm [N*m] = [L, M, N] = [roll, pitch, yaw]
 //
+// Storage convention (Spatial::Wrench):
+//   f = [M_x, M_y, M_z, F_x, F_y, F_z]^T
+//
+// Notes:
+// - No `if` branches; suitable for CppAD::AD<...>.
+// - Depends on AerodynamicForces.h and AerodynamicMoments.h.
+// ------------------------------------------------------------------------------
+
+#pragma once
+
+#include "Aetherion/Aerodynamics/AerodynamicForces.h"
+#include "Aetherion/Aerodynamics/AerodynamicMoments.h"
+#include "Aetherion/Spatial/Wrench.h" 
+
+
+// TODO [Onur] do not use inheritance make this almost like a free function
+// similiar to the way 
+
+namespace Aetherion::Aerodynamics {
+
+    
+    // AeroWrench *is-a* Spatial::Wrench with extra semantic accessors.
+    template <class Scalar>
+    struct AeroWrench : public Spatial::Wrench<Scalar>
+    {
+        using Base = Spatial::Wrench<Scalar>;
+        using Base::f; // bring Base::f into scope
+
+        AeroWrench() = default;
+
+        explicit AeroWrench(const Base& w) { f = w.f; }
+
+        // Named accessors (moment first, then force) — matches Base storage.
+        Vec3<Scalar> Moment_body_Nm() const { return f.template segment<3>(0); }
+        Vec3<Scalar> Force_body_N()   const { return f.template segment<3>(3); }
+
+        void SetMoment_body_Nm(const Vec3<Scalar>& M) { f.template segment<3>(0) = M; }
+        void SetForce_body_N(const Vec3<Scalar>& F) { f.template segment<3>(3) = F; }
+
+        // Convenience: explicit conversion back to base type.
+        Base AsSpatialWrench() const { Base w{}; w.f = f; return w; }
+    };
+
+    // (1) Wrench from force coeffs (CL,CD,CY) and moment coeffs (Cl,Cm,Cn).
+    template <class Scalar>
+    inline AeroWrench<Scalar> AerodynamicWrenchBodyFromCoefficients(
+        const Vec3<Scalar>& v_body_m_s,
+        const Scalar& density_kg_m3,
+        const Scalar& S_ref_m2,
+        const Scalar& b_ref_m,
+        const Scalar& cbar_ref_m,
+        const Scalar& CL,
+        const Scalar& CD,
+        const Scalar& CY,
+        const Scalar& Cl,
+        const Scalar& Cm,
+        const Scalar& Cn,
+        const Scalar& eps = Scalar(1e-12))
+    {
+        AeroWrench<Scalar> w{};
+
+        const Vec3<Scalar> F = AerodynamicForceBodyFromCLCDCY(
+            v_body_m_s, density_kg_m3, S_ref_m2, CL, CD, CY, eps);
+
+        const Vec3<Scalar> M = AerodynamicMomentBodyFromClCmCn(
+            v_body_m_s, density_kg_m3, S_ref_m2, b_ref_m, cbar_ref_m, Cl, Cm, Cn, eps);
+
+        w.SetForce_body_N(F);
+        w.SetMoment_body_Nm(M);
+        return w;
+    }
+
+    // (2) Wrench from force coeffs (CL,CD,CY) and CP offset moment (r x F).
+    template <class Scalar>
+    inline AeroWrench<Scalar> AerodynamicWrenchBodyFromCoefficientsAndCP(
+        const Vec3<Scalar>& v_body_m_s,
+        const Scalar& density_kg_m3,
+        const Scalar& S_ref_m2,
+        const Scalar& CL,
+        const Scalar& CD,
+        const Scalar& CY,
+        const Vec3<Scalar>& r_cp_minus_cg_m,
+        const Scalar& eps = Scalar(1e-12))
+    {
+        AeroWrench<Scalar> w{};
+
+        const Vec3<Scalar> F = AerodynamicForceBodyFromCLCDCY(
+            v_body_m_s, density_kg_m3, S_ref_m2, CL, CD, CY, eps);
+
+        const Vec3<Scalar> M = AerodynamicMomentBodyFromCPForce(r_cp_minus_cg_m, F);
+
+        w.SetForce_body_N(F);
+        w.SetMoment_body_Nm(M);
+        return w;
+    }
+
+} // namespace Aetherion::Aerodynamics
+
+
+// ------------------------------------------------------------------------------
+// Project: Aetherion
+// Copyright(c) 2025, Onur Tuncer, PhD,
+// Istanbul Technical University
+//
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
+// ------------------------------------------------------------------------------
+//
+// AerodynamicWrench.h
+//
+// CppAD-friendly aerodynamic wrench utilities.
+//
+// A "wrench" is a force + moment pair, both expressed in body axes.
+//
+// Conventions (body frame):
+// - Body axes: +x forward, +y right, +z down.
+// - Force:  F_body_N  [N]
+// - Moment: M_body_Nm [N*m] = [L, M, N] = [roll, pitch, yaw]
+//
 // This header provides convenience functions to build an aerodynamic wrench from:
 //
 // (1) Coefficient-based force (CL, CD, CY) + coefficient-based moment (Cl, Cm, Cn)
@@ -28,7 +147,7 @@
 // - Depends on AerodynamicForce.h and AerodynamicMoment.h.
 //
 
-#pragma once
+/*#pragma once
 
 #include "Aetherion/Aerodynamics/AerodynamicForces.h"
 #include "Aetherion/Aerodynamics/AerodynamicMoments.h"
@@ -91,4 +210,6 @@ namespace Aetherion::Aerodynamics {
         return w;
     }
 
-} // namespace Aetherion::Aerodynamics
+} // namespace Aetherion::Aerodynamics */
+
+

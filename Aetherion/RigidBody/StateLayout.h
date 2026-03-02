@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace Aetherion::FlightDynamics
+namespace Aetherion::RigidBody
 {
 	struct StateLayout {
 		static constexpr int IDX_P = 0;      // 0..2
@@ -19,5 +19,4 @@ namespace Aetherion::FlightDynamics
 		static constexpr int N = 14;
 	};
 
-
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody

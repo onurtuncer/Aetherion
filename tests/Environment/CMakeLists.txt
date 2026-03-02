@@ -22,7 +22,8 @@ target_include_directories(test_atmosphere PRIVATE "${CMAKE_SOURCE_DIR}/vendor/C
 add_test(NAME atmosphere_tests COMMAND test_atmosphere)
 
 add_executable(test_gravity
-                    test_gravity.cpp )
+                    test_gravity.cpp
+                    test_GravitationalWrench.cpp)
 
 target_link_libraries(test_gravity
     PRIVATE
