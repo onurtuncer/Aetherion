@@ -29,10 +29,26 @@
 
 #include "Aetherion/Spatial/Twist.h"
 #include "Aetherion/Spatial/Wrench.h"
-#include "Aetherion/Spatial/Skew.h"
+//#include "Aetherion/Spatial/Skew.h"
+#include "Aetherion/Spatial/Adjoint.h"
 
 namespace Aetherion::Spatial {
 
+    template<typename Scalar>
+    inline Eigen::Matrix<Scalar, 6, 6> CrossForceMatrix(const Twist<Scalar>& v)
+    {
+        return ad_star(v);
+    }
+
+    template<typename Scalar>
+    inline Wrench<Scalar> CrossForce(const Twist<Scalar>& v, const Wrench<Scalar>& f)
+    {
+        Wrench<Scalar> out{};
+        out.f = CrossForceMatrix(v) * f.f;
+        return out;
+    }
+
+    /*
     template<typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 6> CrossForceMatrix(const Twist<Scalar>& v)
     {
@@ -70,5 +86,6 @@ namespace Aetherion::Spatial {
     {
         return -CrossMotionMatrix(v).transpose();
     }
+    */
 
 } // namespace Aetherion::Spatial

@@ -25,10 +25,26 @@
 #include <Eigen/Dense>
 
 #include "Aetherion/Spatial/Twist.h"
-#include "Aetherion/Spatial/Skew.h" // expects skew(vec3) -> 3x3
+//#include "Aetherion/Spatial/Skew.h" 
+#include "Aetherion/Spatial/Adjoint.h"
 
 namespace Aetherion::Spatial {
 
+    template<typename Scalar>
+    inline Eigen::Matrix<Scalar, 6, 6> CrossMotionMatrix(const Twist<Scalar>& v)
+    {
+        return ad(v);
+    }
+
+    template<typename Scalar>
+    inline Twist<Scalar> CrossMotion(const Twist<Scalar>& v, const Twist<Scalar>& u)
+    {
+        Twist<Scalar> out{};
+        out.v = CrossMotionMatrix(v) * u.v;
+        return out;
+    }
+
+    /*
     template<typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 6> CrossMotionMatrix(const Twist<Scalar>& v)
     {
@@ -59,5 +75,6 @@ namespace Aetherion::Spatial {
         out.v = CrossMotionMatrix(v) * u.v;
         return out;
     }
+    */
 
 } // namespace Aetherion::Spatial

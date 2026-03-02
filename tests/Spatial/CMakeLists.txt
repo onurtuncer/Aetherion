@@ -11,7 +11,8 @@ add_executable(test_spatial
                     test_Skew.cpp 
                     test_Transform.cpp 
                     test_CrossForce.cpp
-                    test_CrossMotion.cpp)
+                    test_CrossMotion.cpp 
+                    test_Adjoint.cpp)
 
 target_compile_options(test_spatial PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
