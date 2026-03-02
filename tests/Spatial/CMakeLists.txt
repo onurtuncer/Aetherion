@@ -7,11 +7,12 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_spatial
-                    test_Inertia.cpp)
+                    test_Inertia.cpp 
+                    test_Skew.cpp)
 
-target_compile_options(test_scalar PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+target_compile_options(test_spatial PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_link_libraries(test_scalar
+target_link_libraries(test_spatial
     PRIVATE
         Aetherion
         Catch2::Catch2WithMain

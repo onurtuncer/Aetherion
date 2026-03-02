@@ -8,6 +8,8 @@
 
 #pragma once 
 
+#include "StateLayout.h"
+
 #include "Aetherion/FlightDynamics/AerodynamicParameters.h"
 #include "Aetherion/FlightDynamics/InertialParameters.h"
 

@@ -9,15 +9,16 @@
 #pragma once
 
 #include "Aetherion/FlightDynamics/InertialParameters.h"
+#include "Aetherion/Spatial/Skew.h"
 
 namespace Aetherion::Spatial {
 
 	template<typename Scalar>
 	struct Inertia {
 		Scalar mass; // [kg]
-		Eigen::Matrix<Scalar, 3, 3> I_com; // W.r.t c.o.g [kg·m²]
+		Eigen::Matrix<Scalar, 3, 3> I_com; // W.r.t c.o.g [kg.m2]
 		Eigen::Matrix<Scalar, 3, 1> c; // CG offset [m]
-		Eigen::Matrix<Scalar, 6, 6> M; // Spatial inertia [kg·m²]
+		Eigen::Matrix<Scalar, 6, 6> M; // Spatial inertia [kg.m2]
 		Inertia(Scalar m,
 			const Eigen::Matrix<Scalar, 3, 3>& I_C,
 			const Eigen::Matrix<Scalar, 3, 1>& c_C)
@@ -36,7 +37,7 @@ namespace Aetherion::Spatial {
 			M.bottomLeftCorner<3, 3>() = -mass * C;
 			M.bottomRightCorner<3, 3>() = mass * I3;
 		}
-		// Bloğa ayrılmış 3x3 alt matrisleri döndürür
+		// Turns 3x3 block sub-matrices
 		std::array<Eigen::Matrix<Scalar, 3, 3>, 4> toBlock() const {
 			return { M.topLeftCorner<3,3>(), M.topRightCorner<3,3>(),
 			M.bottomLeftCorner<3,3>(), M.bottomRightCorner<3,3>() };

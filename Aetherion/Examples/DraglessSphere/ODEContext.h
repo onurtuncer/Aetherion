@@ -6,17 +6,15 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#pragma once 
+#pragma once
 
-namespace Aetherion::Spatial {
+#include <Aetherion/FlightDynamics/ODEContextBase.h>
 
-	template<class S> Eigen::Matrix<S, 3, 3> skew(const Eigen::Matrix<S, 3, 1>& v) {
-		Eigen::Matrix<S, 3, 3> M;
-		M << 0, -v(2), v(1),
-			v(2), 0, -v(0),
-			-v(1), v(0), 0;
-		return M;
-	}
+namespace Aetherion::Examples::DraglessSphere {
 
-} // namespace Aetherion::Spatial
+	struct ODEContext public : FlightDynamics::ODEContextBase {
 
+	};
+
+
+} // namespace Aetherion::Examples::DraglessSphere
