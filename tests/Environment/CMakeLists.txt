@@ -23,7 +23,7 @@ add_test(NAME atmosphere_tests COMMAND test_atmosphere)
 
 add_executable(test_gravity
                     test_gravity.cpp
-                    test_GravitationalWrench.cpp)
+                    "../RigidBody/test_GravitationalWrench.cpp")
 
 target_link_libraries(test_gravity
     PRIVATE

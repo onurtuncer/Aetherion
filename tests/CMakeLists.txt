@@ -25,5 +25,6 @@ add_subdirectory("ODE")
 add_subdirectory("Aerodynamics")
 add_subdirectory("FlightDynamics/Serialization")
 add_subdirectory("Spatial")
+add_subdirectory("RigidBody")
 
 

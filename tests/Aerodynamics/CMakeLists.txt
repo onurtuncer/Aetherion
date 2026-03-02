@@ -11,7 +11,7 @@ add_executable(test_aero
                     test_AerodynamicAngles.cpp
                     test_AerodynamicForces.cpp 
                     test_AerodynamicMoments.cpp 
-                    test_AerodynamicWrench.cpp)
+                    "../RigidBody/test_AerodynamicWrench.cpp")
 
 target_link_libraries(test_aero
     PRIVATE

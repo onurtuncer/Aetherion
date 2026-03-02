@@ -18,7 +18,7 @@
 #include <Eigen/Dense>
 #include <cmath>
 
-#include "Aetherion/Environment/GravitationalWrench.h" // adjust include path
+#include "Aetherion/RigidBody/GravitationalWrench.h" // adjust include path
 
 namespace {
 
@@ -47,7 +47,7 @@ TEST_CASE("GravitationalWrenchAtCG: central gravity at equator gives expected fo
     // Position at equator on +x axis in frame W
     const Aetherion::Environment::Vec3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) };
 
-    const auto w = Aetherion::Environment::GravitationalWrenchAtCG(r_W, m, Scalar(kMu_WGS84));
+    const auto w = Aetherion::RigidBody::GravitationalWrenchAtCG(r_W, m, Scalar(kMu_WGS84));
 
     const Vec3E<Scalar> M = w.f.template segment<3>(0);
     const Vec3E<Scalar> F = w.f.template segment<3>(3);
@@ -71,8 +71,8 @@ TEST_CASE("GravitationalWrenchJ2AtCG: J2 changes equatorial gravity (more negati
     const Scalar m = 1.0; // [kg]
     const Aetherion::Environment::Vec3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) };
 
-    const auto w_c = Aetherion::Environment::GravitationalWrenchAtCG(r_W, m, Scalar(kMu_WGS84));
-    const auto w_j2 = Aetherion::Environment::GravitationalWrenchJ2AtCG(
+    const auto w_c = Aetherion::RigidBody::GravitationalWrenchAtCG(r_W, m, Scalar(kMu_WGS84));
+    const auto w_j2 = Aetherion::RigidBody::GravitationalWrenchJ2AtCG(
         r_W, m, Scalar(kMu_WGS84), Scalar(kRe_WGS84), Scalar(kJ2_WGS84));
 
     const Vec3E<Scalar> F_c = w_c.f.template segment<3>(3);
@@ -102,7 +102,7 @@ TEST_CASE("GravitationalWrenchWithOffset: moment equals r x F", "[gravity][wrenc
     // r = [0,0,1], F ≈ [-m*g,0,0] => M = r x F = [0, +m*g, 0]
     const Vec3E<Scalar> r_app_minus_cg_W(Scalar(0), Scalar(0), Scalar(1));
 
-    const auto w = Aetherion::Environment::GravitationalWrenchWithOffset(
+    const auto w = Aetherion::RigidBody::GravitationalWrenchWithOffset(
         r_W, m, r_app_minus_cg_W, Scalar(kMu_WGS84));
 
     const Vec3E<Scalar> M = w.f.template segment<3>(0);

@@ -9,7 +9,7 @@
 //
 // test_GravitationalWrench.cpp
 //
-// Catch2 tests for Aetherion/Environment/GravitationalWrench.h
+// Catch2 tests for Aetherion/RigidBody/GravitationalWrench.h
 // ------------------------------------------------------------------------------
 
 #include <catch2/catch_test_macros.hpp>
@@ -19,7 +19,7 @@
 #include <array>
 #include <cmath>
 
-#include "Aetherion/Environment/GravitationalWrench.h" // adjust if needed
+#include "Aetherion/RigidBody/GravitationalWrench.h" 
 
 namespace {
 
@@ -51,7 +51,7 @@ TEST_CASE("GravitationalWrenchAtCG: central gravity at equator gives expected fo
     // Position at equator on +x axis (frame W)
     const Arr3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) };
 
-    const auto w = Aetherion::Environment::GravitationalWrenchAtCG(
+    const auto w = Aetherion::RigidBody::GravitationalWrenchAtCG(
         r_W, m, Scalar(kMu_WGS84));
 
     const Vec3E<Scalar> M = w.f.template segment<3>(0);
@@ -74,10 +74,10 @@ TEST_CASE("GravitationalWrenchJ2AtCG: J2 perturbs equatorial gravity and keeps z
     const Scalar m = Scalar(1.0); // [kg]
     const Arr3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) }; // equator => z=0
 
-    const auto w_c = Aetherion::Environment::GravitationalWrenchAtCG(
+    const auto w_c = Aetherion::RigidBody::GravitationalWrenchAtCG(
         r_W, m, Scalar(kMu_WGS84));
 
-    const auto w_j2 = Aetherion::Environment::GravitationalWrenchJ2AtCG(
+    const auto w_j2 = Aetherion::RigidBody::GravitationalWrenchJ2AtCG(
         r_W, m, Scalar(kMu_WGS84), Scalar(kRe_WGS84), Scalar(kJ2_WGS84));
 
     const Vec3E<Scalar> F_c = w_c.f.template segment<3>(3);
@@ -108,7 +108,7 @@ TEST_CASE("GravitationalWrenchWithOffset: moment equals r x F", "[gravity][wrenc
     // r = [0,0,1], F ≈ [-m*g,0,0] => M = r x F = [0, +m*g, 0]
     const Vec3E<Scalar> r_app_minus_cg_W_m(Scalar(0), Scalar(0), Scalar(1));
 
-    const auto w = Aetherion::Environment::GravitationalWrenchWithOffset(
+    const auto w = Aetherion::RigidBody::GravitationalWrenchWithOffset(
         r_W, m, r_app_minus_cg_W_m, Scalar(kMu_WGS84));
 
     const Vec3E<Scalar> M = w.f.template segment<3>(0);

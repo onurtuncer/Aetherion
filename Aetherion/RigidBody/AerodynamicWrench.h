@@ -36,7 +36,7 @@
 // TODO [Onur] do not use inheritance make this almost like a free function
 // similiar to the way 
 
-namespace Aetherion::Aerodynamics {
+namespace Aetherion::RigidBody {
 
     
     // AeroWrench *is-a* Spatial::Wrench with extra semantic accessors.
@@ -114,7 +114,7 @@ namespace Aetherion::Aerodynamics {
         return w;
     }
 
-} // namespace Aetherion::Aerodynamics
+} // namespace Aetherion::RigidBody
 
 
 // ------------------------------------------------------------------------------

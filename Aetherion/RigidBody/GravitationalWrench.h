@@ -28,12 +28,9 @@
 #include <Eigen/Dense>
 
 #include "Aetherion/Spatial/Wrench.h"
-
-// IMPORTANT: include the header that defines CentralGravity() and J2().
-// Adjust this include to your actual filename/path.
 #include "Aetherion/Environment/Gravity.h"
 
-namespace Aetherion::Environment {
+namespace Aetherion::RigidBody {
 
     template <class Scalar>
     using Vec3E = Eigen::Matrix<Scalar, 3, 1>;
@@ -56,14 +53,14 @@ namespace Aetherion::Environment {
     // =========================================================================
     template <class Scalar>
     inline Spatial::Wrench<Scalar> GravitationalWrenchAtCG(
-        const Vec3<Scalar>& r_W,
+        const Aetherion::Environment::Vec3<Scalar>& r_W,
         const Scalar& mass_kg,
         const Scalar& mu = Scalar(3.986004418e14)) // [m^3/s^2]
     {
         Spatial::Wrench<Scalar> w{};
 
         // g_W (std::array<Scalar,3>)
-        const Vec3<Scalar> g_arr = CentralGravity(r_W, mu);
+        const Aetherion::Environment::Vec3<Scalar> g_arr = Environment::CentralGravity(r_W, mu);
 
         Vec3E<Scalar> g_W;
         g_W << g_arr[0], g_arr[1], g_arr[2];
@@ -80,7 +77,7 @@ namespace Aetherion::Environment {
     // =========================================================================
     template <class Scalar>
     inline Spatial::Wrench<Scalar> GravitationalWrenchJ2AtCG(
-        const Vec3<Scalar>& r_W,
+        const Aetherion::Environment::Vec3<Scalar>& r_W,
         const Scalar& mass_kg,
         const Scalar& mu = Scalar(3.986004418e14),      // [m^3/s^2]
         const Scalar& Re = Scalar(6378137.0),           // [m]
@@ -89,7 +86,7 @@ namespace Aetherion::Environment {
         Spatial::Wrench<Scalar> w{};
 
         // Fully qualify to avoid any accidental name hiding
-        const Vec3<Scalar> g_arr = Aetherion::Environment::J2(r_W, mu, Re, J2_coeff);
+        const Aetherion::Environment::Vec3<Scalar> g_arr = Aetherion::Environment::J2(r_W, mu, Re, J2_coeff);
 
         Vec3E<Scalar> g_W;
         g_W << g_arr[0], g_arr[1], g_arr[2];
@@ -107,14 +104,14 @@ namespace Aetherion::Environment {
     // =========================================================================
     template <class Scalar>
     inline Spatial::Wrench<Scalar> GravitationalWrenchWithOffset(
-        const Vec3<Scalar>& r_W,
+        const Aetherion::Environment::Vec3<Scalar>& r_W,
         const Scalar& mass_kg,
         const Vec3E<Scalar>& r_app_minus_cg_W_m,
         const Scalar& mu = Scalar(3.986004418e14)) // [m^3/s^2]
     {
         Spatial::Wrench<Scalar> w{};
 
-        const Vec3<Scalar> g_arr = CentralGravity(r_W, mu);
+        const Environment::Vec3<Scalar> g_arr = Environment::CentralGravity(r_W, mu);
 
         Vec3E<Scalar> g_W;
         g_W << g_arr[0], g_arr[1], g_arr[2];
@@ -127,4 +124,4 @@ namespace Aetherion::Environment {
         return w;
     }
 
-} // namespace Aetherion::Environment
+} // namespace Aetherion::RigidBody
