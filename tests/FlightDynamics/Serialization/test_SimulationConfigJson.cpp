@@ -11,15 +11,15 @@
 #include <catch2/catch_approx.hpp>
 #include <vendor/nlohmann/json.hpp>
 
-#include "Aetherion/FlightDynamics/FlightSimulationConfig.h"
-#include "Aetherion/FlightDynamics/Serialization/FlightSimulationConfigJson.h"
+#include "Aetherion/FlightDynamics/SimulationConfig.h"
+#include "Aetherion/FlightDynamics/Serialization/SimulationConfigJson.h"
 
 namespace Ser = ::Aetherion::FlightDynamics::Serialization;
-using ::Aetherion::FlightDynamics::FlightSimulationConfig;
+using ::Aetherion::FlightDynamics::SimulationConfig;
 
 TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json][flightdynamics][config]")
 {
-    FlightSimulationConfig in{};
+    SimulationConfig in{};
 
     // --- SimulationParameters ---
     in.simulation.startTime = 1.25;
@@ -82,7 +82,7 @@ TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json
     REQUIRE(j.contains("aerodynamicParameters"));
 
     // Deserialize
-    FlightSimulationConfig out{};
+    SimulationConfig out{};
     Ser::from_json(j, out);
 
     // --- Compare all fields ---

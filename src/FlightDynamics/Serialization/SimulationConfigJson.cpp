@@ -6,8 +6,8 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/FlightDynamics/FlightSimulationConfig.h"
-#include "Aetherion/FlightDynamics/Serialization/FlightSimulationConfigJson.h"
+#include "Aetherion/FlightDynamics/SimulationConfig.h"
+#include "Aetherion/FlightDynamics/Serialization/SimulationConfigJson.h"
 
 #include "Aetherion/FlightDynamics/Serialization/SimulationParametersJson.h"
 #include "Aetherion/FlightDynamics/Serialization/InitialPoseWGS84_NEDJson.h"     
@@ -20,7 +20,7 @@
 
 namespace Aetherion::FlightDynamics::Serialization {
 
-    void from_json(const nlohmann::json& j, FlightSimulationConfig& cfg)
+    void from_json(const nlohmann::json& j, SimulationConfig& cfg)
     {
         // Fully qualify to avoid accidentally picking nlohmann::from_json
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("simulation"), cfg.simulation);
@@ -31,7 +31,7 @@ namespace Aetherion::FlightDynamics::Serialization {
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("aerodynamicParameters"), cfg.aerodynamicParameters);
     }
 
-    void to_json(nlohmann::json& j, const FlightSimulationConfig& cfg)
+    void to_json(nlohmann::json& j, const SimulationConfig& cfg)
     {
         // Build sub-objects using own serializers (no ADL)
         nlohmann::json sim, pose, inert, aero;

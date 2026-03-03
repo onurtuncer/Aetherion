@@ -12,7 +12,8 @@ add_executable(test_json
                     test_InertialParametersJson.cpp 
                     test_SimulationParametersJson.cpp
                     test_AerodynamicParametersJson.cpp 
-                    test_FlightSimulationConfigJson.cpp)
+                    test_SimulationConfigJson.cpp
+                   )
 
 target_link_libraries(test_json
     PRIVATE
@@ -24,7 +25,7 @@ target_link_libraries(test_json
                                                
 add_test(NAME json_tests COMMAND test_json)
 
-add_executable(test_load_file test_LoadFlightSimulationFromFile.cpp)
+add_executable(test_load_file test_LoadSimulationConfigFromFile.cpp)
 
 target_link_libraries(test_load_file 
     PRIVATE

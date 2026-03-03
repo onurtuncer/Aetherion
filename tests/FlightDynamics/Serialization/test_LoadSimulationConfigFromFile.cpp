@@ -14,7 +14,7 @@
 #include <string>
 #include <optional>
 
-#include "Aetherion/FlightDynamics/Serialization/LoadFlightSimulationConfigFromFile.h"
+#include "Aetherion/FlightDynamics/Serialization/LoadSimulationConfigFromFile.h"
 
 namespace {
 
@@ -55,7 +55,7 @@ TEST_CASE("FlightSimulationConfig loads correctly from JSON file", "[config][fil
 
     auto cfg =
         Aetherion::FlightDynamics::Serialization::
-        LoadFlightSimulationConfigFromFile(*g_configFile);
+        LoadSimulationConfigFromFile(*g_configFile);
 
     // Example sanity checks
     REQUIRE(cfg.inertialParameters.mass_kg > 0.0);

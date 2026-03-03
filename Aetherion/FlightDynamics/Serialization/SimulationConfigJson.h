@@ -7,9 +7,16 @@
 // ------------------------------------------------------------------------------
 
 #pragma once
-#include <string>
-#include "Aetherion/FlightDynamics/FlightSimulationConfig.h"
+
+#include "Aetherion/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.h"
+
+namespace Aetherion::FlightDynamics {
+    struct SimulationConfig;
+}
 
 namespace Aetherion::FlightDynamics::Serialization {
-    FlightSimulationConfig LoadFlightSimulationConfigFromFile(const std::string& filename);
-}
+
+    void from_json(const nlohmann::json& j, FlightDynamics::SimulationConfig& fsc);
+    void to_json(nlohmann::json& j, const FlightDynamics::SimulationConfig& fsc);
+
+} // namespace Aetherion::FlightDynamics::Serialization

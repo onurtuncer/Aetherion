@@ -6,10 +6,10 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/FlightDynamics/Serialization/LoadFlightSimulationConfigFromFile.h"
+#include "Aetherion/FlightDynamics/Serialization/LoadSimulationConfigFromFile.h"
 
-#include "Aetherion/FlightDynamics/FlightSimulationConfig.h"
-#include "Aetherion/FlightDynamics/Serialization/FlightSimulationConfigJson.h" // <-- MUST (declares from_json)
+#include "Aetherion/FlightDynamics/SimulationConfig.h"
+#include "Aetherion/FlightDynamics/Serialization/SimulationConfigJson.h" 
 
 #include <fstream>
 #include <stdexcept>
@@ -17,7 +17,7 @@
 
 namespace Aetherion::FlightDynamics::Serialization {
 
-    FlightSimulationConfig LoadFlightSimulationConfigFromFile(const std::string& filename)
+    SimulationConfig LoadSimulationConfigFromFile(const std::string& filename)
     {
         std::ifstream f(filename);
         if (!f.is_open())
@@ -26,7 +26,7 @@ namespace Aetherion::FlightDynamics::Serialization {
         nlohmann::json j;
         f >> j;
 
-        FlightSimulationConfig cfg{};
+        SimulationConfig cfg{};
         ::Aetherion::FlightDynamics::Serialization::from_json(j, cfg); 
         return cfg;
     }

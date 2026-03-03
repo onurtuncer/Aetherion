@@ -17,7 +17,7 @@
 
 namespace Aetherion::FlightDynamics {
 
-    struct FlightSimulationConfig
+    struct SimulationConfig
     {
         SimulationParameters simulation;
         InitialPoseWGS84_NED initialPose;
