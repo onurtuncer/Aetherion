@@ -17,7 +17,7 @@
 namespace Ser = ::Aetherion::FlightDynamics::Serialization;
 using ::Aetherion::FlightDynamics::SimulationConfig;
 
-TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json][flightdynamics][config]")
+TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flightdynamics][config]")
 {
     SimulationConfig in{};
 
@@ -26,12 +26,12 @@ TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json
     in.simulation.duration = 120.0;
 
     // --- InitialPoseWGS84_NED ---
-    in.initialPose.lat_deg = 41.1055;
-    in.initialPose.lon_deg = 29.0217;
-    in.initialPose.alt_m = 123.4;
-    in.initialPose.azimuth_deg = 90.0;
-    in.initialPose.zenith_deg = 5.5;
-    in.initialPose.roll_deg = -2.0;
+    in.pose.lat_deg = 41.1055;
+    in.pose.lon_deg = 29.0217;
+    in.pose.alt_m = 123.4;
+    in.pose.azimuth_deg = 90.0;
+    in.pose.zenith_deg = 5.5;
+    in.pose.roll_deg = -2.0;
 
     // --- InitialVelocityNED ---
 
@@ -75,7 +75,7 @@ TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json
 
     // Top-level key sanity
     REQUIRE(j.contains("simulation"));
-    REQUIRE(j.contains("initialPose"));
+    REQUIRE(j.contains("pose"));
     REQUIRE(j.contains("initialVelocityNED"));
     REQUIRE(j.contains("initialRotationAboutBodyAxes"));
     REQUIRE(j.contains("inertialParameters"));
@@ -89,12 +89,12 @@ TEST_CASE("FlightSimulationConfig: JSON round-trip preserves all fields", "[json
     REQUIRE(out.simulation.startTime == Catch::Approx(in.simulation.startTime));
     REQUIRE(out.simulation.duration == Catch::Approx(in.simulation.duration));
 
-    REQUIRE(out.initialPose.lat_deg == Catch::Approx(in.initialPose.lat_deg));
-    REQUIRE(out.initialPose.lon_deg == Catch::Approx(in.initialPose.lon_deg));
-    REQUIRE(out.initialPose.alt_m == Catch::Approx(in.initialPose.alt_m));
-    REQUIRE(out.initialPose.azimuth_deg == Catch::Approx(in.initialPose.azimuth_deg));
-    REQUIRE(out.initialPose.zenith_deg == Catch::Approx(in.initialPose.zenith_deg));
-    REQUIRE(out.initialPose.roll_deg == Catch::Approx(in.initialPose.roll_deg));
+    REQUIRE(out.pose.lat_deg == Catch::Approx(in.pose.lat_deg));
+    REQUIRE(out.pose.lon_deg == Catch::Approx(in.pose.lon_deg));
+    REQUIRE(out.pose.alt_m == Catch::Approx(in.pose.alt_m));
+    REQUIRE(out.pose.azimuth_deg == Catch::Approx(in.pose.azimuth_deg));
+    REQUIRE(out.pose.zenith_deg == Catch::Approx(in.pose.zenith_deg));
+    REQUIRE(out.pose.roll_deg == Catch::Approx(in.pose.roll_deg));
 
     REQUIRE(out.initialVelocityNED.north_mps == Catch::Approx(in.initialVelocityNED.north_mps));
     REQUIRE(out.initialVelocityNED.east_mps == Catch::Approx(in.initialVelocityNED.east_mps));

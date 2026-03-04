@@ -9,7 +9,7 @@
 #pragma once
 
 #include "SimulationParameters.h"
-#include "InitialPoseWGS84_NED.h"
+#include "PoseWGS84_NED.h"
 #include "InertialParameters.h"
 #include "AerodynamicParameters.h"
 #include "InitialVelocityNED.h"
@@ -20,7 +20,7 @@ namespace Aetherion::FlightDynamics {
     struct SimulationConfig
     {
         SimulationParameters simulation;
-        InitialPoseWGS84_NED initialPose;
+        PoseWGS84_NED pose;
         InitialVelocityNED initialVelocityNED;
         InitialRotationAboutBodyAxes initialRotationAboutBodyAxes;
         InertialParameters inertialParameters;

@@ -11,13 +11,13 @@
 #include <catch2/catch_approx.hpp>
 #include <vendor/nlohmann/json.hpp>
 
-#include "Aetherion/FlightDynamics/InitialPoseWGS84_NED.h"
-#include "Aetherion/FlightDynamics/Serialization/InitialPoseWGS84_NEDJson.h"
+#include "Aetherion/FlightDynamics/PoseWGS84_NED.h"
+#include "Aetherion/FlightDynamics/Serialization/PoseWGS84_NEDJson.h"
 
 using namespace Aetherion::FlightDynamics;
 namespace Ser = Aetherion::FlightDynamics::Serialization;
 
-TEST_CASE("InitialPoseWGS84_NED: from_json parses expected values", "[json][initial_pose]")
+TEST_CASE("PoseWGS84_NED: from_json parses expected values", "[json][initial_pose]")
 {
     const char* text = R"(
     {
@@ -31,7 +31,7 @@ TEST_CASE("InitialPoseWGS84_NED: from_json parses expected values", "[json][init
 
     nlohmann::json j = nlohmann::json::parse(text);
 
-    InitialPoseWGS84_NED pose{};
+    PoseWGS84_NED pose{};
     Ser::from_json(j, pose);
 
     REQUIRE(pose.lat_deg == Catch::Approx(41.1055));
@@ -44,7 +44,7 @@ TEST_CASE("InitialPoseWGS84_NED: from_json parses expected values", "[json][init
 
 TEST_CASE("InitialPoseWGS84_NED: to_json emits expected keys and values", "[json][initial_pose]")
 {
-    InitialPoseWGS84_NED pose{};
+    PoseWGS84_NED pose{};
     pose.lat_deg = 41.1055;
     pose.lon_deg = 29.0217;
     pose.alt_m = 120.0;
@@ -63,9 +63,9 @@ TEST_CASE("InitialPoseWGS84_NED: to_json emits expected keys and values", "[json
     REQUIRE(j.at("roll_deg").get<double>() == Catch::Approx(0.0));
 }
 
-TEST_CASE("InitialPoseWGS84_NED: round-trip JSON preserves values", "[json][initial_pose]")
+TEST_CASE("PoseWGS84_NED: round-trip JSON preserves values", "[json][initial_pose]")
 {
-    InitialPoseWGS84_NED in{};
+    PoseWGS84_NED in{};
     in.lat_deg = 41.1055;
     in.lon_deg = 29.0217;
     in.alt_m = 120.0;
@@ -76,7 +76,7 @@ TEST_CASE("InitialPoseWGS84_NED: round-trip JSON preserves values", "[json][init
     nlohmann::json j;
     Ser::to_json(j, in);
 
-    InitialPoseWGS84_NED out{};
+    PoseWGS84_NED out{};
     Ser::from_json(j, out);
 
     REQUIRE(out.lat_deg == Catch::Approx(in.lat_deg));

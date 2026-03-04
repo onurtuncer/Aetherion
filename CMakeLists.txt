@@ -49,7 +49,7 @@ target_sources(Aetherion PRIVATE
    src/ODE/RKMK/Lie/SE3.cpp
    src/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.cpp
    src/FlightDynamics/Serialization/InertialParametersJson.cpp
-   src/FlightDynamics/Serialization/InitialPoseWGS84_NEDJson.cpp
+   src/FlightDynamics/Serialization/PoseWGS84_NEDJson.cpp
    src/FlightDynamics/Serialization/AerodynamicParametersJson.cpp
    src/FlightDynamics/Serialization/SimulationParametersJson.cpp
    src/FlightDynamics/Serialization/SimulationConfigJson.cpp

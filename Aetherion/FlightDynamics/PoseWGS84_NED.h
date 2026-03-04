@@ -10,8 +10,7 @@
 
 namespace Aetherion::FlightDynamics {
 
-    struct InitialPoseWGS84_NED {
-
+    struct PoseWGS84_NED {
 
          // --- Geodetic WGS84/Local NED (JSON input convenience) ---
         double lat_deg{ 0.0 };

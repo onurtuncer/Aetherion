@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     return session.run();
 }
 
-TEST_CASE("FlightSimulationConfig loads correctly from JSON file", "[config][file]")
+TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][file]")
 {
     REQUIRE(g_configFile.has_value());
 
@@ -61,7 +61,7 @@ TEST_CASE("FlightSimulationConfig loads correctly from JSON file", "[config][fil
     REQUIRE(cfg.inertialParameters.mass_kg > 0.0);
     REQUIRE(cfg.simulation.duration > 0.0);
 
-    REQUIRE(cfg.initialPose.alt_m >= 0.0);
+    REQUIRE(cfg.pose.alt_m >= 0.0);
 
     // Earth rotation sanity 
     REQUIRE(cfg.initialRotationAboutBodyAxes.roll_rad_s ==
