@@ -10,7 +10,7 @@
 
 namespace Aetherion::FlightDynamics {
 
-	struct InitialVelocityNED
+	struct VelocityNED
 	{
 		double north_mps{ 0.0 };
 		double east_mps{ 0.0 };

@@ -7,19 +7,19 @@
 // ------------------------------------------------------------------------------
 
 
-#include "Aetherion/FlightDynamics/InitialVelocityNED.h"
-#include "Aetherion/FlightDynamics/Serialization/InitialVelocityNEDJson.h"
+#include "Aetherion/FlightDynamics/VelocityNED.h"
+#include "Aetherion/FlightDynamics/Serialization/VelocityNEDJson.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 
-    void from_json(const nlohmann::json& j, FlightDynamics::InitialVelocityNED& v)
+    void from_json(const nlohmann::json& j, FlightDynamics::VelocityNED& v)
     {
         v.north_mps = j.at("north_mps").get<double>();
         v.east_mps = j.at("east_mps").get<double>();
         v.down_mps = j.at("down_mps").get<double>();
     }
 
-    void to_json(nlohmann::json& j, const FlightDynamics::InitialVelocityNED& v)
+    void to_json(nlohmann::json& j, const FlightDynamics::VelocityNED& v)
     {
         j = nlohmann::json::object();
         j["north_mps"] = v.north_mps;

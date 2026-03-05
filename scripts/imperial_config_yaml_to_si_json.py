@@ -49,8 +49,8 @@ def convert_imperial_to_si(cfg: dict) -> dict:
     Convert an imperial-ish config to an SI config WITH SI-INDICATED OUTPUT KEYS.
 
     Output schema (as requested):
-      initialPose: lat_degree, lon_degree, azimuth_degree, zenith_degree, roll_degree, alt_m
-      initialVelocityNED: vn_mps, ve_mps, vd_mps
+      pose: lat_degree, lon_degree, azimuth_degree, zenith_degree, roll_degree, alt_m
+      velocityNED: vn_mps, ve_mps, vd_mps
       initialRotationAboutBodyAxes: p_rad_s, q_rad_s, r_rad_s
       inertialParameters: mass_kg, Ixx/Iyy/Izz/Ixy/Iyz/Ixz (SI kg*m^2), xbar_m/ybar_m/zbar_m
       aerodynamicParameters: S (SI m^2)
@@ -62,9 +62,9 @@ def convert_imperial_to_si(cfg: dict) -> dict:
     out = deepcopy(cfg)
 
     # -------------------------
-    # initialPose (rename to *_degree, alt_m)
+    # pose (rename to *_degree, alt_m)
     # -------------------------
-    pose_in = out.get("initialPose", {}) or {}
+    pose_in = out.get("pose", {}) or {}
     pose_out = {}
 
     # latitude/longitude degrees
@@ -110,12 +110,12 @@ def convert_imperial_to_si(cfg: dict) -> dict:
     else:
         pose_out["alt_m"] = 0.0
 
-    out["initialPose"] = pose_out
+    out["pose"] = pose_out
 
     # -------------------------
-    # initialVelocityNED -> *_mps
+    # velocityNED -> *_mps
     # -------------------------
-    v_in = out.get("initialVelocityNED", {}) or {}
+    v_in = out.get("velocityNED", {}) or {}
     v_out = {}
 
     def to_mps(component: str) -> float:
@@ -134,7 +134,7 @@ def convert_imperial_to_si(cfg: dict) -> dict:
     v_out["ve_mps"] = to_mps("ve")
     v_out["vd_mps"] = to_mps("vd")
 
-    out["initialVelocityNED"] = v_out
+    out["velocityNED"] = v_out
 
     # -------------------------
     # initialRotationAboutBodyAxes -> rad/s

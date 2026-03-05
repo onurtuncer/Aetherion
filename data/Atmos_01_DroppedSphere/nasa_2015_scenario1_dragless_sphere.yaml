@@ -2,7 +2,7 @@ simulation:
   startTime: 0.0 # seconds
   duration: 30.0 # seconds
 
-initialPose:
+pose:
   lat_degree: 0.0    # degree
   lon_degree: 0.0    # degree
   alt_ft: 30000  # feet
@@ -11,7 +11,7 @@ initialPose:
   zenith_degree: 0.0  # degree
   roll_degree: 0.0    # degree
 
-initialVelocityNED:
+velocityNED:
   vn_fps: 0.0 # feet/s
   ve_fps: 0.0 # feet/s
   vd_fps: 0.0 # feet/s

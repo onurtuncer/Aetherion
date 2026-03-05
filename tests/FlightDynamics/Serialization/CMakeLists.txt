@@ -13,6 +13,7 @@ add_executable(test_json
                     test_SimulationParametersJson.cpp
                     test_AerodynamicParametersJson.cpp 
                     test_SimulationConfigJson.cpp
+                    test_VelocityNEDJson.cpp
                    )
 
 target_link_libraries(test_json

@@ -13,7 +13,7 @@
 #include "Aetherion/FlightDynamics/Serialization/PoseWGS84_NEDJson.h"     
 #include "Aetherion/FlightDynamics/Serialization/InertialParametersJson.h"
 #include "Aetherion/FlightDynamics/Serialization/AerodynamicParametersJson.h"
-#include "Aetherion/FlightDynamics/Serialization/InitialVelocityNEDJson.h"
+#include "Aetherion/FlightDynamics/Serialization/VelocityNEDJson.h"
 #include "Aetherion/FlightDynamics/Serialization/InitialRotationAboutBodyAxesJson.h"
 
 #include <vendor/nlohmann/json.hpp>
@@ -25,7 +25,7 @@ namespace Aetherion::FlightDynamics::Serialization {
         // Fully qualify to avoid accidentally picking nlohmann::from_json
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("simulation"), cfg.simulation);
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("pose"), cfg.pose);
-        ::Aetherion::FlightDynamics::Serialization::from_json(j.at("initialVelocityNED"), cfg.initialVelocityNED);
+        ::Aetherion::FlightDynamics::Serialization::from_json(j.at("initialVelocityNED"), cfg.velocityNED);
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("initialRotationAboutBodyAxes"), cfg.initialRotationAboutBodyAxes);
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("inertialParameters"), cfg.inertialParameters);
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("aerodynamicParameters"), cfg.aerodynamicParameters);

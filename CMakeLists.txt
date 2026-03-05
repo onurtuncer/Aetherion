@@ -53,7 +53,7 @@ target_sources(Aetherion PRIVATE
    src/FlightDynamics/Serialization/AerodynamicParametersJson.cpp
    src/FlightDynamics/Serialization/SimulationParametersJson.cpp
    src/FlightDynamics/Serialization/SimulationConfigJson.cpp
-   src/FlightDynamics/Serialization/InitialVelocityNEDJson.cpp 
+   src/FlightDynamics/Serialization/VelocityNEDJson.cpp 
    src/FlightDynamics/Serialization/InitialRotationAboutBodyAxesJson.cpp
    src/FlightDynamics/Serialization/LoadSimulationConfigFromFile.cpp 
 )

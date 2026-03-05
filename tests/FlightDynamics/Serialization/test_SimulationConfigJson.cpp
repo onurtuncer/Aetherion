@@ -33,11 +33,11 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
     in.pose.zenith_deg = 5.5;
     in.pose.roll_deg = -2.0;
 
-    // --- InitialVelocityNED ---
+    // --- VelocityNED ---
 
-    in.initialVelocityNED.north_mps = 0.0;
-    in.initialVelocityNED.east_mps = 0.0;
-    in.initialVelocityNED.down_mps = 0.0;
+    in.velocityNED.north_mps = 0.0;
+    in.velocityNED.east_mps = 0.0;
+    in.velocityNED.down_mps = 0.0;
 
     // --- InitialRotationAboutBodyAxes ---
 
@@ -76,7 +76,7 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
     // Top-level key sanity
     REQUIRE(j.contains("simulation"));
     REQUIRE(j.contains("pose"));
-    REQUIRE(j.contains("initialVelocityNED"));
+    REQUIRE(j.contains("velocityNED"));
     REQUIRE(j.contains("initialRotationAboutBodyAxes"));
     REQUIRE(j.contains("inertialParameters"));
     REQUIRE(j.contains("aerodynamicParameters"));
@@ -96,9 +96,9 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
     REQUIRE(out.pose.zenith_deg == Catch::Approx(in.pose.zenith_deg));
     REQUIRE(out.pose.roll_deg == Catch::Approx(in.pose.roll_deg));
 
-    REQUIRE(out.initialVelocityNED.north_mps == Catch::Approx(in.initialVelocityNED.north_mps));
-    REQUIRE(out.initialVelocityNED.east_mps == Catch::Approx(in.initialVelocityNED.east_mps));
-    REQUIRE(out.initialVelocityNED.down_mps == Catch::Approx(in.initialVelocityNED.down_mps));
+    REQUIRE(out.velocityNED.north_mps == Catch::Approx(in.velocityNED.north_mps));
+    REQUIRE(out.velocityNED.east_mps == Catch::Approx(in.velocityNED.east_mps));
+    REQUIRE(out.velocityNED.down_mps == Catch::Approx(in.velocityNED.down_mps));
 
     REQUIRE(out.initialRotationAboutBodyAxes.roll_rad_s == Catch::Approx(in.initialRotationAboutBodyAxes.roll_rad_s));
     REQUIRE(out.initialRotationAboutBodyAxes.pitch_rad_s == Catch::Approx(in.initialRotationAboutBodyAxes.pitch_rad_s));
