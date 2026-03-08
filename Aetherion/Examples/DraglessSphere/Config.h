@@ -17,7 +17,7 @@
 namespace Aetherion::Examples {
 
     // NASA check case 1: dragless sphere, central gravity
-    using DraglessSphereVF = FlightDynamics::RigidBodyVectorField
+    using DraglessSphereVF = FlightDynamics::RigidBodyVectorField<
         FlightDynamics::CentralGravityPolicy,  // gravity
         FlightDynamics::ZeroAeroPolicy,        // aero:     none
         FlightDynamics::ZeroPropulsionPolicy,  // thrust:   none
@@ -26,8 +26,7 @@ namespace Aetherion::Examples {
 
     using DraglessSphereStepper = FlightDynamics::RigidBody6DoFStepper<DraglessSphereVF>;
 
-    // NASA check case 2: same orbit with J2
-    using J2SphereVF = FlightDynamics::RigidBodyVectorField
+    using J2SphereVF = FlightDynamics::RigidBodyVectorField<
         FlightDynamics::J2GravityPolicy,
         FlightDynamics::ZeroAeroPolicy,
         FlightDynamics::ZeroPropulsionPolicy,
