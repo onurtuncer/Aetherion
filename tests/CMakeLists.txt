@@ -23,7 +23,7 @@ add_subdirectory("Environment")
 add_subdirectory("Coordinate")
 add_subdirectory("ODE")
 add_subdirectory("Aerodynamics")
-add_subdirectory("FlightDynamics/Serialization")
+add_subdirectory("FlightDynamics")
 add_subdirectory("Spatial")
 add_subdirectory("RigidBody")
 
