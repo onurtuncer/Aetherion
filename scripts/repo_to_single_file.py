@@ -37,7 +37,7 @@ BASE_IGNORE_DIRS = {
     ".cache", ".pytest_cache",
     "node_modules",
     "data", 
-    "scripts"
+    "scripts", "assets"
 }
 
 VENDOR_NAMES = {
@@ -81,7 +81,6 @@ PREFERRED_ROOTS_ORDER = [
     "src",
     "tests",
     "test",
-    "apps",
     "examples",
     "tools",
     "cmake",

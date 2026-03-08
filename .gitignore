@@ -3,6 +3,9 @@ out/*
 
 .vs/*
 
+# Repo dump file (via Python script under /scripts)
+output.txt
+
 # Python related files
 .venv/
 __pycache__/
