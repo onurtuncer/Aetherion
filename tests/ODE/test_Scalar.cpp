@@ -264,7 +264,7 @@ TEST_CASE("Scalar.so3_ABC used in SO(3) exp: matches Eigen::AngleAxis", "[scalar
     check(Eigen::Vector3d(1.2, -0.7, 0.4), 1e-12);
 }
 
-TEST_CASE("Scalar.so3_ABC used in SE(3): J(w) matches integral ∫0^1 exp(s[w]_x) ds (Gauss-Legendre)",
+TEST_CASE("Scalar.so3_ABC used in SE(3): J(w) matches integral int_0^1 exp(s[w]_x) ds (Gauss-Legendre)",
     "[scalar][so3][se3][jacobian][quadrature]") {
     static constexpr std::array<double, 8> xi = {
         -0.9602898564975363,
