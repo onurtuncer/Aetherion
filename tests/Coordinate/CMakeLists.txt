@@ -27,5 +27,8 @@ target_link_libraries(test_coordinate
 )
 
 target_include_directories(test_coordinate PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+include(Catch)
+catch_discover_tests(test_coordinate)
                                                
-add_test(NAME coordinate_tests COMMAND test_coordinate)
+#add_test(NAME coordinate_tests COMMAND test_coordinate)

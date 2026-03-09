@@ -11,6 +11,9 @@ cmake_minimum_required(VERSION 3.26)
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" projectVersion)
 project(Aetherion VERSION ${projectVersion} LANGUAGES CXX)
 
+include(CTest)
+enable_testing()
+
 option(FMU4CPP_BUILD_TESTS "Build internal tests" ON)
 option(FMU4CPP_MSVC_STATIC_CRT "Use static MSVC runtime library" ON)
 
@@ -72,9 +75,8 @@ if (ENABLE_STATIC_ANALYSIS)
 endif()
 
 if(AETHERION_BUILD_TESTS)
-   
 	add_subdirectory(tests)
 endif()
 
-endif() # Build docs
+endif() # Build docscd o    
 

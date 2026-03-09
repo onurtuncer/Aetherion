@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # Project: Aetherion
-# Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
@@ -18,8 +18,11 @@ target_link_libraries(test_atmosphere
 )
 
 target_include_directories(test_atmosphere PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+include(Catch)
+catch_discover_tests(test_atmosphere)
                                                
-add_test(NAME atmosphere_tests COMMAND test_atmosphere)
+#add_test(NAME atmosphere_tests COMMAND test_atmosphere)
 
 add_executable(test_gravity
                     test_gravity.cpp
@@ -34,5 +37,8 @@ target_link_libraries(test_gravity
 )
 
 target_include_directories(test_gravity PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+include(Catch)
+catch_discover_tests(test_gravity)
                                                
-add_test(NAME gravity_tests COMMAND test_gravity)
+#add_test(NAME gravity_tests COMMAND test_gravity)

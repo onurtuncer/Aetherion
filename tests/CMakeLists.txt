@@ -16,8 +16,6 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(catch2)
 
 
-include(CTest)
-
 add_subdirectory("ThirdPartyIntegration")
 add_subdirectory("Environment")
 add_subdirectory("Coordinate")

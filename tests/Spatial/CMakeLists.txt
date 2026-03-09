@@ -26,4 +26,7 @@ target_link_libraries(test_spatial
         Eigen3::Eigen
 )
 
-add_test(NAME spatial_algebra_tests COMMAND test_spatial)
+include(Catch)
+catch_discover_tests(test_spatial)
+
+#add_test(NAME spatial_algebra_tests COMMAND test_spatial)

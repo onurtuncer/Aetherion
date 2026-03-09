@@ -1,6 +1,6 @@
 # ------------------------------------------------------------------------------
 # Project: Aetherion
-# Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
@@ -18,7 +18,10 @@ target_link_libraries(test_eigen
 
 target_include_directories(test_eigen PRIVATE "${CMAKE_SOURCE_DIR}/vendor/eigen")
 
-add_test(NAME eigen_basic_test COMMAND test_eigen)
+include(Catch)
+catch_discover_tests(test_eigen)
+
+#add_test(NAME eigen_basic_test COMMAND test_eigen)
 
 add_executable(test_nlohmann
     test_nlohmann_json.cpp
@@ -32,7 +35,10 @@ target_link_libraries(test_nlohmann
 
 # target_include_directories(test_eigen PRIVATE "${CMAKE_SOURCE_DIR}/vendor/nlohmann")
 
-add_test(NAME nlohmann_json_test COMMAND test_nlohmann)
+include(Catch)
+catch_discover_tests(test_nlohmann)
+
+#add_test(NAME nlohmann_json_test COMMAND test_nlohmann)
 
 add_executable(test_cppad
     test_cppad.cpp
@@ -47,4 +53,7 @@ target_link_libraries(test_cppad
 
 target_include_directories(test_cppad PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
-add_test(NAME cppad_basic_test COMMAND test_cppad)
+include(Catch)
+catch_discover_tests(test_cppad)
+
+#add_test(NAME cppad_basic_test COMMAND test_cppad)

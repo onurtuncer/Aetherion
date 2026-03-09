@@ -41,7 +41,7 @@ namespace {
 
 } // namespace
 
-TEST_CASE("GravitationalWrenchAtCG: central gravity at equator gives expected force and zero moment", "[gravity][wrench]")
+TEST_CASE("GravitationalWrenchAtCG: central gravity at equator gives expected force and zero moment", "[gravity][wrench][equator]")
 {
     using Scalar = double;
 
@@ -89,13 +89,13 @@ TEST_CASE("GravitationalWrenchJ2AtCG: J2 perturbs equatorial gravity and keeps z
     CHECK_THAT(F_c(2), WithinAbs(Scalar(0), 1e-12));
     CHECK_THAT(F_j2(2), WithinAbs(Scalar(0), 1e-12));
 
-    // J2 should change x-component from the central value at equator (your J2 model does)
+    // J2 should change x-component from the central value at equator (cd J2 model does)
     REQUIRE(F_c(0) < Scalar(0));
     REQUIRE(F_j2(0) < Scalar(0));
     CHECK(std::abs(F_j2(0)) > std::abs(F_c(0)));
 }
 
-TEST_CASE("GravitationalWrenchWithOffset: moment equals r x F", "[gravity][wrench][moment]")
+TEST_CASE("GravitationalWrenchWithOffset: moment equals r x F", "[gravity][wrench][offset]")
 {
     using Scalar = double;
 

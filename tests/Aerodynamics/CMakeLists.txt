@@ -22,5 +22,8 @@ target_link_libraries(test_aero
 )
 
 target_include_directories(test_aero PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+include(Catch)
+catch_discover_tests(test_aero)
                                                
-add_test(NAME aero_tests COMMAND test_aero)
+#add_test(NAME aero_tests COMMAND test_aero)

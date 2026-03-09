@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
     return session.run();
 }
 
-TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][file]")
+TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][external_file]")
 {
     REQUIRE(g_configFile.has_value());
 
