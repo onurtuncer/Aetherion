@@ -88,7 +88,7 @@ namespace Aetherion::Coordinate {
         const Scalar azimuth = ArcTangent2(fE, fN);
 
         // Zenith: angle from local Up (0,0,-1) toward the direction vector.
-        // Up · f = cos(zenith) => (0,0,-1)·(fN,fE,fD) = -fD
+        // Up Â· f = cos(zenith) => (0,0,-1)Â·(fN,fE,fD) = -fD
         const Scalar cos_zenith = -fD;  // assuming perfectly normalized rotation
         const Scalar zenith = ArcCos(cos_zenith);
 

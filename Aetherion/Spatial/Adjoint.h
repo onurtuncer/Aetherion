@@ -1,4 +1,4 @@
-﻿// ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Project: Aetherion
 // Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
@@ -35,7 +35,7 @@
 namespace Aetherion::Spatial {
 
     // -------------------------------------------------------------------------
-    // ad(xi)  — motion adjoint (6x6)
+    // ad(xi)  -- motion adjoint (6x6)
     //
     // xi = [ω; v]
     //
@@ -70,7 +70,7 @@ namespace Aetherion::Spatial {
     }
 
     // -------------------------------------------------------------------------
-    // ad*(xi) — force adjoint (dual)
+    // ad*(xi) -- force adjoint (dual)
     //
     // ad*(xi) = - ad(xi)^T
     //

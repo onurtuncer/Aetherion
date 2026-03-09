@@ -24,7 +24,7 @@
 //
 // (2) From an aerodynamic force applied at a center-of-pressure (CP) offset:
 //
-//     M = r_cp_cg × F
+//     M = r_cp_cg Ã— F
 //
 // where r_cp_cg is CP position relative to CG in body axes [m],
 // and F is the aerodynamic force in body axes [N].
@@ -102,7 +102,7 @@ namespace Aetherion::Aerodynamics {
 
     // --- Moments from CP offset and body force -----------------------------------
     //
-    // M = r_cp_cg × F_body
+    // M = r_cp_cg Ã— F_body
     template <class Scalar>
     inline Vec3<Scalar> AerodynamicMomentBodyFromCPForce(
         const Vec3<Scalar>& r_cp_minus_cg_m,

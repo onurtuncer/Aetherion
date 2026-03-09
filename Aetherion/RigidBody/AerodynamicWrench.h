@@ -50,7 +50,7 @@ namespace Aetherion::RigidBody {
 
         explicit AeroWrench(const Base& w) { f = w.f; }
 
-        // Named accessors (moment first, then force) — matches Base storage.
+        // Named accessors (moment first, then force) -- matches Base storage.
         Vec3<Scalar> Moment_body_Nm() const { return f.template segment<3>(0); }
         Vec3<Scalar> Force_body_N()   const { return f.template segment<3>(3); }
 
@@ -140,7 +140,7 @@ namespace Aetherion::RigidBody {
 // This header provides convenience functions to build an aerodynamic wrench from:
 //
 // (1) Coefficient-based force (CL, CD, CY) + coefficient-based moment (Cl, Cm, Cn)
-// (2) Coefficient-based force (CL, CD, CY) + CP offset moment (r_cp_minus_cg × F)
+// (2) Coefficient-based force (CL, CD, CY) + CP offset moment (r_cp_minus_cg Ã— F)
 //
 // Notes:
 // - No `if` branches; suitable for CppAD::AD<...>.

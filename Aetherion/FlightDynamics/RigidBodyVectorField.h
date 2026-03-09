@@ -1,4 +1,4 @@
-﻿// ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Project: Aetherion
 // SPDX-License-Identifier: MIT
 // ------------------------------------------------------------------------------
@@ -18,7 +18,7 @@
 //
 // where W_ext = sum of gravity + aero + propulsion wrenches in body frame.
 //
-// Templated on Scalar S — works for both double and CppAD::AD<double>.
+// Templated on Scalar S -- works for both double and CppAD::AD<double>.
 // M_inv stored as double; cast<S>() inside operator().
 //
 #pragma once
@@ -42,7 +42,7 @@ namespace Aetherion::FlightDynamics {
     //
     //   g_dot = g * hat(nu_B)
     //
-    // In RKMK form the velocity field xi(t, g, x) is simply nu_B — the first
+    // In RKMK form the velocity field xi(t, g, x) is simply nu_B -- the first
     // 6 components of the Euclidean state x.
     //
     // This struct satisfies the XiField concept expected by
@@ -143,7 +143,7 @@ namespace Aetherion::FlightDynamics {
             const Eigen::Matrix<S, 6, 1> nu_B = x.template head<6>();
             const S                    m = x(6);
 
-            // 1. External wrenches — all in body frame at CG
+            // 1. External wrenches -- all in body frame at CG
             Spatial::Wrench<S> W_ext{};
             W_ext.f = gravity(g, m).f;
             W_ext.f += aero(g, nu_B, m, t).f;
@@ -170,7 +170,7 @@ namespace Aetherion::FlightDynamics {
         }
     };
 
-    // CTAD deduction guide — omit trailing defaulted policies at call site.
+    // CTAD deduction guide -- omit trailing defaulted policies at call site.
     template<class G,
         class A = ZeroAeroPolicy,
         class T = ZeroPropulsionPolicy,

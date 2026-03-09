@@ -16,6 +16,8 @@
 
 namespace Aetherion::ODE::RKMK::Lie::SO3 {
 
+
+    // TODO [Onur] Use Skew operator from Spatial algebra headers
     // -------------------------------------------------------------------------
     // Skew (hat) operator
     // -------------------------------------------------------------------------

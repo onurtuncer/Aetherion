@@ -9,7 +9,7 @@
 
 namespace Aetherion::FlightDynamics {
 
-    // Dragless sphere — satisfies AeroPolicy, returns zero.
+    // Dragless sphere -- satisfies AeroPolicy, returns zero.
     // Optimised away entirely by the compiler.
     struct ZeroAeroPolicy {
         template<class S>

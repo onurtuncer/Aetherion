@@ -1,4 +1,4 @@
-﻿
+
 
 // ------------------------------------------------------------------------------
 // Project: Aetherion
@@ -9,9 +9,9 @@
 //
 // State on the product manifold SE(3) x R^7.
 //
-//   g     ∈ SE(3)   — pose (attitude + ECI position)
-//   nu_B  ∈ R^6     — body twist [omega_B(3); v_B(3)]
-//   m     ∈ R^1     — vehicle mass [kg]
+//   g     ∈ SE(3)   -- pose (attitude + ECI position)
+//   nu_B  ∈ R^6     -- body twist [omega_B(3); v_B(3)]
+//   m     ∈ R^1     -- vehicle mass [kg]
 //
 // x = [nu_B; m] ∈ R^7 is the Euclidean part stored/stepped separately.
 //

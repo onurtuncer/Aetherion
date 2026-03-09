@@ -65,7 +65,7 @@ namespace {
     };
 
     // -----------------------------
-    // Dynamics fields on G × R^3
+    // Dynamics fields on G x R^3
     // -----------------------------
     struct XiGood {
         template<class S>

@@ -13,7 +13,7 @@
 //  - scalar types (double, CppAD::AD<double>, etc.)
 //  - value-semantics types
 //  - Lie groups (value type with Identity/Exp/dexp_inv and composition)
-//  - dynamics fields xi(t,g,x) and f(t,g,x) for product manifolds G × R^m
+//  - dynamics fields xi(t,g,x) and f(t,g,x) for product manifolds G Ã— R^m
 //
 #pragma once
 
@@ -119,7 +119,7 @@ namespace Aetherion::ODE::RKMK::Core {
     // Product-manifold dynamics fields
     // ----------------------------------------------------------------------------
     //
-    // For product manifold: (g, x) in G × R^m
+    // For product manifold: (g, x) in G Ã— R^m
     // We model:
     //
     //   xi : (t, g, x) -> Tangent(G)   (a "twist"/algebra element)

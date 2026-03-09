@@ -6,7 +6,7 @@
 // PolicyConcepts.h
 //
 // Concepts that define the compile-time interface for each physics policy.
-// Each concept is checked for both double and CppAD::AD<double> —
+// Each concept is checked for both double and CppAD::AD<double> --
 // a policy that is not AD-safe fails here, not inside CppAD tape evaluation.
 //
 #pragma once
@@ -45,7 +45,7 @@ namespace Aetherion::FlightDynamics {
     }
 
     // -------------------------------------------------------------------------
-    // Public concepts — must satisfy both double and AD<double>.
+    // Public concepts -- must satisfy both double and AD<double>.
     // -------------------------------------------------------------------------
 
     template<class P>

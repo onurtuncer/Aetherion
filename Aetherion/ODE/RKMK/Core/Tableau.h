@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD,
+// Copyright(c) 2025-2026, Onur Tuncer, PhD,
 // Istanbul Technical University
 //
 // SPDX - License - Identifier: MIT
@@ -9,7 +9,7 @@
 //
 // File: Aetherion/ODE/RKMK/Core/Tableau.h
 //
-// Generic Butcher tableau for (implicit) Runge–Kutta methods, plus a factory for
+// Generic Butcher tableau for (implicit) Runge-Kutta methods, plus a factory for
 // Radau IIA (3-stage, order 5).
 //
 #pragma once

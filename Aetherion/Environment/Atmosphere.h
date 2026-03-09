@@ -46,7 +46,7 @@ namespace Aetherion::Environment {
 
     } // namespace detail
 
-    /// U.S. Standard Atmosphere 1976, 0–86 km (geometric altitude).
+    /// U.S. Standard Atmosphere 1976, 0-86 km (geometric altitude).
     /// - Input:  geometric altitude above MSL in meters (approx; internally converted to geopotential).
     /// - Output: temperature T [K], pressure p [Pa], density rho [kg/m^3], speed of sound a [m/s].
     ///
@@ -65,7 +65,7 @@ namespace Aetherion::Environment {
 
         // ---- Physical constants (US1976) ---------------------------------------
         const Scalar g0 = Scalar(9.80665);    // [m/s^2]
-        const Scalar R = Scalar(287.05287);  // [J/(kg·K)] specific gas constant for air
+        const Scalar R = Scalar(287.05287);  // [J/(kgÂ·K)] specific gas constant for air
         const Scalar gamma = Scalar(1.4);       // ratio of specific heats
 
         // Geopotential reference Earth radius (USSA-76) [m]
@@ -125,13 +125,13 @@ namespace Aetherion::Environment {
 
         // Temperature lapse rates Lb = dT/dH [K/km]
         static constexpr double Lb_K_per_km_arr[8] = {
-            -6.5,   // 0: 0–11 km
-            0.0,    // 1: 11–20 km (isothermal)
-            1.0,    // 2: 20–32 km
-            2.8,    // 3: 32–47 km
-            0.0,    // 4: 47–51 km
-            -2.8,   // 5: 51–71 km
-            -2.0,   // 6: 71–84.852 km
+            -6.5,   // 0: 0-11 km
+            0.0,    // 1: 11-20 km (isothermal)
+            1.0,    // 2: 20-32 km
+            2.8,    // 3: 32-47 km
+            0.0,    // 4: 47-51 km
+            -2.8,   // 5: 51-71 km
+            -2.0,   // 6: 71-84.852 km
             0.0     // 7: >=84.852 km (not really used here)
         };
 

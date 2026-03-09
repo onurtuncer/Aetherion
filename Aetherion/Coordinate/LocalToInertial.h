@@ -12,7 +12,7 @@
 
 // ------------------------------------------------------------------------------
 // Launch geometry: WGS-84 + NED -> ECI position and attitude (quaternion).
-// Local frame is right-handed North–East–Down.
+// Local frame is right-handed North-East-Down.
 // ------------------------------------------------------------------------------
 
 namespace Aetherion::Coordinate{
@@ -86,7 +86,7 @@ namespace Aetherion::Coordinate{
 
     /// Transform a vector from local NED at (lat, lon) to ECEF.
     /// lat, lon in radians (geodetic).
-    /// NED is right-handed with N × E = D.
+    /// NED is right-handed with N Ã— E = D.
     template <class Scalar>
     inline Vec3<Scalar> NEDToECEF(
         const Vec3<Scalar>& v_ned,
@@ -202,7 +202,7 @@ namespace Aetherion::Coordinate{
         // Reference "Up" in NED coordinates for zero roll: Up = -D.
         const Vec3<Scalar> up_ref_ned{ Scalar(0), Scalar(0), Scalar(-1) };
 
-        // Side axis (body y) before roll: s = normalize(ref × forward)
+        // Side axis (body y) before roll: s = normalize(ref Ã— forward)
         // Guard against degeneracy when forward is parallel to ref.
         auto make_side_ned = [&](const Vec3<Scalar>& ref_ned) -> Vec3<Scalar> {
             const Vec3<Scalar> candidate = Cross(ref_ned, forward_ned);
@@ -226,7 +226,7 @@ namespace Aetherion::Coordinate{
             side_ned = Normalize(Cross(north_ref_ned, forward_ned));
         }
 
-        // Third axis (body z) before roll: z = x × y
+        // Third axis (body z) before roll: z = x Ã— y
         const Vec3<Scalar> up_body0_ned = Normalize(
             Cross(forward_ned, side_ned));
 
