@@ -105,7 +105,7 @@ TEST_CASE("GravitationalWrenchWithOffset: moment equals r x F", "[gravity][wrenc
     const Arr3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) };
 
     // Apply gravitational force at +1m along +z (frame W)
-    // r = [0,0,1], F ≈ [-m*g,0,0] => M = r x F = [0, +m*g, 0]
+    // r = [0,0,1], F ≈ [-m*g,0,0] => M = r x F = [0, -m*g, 0]
     const Vec3E<Scalar> r_app_minus_cg_W_m(Scalar(0), Scalar(0), Scalar(1));
 
     const auto w = Aetherion::RigidBody::GravitationalWrenchWithOffset(
@@ -121,6 +121,6 @@ TEST_CASE("GravitationalWrenchWithOffset: moment equals r x F", "[gravity][wrenc
     CHECK_THAT(F(2), WithinAbs(Scalar(0), 1e-12));
 
     CHECK_THAT(M(0), WithinAbs(Scalar(0), 1e-12));
-    CHECK_THAT(M(1), WithinAbs(m * g, 1e-9));
+    CHECK_THAT(M(1), WithinAbs(-m * g, 1e-9));
     CHECK_THAT(M(2), WithinAbs(Scalar(0), 1e-12));
 }
