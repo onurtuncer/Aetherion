@@ -44,37 +44,4 @@ namespace Aetherion::Spatial {
         return out;
     }
 
-    /*
-    template<typename Scalar>
-    inline Eigen::Matrix<Scalar, 6, 6> CrossMotionMatrix(const Twist<Scalar>& v)
-    {
-        using Mat3 = Eigen::Matrix<Scalar, 3, 3>;
-        using Vec3 = Eigen::Matrix<Scalar, 3, 1>;
-
-        const Vec3 w = v.v.template segment<3>(0);
-        const Vec3 lin = v.v.template segment<3>(3);
-
-        const Mat3 wx = skew(w);
-        const Mat3 vx = skew(lin);
-
-        Eigen::Matrix<Scalar, 6, 6> crm;
-        crm.setZero();
-
-        crm.template block<3, 3>(0, 0) = wx;
-        crm.template block<3, 3>(3, 0) = vx;
-        crm.template block<3, 3>(3, 3) = wx;
-
-        return crm;
-    }
-
-    // Convenience: v × u (motion cross product)
-    template<typename Scalar>
-    inline Twist<Scalar> CrossMotion(const Twist<Scalar>& v, const Twist<Scalar>& u)
-    {
-        Twist<Scalar> out{};
-        out.v = CrossMotionMatrix(v) * u.v;
-        return out;
-    }
-    */
-
 } // namespace Aetherion::Spatial
