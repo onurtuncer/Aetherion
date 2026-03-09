@@ -37,7 +37,9 @@ BASE_IGNORE_DIRS = {
     ".cache", ".pytest_cache",
     "node_modules",
     "data", 
-    "scripts", "assets"
+    "scripts", "assets", "LICENSES"
+    "tools",
+    "doc"
 }
 
 VENDOR_NAMES = {
@@ -82,9 +84,7 @@ PREFERRED_ROOTS_ORDER = [
     "tests",
     "test",
     "examples",
-    "tools",
-    "cmake",
-    "docs",
+    "cmake"
 ]
 
 # If module cannot be inferred, put it here

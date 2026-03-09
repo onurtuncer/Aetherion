@@ -2,9 +2,13 @@ build/*
 out/*
 
 .vs/*
+.vs/
 
 # Repo dump file (via Python script under /scripts)
 output.txt
+
+# Repo structure dump file 
+structure.txt
 
 # Python related files
 .venv/
