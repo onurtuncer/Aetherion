@@ -25,7 +25,7 @@ namespace Aetherion::FlightDynamics::Serialization {
         // Fully qualify to avoid accidentally picking nlohmann::from_json
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("simulation"), cfg.simulation);
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("pose"), cfg.pose);
-        ::Aetherion::FlightDynamics::Serialization::from_json(j.at("initialVelocityNED"), cfg.velocityNED);
+        ::Aetherion::FlightDynamics::Serialization::from_json(j.at("velocityNED"), cfg.velocityNED);
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("initialRotationAboutBodyAxes"), cfg.initialRotationAboutBodyAxes);
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("inertialParameters"), cfg.inertialParameters);
         ::Aetherion::FlightDynamics::Serialization::from_json(j.at("aerodynamicParameters"), cfg.aerodynamicParameters);
@@ -33,17 +33,19 @@ namespace Aetherion::FlightDynamics::Serialization {
 
     void to_json(nlohmann::json& j, const SimulationConfig& cfg)
     {
-        // Build sub-objects using own serializers (no ADL)
-        nlohmann::json sim, pose, inert, aero;
-
+        nlohmann::json sim, pose, vel, rot, inert, aero;
         ::Aetherion::FlightDynamics::Serialization::to_json(sim, cfg.simulation);
         ::Aetherion::FlightDynamics::Serialization::to_json(pose, cfg.pose);
+        ::Aetherion::FlightDynamics::Serialization::to_json(vel, cfg.velocityNED);
+        ::Aetherion::FlightDynamics::Serialization::to_json(rot, cfg.initialRotationAboutBodyAxes);
         ::Aetherion::FlightDynamics::Serialization::to_json(inert, cfg.inertialParameters);
         ::Aetherion::FlightDynamics::Serialization::to_json(aero, cfg.aerodynamicParameters);
 
         j = nlohmann::json::object();
         j["simulation"] = std::move(sim);
-        j["initialPose"] = std::move(pose);
+        j["pose"] = std::move(pose);
+        j["velocityNED"] = std::move(vel);
+        j["initialRotationAboutBodyAxes"] = std::move(rot);
         j["inertialParameters"] = std::move(inert);
         j["aerodynamicParameters"] = std::move(aero);
     }
