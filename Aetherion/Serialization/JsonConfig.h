@@ -24,7 +24,7 @@
 #include <utility>
 //#include <vector>
 
-#include "Aetherion/FlightDynamics/Serialization/JsonAdapter.h"
+#include "Aetherion/Serialization/JsonAdapter.h"
 #include "Aetherion/FlightDynamics/PoseWGS84_NED.h"
 
 namespace Aetherion::FlightDynamics::Serialization {

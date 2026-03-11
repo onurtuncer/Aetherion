@@ -8,7 +8,7 @@
 
 
 #include "Aetherion/FlightDynamics/InertialParameters.h"
-#include "Aetherion/FlightDynamics/Serialization/InertialParametersJson.h"
+#include "Aetherion/Serialization/InertialParametersJson.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 

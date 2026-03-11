@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/FlightDynamics/InitialRotationAboutBodyAxes.h"
-#include "Aetherion/FlightDynamics/Serialization/InitialRotationAboutBodyAxesJson.h"
+#include "Aetherion/Serialization/InitialRotationAboutBodyAxesJson.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 

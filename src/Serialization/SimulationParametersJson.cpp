@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/FlightDynamics/SimulationParameters.h"
-#include "Aetherion/FlightDynamics/Serialization/SimulationParametersJson.h"
+#include "Aetherion/Serialization/SimulationParametersJson.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 

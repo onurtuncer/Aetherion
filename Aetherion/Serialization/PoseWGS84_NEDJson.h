@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "Aetherion/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.h"
+#include "Aetherion/Serialization/JsonConfigNlohmannAdapter.h"
 
 namespace Aetherion::FlightDynamics{
 

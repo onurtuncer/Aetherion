@@ -14,7 +14,7 @@
 #include <string>
 #include <optional>
 
-#include "Aetherion/FlightDynamics/Serialization/LoadSimulationConfigFromFile.h"
+#include "Aetherion/Serialization/LoadSimulationConfigFromFile.h"
 
 namespace {
 

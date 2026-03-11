@@ -6,8 +6,8 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include <Aetherion/FlightDynamics/Serialization/JsonConfigNlohmannAdapter.h>
-#include "Aetherion/FlightDynamics/Serialization/JsonAdapter.h"
+#include <Aetherion/Serialization/JsonConfigNlohmannAdapter.h>
+#include "Aetherion/Serialization/JsonAdapter.h"
 
 namespace Aetherion::FlightDynamics{
 

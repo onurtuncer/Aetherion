@@ -9,12 +9,11 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
-#include <catch2/matchers/catch_matchers_floating_point.hpp> // optional, but useful
+#include <catch2/matchers/catch_matchers_floating_point.hpp> 
 
 #include <type_traits>
 
-// Adjust include paths to your project layout
-#include "Aetherion/FlightDynamics/Serialization/JsonConfig.h"
+#include "Aetherion/Serialization/JsonConfig.h"
 
 #include <vendor/nlohmann/json.hpp>
 
@@ -51,7 +50,7 @@ namespace Aetherion::FlightDynamics::Tests {
         STATIC_REQUIRE(has_zenith_deg<IC>::value);
         STATIC_REQUIRE(has_roll_deg<IC>::value);
 
-        // Also sanity-check defaults (optional but nice)
+        // Sanity-check defaults 
         IC ic{};
         REQUIRE(ic.lat_deg == Approx(0.0));
         REQUIRE(ic.lon_deg == Approx(0.0));

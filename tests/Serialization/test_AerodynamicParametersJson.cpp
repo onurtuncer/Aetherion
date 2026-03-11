@@ -12,7 +12,7 @@
 #include <vendor/nlohmann/json.hpp>
 
 #include "Aetherion/FlightDynamics/AerodynamicParameters.h"
-#include "Aetherion/FlightDynamics/Serialization/AerodynamicParametersJson.h"
+#include "Aetherion/Serialization/AerodynamicParametersJson.h"
 
 namespace Ser = Aetherion::FlightDynamics::Serialization;
 using namespace Aetherion::FlightDynamics;

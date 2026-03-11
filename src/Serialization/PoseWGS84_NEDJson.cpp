@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/FlightDynamics/PoseWGS84_NED.h"
-#include "Aetherion/FlightDynamics/Serialization/PoseWGS84_NEDJson.h"
+#include "Aetherion/Serialization/PoseWGS84_NEDJson.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 

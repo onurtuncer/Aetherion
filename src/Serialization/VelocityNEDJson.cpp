@@ -6,9 +6,8 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-
 #include "Aetherion/FlightDynamics/VelocityNED.h"
-#include "Aetherion/FlightDynamics/Serialization/VelocityNEDJson.h"
+#include "Aetherion/Serialization/VelocityNEDJson.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 

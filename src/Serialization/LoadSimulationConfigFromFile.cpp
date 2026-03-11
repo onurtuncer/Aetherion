@@ -6,10 +6,10 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/FlightDynamics/Serialization/LoadSimulationConfigFromFile.h"
+#include "Aetherion/Serialization/LoadSimulationConfigFromFile.h"
 
 #include "Aetherion/FlightDynamics/SimulationConfig.h"
-#include "Aetherion/FlightDynamics/Serialization/SimulationConfigJson.h" 
+#include "Aetherion/Serialization/SimulationConfigJson.h" 
 
 #include <fstream>
 #include <stdexcept>

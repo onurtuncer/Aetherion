@@ -7,14 +7,14 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/FlightDynamics/SimulationConfig.h"
-#include "Aetherion/FlightDynamics/Serialization/SimulationConfigJson.h"
+#include "Aetherion/Serialization/SimulationConfigJson.h"
 
-#include "Aetherion/FlightDynamics/Serialization/SimulationParametersJson.h"
-#include "Aetherion/FlightDynamics/Serialization/PoseWGS84_NEDJson.h"     
-#include "Aetherion/FlightDynamics/Serialization/InertialParametersJson.h"
-#include "Aetherion/FlightDynamics/Serialization/AerodynamicParametersJson.h"
-#include "Aetherion/FlightDynamics/Serialization/VelocityNEDJson.h"
-#include "Aetherion/FlightDynamics/Serialization/InitialRotationAboutBodyAxesJson.h"
+#include "Aetherion/Serialization/SimulationParametersJson.h"
+#include "Aetherion/Serialization/PoseWGS84_NEDJson.h"     
+#include "Aetherion/Serialization/InertialParametersJson.h"
+#include "Aetherion/Serialization/AerodynamicParametersJson.h"
+#include "Aetherion/Serialization/VelocityNEDJson.h"
+#include "Aetherion/Serialization/InitialRotationAboutBodyAxesJson.h"
 
 #include <vendor/nlohmann/json.hpp>
 
