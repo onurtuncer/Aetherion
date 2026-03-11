@@ -53,9 +53,7 @@ TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][external_
 {
     REQUIRE(g_configFile.has_value());
 
-    auto cfg =
-        Aetherion::FlightDynamics::Serialization::
-        LoadSimulationConfigFromFile(*g_configFile);
+    auto cfg = Aetherion::Serialization::LoadSimulationConfigFromFile(*g_configFile);
 
     // Example sanity checks
     REQUIRE(cfg.inertialParameters.mass_kg > 0.0);

@@ -9,7 +9,7 @@
 #include "Aetherion/FlightDynamics/AerodynamicParameters.h"
 #include "Aetherion/Serialization/InertialParametersJson.h"
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, FlightDynamics::AerodynamicParameters& aero)
     {
@@ -35,4 +35,4 @@ namespace Aetherion::FlightDynamics::Serialization {
         };
     }
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization

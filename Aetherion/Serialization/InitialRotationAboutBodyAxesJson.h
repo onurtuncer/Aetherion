@@ -14,9 +14,9 @@ namespace Aetherion::FlightDynamics {
     struct InitialRotationAboutBodyAxes;
 } // namespace Aetherion::FlightDynamics
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, FlightDynamics::InitialRotationAboutBodyAxes& ir);
     void to_json(nlohmann::json& j, const FlightDynamics::InitialRotationAboutBodyAxes& ir);
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization

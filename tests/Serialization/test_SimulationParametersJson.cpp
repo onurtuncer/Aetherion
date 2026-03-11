@@ -14,7 +14,7 @@
 #include "Aetherion/FlightDynamics/SimulationParameters.h"
 #include "Aetherion/Serialization/SimulationParametersJson.h"
 
-namespace Ser = Aetherion::FlightDynamics::Serialization;
+namespace Ser = Aetherion::Serialization;
 using namespace Aetherion::FlightDynamics;
 
 TEST_CASE("SimulationParameters: from_json parses expected values", "[json][simulation]")

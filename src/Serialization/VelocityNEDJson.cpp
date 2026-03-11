@@ -9,7 +9,7 @@
 #include "Aetherion/FlightDynamics/VelocityNED.h"
 #include "Aetherion/Serialization/VelocityNEDJson.h"
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, FlightDynamics::VelocityNED& v)
     {
@@ -26,4 +26,4 @@ namespace Aetherion::FlightDynamics::Serialization {
         j["down_mps"] = v.down_mps;
     }
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization

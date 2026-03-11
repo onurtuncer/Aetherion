@@ -14,7 +14,7 @@
 #include "Aetherion/FlightDynamics/InertialParameters.h"
 #include "Aetherion/Serialization/InertialParametersJson.h"
 
-namespace Ser = Aetherion::FlightDynamics::Serialization;
+namespace Ser = Aetherion::Serialization;
 using namespace Aetherion::FlightDynamics;
 
 TEST_CASE("InertialParameters: from_json parses expected values", "[json][inertial]")

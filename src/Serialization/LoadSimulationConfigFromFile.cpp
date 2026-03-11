@@ -15,9 +15,9 @@
 #include <stdexcept>
 #include <vendor/nlohmann/json.hpp>
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
-    SimulationConfig LoadSimulationConfigFromFile(const std::string& filename)
+    FlightDynamics::SimulationConfig LoadSimulationConfigFromFile(const std::string& filename)
     {
         std::ifstream f(filename);
         if (!f.is_open())
@@ -26,9 +26,9 @@ namespace Aetherion::FlightDynamics::Serialization {
         nlohmann::json j;
         f >> j;
 
-        SimulationConfig cfg{};
-        ::Aetherion::FlightDynamics::Serialization::from_json(j, cfg); 
+        FlightDynamics::SimulationConfig cfg{};
+        ::Aetherion::Serialization::from_json(j, cfg); 
         return cfg;
     }
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization

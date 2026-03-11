@@ -7,9 +7,9 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_json
-                  #  test_JsonConfig.cpp 
                     test_PoseWGS84_NEDJson.cpp
                     test_InertialParametersJson.cpp 
+                    test_InitialRotationAboutBodyAxes.cpp 
                     test_SimulationParametersJson.cpp
                     test_AerodynamicParametersJson.cpp 
                     test_SimulationConfigJson.cpp
@@ -22,13 +22,9 @@ target_link_libraries(test_json
         Catch2::Catch2WithMain
 )
 
-#target_include_directories(test_json PRIVATE "${CMAKE_SOURCE_DIR}")
-
 include(Catch)
 catch_discover_tests(test_json)
                                                
-#add_test(NAME json_tests COMMAND test_json)
-
 add_executable(test_load_file test_LoadSimulationConfigFromFile.cpp)
 
 target_link_libraries(test_load_file 
@@ -38,5 +34,3 @@ target_link_libraries(test_load_file
 
 include(Catch)
 catch_discover_tests(test_load_file TEST_SPEC "~[external_file]")
-
-#add_test(NAME config_tests COMMAND test_load_file)

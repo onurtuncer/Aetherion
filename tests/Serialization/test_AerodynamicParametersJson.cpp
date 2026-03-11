@@ -14,7 +14,7 @@
 #include "Aetherion/FlightDynamics/AerodynamicParameters.h"
 #include "Aetherion/Serialization/AerodynamicParametersJson.h"
 
-namespace Ser = Aetherion::FlightDynamics::Serialization;
+namespace Ser = Aetherion::Serialization;
 using namespace Aetherion::FlightDynamics;
 
 TEST_CASE("AerodynamicParameters: from_json parses expected values", "[json][aero]")

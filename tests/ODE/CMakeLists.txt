@@ -24,8 +24,6 @@ target_include_directories(test_scalar PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD
 include(Catch)
 catch_discover_tests(test_scalar)
                                                
-#add_test(NAME scalar_tests COMMAND test_scalar)
-
 add_executable(test_concepts
                       test_Concepts.cpp)
 
@@ -64,8 +62,6 @@ target_include_directories(test_se3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/in
 include(Catch)
 catch_discover_tests(test_se3)
                                                
-#add_test(NAME se3_tests COMMAND test_se3)
-
 add_executable(test_newton
                       test_Newton.cpp)
 
@@ -84,7 +80,6 @@ target_include_directories(test_newton PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD
 include(Catch)
 catch_discover_tests(test_newton)
                                                
-#add_test(NAME newton_tests COMMAND test_newton)
 
 add_executable(test_stage_pack
                       test_StagePack.cpp)
@@ -104,8 +99,6 @@ target_include_directories(test_stage_pack PRIVATE "${CMAKE_SOURCE_DIR}/vendor/C
 include(Catch)
 catch_discover_tests(test_stage_pack)
                                                
-#add_test(NAME stage_pack_tests COMMAND test_stage_pack)
-
 add_executable(test_radauiia_se3
                       test_RadauIIA_SE3.cpp)
 
@@ -122,7 +115,4 @@ target_link_libraries(test_radauiia_se3
 target_include_directories(test_radauiia_se3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
-catch_discover_tests(test_radauiia_se3)
-                                               
-#add_test(NAME radauiia_se3_tests COMMAND test_radauiia_se3)
-
+catch_discover_tests(test_radauiia_se3)                                              

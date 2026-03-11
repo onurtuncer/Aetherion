@@ -9,7 +9,7 @@
 #include "Aetherion/FlightDynamics/InitialRotationAboutBodyAxes.h"
 #include "Aetherion/Serialization/InitialRotationAboutBodyAxesJson.h"
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, FlightDynamics::InitialRotationAboutBodyAxes& w)
     {
@@ -26,4 +26,4 @@ namespace Aetherion::FlightDynamics::Serialization {
         j["yaw_rad_s"] = w.yaw_rad_s;
     }
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization

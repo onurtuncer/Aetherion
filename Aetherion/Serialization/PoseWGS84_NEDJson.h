@@ -15,11 +15,11 @@ namespace Aetherion::FlightDynamics{
     struct PoseWGS84_NED;
 } // namespace Aetherion::FlightDynamics
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
     struct FlightDynamics::PoseWGS84_NED;
 
     void from_json(const nlohmann::json& j, FlightDynamics::PoseWGS84_NED& pose);
     void to_json(nlohmann::json& j, const FlightDynamics::PoseWGS84_NED& pose);
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization

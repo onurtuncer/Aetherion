@@ -14,11 +14,11 @@ namespace Aetherion::FlightDynamics {
     struct InertialParameters;
 }
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
 
     void from_json(const nlohmann::json& j, FlightDynamics::InertialParameters& ip);
     void to_json(nlohmann::json& j, const FlightDynamics::InertialParameters& ip);
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization
 

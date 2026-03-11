@@ -9,7 +9,7 @@
 #include "Aetherion/FlightDynamics/SimulationParameters.h"
 #include "Aetherion/Serialization/SimulationParametersJson.h"
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, FlightDynamics::SimulationParameters& sp)
     {
@@ -25,4 +25,4 @@ namespace Aetherion::FlightDynamics::Serialization {
         };
     }
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization

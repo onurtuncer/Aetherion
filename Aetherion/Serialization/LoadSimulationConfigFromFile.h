@@ -10,6 +10,6 @@
 #include <string>
 #include "Aetherion/FlightDynamics/SimulationConfig.h"
 
-namespace Aetherion::FlightDynamics::Serialization {
-    SimulationConfig LoadSimulationConfigFromFile(const std::string& filename);
+namespace Aetherion::Serialization {
+    FlightDynamics::SimulationConfig LoadSimulationConfigFromFile(const std::string& filename);
 }

@@ -14,9 +14,9 @@ namespace Aetherion::FlightDynamics {
     struct SimulationConfig;
 }
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, FlightDynamics::SimulationConfig& fsc);
     void to_json(nlohmann::json& j, const FlightDynamics::SimulationConfig& fsc);
 
-} // namespace Aetherion::FlightDynamics::Serialization
+} // namespace Aetherion::Serialization

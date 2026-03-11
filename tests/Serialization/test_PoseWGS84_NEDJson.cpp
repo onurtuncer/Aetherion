@@ -15,7 +15,7 @@
 #include "Aetherion/Serialization/PoseWGS84_NEDJson.h"
 
 using namespace Aetherion::FlightDynamics;
-namespace Ser = Aetherion::FlightDynamics::Serialization;
+namespace Ser = Aetherion::Serialization;
 
 TEST_CASE("PoseWGS84_NED: from_json parses expected values", "[json][initial_pose]")
 {

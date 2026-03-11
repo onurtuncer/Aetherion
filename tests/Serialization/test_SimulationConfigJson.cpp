@@ -14,7 +14,7 @@
 #include "Aetherion/FlightDynamics/SimulationConfig.h"
 #include "Aetherion/Serialization/SimulationConfigJson.h"
 
-namespace Ser = ::Aetherion::FlightDynamics::Serialization;
+namespace Ser = ::Aetherion::Serialization;
 using ::Aetherion::FlightDynamics::SimulationConfig;
 
 TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flightdynamics][config]")
