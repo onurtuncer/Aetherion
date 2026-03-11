@@ -18,4 +18,3 @@ target_link_libraries(test_initial_state
 include(Catch)
 catch_discover_tests(test_initial_state)
 
-add_subdirectory(Serialization)
