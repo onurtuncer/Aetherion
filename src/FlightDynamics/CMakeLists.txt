@@ -19,7 +19,7 @@
 # then be added with add_subdirectory() below.
 # ------------------------------------------------------------------------------
 
-add_subdirectory(Serialization)
+#add_subdirectory(Serialization)
 
 # --- Future submodules --------------------------------------------------------
 # add_subdirectory(Aerodynamics)

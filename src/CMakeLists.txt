@@ -50,6 +50,7 @@ target_include_directories(Aetherion
 add_subdirectory(Coordinate)
 add_subdirectory(FlightDynamics)
 add_subdirectory(ODE)
+add_subdirectory(Serialization)
 
 # ------------------------------------------------------------------------------
 # FMU targets (optional, independent of the Aetherion library target)
