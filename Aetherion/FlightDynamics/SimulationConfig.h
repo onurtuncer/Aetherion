@@ -10,7 +10,7 @@
 
 #include "SimulationParameters.h"
 #include "PoseWGS84_NED.h"
-#include "InertialParameters.h"
+#include "Aetherion/RigidBody/Parameters/Inertial.h"
 #include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
 #include "VelocityNED.h"
 #include "InitialRotationAboutBodyAxes.h"

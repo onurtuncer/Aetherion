@@ -11,7 +11,7 @@
 #include <catch2/catch_approx.hpp>
 #include <vendor/nlohmann/json.hpp>
 
-#include "Aetherion/FlightDynamics/InertialParameters.h"
+#include "Aetherion/RigidBody/Parameters/Inertial.h"
 #include "Aetherion/Serialization/InertialParametersJson.h"
 
 namespace Ser = Aetherion::Serialization;

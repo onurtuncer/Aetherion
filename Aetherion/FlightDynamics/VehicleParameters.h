@@ -5,17 +5,17 @@
 // SPDX - License - Identifier: MIT
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
-
-#pragma once
-
-#include <Eigen/Dense>
-
-namespace Aetherion::FlightDynamics {
-
-	struct VehicleParams {
-		Eigen::Matrix3d J_B = Eigen::Matrix3d::Identity();
-	};
-} // namespace Aetherion::FlightDynamics
+//
+//#pragma once
+//
+//#include <Eigen/Dense>
+//
+//namespace Aetherion::FlightDynamics {
+//
+//	struct VehicleParams {
+//		Eigen::Matrix3d J_B = Eigen::Matrix3d::Identity();
+//	};
+//} // namespace Aetherion::FlightDynamics
 
 
 

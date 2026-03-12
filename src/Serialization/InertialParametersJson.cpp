@@ -6,8 +6,7 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-
-#include "Aetherion/FlightDynamics/InertialParameters.h"
+#include "Aetherion/RigidBody/Parameters/Inertial.h"
 #include "Aetherion/Serialization/InertialParametersJson.h"
 
 namespace Aetherion::Serialization {
