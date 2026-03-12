@@ -9,7 +9,7 @@
 add_executable(test_json
                     test_PoseWGS84_NEDJson.cpp
                     test_InertialParametersJson.cpp 
-                    test_InitialRotationAboutBodyAxes.cpp 
+                    test_RotationRateAboutBodyAxesJson.cpp 
                     test_SimulationParametersJson.cpp
                     test_AerodynamicParametersJson.cpp 
                     test_SimulationConfigJson.cpp

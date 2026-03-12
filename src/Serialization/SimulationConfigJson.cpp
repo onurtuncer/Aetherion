@@ -14,7 +14,7 @@
 #include "Aetherion/Serialization/InertialParametersJson.h"
 #include "Aetherion/Serialization/AerodynamicParametersJson.h"
 #include "Aetherion/Serialization/VelocityNEDJson.h"
-#include "Aetherion/Serialization/InitialRotationAboutBodyAxesJson.h"
+#include "Aetherion/Serialization/RotationRateAboutBodyAxesJson.h"
 
 #include <vendor/nlohmann/json.hpp>
 

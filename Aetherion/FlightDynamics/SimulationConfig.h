@@ -13,7 +13,7 @@
 #include "Aetherion/RigidBody/Parameters/Inertial.h"
 #include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
 #include "VelocityNED.h"
-#include "InitialRotationAboutBodyAxes.h"
+#include "RotationRateAboutBodyAxes.h"
 
 namespace Aetherion::FlightDynamics {
 
