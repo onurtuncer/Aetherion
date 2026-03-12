@@ -23,7 +23,7 @@ namespace Aetherion::FlightDynamics {
         PoseWGS84_NED pose;
         VelocityNED velocityNED;
         InitialRotationAboutBodyAxes initialRotationAboutBodyAxes;
-        InertialParameters inertialParameters;
+        RigidBody::Parameters::Inertial inertialParameters;
         RigidBody::Parameters::Aerodynamic aerodynamicParameters;
     };
 

@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
 // SPDX - License - Identifier: MIT
 // License - Filename: LICENSE
@@ -8,9 +8,9 @@
 
 #pragma once
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody::Parameters {
 
-    struct InertialParameters
+    struct Inertial
     {
         // --- Mass ---
         double mass_kg{ 0.0 };
@@ -34,4 +34,4 @@ namespace Aetherion::FlightDynamics {
         double zbar_m{ 0.0 };
     };
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBosy::Parameters

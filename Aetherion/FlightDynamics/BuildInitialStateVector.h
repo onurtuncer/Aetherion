@@ -171,7 +171,7 @@ namespace Aetherion::FlightDynamics {
         //     ωy = pitch rate about body +y (right wing)
         //     ωz = yaw   rate about body +z (down)
         //
-        const double omega_x = cfg.initialRotationAboutBodyAxes.roll_rad_s;
+        const double omega_x = cfg.initialRotationAboutBodyAxes.roll_rad_s;  //TODO [Onur] rename this RotationRateAboutBodyAxes
         const double omega_y = cfg.initialRotationAboutBodyAxes.pitch_rad_s;
         const double omega_z = cfg.initialRotationAboutBodyAxes.yaw_rad_s;
 
