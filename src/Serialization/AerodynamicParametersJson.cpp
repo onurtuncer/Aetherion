@@ -6,12 +6,12 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/FlightDynamics/AerodynamicParameters.h"
+#include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
 #include "Aetherion/Serialization/InertialParametersJson.h"
 
 namespace Aetherion::Serialization {
 
-    void from_json(const nlohmann::json& j, FlightDynamics::AerodynamicParameters& aero)
+    void from_json(const nlohmann::json& j, RigidBody::Parameters::Aerodynamic& aero)
     {
         aero.S = j.at("S").get<double>();
         aero.CL = j.at("CL").get<double>();
@@ -22,7 +22,7 @@ namespace Aetherion::Serialization {
         aero.Cn = j.at("Cn").get<double>();
     }
 
-    void to_json(nlohmann::json& j, const FlightDynamics::AerodynamicParameters& aero)
+    void to_json(nlohmann::json& j, const RigidBody::Parameters::Aerodynamic& aero)
     {
         j = {
             {"S",  aero.S},

@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
 // SPDX - License - Identifier: MIT
 // License - Filename: LICENSE
@@ -8,9 +8,9 @@
 
 #pragma once
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody::Parameters {
 
-	struct AerodynamicParameters {
+	struct Aerodynamic {
 		double S{ 0.0 }; // Reference area (m^2)
 		double CL{ 0.0 }; // Lift coefficient
 		double CD{ 0.0 }; // Drag coefficient
@@ -20,5 +20,5 @@ namespace Aetherion::FlightDynamics {
 		double Cn{ 0.0 }; // Yaw moment coefficient
 	};
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody::Parameters
 
