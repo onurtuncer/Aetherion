@@ -12,7 +12,7 @@
 #include "PoseWGS84_NED.h"
 #include "Aetherion/RigidBody/Parameters/Inertial.h"
 #include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
-#include "VelocityNED.h"
+#include "Aetherion/RigidBody/VelocityNED.h"
 #include "RotationRateAboutBodyAxes.h"
 
 namespace Aetherion::FlightDynamics {

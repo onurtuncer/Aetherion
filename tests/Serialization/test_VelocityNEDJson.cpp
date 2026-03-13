@@ -10,7 +10,7 @@
 
 #include <vendor/nlohmann/json.hpp>
 
-#include "Aetherion/FlightDynamics/VelocityNED.h"
+#include "Aetherion/RigidBody/VelocityNED.h"
 #include "Aetherion/Serialization/VelocityNEDJson.h"
 
 using namespace Aetherion::FlightDynamics;
