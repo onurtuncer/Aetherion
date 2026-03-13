@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
 	struct VelocityNED
 	{
@@ -16,4 +16,4 @@ namespace Aetherion::FlightDynamics {
 		double east_mps{ 0.0 };
 		double down_mps{ 0.0 };
 	};
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody

@@ -13,7 +13,7 @@
 #include "Aetherion/RigidBody/VelocityNED.h"
 #include "Aetherion/Serialization/VelocityNEDJson.h"
 
-using namespace Aetherion::FlightDynamics;
+namespace RigidBody =  Aetherion::RigidBody;
 namespace Ser = Aetherion::Serialization;
 
 using namespace Catch::Matchers;
@@ -24,7 +24,7 @@ TEST_CASE("VelocityNED JSON round-trip", "[serialization][FlightDynamics]")
 {
     SECTION("to_json produces correct keys and values")
     {
-        const VelocityNED vel{ 10.0, -5.0, 2.5 };
+        const RigidBody::VelocityNED vel{ 10.0, -5.0, 2.5 };
         nlohmann::json j;
         Ser::to_json(j, vel);
 
@@ -45,7 +45,7 @@ TEST_CASE("VelocityNED JSON round-trip", "[serialization][FlightDynamics]")
             {"down_mps",   0.8}
         };
 
-        VelocityNED vel{};
+        RigidBody::VelocityNED vel{};
         Ser::from_json(j, vel);
 
         CHECK_THAT(vel.north_mps, WithinRel(3.0));
@@ -55,12 +55,12 @@ TEST_CASE("VelocityNED JSON round-trip", "[serialization][FlightDynamics]")
 
     SECTION("round-trip serialization preserves all values")
     {
-        const VelocityNED original{ 100.0, 0.0, -9.81 };
+        const RigidBody::VelocityNED original{ 100.0, 0.0, -9.81 };
 
         nlohmann::json j;
         Ser::to_json(j, original);
 
-        VelocityNED restored{};
+        RigidBody::VelocityNED restored{};
         Ser::from_json(j, restored);
 
         CHECK_THAT(restored.north_mps, WithinRel(original.north_mps));
@@ -71,7 +71,7 @@ TEST_CASE("VelocityNED JSON round-trip", "[serialization][FlightDynamics]")
 
     SECTION("default-constructed struct serialises to zero values")
     {
-        const VelocityNED vel{};
+        const RigidBody::VelocityNED vel{};
         nlohmann::json j;
         Ser::to_json(j, vel);
 
@@ -87,19 +87,19 @@ TEST_CASE("VelocityNED JSON round-trip", "[serialization][FlightDynamics]")
             // east_mps and down_mps deliberately omitted
         };
 
-        VelocityNED vel{};
+        RigidBody::VelocityNED vel{};
         REQUIRE_THROWS_AS(Ser::from_json(j, vel), nlohmann::json::out_of_range);
     }
 
     SECTION("physically meaningful values: hover with slight drift")
     {
         // Hovering vehicle: near-zero horizontal, small positive down (sinking)
-        const VelocityNED original{ 0.05, -0.03, 0.1 };
+        const RigidBody::VelocityNED original{ 0.05, -0.03, 0.1 };
 
         nlohmann::json j;
         Ser::to_json(j, original);
 
-        VelocityNED restored{};
+        RigidBody::VelocityNED restored{};
         Ser::from_json(j, restored);
 
         CHECK_THAT(restored.north_mps, WithinRel(original.north_mps));
