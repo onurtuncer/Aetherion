@@ -10,7 +10,7 @@
 
 namespace Aetherion::FlightDynamics {
 
-	struct InitialRotationAboutBodyAxes
+	struct RotationRateAboutBodyAxes
 	{
 		double roll_rad_s{ 0.0 };
 		double pitch_rad_s{ 0.0 };

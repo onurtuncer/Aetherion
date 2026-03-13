@@ -21,7 +21,7 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
 {
     SECTION("to_json produces correct keys and values")
     {
-        const InitialRotationAboutBodyAxes rot{ 0.1, 0.2, 0.3 };
+        const RotationRateAboutBodyAxes rot{ 0.1, 0.2, 0.3 };
         nlohmann::json j;
         Ser::to_json(j, rot);
 
@@ -42,7 +42,7 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
             {"yaw_rad_s",   0.6}
         };
 
-        InitialRotationAboutBodyAxes rot{};
+        RotationRateAboutBodyAxes rot{};
         Ser::from_json(j, rot);
 
         CHECK_THAT(rot.roll_rad_s, WithinRel(0.4));
@@ -52,12 +52,12 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
 
     SECTION("round-trip serialization preserves all values")
     {
-        const InitialRotationAboutBodyAxes original{ 1.1, -0.5, 0.0 };
+        const RotationRateAboutBodyAxes original{ 1.1, -0.5, 0.0 };
 
         nlohmann::json j;
         Ser::to_json(j, original);
 
-        InitialRotationAboutBodyAxes restored{};
+        RotationRateAboutBodyAxes restored{};
         Ser::from_json(j, restored);
 
         CHECK_THAT(restored.roll_rad_s, WithinRel(original.roll_rad_s));
@@ -68,7 +68,7 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
 
     SECTION("default-constructed struct serialises to zero values")
     {
-        const InitialRotationAboutBodyAxes rot{};
+        const RotationRateAboutBodyAxes rot{};
         nlohmann::json j;
         Ser::to_json(j, rot);
 
@@ -84,7 +84,7 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
             // pitch_rad_s and yaw_rad_s deliberately omitted
         };
 
-        InitialRotationAboutBodyAxes rot{};
+        RotationRateAboutBodyAxes rot{};
         REQUIRE_THROWS_AS(Ser::from_json(j, rot), nlohmann::json::out_of_range);
     }
 }
