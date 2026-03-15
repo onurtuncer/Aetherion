@@ -13,7 +13,9 @@
 #include "Aetherion/RigidBody/Parameters/Inertial.h"
 #include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
 #include "Aetherion/RigidBody/VelocityNED.h"
-#include "RotationRateAboutBodyAxes.h"
+#include "Aetherion/RigidBody/BodyRates.h"
+
+//TODO [Onur] after simulation parameters gone this should be strictly RigidBody::Config!!!
 
 namespace Aetherion::FlightDynamics {
 

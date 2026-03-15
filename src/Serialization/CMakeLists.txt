@@ -31,5 +31,5 @@ target_sources(Aetherion PRIVATE
     # State / pose serializers
     ${CMAKE_CURRENT_SOURCE_DIR}/GeodeticPoseNEDJson.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/VelocityNEDJson.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/RotationRateAboutBodyAxesJson.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/BodyRatesJson.cpp
 )

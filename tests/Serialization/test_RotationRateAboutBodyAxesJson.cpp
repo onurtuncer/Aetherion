@@ -9,8 +9,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <vendor/nlohmann/json.hpp>  //TODO [Onur] this should be nlohhmann/json.hpp later on
-#include "Aetherion/Serialization/RotationRateAboutBodyAxesJson.h"
-#include "Aetherion/FlightDynamics/RotationRateAboutBodyAxes.h"
+#include "Aetherion/Serialization/BodyRatesJson.h"
+#include "Aetherion/FlightDynamics/BodyRates.h"
 
 using namespace Aetherion::FlightDynamics;
 namespace Ser = Aetherion::Serialization;

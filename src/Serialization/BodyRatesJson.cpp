@@ -6,8 +6,8 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/FlightDynamics/RotationRateAboutBodyAxes.h"
-#include "Aetherion/Serialization/RotationRateAboutBodyAxesJson.h"
+#include "Aetherion/RigidBody/BodyRates.h"
+#include "Aetherion/Serialization/BodyRatesJson.h"
 
 namespace Aetherion::Serialization {
 

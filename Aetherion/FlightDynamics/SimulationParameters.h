@@ -8,6 +8,9 @@
 
 #pragma once
 
+//TODO [Onur] remove this struct as these parameters need to be setup by the simulation tool
+// i.e. simulink or other consumer
+
 namespace Aetherion::FlightDynamics {
 
     struct SimulationParameters
