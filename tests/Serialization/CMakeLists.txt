@@ -12,7 +12,7 @@ add_executable(test_json
                     test_RotationRateAboutBodyAxesJson.cpp 
                     test_SimulationParametersJson.cpp
                     test_AerodynamicParametersJson.cpp 
-                    test_SimulationConfigJson.cpp
+                    test_ConfigJson.cpp
                     test_VelocityNEDJson.cpp
                    )
 

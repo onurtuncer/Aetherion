@@ -46,6 +46,7 @@
 
 // State index constants
 #include <Aetherion/RigidBody/StateLayout.h>
+#include <Aetherion/RigidBody/Config.h>
 
 // --- Namespace aliases --------------------------------------------------------
 
@@ -54,6 +55,7 @@ using Catch::Approx;
 namespace AC = Aetherion::Coordinate;
 namespace FD = Aetherion::FlightDynamics;
 using SL = Aetherion::RigidBody::StateLayout;
+namespace RigidBody = Aetherion::RigidBody;
 
 using Vec3d = AC::Vec3<double>;
 using Quatd = AC::Quat<double>;
@@ -69,9 +71,9 @@ static constexpr double kRpol = kReq * (1.0 - kFlat); // polar radius [m]
 
 // --- Test helpers -------------------------------------------------------------
 
-// Build a SimulationConfig.  All pose angles are in DEGREES (matches PoseWGS84_NED).
+// Build a RigidBody::Config.  All pose angles are in DEGREES (matches GeodeticPoseNED).
 // Every parameter has a default so individual tests can name just what they change.
-static FD::SimulationConfig MakeCfg(
+static RigidBody::Config MakeCfg(
     double lat_deg = 28.6,
     double lon_deg = -80.6,
     double alt_m = 0.0,
@@ -87,7 +89,7 @@ static FD::SimulationConfig MakeCfg(
     double mass_kg = 10'000.0)
   //  double t0 = 0.0)
 {
-    FD::SimulationConfig cfg{};
+    RigidBody::Config cfg{};
     cfg.pose.lat_deg = lat_deg;
     cfg.pose.lon_deg = lon_deg;
     cfg.pose.alt_m = alt_m;

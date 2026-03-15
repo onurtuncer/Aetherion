@@ -21,7 +21,7 @@ target_sources(Aetherion PRIVATE
 
     # Config loaders
     ${CMAKE_CURRENT_SOURCE_DIR}/LoadSimulationConfigFromFile.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/SimulationConfigJson.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ConfigJson.cpp
 
     # Physical parameter serializers
     ${CMAKE_CURRENT_SOURCE_DIR}/InertialParametersJson.cpp

@@ -9,7 +9,7 @@
 #include "Aetherion/Serialization/LoadSimulationConfigFromFile.h"
 
 #include "Aetherion/RigidBody/Config.h"
-#include "Aetherion/Serialization/SimulationConfigJson.h" 
+#include "Aetherion/Serialization/ConfigJson.h" 
 
 #include <fstream>
 #include <stdexcept>
@@ -17,7 +17,7 @@
 
 namespace Aetherion::Serialization {
 
-    FlightDynamics::SimulationConfig LoadSimulationConfigFromFile(const std::string& filename)
+    RigidBody::Config LoadSimulationConfigFromFile(const std::string& filename)
     {
         std::ifstream f(filename);
         if (!f.is_open())
@@ -26,7 +26,7 @@ namespace Aetherion::Serialization {
         nlohmann::json j;
         f >> j;
 
-        FlightDynamics::SimulationConfig cfg{};
+        RigidBody::Config cfg{};
         ::Aetherion::Serialization::from_json(j, cfg); 
         return cfg;
     }

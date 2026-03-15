@@ -97,7 +97,7 @@ namespace Aetherion::FlightDynamics {
     // =========================================================================
     inline Eigen::Matrix<double, RigidBody::StateLayout::N, 1>
         BuildInitialStateVector(
-            const SimulationConfig& cfg,
+            const RigidBody::Config& cfg,
             const double            theta_era_rad)
     {
         using namespace RigidBody;

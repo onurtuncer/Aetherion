@@ -12,14 +12,14 @@
 #include <vendor/nlohmann/json.hpp>
 
 #include "Aetherion/RigidBody/Config.h"
-#include "Aetherion/Serialization/SimulationConfigJson.h"
+#include "Aetherion/Serialization/ConfigJson.h"
 
 namespace Ser = ::Aetherion::Serialization;
-using ::Aetherion::FlightDynamics::SimulationConfig;
+namespace RigidBody = Aetherion::RigidBody;
 
-TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flightdynamics][config]")
+TEST_CASE("RigidBodyConfig: JSON round-trip preserves all fields", "[json][rigidbody][config]")
 {
-    SimulationConfig in{};
+   RigidBody::Config in{};
 
     // --- InitialPoseWGS84_NED ---
     in.pose.lat_deg = 41.1055;
@@ -70,7 +70,6 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
     Ser::to_json(j, in);
 
     // Top-level key sanity
-   // REQUIRE(j.contains("simulation"));
     REQUIRE(j.contains("pose"));
     REQUIRE(j.contains("velocityNED"));
     REQUIRE(j.contains("initialRotationAboutBodyAxes"));
@@ -78,13 +77,10 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
     REQUIRE(j.contains("aerodynamicParameters"));
 
     // Deserialize
-    SimulationConfig out{};
+    RigidBody::Config out{};
     Ser::from_json(j, out);
 
     // --- Compare all fields ---
-   /* REQUIRE(out.simulation.startTime == Catch::Approx(in.simulation.startTime));
-    REQUIRE(out.simulation.duration == Catch::Approx(in.simulation.duration));*/
-
     REQUIRE(out.pose.lat_deg == Catch::Approx(in.pose.lat_deg));
     REQUIRE(out.pose.lon_deg == Catch::Approx(in.pose.lon_deg));
     REQUIRE(out.pose.alt_m == Catch::Approx(in.pose.alt_m));

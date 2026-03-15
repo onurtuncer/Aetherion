@@ -8,21 +8,21 @@
 
 #pragma once
 
-#include "Aetherion/RigidBody/GeodeticPoseNED.h"
-#include "Aetherion/RigidBody/Parameters/Inertial.h"
-#include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
-#include "Aetherion/RigidBody/VelocityNED.h"
-#include "Aetherion/RigidBody/BodyRates.h"
+#include "GeodeticPoseNED.h"
+#include "Parameters/Inertial.h"
+#include "Parameters/Aerodynamic.h"
+#include "VelocityNED.h"
+#include "BodyRates.h"
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
-    struct SimulationConfig
+    struct Config
     {
-        RigidBody::GeodeticPoseNED pose;
-        RigidBody::VelocityNED velocityNED;
-        RigidBody::BodyRates initialRotationAboutBodyAxes;  //TODO [Onur] rename this!!!
-        RigidBody::Parameters::Inertial inertialParameters;
-        RigidBody::Parameters::Aerodynamic aerodynamicParameters;
+        GeodeticPoseNED pose;
+        VelocityNED velocityNED;
+        BodyRates initialRotationAboutBodyAxes;  //TODO [Onur] rename this!!!
+        Parameters::Inertial inertialParameters;
+        Parameters::Aerodynamic aerodynamicParameters;
     };
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody
