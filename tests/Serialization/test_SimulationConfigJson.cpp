@@ -11,7 +11,7 @@
 #include <catch2/catch_approx.hpp>
 #include <vendor/nlohmann/json.hpp>
 
-#include "Aetherion/FlightDynamics/SimulationConfig.h"
+#include "Aetherion/RigidBody/Config.h"
 #include "Aetherion/Serialization/SimulationConfigJson.h"
 
 namespace Ser = ::Aetherion::Serialization;
@@ -20,10 +20,6 @@ using ::Aetherion::FlightDynamics::SimulationConfig;
 TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flightdynamics][config]")
 {
     SimulationConfig in{};
-
-    //// --- SimulationParameters ---
-    //in.simulation.startTime = 1.25;
-    //in.simulation.duration = 120.0;
 
     // --- InitialPoseWGS84_NED ---
     in.pose.lat_deg = 41.1055;
@@ -39,7 +35,7 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
     in.velocityNED.east_mps = 0.0;
     in.velocityNED.down_mps = 0.0;
 
-    // --- InitialRotationAboutBodyAxes ---
+    // --- BodyRates ---
 
     in.initialRotationAboutBodyAxes.roll_rad_s = 0.0;
     in.initialRotationAboutBodyAxes.pitch_rad_s = 0.0;

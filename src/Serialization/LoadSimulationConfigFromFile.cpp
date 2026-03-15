@@ -8,7 +8,7 @@
 
 #include "Aetherion/Serialization/LoadSimulationConfigFromFile.h"
 
-#include "Aetherion/FlightDynamics/SimulationConfig.h"
+#include "Aetherion/RigidBody/Config.h"
 #include "Aetherion/Serialization/SimulationConfigJson.h" 
 
 #include <fstream>

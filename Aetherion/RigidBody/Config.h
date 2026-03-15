@@ -14,15 +14,13 @@
 #include "Aetherion/RigidBody/VelocityNED.h"
 #include "Aetherion/RigidBody/BodyRates.h"
 
-//TODO [Onur] after simulation parameters gone this should be strictly RigidBody::Config!!!
-
 namespace Aetherion::FlightDynamics {
 
     struct SimulationConfig
     {
         RigidBody::GeodeticPoseNED pose;
         RigidBody::VelocityNED velocityNED;
-        RigidBody::BodyRates initialRotationAboutBodyAxes;
+        RigidBody::BodyRates initialRotationAboutBodyAxes;  //TODO [Onur] rename this!!!
         RigidBody::Parameters::Inertial inertialParameters;
         RigidBody::Parameters::Aerodynamic aerodynamicParameters;
     };

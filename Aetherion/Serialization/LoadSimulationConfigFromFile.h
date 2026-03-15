@@ -8,7 +8,7 @@
 
 #pragma once
 #include <string>
-#include "Aetherion/FlightDynamics/SimulationConfig.h"
+#include "Aetherion/RigidBody/Config.h"
 
 namespace Aetherion::Serialization {
     FlightDynamics::SimulationConfig LoadSimulationConfigFromFile(const std::string& filename);

@@ -6,7 +6,7 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/FlightDynamics/SimulationConfig.h"
+#include "Aetherion/RigidBody/Config.h"
 #include "Aetherion/Serialization/SimulationConfigJson.h"
 
 #include "Aetherion/Serialization/SimulationParametersJson.h"

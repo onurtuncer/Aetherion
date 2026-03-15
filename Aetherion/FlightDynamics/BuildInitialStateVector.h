@@ -73,7 +73,7 @@
                                                       // ECEFToECI, MakeLaunchStateECI
 
 // FlightDynamics types
-#include <Aetherion/FlightDynamics/SimulationConfig.h>
+#include <Aetherion/RigidBody/Config.h>
 
 // State layout
 #include <Aetherion/RigidBody/StateLayout.h>
