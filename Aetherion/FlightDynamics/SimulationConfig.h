@@ -9,7 +9,7 @@
 #pragma once
 
 #include "SimulationParameters.h"
-#include "PoseWGS84_NED.h"
+#include "Aetherion/RigidBody/GeodeticPoseNED.h"
 #include "Aetherion/RigidBody/Parameters/Inertial.h"
 #include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
 #include "Aetherion/RigidBody/VelocityNED.h"

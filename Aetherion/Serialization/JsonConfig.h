@@ -15,17 +15,14 @@
 
 #pragma once
 
-//#include <cmath>
 #include <filesystem>
-//#include <optional>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <utility>
-//#include <vector>
 
 #include "Aetherion/Serialization/JsonAdapter.h"
-#include "Aetherion/FlightDynamics/PoseWGS84_NED.h"
+#include "Aetherion/RigidBody/GeodeticPoseNED.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 
@@ -47,6 +44,6 @@ namespace Aetherion::FlightDynamics::Serialization {
         return getter(json_at(parent, key));
     }
   
- //   FlightDynamics::InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path); //TODO remove this!
+ //   FlightDynamics::InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path); //TODO [Onur] remove this!
     
 } // namespace Aetherion::FlightDynamics::Serialization

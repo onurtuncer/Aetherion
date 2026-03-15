@@ -6,8 +6,8 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/FlightDynamics/PoseWGS84_NED.h"
-#include "Aetherion/Serialization/PoseWGS84_NEDJson.h"
+#include "Aetherion/RigidBody/GeodeticPoseNED.h"
+#include "Aetherion/Serialization/GeodeticPoseNEDJson.h"
 
 namespace Aetherion::Serialization {
 

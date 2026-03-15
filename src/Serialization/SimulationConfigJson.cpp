@@ -10,7 +10,7 @@
 #include "Aetherion/Serialization/SimulationConfigJson.h"
 
 #include "Aetherion/Serialization/SimulationParametersJson.h"
-#include "Aetherion/Serialization/PoseWGS84_NEDJson.h"     
+#include "Aetherion/Serialization/GeodeticPoseNEDJson.h"     
 #include "Aetherion/Serialization/InertialParametersJson.h"
 #include "Aetherion/Serialization/AerodynamicParametersJson.h"
 #include "Aetherion/Serialization/VelocityNEDJson.h"

@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
-# src/FlightDynamics/Serialization/CMakeLists.txt
+# src/Serialization/CMakeLists.txt
 #
 # Registers Serialization submodule sources into the Aetherion library target.
 #
@@ -29,7 +29,7 @@ target_sources(Aetherion PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/AerodynamicParametersJson.cpp
 
     # State / pose serializers
-    ${CMAKE_CURRENT_SOURCE_DIR}/PoseWGS84_NEDJson.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/GeodeticPoseNEDJson.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/VelocityNEDJson.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/RotationRateAboutBodyAxesJson.cpp
 )

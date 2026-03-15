@@ -11,8 +11,8 @@
 #include <catch2/catch_approx.hpp>
 #include <vendor/nlohmann/json.hpp>
 
-#include "Aetherion/FlightDynamics/PoseWGS84_NED.h"
-#include "Aetherion/Serialization/PoseWGS84_NEDJson.h"
+#include "Aetherion/RigidBody/GeodeticPoseNED.h"
+#include "Aetherion/Serialization/GeodeticPoseNEDJson.h"
 
 using namespace Aetherion::FlightDynamics;
 namespace Ser = Aetherion::Serialization;

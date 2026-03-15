@@ -7,7 +7,7 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_json
-                    test_PoseWGS84_NEDJson.cpp
+                    test_GeodeticPoseNEDJson.cpp
                     test_InertialParametersJson.cpp 
                     test_RotationRateAboutBodyAxesJson.cpp 
                     test_SimulationParametersJson.cpp
