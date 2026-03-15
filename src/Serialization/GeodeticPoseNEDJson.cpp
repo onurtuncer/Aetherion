@@ -11,7 +11,7 @@
 
 namespace Aetherion::Serialization {
 
-    void from_json(const nlohmann::json& j, FlightDynamics::PoseWGS84_NED& pose)
+    void from_json(const nlohmann::json& j, RigidBody::GeodeticPoseNED& pose)
     {
         pose.lat_deg = j.at("lat_deg").get<double>();
         pose.lon_deg = j.at("lon_deg").get<double>();
@@ -22,7 +22,7 @@ namespace Aetherion::Serialization {
         pose.roll_deg = j.at("roll_deg").get<double>();
     }
 
-    void to_json(nlohmann::json& j, const FlightDynamics::PoseWGS84_NED& pose)
+    void to_json(nlohmann::json& j, const RigidBody::GeodeticPoseNED& pose)
     {
         j = {
             {"lat_deg", pose.lat_deg},

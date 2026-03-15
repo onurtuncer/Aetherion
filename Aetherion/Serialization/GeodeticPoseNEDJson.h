@@ -10,16 +10,14 @@
 
 #include "Aetherion/Serialization/JsonConfigNlohmannAdapter.h"
 
-namespace Aetherion::FlightDynamics{
+namespace Aetherion::RigidBody{
 
-    struct PoseWGS84_NED;
-} // namespace Aetherion::FlightDynamics
+    struct GeodeticPoseNED;
+} // namespace Aetherion::RigidBody
 
 namespace Aetherion::Serialization {
 
-    struct FlightDynamics::PoseWGS84_NED;
-
-    void from_json(const nlohmann::json& j, FlightDynamics::PoseWGS84_NED& pose);
-    void to_json(nlohmann::json& j, const FlightDynamics::PoseWGS84_NED& pose);
+    void from_json(const nlohmann::json& j, RigidBody::GeodeticPoseNED& pose);
+    void to_json(nlohmann::json& j, const RigidBody::GeodeticPoseNED& pose);
 
 } // namespace Aetherion::Serialization

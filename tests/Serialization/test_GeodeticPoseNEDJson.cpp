@@ -14,7 +14,7 @@
 #include "Aetherion/RigidBody/GeodeticPoseNED.h"
 #include "Aetherion/Serialization/GeodeticPoseNEDJson.h"
 
-using namespace Aetherion::FlightDynamics;
+namespace RigidBody = Aetherion::RigidBody;
 namespace Ser = Aetherion::Serialization;
 
 TEST_CASE("PoseWGS84_NED: from_json parses expected values", "[json][initial_pose]")
@@ -31,7 +31,7 @@ TEST_CASE("PoseWGS84_NED: from_json parses expected values", "[json][initial_pos
 
     nlohmann::json j = nlohmann::json::parse(text);
 
-    PoseWGS84_NED pose{};
+    RigidBody::GeodeticPoseNED pose{};
     Ser::from_json(j, pose);
 
     REQUIRE(pose.lat_deg == Catch::Approx(41.1055));
@@ -44,7 +44,7 @@ TEST_CASE("PoseWGS84_NED: from_json parses expected values", "[json][initial_pos
 
 TEST_CASE("InitialPoseWGS84_NED: to_json emits expected keys and values", "[json][initial_pose]")
 {
-    PoseWGS84_NED pose{};
+    RigidBody::GeodeticPoseNED pose{};
     pose.lat_deg = 41.1055;
     pose.lon_deg = 29.0217;
     pose.alt_m = 120.0;
@@ -65,7 +65,7 @@ TEST_CASE("InitialPoseWGS84_NED: to_json emits expected keys and values", "[json
 
 TEST_CASE("PoseWGS84_NED: round-trip JSON preserves values", "[json][initial_pose]")
 {
-    PoseWGS84_NED in{};
+    RigidBody::GeodeticPoseNED in{};
     in.lat_deg = 41.1055;
     in.lon_deg = 29.0217;
     in.alt_m = 120.0;
@@ -76,7 +76,7 @@ TEST_CASE("PoseWGS84_NED: round-trip JSON preserves values", "[json][initial_pos
     nlohmann::json j;
     Ser::to_json(j, in);
 
-    PoseWGS84_NED out{};
+    RigidBody::GeodeticPoseNED out{};
     Ser::from_json(j, out);
 
     REQUIRE(out.lat_deg == Catch::Approx(in.lat_deg));

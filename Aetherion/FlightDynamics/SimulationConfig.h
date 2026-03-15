@@ -20,7 +20,7 @@ namespace Aetherion::FlightDynamics {
     struct SimulationConfig
     {
         SimulationParameters simulation;
-        PoseWGS84_NED pose;
+        RigidBody::GeodeticPoseNED pose;
         RigidBody::VelocityNED velocityNED;
         RotationRateAboutBodyAxes initialRotationAboutBodyAxes;
         RigidBody::Parameters::Inertial inertialParameters;

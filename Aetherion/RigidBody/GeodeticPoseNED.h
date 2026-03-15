@@ -8,9 +8,9 @@
 
 #pragma once
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
-    struct PoseWGS84_NED {
+    struct GeodeticPoseNED {
 
          // --- Geodetic WGS84/Local NED (JSON input convenience) ---
         double lat_deg{ 0.0 };
@@ -22,4 +22,4 @@ namespace Aetherion::FlightDynamics {
     };
 
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody
