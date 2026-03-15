@@ -11,14 +11,14 @@
 
 namespace Aetherion::Serialization {
 
-    void from_json(const nlohmann::json& j, FlightDynamics::RotationRateAboutBodyAxes& w)
+    void from_json(const nlohmann::json& j, RigidBody::BodyRates& w)
     {
         w.roll_rad_s = j.at("roll_rad_s").get<double>();
         w.pitch_rad_s = j.at("pitch_rad_s").get<double>();
         w.yaw_rad_s = j.at("yaw_rad_s").get<double>();
     }
 
-    void to_json(nlohmann::json& j, const FlightDynamics::RotationRateAboutBodyAxes& w)
+    void to_json(nlohmann::json& j, const RigidBody::BodyRates& w)
     {
         j = nlohmann::json::object();
         j["roll_rad_s"] = w.roll_rad_s;

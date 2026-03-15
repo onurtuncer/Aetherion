@@ -10,9 +10,9 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <vendor/nlohmann/json.hpp>  //TODO [Onur] this should be nlohhmann/json.hpp later on
 #include "Aetherion/Serialization/BodyRatesJson.h"
-#include "Aetherion/FlightDynamics/BodyRates.h"
+#include "Aetherion/RigidBody/BodyRates.h"
 
-using namespace Aetherion::FlightDynamics;
+namespace RigidBody = Aetherion::RigidBody;
 namespace Ser = Aetherion::Serialization;
 
 using namespace Catch::Matchers;
@@ -21,7 +21,7 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
 {
     SECTION("to_json produces correct keys and values")
     {
-        const RotationRateAboutBodyAxes rot{ 0.1, 0.2, 0.3 };
+        const RigidBody::BodyRates rot{ 0.1, 0.2, 0.3 };
         nlohmann::json j;
         Ser::to_json(j, rot);
 
@@ -42,7 +42,7 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
             {"yaw_rad_s",   0.6}
         };
 
-        RotationRateAboutBodyAxes rot{};
+        RigidBody::BodyRates rot{};
         Ser::from_json(j, rot);
 
         CHECK_THAT(rot.roll_rad_s, WithinRel(0.4));
@@ -52,12 +52,12 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
 
     SECTION("round-trip serialization preserves all values")
     {
-        const RotationRateAboutBodyAxes original{ 1.1, -0.5, 0.0 };
+        const RigidBody::BodyRates original{ 1.1, -0.5, 0.0 };
 
         nlohmann::json j;
         Ser::to_json(j, original);
 
-        RotationRateAboutBodyAxes restored{};
+        RigidBody::BodyRates restored{};
         Ser::from_json(j, restored);
 
         CHECK_THAT(restored.roll_rad_s, WithinRel(original.roll_rad_s));
@@ -68,7 +68,7 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
 
     SECTION("default-constructed struct serialises to zero values")
     {
-        const RotationRateAboutBodyAxes rot{};
+        const RigidBody::BodyRates rot{};
         nlohmann::json j;
         Ser::to_json(j, rot);
 
@@ -84,7 +84,7 @@ TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][Fligh
             // pitch_rad_s and yaw_rad_s deliberately omitted
         };
 
-        RotationRateAboutBodyAxes rot{};
+        RigidBody::BodyRates rot{};
         REQUIRE_THROWS_AS(Ser::from_json(j, rot), nlohmann::json::out_of_range);
     }
 }

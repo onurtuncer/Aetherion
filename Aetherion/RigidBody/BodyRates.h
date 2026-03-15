@@ -8,12 +8,12 @@
 
 #pragma once
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
-	struct RotationRateAboutBodyAxes
+	struct BodyRates
 	{
 		double roll_rad_s{ 0.0 };
 		double pitch_rad_s{ 0.0 };
 		double yaw_rad_s{ 0.0 };
 	};
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody

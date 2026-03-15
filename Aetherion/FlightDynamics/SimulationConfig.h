@@ -24,7 +24,7 @@ namespace Aetherion::FlightDynamics {
         SimulationParameters simulation;
         RigidBody::GeodeticPoseNED pose;
         RigidBody::VelocityNED velocityNED;
-        RotationRateAboutBodyAxes initialRotationAboutBodyAxes;
+        RigidBody::BodyRates initialRotationAboutBodyAxes;
         RigidBody::Parameters::Inertial inertialParameters;
         RigidBody::Parameters::Aerodynamic aerodynamicParameters;
     };

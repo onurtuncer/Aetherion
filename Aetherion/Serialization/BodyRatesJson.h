@@ -10,13 +10,13 @@
 
 #include "Aetherion/Serialization/JsonConfigNlohmannAdapter.h"
 
-namespace Aetherion::FlightDynamics {
-    struct RotationRateAboutBodyAxes;
-} // namespace Aetherion::FlightDynamics
+namespace Aetherion::RigidBody {
+    struct BodyRates;
+} // namespace Aetherion::RigidBody
 
 namespace Aetherion::Serialization {
 
-    void from_json(const nlohmann::json& j, FlightDynamics::RotationRateAboutBodyAxes& ir);
-    void to_json(nlohmann::json& j, const FlightDynamics::RotationRateAboutBodyAxes& ir);
+    void from_json(const nlohmann::json& j, RigidBody::BodyRates& ir);
+    void to_json(nlohmann::json& j, const RigidBody::BodyRates& ir);
 
 } // namespace Aetherion::Serialization
