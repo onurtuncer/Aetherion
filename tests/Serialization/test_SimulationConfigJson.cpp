@@ -21,9 +21,9 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
 {
     SimulationConfig in{};
 
-    // --- SimulationParameters ---
-    in.simulation.startTime = 1.25;
-    in.simulation.duration = 120.0;
+    //// --- SimulationParameters ---
+    //in.simulation.startTime = 1.25;
+    //in.simulation.duration = 120.0;
 
     // --- InitialPoseWGS84_NED ---
     in.pose.lat_deg = 41.1055;
@@ -74,7 +74,7 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
     Ser::to_json(j, in);
 
     // Top-level key sanity
-    REQUIRE(j.contains("simulation"));
+   // REQUIRE(j.contains("simulation"));
     REQUIRE(j.contains("pose"));
     REQUIRE(j.contains("velocityNED"));
     REQUIRE(j.contains("initialRotationAboutBodyAxes"));
@@ -86,8 +86,8 @@ TEST_CASE("SimulationConfig: JSON round-trip preserves all fields", "[json][flig
     Ser::from_json(j, out);
 
     // --- Compare all fields ---
-    REQUIRE(out.simulation.startTime == Catch::Approx(in.simulation.startTime));
-    REQUIRE(out.simulation.duration == Catch::Approx(in.simulation.duration));
+   /* REQUIRE(out.simulation.startTime == Catch::Approx(in.simulation.startTime));
+    REQUIRE(out.simulation.duration == Catch::Approx(in.simulation.duration));*/
 
     REQUIRE(out.pose.lat_deg == Catch::Approx(in.pose.lat_deg));
     REQUIRE(out.pose.lon_deg == Catch::Approx(in.pose.lon_deg));

@@ -222,13 +222,13 @@ namespace Aetherion::FlightDynamics {
     // @param cfg  Fully populated SimulationConfig
     // @return     Eigen column vector of length 14
     // =========================================================================
-    inline Eigen::Matrix<double, RigidBody::StateLayout::N, 1>
+  /*  inline Eigen::Matrix<double, RigidBody::StateLayout::N, 1>
         BuildInitialStateVector(const SimulationConfig& cfg)
     {
         const double theta_era_rad =
             kEarthRotationRate_rad_s * cfg.simulation.startTime;
 
         return BuildInitialStateVector(cfg, theta_era_rad);
-    }
+    }*/
 
 } // namespace Aetherion::FlightDynamics

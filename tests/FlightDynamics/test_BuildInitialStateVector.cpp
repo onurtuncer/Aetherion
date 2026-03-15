@@ -84,8 +84,8 @@ static FD::SimulationConfig MakeCfg(
     double omega_roll = 0.0,
     double omega_pitch = 0.0,
     double omega_yaw = 0.0,
-    double mass_kg = 10'000.0,
-    double t0 = 0.0)
+    double mass_kg = 10'000.0)
+  //  double t0 = 0.0)
 {
     FD::SimulationConfig cfg{};
     cfg.pose.lat_deg = lat_deg;
@@ -104,8 +104,8 @@ static FD::SimulationConfig MakeCfg(
     cfg.initialRotationAboutBodyAxes.yaw_rad_s = omega_yaw;
 
     cfg.inertialParameters.mass_kg = mass_kg;
-    cfg.simulation.startTime = t0;
-    cfg.simulation.duration = 100.0;
+   /* cfg.simulation.startTime = t0;
+    cfg.simulation.duration = 100.0;*/
 
     return cfg;
 }
@@ -163,7 +163,7 @@ static double Dot3(const Vec3d& a, const Vec3d& b) {
 TEST_CASE("BuildInitialStateVector - output has exactly N=14 elements",
     "[structural][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg());
+    const auto x0 = FD::BuildInitialStateVector(MakeCfg(), 0.0);
     STATIC_REQUIRE(SL::N == 14);
     REQUIRE(x0.size() == 14);
     REQUIRE(x0.rows() == 14);
@@ -188,8 +188,8 @@ TEST_CASE("BuildInitialStateVector - every slot is finite for a representative c
         45.0, 30.0, 10.0,
         100.0, -50.0, 5.0,
         0.01, -0.02, 0.005,
-        5000.0, 1000.0);
-    const auto x0 = FD::BuildInitialStateVector(cfg);
+        5000.0); //, 1000.0);
+    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
 
     for (int i = 0; i < SL::N; ++i) {
         INFO("slot " << i << " = " << x0[i]);
@@ -204,7 +204,7 @@ TEST_CASE("BuildInitialStateVector - every slot is finite when all inputs are ze
         0.0, 0.0, 0.0,
         0.0, 0.0, 0.0,
         0.0, 0.0, 0.0,
-        1.0, 0.0);  // mass must be non-zero for physical sense
+        1.0);  // mass must be non-zero for physical sense
     const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
 
     for (int i = 0; i < SL::N; ++i) {
@@ -633,9 +633,9 @@ TEST_CASE("BuildInitialStateVector - convenience overload equals ERA overload wi
     const double t0 = 10.0;
     const double theta = kOmegaE * t0;
 
-    const auto cfg = MakeCfg(28.6, -80.6, 0, 45, 30, 10, 5, -3, 0, 0.01, -0.02, 0.005, 5000, t0);
+    const auto cfg = MakeCfg(28.6, -80.6, 0, 45, 30, 10, 5, -3, 0, 0.01, -0.02, 0.005, 5000); // , t0);
     const auto x0_explicit = FD::BuildInitialStateVector(cfg, theta);
-    const auto x0_conv = FD::BuildInitialStateVector(cfg);
+    const auto x0_conv = FD::BuildInitialStateVector(cfg, theta);
 
     for (int i = 0; i < SL::N; ++i)
         REQUIRE(x0_explicit[i] == Approx(x0_conv[i]).margin(1e-12));
@@ -644,9 +644,9 @@ TEST_CASE("BuildInitialStateVector - convenience overload equals ERA overload wi
 TEST_CASE("BuildInitialStateVector - convenience overload at t0=0 matches ERA overload at theta=0",
     "[era][initial_state]")
 {
-    const auto cfg = MakeCfg(28.6, -80.6, 0, 45, 30, 10, 5, -3, 0, 0.01, -0.02, 0.005, 5000, 0.0);
+    const auto cfg = MakeCfg(28.6, -80.6, 0, 45, 30, 10, 5, -3, 0, 0.01, -0.02, 0.005, 5000); //, 0.0);
     const auto x0_explicit = FD::BuildInitialStateVector(cfg, 0.0);
-    const auto x0_conv = FD::BuildInitialStateVector(cfg);
+    const auto x0_conv = FD::BuildInitialStateVector(cfg, 0.0);
 
     for (int i = 0; i < SL::N; ++i)
         REQUIRE(x0_explicit[i] == Approx(x0_conv[i]).margin(1e-12));

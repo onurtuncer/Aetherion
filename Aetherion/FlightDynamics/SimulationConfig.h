@@ -8,7 +8,6 @@
 
 #pragma once
 
-#include "SimulationParameters.h"
 #include "Aetherion/RigidBody/GeodeticPoseNED.h"
 #include "Aetherion/RigidBody/Parameters/Inertial.h"
 #include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
@@ -21,7 +20,6 @@ namespace Aetherion::FlightDynamics {
 
     struct SimulationConfig
     {
-        SimulationParameters simulation;
         RigidBody::GeodeticPoseNED pose;
         RigidBody::VelocityNED velocityNED;
         RigidBody::BodyRates initialRotationAboutBodyAxes;
