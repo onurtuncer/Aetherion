@@ -10,15 +10,15 @@
 
 #include "Aetherion/Serialization/JsonConfigNlohmannAdapter.h"
 
-namespace Aetherion::RigidBody::Parameters {
-    struct Inertial;
+namespace Aetherion::RigidBody {
+    struct InertialParameters;
 }
 
 namespace Aetherion::Serialization {
 
 
-    void from_json(const nlohmann::json& j, RigidBody::Parameters::Inertial& ip);
-    void to_json(nlohmann::json& j, const RigidBody::Parameters::Inertial& ip);
+    void from_json(const nlohmann::json& j, RigidBody::InertialParameters& ip);
+    void to_json(nlohmann::json& j, const RigidBody::InertialParameters& ip);
 
 } // namespace Aetherion::Serialization
 

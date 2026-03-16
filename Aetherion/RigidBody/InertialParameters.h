@@ -8,9 +8,9 @@
 
 #pragma once
 
-namespace Aetherion::RigidBody::Parameters {
+namespace Aetherion::RigidBody{
 
-    struct Inertial
+    struct InertialParameters
     {
         // --- Mass ---
         double mass_kg{ 0.0 };

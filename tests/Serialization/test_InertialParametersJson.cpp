@@ -11,11 +11,11 @@
 #include <catch2/catch_approx.hpp>
 #include <vendor/nlohmann/json.hpp>
 
-#include "Aetherion/RigidBody/Parameters/Inertial.h"
+#include "Aetherion/RigidBody/InertialParameters.h"
 #include "Aetherion/Serialization/InertialParametersJson.h"
 
 namespace Ser = Aetherion::Serialization;
-namespace Parameters = Aetherion::RigidBody::Parameters;
+namespace RigidBody = Aetherion::RigidBody;
 
 TEST_CASE("InertialParameters: from_json parses expected values", "[json][inertial]")
 {
@@ -39,7 +39,7 @@ TEST_CASE("InertialParameters: from_json parses expected values", "[json][inerti
 
     const nlohmann::json j = nlohmann::json::parse(text);
 
-    Parameters::Inertial ip{};
+    RigidBody::InertialParameters ip{};
     Ser::from_json(j, ip);
 
     REQUIRE(ip.mass_kg == Catch::Approx(10.0));
@@ -56,7 +56,7 @@ TEST_CASE("InertialParameters: from_json parses expected values", "[json][inerti
 
 TEST_CASE("InertialParameters: to_json emits expected nested structure", "[json][inertial]")
 {
-    Parameters::Inertial ip{};
+    RigidBody::InertialParameters ip{};
     ip.mass_kg = 12.5;
 
     ip.Ixx = 0.42;
@@ -91,7 +91,7 @@ TEST_CASE("InertialParameters: to_json emits expected nested structure", "[json]
 
 TEST_CASE("InertialParameters: JSON round-trip preserves values", "[json][inertial]")
 {
-    Parameters::Inertial in{};
+    RigidBody::InertialParameters in{};
     in.mass_kg = 7.25;
 
     in.Ixx = 0.31;
@@ -108,7 +108,7 @@ TEST_CASE("InertialParameters: JSON round-trip preserves values", "[json][inerti
     nlohmann::json j;
     Ser::to_json(j, in);
 
-    Parameters::Inertial out{};
+    RigidBody::InertialParameters out{};
     Ser::from_json(j, out);
 
     REQUIRE(out.mass_kg == Catch::Approx(in.mass_kg));
@@ -125,7 +125,7 @@ TEST_CASE("InertialParameters: JSON round-trip preserves values", "[json][inerti
 
 TEST_CASE("InertialParameters: basic physical sanity (necessary conditions)", "[json][inertial][physics]")
 {
-    Parameters::Inertial ip{};
+    RigidBody::InertialParameters ip{};
     ip.mass_kg = 5.0;
     ip.Ixx = 0.30;
     ip.Iyy = 0.40;

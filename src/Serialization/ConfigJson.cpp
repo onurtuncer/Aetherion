@@ -33,7 +33,6 @@ namespace Aetherion::Serialization {
     void to_json(nlohmann::json& j, const RigidBody::Config& cfg)
     {
         nlohmann::json pose, vel, rot, inert, aero;
-      //  ::Aetherion::Serialization::to_json(sim, cfg.simulation);
         to_json(pose, cfg.pose);
         ::Aetherion::Serialization::to_json(vel, cfg.velocityNED);
         ::Aetherion::Serialization::to_json(rot, cfg.initialRotationAboutBodyAxes);

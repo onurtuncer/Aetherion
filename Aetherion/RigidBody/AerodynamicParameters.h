@@ -8,9 +8,9 @@
 
 #pragma once
 
-namespace Aetherion::RigidBody::Parameters {
+namespace Aetherion::RigidBody{
 
-	struct Aerodynamic {
+	struct AerodynamicParameters {
 		double S{ 0.0 }; // Reference area (m^2)
 		double CL{ 0.0 }; // Lift coefficient
 		double CD{ 0.0 }; // Drag coefficient

@@ -6,6 +6,8 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
+#include "Aetherion/Spatial/Wrench.h"
+#include "Aetherion/ODE/RKMK/Lie/SE3.h"
 
 namespace Aetherion::FlightDynamics {
 

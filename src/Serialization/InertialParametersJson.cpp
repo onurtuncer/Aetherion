@@ -6,12 +6,12 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/RigidBody/Parameters/Inertial.h"
+#include "Aetherion/RigidBody/InertialParameters.h"
 #include "Aetherion/Serialization/InertialParametersJson.h"
 
 namespace Aetherion::Serialization {
 
-    void from_json(const nlohmann::json& j, RigidBody::Parameters::Inertial& ip)
+    void from_json(const nlohmann::json& j, RigidBody::InertialParameters& ip)
     {
         ip.mass_kg = j.at("mass_kg").get<double>();
 
@@ -29,7 +29,7 @@ namespace Aetherion::Serialization {
         ip.zbar_m = r.at("z").get<double>();
     }
 
-    void to_json(nlohmann::json& j, const RigidBody::Parameters::Inertial& ip)
+    void to_json(nlohmann::json& j, const RigidBody::InertialParameters& ip)
     {
         j = {
             {"mass_kg", ip.mass_kg},

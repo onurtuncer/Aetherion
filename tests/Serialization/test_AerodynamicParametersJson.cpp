@@ -11,11 +11,11 @@
 #include <catch2/catch_approx.hpp>
 #include <vendor/nlohmann/json.hpp>
 
-#include "Aetherion/RigidBody/Parameters/Aerodynamic.h"
+#include "Aetherion/RigidBody/AerodynamicParameters.h"
 #include "Aetherion/Serialization/AerodynamicParametersJson.h"
 
 namespace Ser = Aetherion::Serialization;
-namespace Parameters = Aetherion::RigidBody::Parameters;
+namespace RigidBody = Aetherion::RigidBody;
 
 TEST_CASE("AerodynamicParameters: from_json parses expected values", "[json][aero]")
 {
@@ -32,7 +32,7 @@ TEST_CASE("AerodynamicParameters: from_json parses expected values", "[json][aer
 
     const nlohmann::json j = nlohmann::json::parse(text);
 
-    Parameters::Aerodynamic ap{};
+    RigidBody::AerodynamicParameters ap{};
     Ser::from_json(j, ap);
 
     REQUIRE(ap.S == Catch::Approx(0.85));
@@ -46,7 +46,7 @@ TEST_CASE("AerodynamicParameters: from_json parses expected values", "[json][aer
 
 TEST_CASE("AerodynamicParameters: to_json emits expected keys and values", "[json][aero]")
 {
-    Parameters::Aerodynamic ap{};
+    RigidBody::AerodynamicParameters ap{};
     ap.S = 1.2;
     ap.CL = 0.8;
     ap.CD = 0.05;
@@ -69,7 +69,7 @@ TEST_CASE("AerodynamicParameters: to_json emits expected keys and values", "[jso
 
 TEST_CASE("AerodynamicParameters: JSON round-trip preserves values", "[json][aero]")
 {
-    Parameters::Aerodynamic in{};
+    RigidBody::AerodynamicParameters in{};
     in.S = 0.95;
     in.CL = 0.6;
     in.CD = 0.04;
@@ -81,7 +81,7 @@ TEST_CASE("AerodynamicParameters: JSON round-trip preserves values", "[json][aer
     nlohmann::json j;
     Ser::to_json(j, in);
 
-    Parameters::Aerodynamic out{};
+    RigidBody::AerodynamicParameters out{};
     Ser::from_json(j, out);
 
     REQUIRE(out.S == Catch::Approx(in.S));
@@ -102,7 +102,7 @@ TEST_CASE("AerodynamicParameters: missing keys throw", "[json][aero][negative]")
       "CD": 0.03
     })");
 
-    Parameters::Aerodynamic ap{};
+    RigidBody::AerodynamicParameters ap{};
     REQUIRE_THROWS_AS(Ser::from_json(j, ap), nlohmann::json::out_of_range);
 }
 
@@ -119,13 +119,13 @@ TEST_CASE("AerodynamicParameters: wrong types throw", "[json][aero][negative]")
       "Cn": 0.005
     })");
 
-    Parameters::Aerodynamic ap{};
+    RigidBody::AerodynamicParameters ap{};
     REQUIRE_THROWS_AS(Ser::from_json(j, ap), nlohmann::json::type_error);
 }
 
 TEST_CASE("AerodynamicParameters: basic physical sanity", "[json][aero][physics]")
 {
-    Parameters::Aerodynamic ap{};
+    RigidBody::AerodynamicParameters ap{};
     ap.S = 1.0;
     ap.CL = 0.5;
     ap.CD = 0.03;

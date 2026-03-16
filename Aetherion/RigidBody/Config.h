@@ -9,8 +9,8 @@
 #pragma once
 
 #include "GeodeticPoseNED.h"
-#include "Parameters/Inertial.h"
-#include "Parameters/Aerodynamic.h"
+#include "InertialParameters.h"
+#include "AerodynamicParameters.h"
 #include "VelocityNED.h"
 #include "BodyRates.h"
 
@@ -21,8 +21,8 @@ namespace Aetherion::RigidBody {
         GeodeticPoseNED pose;
         VelocityNED velocityNED;
         BodyRates initialRotationAboutBodyAxes;  //TODO [Onur] rename this!!!
-        Parameters::Inertial inertialParameters;
-        Parameters::Aerodynamic aerodynamicParameters;
+        InertialParameters inertialParameters;
+        AerodynamicParameters aerodynamicParameters;
     };
 
 } // namespace Aetherion::RigidBody
