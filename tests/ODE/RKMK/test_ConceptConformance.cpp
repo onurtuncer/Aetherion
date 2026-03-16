@@ -7,17 +7,13 @@
 //
 // Catch2 concept conformance tests for Aetherion::ODE::RKMK concepts.
 // Covers positive and negative cases for all four concepts.
-//
-// NOTE: All comments are ASCII-only. MSVC rejects Unicode in source files
-// even with /utf-8 when the BOM is absent. No math symbols, arrows, or
-// Greek letters anywhere in this translation unit.
-//
+
 #include <catch2/catch_test_macros.hpp>
 
 #include <Aetherion/ODE/RKMK/Concepts.h>
 #include <Aetherion/ODE/RKMK/Integrators/RadauIIA_RKMK_ProductSE3.h>
 #include <Aetherion/FlightDynamics/KinematicsXiField.h>
-#include <Aetherion/FlightDynamics/RigidBodyVectorField.h>
+#include <Aetherion/RigidBody/VectorField.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
 
 #include <Eigen/Core>
@@ -29,7 +25,7 @@ using namespace Aetherion::ODE::RKMK;
 // Concrete aliases -- all templates fully specialised with Scalar=double
 // ------------------------------------------------------------------------------
 using KFd = FlightDynamics::KinematicsXiField<double>;
-using CVFd = FlightDynamics::RigidBodyVectorField<FlightDynamics::CentralGravityPolicy>;
+using CVFd = RigidBody::VectorField<FlightDynamics::CentralGravityPolicy>;
 using Itgd = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<KFd, CVFd, 7>;
 
 // ------------------------------------------------------------------------------

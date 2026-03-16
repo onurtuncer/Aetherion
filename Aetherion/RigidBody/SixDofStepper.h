@@ -35,7 +35,7 @@
 
 #include <Eigen/Core>
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
     // ------------------------------------------------------------------------------
     // EuclidDim
@@ -52,7 +52,7 @@ namespace Aetherion::FlightDynamics {
     inline constexpr int RigidBody6DoFEuclidDim = 7;
 
     // ------------------------------------------------------------------------------
-    // RigidBody6DoFStepper<VF>
+    // SixDoFStepper<VF>
     //
     // Template parameters
     // -------------------
@@ -68,7 +68,7 @@ namespace Aetherion::FlightDynamics {
         requires
         ODE::RKMK::KinematicsFieldOnSE3<KinematicsXiField<Scalar>, Scalar>&&
         ODE::RKMK::VectorFieldOnProductSE3<VectorField, 7, Scalar>
-        class RigidBody6DoFStepper
+        class SixDoFStepper
     {
     public:
         // ------------------------------------------------------------------
@@ -100,7 +100,7 @@ namespace Aetherion::FlightDynamics {
         // Primary constructor: accepts a fully-constructed VectorField.
         // Use this when the policy requires arguments beyond InertialParameters
         // (e.g. atmosphere tables, thrust curves, aerodynamic databases).
-        explicit RigidBody6DoFStepper(
+        explicit SixDoFStepper(
             VectorField                    vf,
             ODE::RKMK::Core::NewtonOptions opt = {})
             : integrator_(KinematicsField{}, std::move(vf))
@@ -111,7 +111,7 @@ namespace Aetherion::FlightDynamics {
         // Convenience constructor: builds VectorField directly from InertialParameters.
         // Only participates in overload resolution when VF models
         // ConstructibleFromInertialParameters — SFINAE-free thanks to the concept.
-        explicit RigidBody6DoFStepper(
+        explicit SixDoFStepper(
             const InertialParameters& ip,
             ODE::RKMK::Core::NewtonOptions opt = {})
             requires ODE::RKMK::ConstructibleFromInertialParameters<VectorField>
@@ -162,9 +162,9 @@ namespace Aetherion::FlightDynamics {
         }
 
         [[nodiscard]]
-        static RigidBodyStateD unpack(const SE3d& g, const VecE& x) noexcept
+        static StateD unpack(const SE3d& g, const VecE& x) noexcept
         {
-            RigidBodyStateD s;
+            StateD s;
             s.g = g;
             s.nu_B = x.template head<6>();
             s.m = x(6);
@@ -173,7 +173,7 @@ namespace Aetherion::FlightDynamics {
 
         // Convenience overload: unpack directly from a StepResult.
         [[nodiscard]]
-        static RigidBodyStateD unpack(const StepResult& r) noexcept
+        static StateD unpack(const StepResult& r) noexcept
         {
             return unpack(r.g1, r.x1);
         }
@@ -198,4 +198,4 @@ namespace Aetherion::FlightDynamics {
         ODE::RKMK::Core::NewtonOptions opt_;
     };
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::Rigidbody

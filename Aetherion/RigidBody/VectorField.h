@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 // ------------------------------------------------------------------------------
 //
-// RigidBodyVectorField.h
+// VectorField.h
 //
 // Euclidean part of the 6-DoF rigid body ODE on SE(3) x R^7.
 //
@@ -34,9 +34,11 @@
 #include <Aetherion/Spatial/Adjoint.h>
 #include <Aetherion/Spatial/Twist.h>
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
-     // -------------------------------------------------------------------------
+    namespace FD = Aetherion::FlightDynamics;
+
+    // -------------------------------------------------------------------------
     // RigidBodyVectorField
     //
     // Four policies as template parameters; all have compile-time defaults so
@@ -46,12 +48,12 @@ namespace Aetherion::FlightDynamics {
     //
     // -------------------------------------------------------------------------
     template<
-        GravityPolicy    Gravity,
-        AeroPolicy       Aero = ZeroAeroPolicy,
-        PropulsionPolicy Thrust = ZeroPropulsionPolicy,
-        MassPolicy       MassMdot = ConstantMassPolicy
+        FD::GravityPolicy    Gravity,
+        FD::AeroPolicy       Aero = FD::ZeroAeroPolicy,
+        FD::PropulsionPolicy Thrust = FD::ZeroPropulsionPolicy,
+        FD::MassPolicy       MassMdot = FD::ConstantMassPolicy
     >
-    class RigidBodyVectorField {
+    class VectorField {
     public:
         // Pre-inverted 6x6 spatial inertia matrix (double, built once).
         Eigen::Matrix<double, 6, 6> M_inv;
@@ -62,8 +64,8 @@ namespace Aetherion::FlightDynamics {
         MassMdot  mass_model;
 
         // Build M_inv from InertialParameters.
-        explicit RigidBodyVectorField(
-            const RigidBody::InertialParameters& ip,
+        explicit VectorField(
+            const InertialParameters& ip,
             Gravity   g = {},
             Aero      a = {},
             Thrust    th = {},
@@ -150,10 +152,10 @@ namespace Aetherion::FlightDynamics {
 
     // CTAD deduction guide -- omit trailing defaulted policies at call site.
     template<class G,
-        class A = ZeroAeroPolicy,
-        class T = ZeroPropulsionPolicy,
-        class M = ConstantMassPolicy>
-    RigidBodyVectorField(const RigidBody::InertialParameters&, G, A = {}, T = {}, M = {})
-        -> RigidBodyVectorField<G, A, T, M>;
+        class A = FD::ZeroAeroPolicy,
+        class T = FD::ZeroPropulsionPolicy,
+        class M = FD::ConstantMassPolicy>
+    VectorField(const InertialParameters&, G, A = {}, T = {}, M = {})
+        -> VectorField<G, A, T, M>;
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody
