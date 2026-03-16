@@ -25,7 +25,7 @@ target_link_libraries(test_json
 include(Catch)
 catch_discover_tests(test_json)
                                                
-add_executable(test_load_file test_LoadConfigFromFile.cpp)
+add_executable(test_load_file "test_LoadConfig.cpp")
 
 target_link_libraries(test_load_file 
     PRIVATE
@@ -33,4 +33,4 @@ target_link_libraries(test_load_file
         Catch2::Catch2)
 
 include(Catch)
-catch_discover_tests(test_load_file TEST_SPEC "~[external_file]")
+catch_discover_tests(test_load_file TEST_SPEC "~[requires_external_file]")

@@ -8,8 +8,13 @@
 
 #pragma once
 #include <string>
-#include "Aetherion/RigidBody/Config.h"
+#include <vendor/nlohmann/json.hpp> 
+
+namespace Aetherion::RigidBody {
+    struct Config;
+}
 
 namespace Aetherion::Serialization {
-    RigidBody::Config LoadConfigFromFile(const std::string& filename);
+    RigidBody::Config LoadConfig(const std::string& filename);
+    RigidBody::Config LoadConfig(const nlohmann::json& j);
 }

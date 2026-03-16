@@ -22,7 +22,6 @@
 #include <utility>
 
 #include "Aetherion/Serialization/JsonAdapter.h"
-//#include "Aetherion/RigidBody/GeodeticPoseNED.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 

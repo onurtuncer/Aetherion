@@ -14,7 +14,8 @@
 #include <string>
 #include <optional>
 
-#include "Aetherion/Serialization/LoadConfigFromFile.h"
+#include "Aetherion/Serialization/LoadConfig.h"
+#include "Aetherion/RigidBody/Config.h"
 
 namespace {
 
@@ -53,7 +54,7 @@ TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][external_
 {
     REQUIRE(g_configFile.has_value());
 
-    auto cfg = Aetherion::Serialization::LoadConfigFromFile(*g_configFile);
+    auto cfg = Aetherion::Serialization::LoadConfig(*g_configFile);
 
     // Example sanity checks
     REQUIRE(cfg.inertialParameters.mass_kg > 0.0);

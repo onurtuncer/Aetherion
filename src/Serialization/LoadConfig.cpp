@@ -6,7 +6,7 @@
 // License - Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/Serialization/LoadConfigFromFile.h"
+#include "Aetherion/Serialization/LoadConfig.h"
 
 #include "Aetherion/RigidBody/Config.h"
 #include "Aetherion/Serialization/ConfigJson.h" 
@@ -17,7 +17,7 @@
 
 namespace Aetherion::Serialization {
 
-    RigidBody::Config LoadConfigFromFile(const std::string& filename)
+    RigidBody::Config LoadConfig(const std::string& filename)
     {
         std::ifstream f(filename);
         if (!f.is_open())
@@ -28,6 +28,13 @@ namespace Aetherion::Serialization {
 
         RigidBody::Config cfg{};
         ::Aetherion::Serialization::from_json(j, cfg); 
+        return cfg;
+    }
+
+    RigidBody::Config LoadConfig(const nlohmann::json& j)
+    {
+        RigidBody::Config cfg{};
+        ::Aetherion::Serialization::from_json(j, cfg);
         return cfg;
     }
 
