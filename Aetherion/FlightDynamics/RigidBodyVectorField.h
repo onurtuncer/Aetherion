@@ -36,30 +36,7 @@
 
 namespace Aetherion::FlightDynamics {
 
-    // -------------------------------------------------------------------------
-    // KinematicsXiField
-    //
-    // The SE(3) part of the ODE.  The kinematic equation on SE(3) is:
-    //
-    //   g_dot = g * hat(nu_B)
-    //
-    // In RKMK form the velocity field xi(t, g, x) is simply nu_B -- the first
-    // 6 components of the Euclidean state x.
-    //
-    // This struct satisfies the XiField concept expected by
-    // StageResidualIRK_ProductSE3.
-    // -------------------------------------------------------------------------
-    //struct KinematicsXiField {
-    //    template<class S>
-    //    Eigen::Matrix<S, 6, 1>
-    //        operator()(S, const ODE::RKMK::Lie::SE3<S>&,
-    //            const Eigen::Matrix<S, 7, 1>& x) const
-    //    {
-    //        return x.template head<6>();  // xi = nu_B
-    //    }
-    //};
-
-    // -------------------------------------------------------------------------
+     // -------------------------------------------------------------------------
     // RigidBodyVectorField
     //
     // Four policies as template parameters; all have compile-time defaults so
