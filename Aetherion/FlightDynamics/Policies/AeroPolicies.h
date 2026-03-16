@@ -26,4 +26,6 @@ namespace Aetherion::FlightDynamics {
         }
     };
 
+    static_assert(AeroPolicy<ZeroAeroPolicy>);
+
 } // namespace Aetherion::FlightDynamics

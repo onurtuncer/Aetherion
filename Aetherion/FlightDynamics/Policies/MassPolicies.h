@@ -13,10 +13,14 @@ namespace Aetherion::FlightDynamics {
         S mdot(S /*t*/, S /*mass*/) const { return S(0); }
     };
 
+    static_assert(MassPolicy<ConstantMassPolicy>);
+
     struct LinearBurnPolicy {
         double mdot_kgs{ 0.0 }; // [kg/s], negative
         template<class S>
         S mdot(S /*t*/, S /*mass*/) const { return S(mdot_kgs); }
     };
+
+    static_assert(MassPolicy<LinearBurnPolicy>);
 
 } // namespace Aetherion::FlightDynamics

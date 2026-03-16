@@ -8,7 +8,6 @@
 
 #pragma once
 
-#pragma once
 #include "Aetherion/Spatial/Wrench.h"
 
 namespace Aetherion::Spatial {
