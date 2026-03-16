@@ -29,7 +29,8 @@
 #include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/PropulsionPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/MassPolicies.h>
-#include <Aetherion/FlightDynamics/InertialParameters.h>
+#include <Aetherion/FlightDynamics/KinematicsXiField.h>
+#include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/Spatial/Adjoint.h>
 #include <Aetherion/Spatial/Twist.h>
 
@@ -48,15 +49,15 @@ namespace Aetherion::FlightDynamics {
     // This struct satisfies the XiField concept expected by
     // StageResidualIRK_ProductSE3.
     // -------------------------------------------------------------------------
-    struct KinematicsXiField {
-        template<class S>
-        Eigen::Matrix<S, 6, 1>
-            operator()(S, const ODE::RKMK::Lie::SE3<S>&,
-                const Eigen::Matrix<S, 7, 1>& x) const
-        {
-            return x.template head<6>();  // xi = nu_B
-        }
-    };
+    //struct KinematicsXiField {
+    //    template<class S>
+    //    Eigen::Matrix<S, 6, 1>
+    //        operator()(S, const ODE::RKMK::Lie::SE3<S>&,
+    //            const Eigen::Matrix<S, 7, 1>& x) const
+    //    {
+    //        return x.template head<6>();  // xi = nu_B
+    //    }
+    //};
 
     // -------------------------------------------------------------------------
     // RigidBodyVectorField
@@ -85,7 +86,7 @@ namespace Aetherion::FlightDynamics {
 
         // Build M_inv from InertialParameters.
         explicit RigidBodyVectorField(
-            const InertialParameters& ip,
+            const RigidBody::InertialParameters& ip,
             Gravity   g = {},
             Aero      a = {},
             Thrust    th = {},
@@ -175,7 +176,7 @@ namespace Aetherion::FlightDynamics {
         class A = ZeroAeroPolicy,
         class T = ZeroPropulsionPolicy,
         class M = ConstantMassPolicy>
-    RigidBodyVectorField(const InertialParameters&, G, A = {}, T = {}, M = {})
+    RigidBodyVectorField(const RigidBody::InertialParameters&, G, A = {}, T = {}, M = {})
         -> RigidBodyVectorField<G, A, T, M>;
 
 } // namespace Aetherion::FlightDynamics

@@ -115,4 +115,6 @@ target_link_libraries(test_radauiia_se3
 target_include_directories(test_radauiia_se3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
-catch_discover_tests(test_radauiia_se3)                                              
+catch_discover_tests(test_radauiia_se3)        
+
+add_subdirectory(RKMK)

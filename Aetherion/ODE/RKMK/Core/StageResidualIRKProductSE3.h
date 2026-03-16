@@ -3,7 +3,7 @@
 // SPDX-License-Identifier: MIT
 // ------------------------------------------------------------------------------
 //
-// StageResidualIRK_ProductSE3.h
+// StageResidualIRKProductSE3.h
 //
 // Implicit IRK stage residual on the product manifold SE(3) x R^EuclidDim.
 //

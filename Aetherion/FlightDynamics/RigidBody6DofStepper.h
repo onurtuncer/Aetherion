@@ -66,8 +66,8 @@ namespace Aetherion::FlightDynamics {
     // ------------------------------------------------------------------------------
     template<class VectorField>
         requires
-    ODE::RKMK::KinematicsFieldOnSE3<KinematicsXiField>&&
-        ODE::RKMK::VectorFieldOnProductSE3<VectorField, RigidBody6DoFEuclidDim>
+        ODE::RKMK::KinematicsFieldOnSE3<KinematicsXiField<Scalar>, Scalar>&&
+        ODE::RKMK::VectorFieldOnProductSE3<VectorField, 7, Scalar>
         class RigidBody6DoFStepper
     {
     public:
