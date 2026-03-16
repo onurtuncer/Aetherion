@@ -21,6 +21,7 @@ target_sources(Aetherion PRIVATE
 
     # Config loaders
     ${CMAKE_CURRENT_SOURCE_DIR}/LoadConfigFromFile.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/LoadConfigFromString.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ConfigJson.cpp
 
     # Physical parameter serializers
