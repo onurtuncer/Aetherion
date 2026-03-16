@@ -7,11 +7,25 @@
 // ------------------------------------------------------------------------------
 
 #pragma once
+
 #include <Aetherion/Environment/Gravity.h>
 #include <Aetherion/Spatial/Wrench.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
 namespace Aetherion::FlightDynamics {
+
+    struct ZeroGravityPolicy {
+        template<class S>
+        Spatial::Wrench<S>
+            operator()(const ODE::RKMK::Lie::SE3<S>&, S) const
+        {
+            Spatial::Wrench<S> w{};
+            w.f.setZero();
+            return w;
+        }
+    };
+
+    static_assert(GravityPolicy<ZeroGravityPolicy>);
 
     struct CentralGravityPolicy {
         double mu{ 3.986004418e14 };
@@ -32,6 +46,8 @@ namespace Aetherion::FlightDynamics {
         }
     };
 
+    static_assert(GravityPolicy<CentralGravityPolicy>);
+    
     struct J2GravityPolicy {
         double mu{ 3.986004418e14 };
         double Re{ 6378137.0 };
@@ -51,5 +67,7 @@ namespace Aetherion::FlightDynamics {
             return w;
         }
     };
+
+    static_assert(GravityPolicy<J2GravityPolicy>);
 
 } // namespace Aetherion::FlightDynamics

@@ -245,13 +245,19 @@ TEST_CASE("SixDoFStepper -- g1 stays on SE(3): quaternion norm = 1",
 // zero angular component (Euler equations reduce to omega_dot = 0).
 // KE = 0.5 * nu_B^T * M * nu_B is therefore conserved to integrator accuracy.
 // --------------------------------------------------------------------------
+// --------------------------------------------------------------------------
+// [stepper][energy]
+// --------------------------------------------------------------------------
 TEST_CASE("SixDoFStepper -- symmetric torque-free body conserves rotational KE",
     "[stepper][energy]")
 {
-    auto ip = unit_sphere();
-    TestStepper stepper{ ip };
+    // Use zero gravity so no external forces do work -- purely inertial.
+    using EnergyVF = RigidBody::VectorField<FlightDynamics::ZeroGravityPolicy>;
+    using EnergyStepper = SixDoFStepper<EnergyVF>;
 
-    // Spatial inertia M (diagonal for unit sphere at CG).
+    auto ip = unit_sphere();
+    EnergyStepper stepper{ ip };
+
     Eigen::Matrix<double, 6, 6> M = Eigen::Matrix<double, 6, 6>::Zero();
     M(0, 0) = ip.Ixx;     M(1, 1) = ip.Iyy;     M(2, 2) = ip.Izz;
     M(3, 3) = ip.mass_kg; M(4, 4) = ip.mass_kg; M(5, 5) = ip.mass_kg;
@@ -260,9 +266,9 @@ TEST_CASE("SixDoFStepper -- symmetric torque-free body conserves rotational KE",
         return 0.5 * s.nu_B.dot(M * s.nu_B);
         };
 
-    // Pure spin initial condition -- no translation so gravity does no
-    // work on the rotational channel.
+    // Pure spin -- no translation, no gravity, no external forces.
     StateD s = rest_state();
+    s.g = ODE::RKMK::Lie::SE3<double>::Identity();  // origin, no gravity
     s.nu_B << 1.0, 0.5, 0.25, 0.0, 0.0, 0.0;
 
     double ke0 = ke(s);
@@ -270,9 +276,9 @@ TEST_CASE("SixDoFStepper -- symmetric torque-free body conserves rotational KE",
     for (int i = 0; i < 50; ++i) {
         auto res = stepper.step(i * 0.02, s, 0.02);
         REQUIRE(res.converged);
-        s = TestStepper::unpack(res);
+        s = EnergyStepper::unpack(res);
     }
 
-    // Radau IIA is stiffly accurate -- KE drift over 1 s should be < 1e-6.
+    // Radau IIA is stiffly accurate -- KE drift should be well below 1e-6.
     REQUIRE(ke(s) == Catch::Approx(ke0).epsilon(1e-6));
 }
