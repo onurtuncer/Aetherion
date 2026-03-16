@@ -8,39 +8,24 @@
 
 // Examples/DraglessSphere/Config.h
 #pragma once
-#include <Aetherion/FlightDynamics/RigidBodyVectorField.h>
-#include <Aetherion/FlightDynamics/RigidBody6DoFStepper.h>
+#include <Aetherion/RigidBody/VectorField.h>
+#include <Aetherion/RigidBody/SixDoFStepper.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/MassPolicies.h>
 
-namespace Aetherion::Examples {
+namespace Aetherion::Examples::DraglessSphere {
 
     // NASA check case 1: dragless sphere, central gravity
-    using DraglessSphereVF = FlightDynamics::RigidBodyVectorField<
+    using DraglessSphereVF = RigidBody::VectorField<
         FlightDynamics::CentralGravityPolicy,  // gravity
         FlightDynamics::ZeroAeroPolicy,        // aero:     none
         FlightDynamics::ZeroPropulsionPolicy,  // thrust:   none
         FlightDynamics::ConstantMassPolicy     // mass:     constant
     > ;
 
-    using DraglessSphereStepper = FlightDynamics::RigidBody6DoFStepper<DraglessSphereVF>;
+    using DraglessSphereStepper = RigidBody::SixDoFStepper<DraglessSphereVF>;
 
-    using J2SphereVF = FlightDynamics::RigidBodyVectorField<
-        FlightDynamics::J2GravityPolicy,
-        FlightDynamics::ZeroAeroPolicy,
-        FlightDynamics::ZeroPropulsionPolicy,
-        FlightDynamics::ConstantMassPolicy
-    > ;
-
-    using J2SphereStepper = FlightDynamics::RigidBody6DoFStepper<J2SphereVF>;
-
-    // Future: powered ascent
-    // using PoweredAscentVF = FlightDynamics::RigidBodyVectorField
-    //     FlightDynamics::CentralGravityPolicy,
-    //     FlightDynamics::ZeroAeroPolicy,
-    //     FlightDynamics::ConstantThrustPolicy,
-    //     FlightDynamics::LinearBurnPolicy
-    // >;
+   
 
 } // namespace Aetherion::Examples
