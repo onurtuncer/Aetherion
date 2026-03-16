@@ -20,7 +20,7 @@ target_sources(Aetherion PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/JsonConfigNlohmannAdapter.cpp
 
     # Config loaders
-    ${CMAKE_CURRENT_SOURCE_DIR}/LoadSimulationConfigFromFile.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/LoadConfigFromFile.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ConfigJson.cpp
 
     # Physical parameter serializers

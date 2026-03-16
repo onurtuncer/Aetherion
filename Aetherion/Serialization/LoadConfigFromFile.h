@@ -11,5 +11,5 @@
 #include "Aetherion/RigidBody/Config.h"
 
 namespace Aetherion::Serialization {
-    RigidBody::Config LoadSimulationConfigFromFile(const std::string& filename);
+    RigidBody::Config LoadConfigFromFile(const std::string& filename);
 }

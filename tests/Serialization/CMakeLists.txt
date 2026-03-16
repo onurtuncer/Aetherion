@@ -25,7 +25,7 @@ target_link_libraries(test_json
 include(Catch)
 catch_discover_tests(test_json)
                                                
-add_executable(test_load_file test_LoadSimulationConfigFromFile.cpp)
+add_executable(test_load_file test_LoadConfigFromFile.cpp)
 
 target_link_libraries(test_load_file 
     PRIVATE
