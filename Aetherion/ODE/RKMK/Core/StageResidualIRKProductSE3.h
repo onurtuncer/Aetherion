@@ -140,7 +140,10 @@ namespace Aetherion::ODE::RKMK::Core {
                 // Kinematics:  v_i = xi_field(t_i, g_i, [nu_B=...; m=...])
                 // We pack x_i (size EuclidDim) into a vector for the field.
                 Eigen::Matrix<S, EuclidDim, 1> x_full = x_i;
-                const Vec6 v_i = xi_field_(ti, g_i, x_full);
+                //const Vec6 v_i = xi_field_(ti, g_i, x_full);
+               // const Vec6 v_i = xi_field_(ti, g_i, x_full.template head<6>());
+                const Vec6 xi_i_eval = x_full.template head<6>().eval();
+                const Vec6 v_i = xi_field_(ti, g_i, xi_i_eval);
 
                 // Euclidean dynamics: f_i = f_field(t_i, g_i, x_i)
                 const VecE f_i = f_field_(ti, g_i, x_full);

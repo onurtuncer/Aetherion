@@ -16,22 +16,15 @@
 // the Lie algebra element that drives the exponential update of g -- the
 // integrator never sees g_dot directly.
 //
-// Scalar template parameter
-// -------------------------
-// The field is templated on Scalar so that the Radau IIA Newton solver can
-// instantiate it with CppAD::AD<double> (or a nested AD type for higher-order
-// derivatives) when assembling the Jacobian of the coupled kinematics+dynamics
-// RHS.  The default Scalar=double is the runtime path.
+// The call operator is templated on Scalar S (not the class) so that
+// StageResidualIRKProductSE3 can call it with S = CppAD::AD<double> when
+// building the Newton Jacobian tape, and with S = double at runtime.
+// This matches the pattern used by RigidBodyVectorField::operator().
 //
 // Convention (body frame, right-trivialised):
 //
 //   xi[0..2]  =  omega_B   angular velocity in body frame  (rad/s)
 //   xi[3..5]  =  v_B       linear  velocity in body frame  (m/s)
-//
-// This matches the layout of nu_B in RigidBodyStateD and the head<6>()
-// slice packed into the Euclidean state vector x by RigidBody6DoFStepper.
-//
-// Models: ODE::RKMK::KinematicsFieldOnSE3<KinematicsXiField<Scalar>, Scalar>
 //
 #pragma once
 
@@ -41,57 +34,33 @@
 
 namespace Aetherion::FlightDynamics {
 
-    template<typename Scalar = double>
     class KinematicsXiField
     {
     public:
         // ------------------------------------------------------------------
-        // Convenience aliases -- mirror the pattern used by RigidBodyVectorField
-        // so call-sites can write KinematicsXiField<Scalar>::Vector6 etc.
-        // ------------------------------------------------------------------
-        using ScalarType = Scalar;
-        using SE3Type = ODE::RKMK::Lie::SE3<Scalar>;
-        using Vector6 = Eigen::Matrix<Scalar, 6, 1>;
-
-        // ------------------------------------------------------------------
-        // operator()
+        // operator()<S>
         //
-        // Parameters
-        //   t    -- current time (unused; present for concept conformance and
-        //           future time-varying kinematics e.g. moving reference frames)
-        //   g    -- current pose in SE(3) (unused for standard body-frame
-        //           kinematics; present for concept conformance and future
-        //           configuration-dependent models such as left-trivialised
-        //           world-frame:  return Ad(g) * xi )
-        //   xi   -- body-frame twist [omega_B; v_B] in R^6
+        // Templated on S so the same field instance works for both:
+        //   S = double            -- runtime integration path
+        //   S = CppAD::AD<double> -- Newton Jacobian tape path
         //
-        // Returns
-        //   xi unchanged -- in the right-trivialised RKMK formulation the Lie
-        //   algebra element driving g is exactly the body-frame twist.
-        //
-        //   When Scalar = CppAD::AD<double> this pass-through is differentiable
-        //   at zero cost: CppAD records the identity operation on the tape and
-        //   the resulting Jacobian column is a unit vector, which the Newton
-        //   solver gets for free.
+        // Returns xi unchanged -- in the right-trivialised RKMK formulation
+        // the Lie algebra element driving g is exactly the body-frame twist.
+        // The identity pass-through records a trivial operation on the CppAD
+        // tape and contributes a free identity block to the Jacobian.
         // ------------------------------------------------------------------
+        template<class S>
         [[nodiscard]]
-        Vector6 operator()(
-            const Scalar&   /*t*/,
-            const SE3Type&  /*g*/,
-            const Vector6& xi) const noexcept
+        Eigen::Matrix<S, 6, 1> operator()(
+            const S&                         /*t*/,
+            const ODE::RKMK::Lie::SE3<S>&    /*g*/,
+            const Eigen::Matrix<S, 6, 1>& xi) const noexcept
         {
             return xi;
         }
     };
 
-    // --------------------------------------------------------------------------
-    // Deduction aliases
-    //
-    // RigidBody6DoFStepper uses KinematicsXiField<double> at runtime and
-    // KinematicsXiField<CppAD::AD<double>> inside the Newton Jacobian assembly.
-    // These aliases keep the stepper header readable.
-    // --------------------------------------------------------------------------
-    using KinematicsXiFieldd = KinematicsXiField<double>;
-    using KinematicsXiFieldAD = KinematicsXiField<CppAD::AD<double>>;
+    // Alias kept for call-site readability -- no longer a template itself.
+    using KinematicsXiFieldd = KinematicsXiField;
 
 } // namespace Aetherion::FlightDynamics

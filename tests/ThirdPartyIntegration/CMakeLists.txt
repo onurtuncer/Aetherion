@@ -33,12 +33,7 @@ target_link_libraries(test_nlohmann
         nlohmann_json      
 )
 
-# target_include_directories(test_eigen PRIVATE "${CMAKE_SOURCE_DIR}/vendor/nlohmann")
-
-include(Catch)
 catch_discover_tests(test_nlohmann)
-
-#add_test(NAME nlohmann_json_test COMMAND test_nlohmann)
 
 add_executable(test_cppad
     test_cppad.cpp
@@ -53,7 +48,4 @@ target_link_libraries(test_cppad
 
 target_include_directories(test_cppad PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
-include(Catch)
 catch_discover_tests(test_cppad)
-
-#add_test(NAME cppad_basic_test COMMAND test_cppad)

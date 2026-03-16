@@ -32,5 +32,4 @@ target_link_libraries(test_load_file
         Aetherion
         Catch2::Catch2)
 
-include(Catch)
 catch_discover_tests(test_load_file TEST_SPEC "~[requires_external_file]")

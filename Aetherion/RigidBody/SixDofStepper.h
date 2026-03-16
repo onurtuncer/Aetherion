@@ -3,30 +3,30 @@
 // SPDX-License-Identifier: MIT
 // ------------------------------------------------------------------------------
 //
-// RigidBody6DoFStepper.h
+// SixDoFStepper.h
 //
 // Thin facade combining KinematicsXiField + RigidBodyVectorField into a single
 // step() call on SE(3) x R^7.
 //
 // All template parameters are fully constrained via C++20 concepts defined in
-// Aetherion/ODE/RKMK/Concepts.h — compiler errors surface at the instantiation
+// Aetherion/ODE/RKMK/Concepts.h -- compiler errors surface at the instantiation
 // site rather than deep inside the integrator internals.
 //
 // Usage:
 //   using VF      = RigidBodyVectorField<CentralGravityPolicy>;
-//   using Stepper = RigidBody6DoFStepper<VF>;
+//   using Stepper = SixDoFStepper<VF>;
 //
-//   Stepper stepper(ip);               // ip = InertialParameters
+//   Stepper stepper(ip);
 //   auto res = stepper.step(t0, s, h);
 //   if (res.converged) {
-//       auto s1 = Stepper::unpack(res);
+//       auto s1 = SixDoFStepper<VF>::unpack(res);
 //   }
 //
 #pragma once
 
-#include <Aetherion/FlightDynamics/InertialParameters.h>
-#include <Aetherion/FlightDynamics/RigidBodyState.h>
-#include <Aetherion/FlightDynamics/RigidBodyVectorField.h>
+#include <Aetherion/RigidBody/InertialParameters.h>
+#include <Aetherion/RigidBody/State.h>
+#include <Aetherion/RigidBody/VectorField.h>
 #include <Aetherion/FlightDynamics/KinematicsXiField.h>
 #include <Aetherion/ODE/RKMK/Concepts.h>
 #include <Aetherion/ODE/RKMK/Core/NewtonOptions.h>
@@ -37,37 +37,25 @@
 
 namespace Aetherion::RigidBody {
 
-    // ------------------------------------------------------------------------------
-    // EuclidDim
-    //
-    // Layout of the Euclidean state vector x in R^7:
-    //
-    //   x[0..5]  =  nu_B   body-frame twist  [omega_x, omega_y, omega_z, v_x, v_y, v_z]
-    //   x[6]     =  m      current mass
-    //
-    // Changing this constant (e.g. to 13 for fuel-slosh states) is the only edit
-    // needed to extend the Euclidean state — the concepts and integrator propagate
-    // the dimension automatically.
-    // ------------------------------------------------------------------------------
+    // --------------------------------------------------------------------------
+    // EuclidDim -- layout of x in R^7:
+    //   x[0..5] = nu_B   body-frame twist [omega(3); v(3)]
+    //   x[6]    = m      current mass
+    // --------------------------------------------------------------------------
     inline constexpr int RigidBody6DoFEuclidDim = 7;
 
-    // ------------------------------------------------------------------------------
-    // SixDoFStepper<VF>
+    // --------------------------------------------------------------------------
+    // SixDoFStepper<VectorField>
     //
-    // Template parameters
-    // -------------------
-    //   VectorField   models VectorFieldOnProductSE3<VF, RigidBody6DoFEuclidDim>
-    //                 i.e. callable as: vf(t, g, x) -> Matrix<double, 7, 1>
-    //
-    // The KinematicsXiField is not a template parameter — it is the canonical
-    // body-frame twist kinematic model for this stepper.  If you need a different
-    // kinematic model (dual quaternion, quaternion+R3) derive a new stepper rather
-    // than patching this one.
-    // ------------------------------------------------------------------------------
+    // VectorField must model VectorFieldOnProductSE3<VF, 7, double>.
+    // KinematicsXiField<double> is the fixed kinematic model -- not a template
+    // parameter. For a different kinematic model, derive a new stepper.
+    // --------------------------------------------------------------------------
     template<class VectorField>
         requires
-        ODE::RKMK::KinematicsFieldOnSE3<KinematicsXiField<Scalar>, Scalar>&&
-        ODE::RKMK::VectorFieldOnProductSE3<VectorField, 7, Scalar>
+    ODE::RKMK::KinematicsFieldOnSE3
+        <FlightDynamics::KinematicsXiField, double > &&
+        ODE::RKMK::VectorFieldOnProductSE3<VectorField, 7, double>
         class SixDoFStepper
     {
     public:
@@ -76,30 +64,27 @@ namespace Aetherion::RigidBody {
         // ------------------------------------------------------------------
         static constexpr int EuclidDim = RigidBody6DoFEuclidDim;
 
-        using KinematicsField = KinematicsXiField;
+        using KinematicsField = FlightDynamics::KinematicsXiField;
         using SE3d = ODE::RKMK::Lie::SE3<double>;
         using VecE = Eigen::Matrix<double, EuclidDim, 1>;
 
         using Integrator = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3
-            KinematicsField, VectorField, EuclidDim > ;
+            <KinematicsField, VectorField, EuclidDim> ;
 
         using StepResult = typename Integrator::StepResult;
 
-        // Confirm the assembled integrator satisfies the integrator concept.
-        // This fires at class instantiation time — before any method is called.
+        // Fires at instantiation time -- before any method is called.
         static_assert(
             ODE::RKMK::RKMKIntegratorOnProductSE3<Integrator, EuclidDim>,
             "RadauIIA_RKMK_ProductSE3 does not satisfy RKMKIntegratorOnProductSE3 "
-            "— check that StepResult exposes { g1, x1, converged } and that "
+            "-- check that StepResult exposes { g1, x1, converged } and that "
             "VecE::RowsAtCompileTime == EuclidDim.");
 
         // ------------------------------------------------------------------
         // Constructors
         // ------------------------------------------------------------------
 
-        // Primary constructor: accepts a fully-constructed VectorField.
-        // Use this when the policy requires arguments beyond InertialParameters
-        // (e.g. atmosphere tables, thrust curves, aerodynamic databases).
+        // Primary: accepts a fully-constructed VectorField.
         explicit SixDoFStepper(
             VectorField                    vf,
             ODE::RKMK::Core::NewtonOptions opt = {})
@@ -108,9 +93,9 @@ namespace Aetherion::RigidBody {
         {
         }
 
-        // Convenience constructor: builds VectorField directly from InertialParameters.
+        // Convenience: builds VectorField from InertialParameters directly.
         // Only participates in overload resolution when VF models
-        // ConstructibleFromInertialParameters — SFINAE-free thanks to the concept.
+        // ConstructibleFromInertialParameters.
         explicit SixDoFStepper(
             const InertialParameters& ip,
             ODE::RKMK::Core::NewtonOptions opt = {})
@@ -122,38 +107,18 @@ namespace Aetherion::RigidBody {
 
         // ------------------------------------------------------------------
         // step()
-        //
-        // Advances the rigid-body state by one time step h using Radau IIA.
-        //
-        // Parameters
-        //   t0  -- current time (seconds)
-        //   s   -- current state { g ∈ SE(3), nu_B ∈ R^6, m ∈ R }
-        //   h   -- step size (seconds); caller owns adaptation / rejection
-        //
-        // Returns
-        //   StepResult { g1, x1, converged, [iterations, residual] }
-        //   g1 is guaranteed to remain on the SE(3) manifold.
-        //   If !converged the Newton solve diverged — caller should reduce h.
         // ------------------------------------------------------------------
         [[nodiscard]]
-        StepResult step(double t0, const RigidBodyStateD& s, double h) const
+        StepResult step(double t0, const StateD& s, double h) const
         {
             return integrator_.step(t0, s.g, pack(s), h, opt_);
         }
 
         // ------------------------------------------------------------------
         // pack() / unpack()
-        //
-        // Convert between RigidBodyStateD and the flat Euclidean vector x
-        // used internally by the integrator.
-        //
-        // pack   : RigidBodyStateD  -->  VecE   (called inside step())
-        // unpack : StepResult       -->  RigidBodyStateD
-        //
-        // Both are static so call-sites can use them without a stepper instance.
         // ------------------------------------------------------------------
         [[nodiscard]]
-        static VecE pack(const RigidBodyStateD& s) noexcept
+        static VecE pack(const StateD& s) noexcept
         {
             VecE x;
             x.template head<6>() = s.nu_B;
@@ -171,7 +136,6 @@ namespace Aetherion::RigidBody {
             return s;
         }
 
-        // Convenience overload: unpack directly from a StepResult.
         [[nodiscard]]
         static StateD unpack(const StepResult& r) noexcept
         {
@@ -179,11 +143,10 @@ namespace Aetherion::RigidBody {
         }
 
         // ------------------------------------------------------------------
-        // Accessors
+        // Newton options -- readable and writable for per-phase tuning
         // ------------------------------------------------------------------
-
-        // Expose Newton options for inspection or per-phase tuning.
-        [[nodiscard]] const ODE::RKMK::Core::NewtonOptions& options() const noexcept
+        [[nodiscard]]
+        const ODE::RKMK::Core::NewtonOptions& options() const noexcept
         {
             return opt_;
         }
@@ -198,4 +161,4 @@ namespace Aetherion::RigidBody {
         ODE::RKMK::Core::NewtonOptions opt_;
     };
 
-} // namespace Aetherion::Rigidbody
+} // namespace Aetherion::RigidBody

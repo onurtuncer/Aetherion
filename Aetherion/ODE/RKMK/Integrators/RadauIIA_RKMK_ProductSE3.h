@@ -82,8 +82,10 @@ namespace Aetherion::ODE::RKMK::Integrators {
             Eigen::VectorXd sol(NewtonDim);
             sol.setZero();
             {
-                const Eigen::Matrix<double, 6, 1> v0 =
-                    xi_field_(t0, g0, x0).template head<6>();
+               // const Eigen::Matrix<double, 6, 1> v0 =
+               //     xi_field_(t0, g0, x0).template head<6>();
+                const Eigen::Matrix<double, 6, 1> xi0 = x0.template head<6>();
+                const Eigen::Matrix<double, 6, 1> v0 = xi_field_(t0, g0, xi0);
                 const VecE f0 = f_field_(t0, g0, x0);
                 for (int i = 0; i < Stages; ++i) {
                     const int base = i * BlockDim;

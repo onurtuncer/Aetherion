@@ -17,7 +17,7 @@
 namespace Aetherion::FlightDynamics {
 
     // -------------------------------------------------------------------------
-    // Zero thrust — coasting, unpowered phases.
+    // Zero thrust -- coasting, unpowered phases.
     // -------------------------------------------------------------------------
     struct ZeroPropulsionPolicy {
         template<class S>

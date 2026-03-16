@@ -24,7 +24,7 @@ using namespace Aetherion::ODE::RKMK;
 // ------------------------------------------------------------------------------
 // Concrete aliases -- all templates fully specialised with Scalar=double
 // ------------------------------------------------------------------------------
-using KFd = FlightDynamics::KinematicsXiField<double>;
+using KFd = FlightDynamics::KinematicsXiField;
 using CVFd = RigidBody::VectorField<FlightDynamics::CentralGravityPolicy>;
 using Itgd = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<KFd, CVFd, 7>;
 
