@@ -1,11 +1,10 @@
-
-
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// SPDX-License-Identifier: MIT
-// ------------------------------------------------------------------------------
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
-// RigidBodyState.h
+// SPDX - License - Identifier: MIT
+// License - Filename: LICENSE
+// ------------------------------------------------------------------------------
 //
 // State on the product manifold SE(3) x R^7.
 //
@@ -14,16 +13,16 @@
 //   m     ∈ R^1     -- vehicle mass [kg]
 //
 // x = [nu_B; m] ∈ R^7 is the Euclidean part stored/stepped separately.
-//
+
 #pragma once
 
 #include <Eigen/Dense>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
     template<class S>
-    struct RigidBodyState {
+    struct State {
         using Scalar = S;
         using SE3Type = ODE::RKMK::Lie::SE3<S>;
         using Vec6 = Eigen::Matrix<S, 6, 1>;
@@ -33,7 +32,7 @@ namespace Aetherion::FlightDynamics {
         S       m{ S(0) };
     };
 
-    using RigidBodyStateD = RigidBodyState<double>;
-    using RigidBodyStateAD = RigidBodyState<CppAD::AD<double>>;
+    using StateD = State<double>;
+    using StateAD = State<CppAD::AD<double>>;
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody
