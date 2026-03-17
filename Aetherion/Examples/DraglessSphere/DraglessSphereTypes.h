@@ -6,8 +6,8 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-// Examples/DraglessSphere/Config.h
 #pragma once
+
 #include <Aetherion/RigidBody/VectorField.h>
 #include <Aetherion/RigidBody/SixDoFStepper.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
@@ -25,7 +25,5 @@ namespace Aetherion::Examples::DraglessSphere {
     > ;
 
     using DraglessSphereStepper = RigidBody::SixDoFStepper<DraglessSphereVF>;
-
-   
 
 } // namespace Aetherion::Examples
