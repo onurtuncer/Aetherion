@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
 // SPDX - License - Identifier: MIT
 // License - Filename: LICENSE
@@ -12,6 +12,8 @@
 #include <cmath>
 #include <cstddef>
 
+#include <Aetherion/Environment/detail/MathWrappers.h> 
+
 namespace Aetherion::Environment {
 
     /// Result of the atmosphere call
@@ -22,29 +24,6 @@ namespace Aetherion::Environment {
         Scalar rho;  // Density [kg/m^3]
         Scalar a;    // Speed of sound [m/s]
     };
-
-    namespace detail {
-
-        // ADL-friendly wrappers so this works for double, CppAD::AD<>, etc.
-        template <class S>
-        inline S Power(const S& x, const S& y) {
-            using std::pow;
-            return pow(x, y);
-        }
-
-        template <class S>
-        inline S Exponential(const S& x) {
-            using std::exp;
-            return exp(x);
-        }
-
-        template <class S>
-        inline S SquareRoot(const S& x) {
-            using std::sqrt;
-            return sqrt(x);
-        }
-
-    } // namespace detail
 
     /// U.S. Standard Atmosphere 1976, 0-86 km (geometric altitude).
     /// - Input:  geometric altitude above MSL in meters (approx; internally converted to geopotential).

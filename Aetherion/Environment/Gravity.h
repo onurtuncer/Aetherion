@@ -1,6 +1,6 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
 // SPDX - License - Identifier: MIT
 // License - Filename: LICENSE
@@ -12,20 +12,12 @@
 #include <cstddef>
 #include <cmath>
 
+#include <Aetherion/Environment/detail/MathWrappers.h> 
+
 namespace Aetherion::Environment {
 
     template <class Scalar>
     using Vec3 = std::array<Scalar, 3>;
-
-    namespace detail {
-
-        template <class S>
-        inline S SquareRoot(const S& x) {
-            using std::sqrt;
-            return sqrt(x);
-        }
-
-    } // namespace detail
 
     /// Central Newtonian gravity (point-mass Earth) in an inertial/ECI frame.
     ///
