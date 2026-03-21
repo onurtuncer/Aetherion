@@ -25,5 +25,6 @@ add_subdirectory("FlightDynamics")
 add_subdirectory("Spatial")
 add_subdirectory("RigidBody")
 add_subdirectory("Serialization")
+add_subdirectory("Simulation")
 
 
