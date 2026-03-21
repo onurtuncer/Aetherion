@@ -6,6 +6,11 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
+#pragma once
+
+#include <Eigen/Dense>      
+#include <Eigen/Geometry>   // for Eigen::Quaterniond
+
  // -----------------------------------------------------------------------
  // Snapshot — full observable state at a single time.
  //

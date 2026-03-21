@@ -33,10 +33,16 @@ option(AETHERION_BUILD_EXAMPLES
     "Build the example executables under examples/src"
     OFF)
 
+option(AETHERION_BUILD_SIMULATION
+    "Build the AetherionSimulation post-processing layer (MakeSnapshot1, etc.)"
+    ON)
+
 option(BUILD_DOCS
     "Build Sphinx/Doxygen documentation. When ON, only the doc target \
 is configured and all other targets are skipped (early return in root)."
     OFF)
+
+ 
 
 # ==============================================================================
 # Library Configuration
@@ -123,6 +129,7 @@ message(STATUS "  C++ standard             : 23")
 message(STATUS "")
 message(STATUS "  Build targets")
 message(STATUS "    Shared library         : ${AETHERION_BUILD_SHARED}")
+message(STATUS "    Simulation layer       : ${AETHERION_BUILD_SIMULATION}")
 message(STATUS "    FMUs                   : ${AETHERION_BUILD_FMUS}")
 message(STATUS "    Tests                  : ${AETHERION_BUILD_TESTS}")
 message(STATUS "    Examples               : ${AETHERION_BUILD_EXAMPLES}")

@@ -53,8 +53,18 @@ add_subdirectory(ODE)
 add_subdirectory(Serialization)
 
 # ------------------------------------------------------------------------------
+# Simulation targets (optional, independent of the Aetherion library target)
+# ------------------------------------------------------------------------------
+
+if(AETHERION_BUILD_SIMULATION)
+    add_subdirectory(Simulation)
+endif()
+
+# ------------------------------------------------------------------------------
 # FMU targets (optional, independent of the Aetherion library target)
 # ------------------------------------------------------------------------------
 if(AETHERION_BUILD_FMUS)
     add_subdirectory(FMU)
 endif()
+
+
