@@ -21,6 +21,7 @@ target_compile_features(AetherionSimulation PUBLIC cxx_std_23)
 
 target_sources(AetherionSimulation PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/MakeSnapshot1.cpp
+     ${CMAKE_CURRENT_SOURCE_DIR}/ISimulator.cpp
 )
 
 target_include_directories(AetherionSimulation
