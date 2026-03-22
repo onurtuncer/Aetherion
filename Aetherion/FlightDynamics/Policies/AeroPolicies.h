@@ -6,6 +6,8 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
+#pragma once
+
 #include "Aetherion/Spatial/Wrench.h"
 #include "Aetherion/ODE/RKMK/Lie/SE3.h"
 

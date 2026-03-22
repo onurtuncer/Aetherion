@@ -13,20 +13,23 @@
 
 namespace Aetherion::Simulation {
 
-// ─────────────────────────────────────────────────────────────
-// Application  –  wires the parser to the config and runs
-// ─────────────────────────────────────────────────────────────
-class Application {
-public:
-    explicit Application(int argc, char* argv[]);
+    // ─────────────────────────────────────────────────────────────
+    // Application  –  wires the parser to the config and runs
+    // ─────────────────────────────────────────────────────────────
+    class Application {
+    public:
+        explicit Application(int argc, char* argv[]);
+        virtual ~Application() = default;
 
-    void run() const;
+        virtual void run() const;
 
-private:
-    Config         config_;
-    ArgumentParser parser_;
+        const Config& getConfig() const { return config_; }
 
-    void registerArguments();
-};
+    private:
+        Config         config_;
+        ArgumentParser parser_;
+
+        void registerArguments();
+    };
 
 } // namespace Aetherion::Simulation

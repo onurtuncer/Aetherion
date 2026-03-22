@@ -6,11 +6,6 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Application.h"
-#include <cstdlib>
+#pragma once
 
-int main(int argc, char* argv[]) {
-    Aetherion::Simulation::Application app(argc, argv);
-    app.run();
-    return EXIT_SUCCESS;
-}
+#include "Aetherion/Simulation/EntryPoint.h"

@@ -6,6 +6,8 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
+#pragma once
+
 namespace Aetherion::FlightDynamics {
 
     struct ConstantMassPolicy {

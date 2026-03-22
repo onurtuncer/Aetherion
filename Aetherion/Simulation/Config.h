@@ -12,17 +12,19 @@
 
 namespace Aetherion::Simulation {
 
-// ─────────────────────────────────────────────────────────────
-// Config  –  plain data container for all program settings
-// ─────────────────────────────────────────────────────────────
-class Config {
-public:
-    double      timeStep       = 0.01;
-    double      startTime      = 0.0;
-    double      endTime        = 1.0;
-    std::string outputFileName = "output.txt";
+    // ─────────────────────────────────────────────────────────────
+    // Config  –  plain data container for all program settings
+    // ─────────────────────────────────────────────────────────────
+    class Config {
+    public:
+        double      timeStep = 0.01;
+        double      startTime = 0.0;
+        double      endTime = 1.0;
+        std::string inputFileName = "";
+        std::string outputFileName = "output.txt";
 
-    void print() const;
-};
+        void print() const;
+    };
 
 } // namespace Aetherion::Simulation
+

@@ -38,8 +38,15 @@ target_include_directories(Aetherion
         # <FlightDynamics/Serialization/SimulationConfigJson.hpp> resolve.
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/eigen>
+        $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/CppAD/include>
         # During install (if AETHERION_INSTALL=ON):
         $<INSTALL_INTERFACE:include>
+)
+
+target_link_libraries(Aetherion
+    PUBLIC
+        Eigen3::Eigen
+        CppAD::cppad
 )
 
 # ------------------------------------------------------------------------------

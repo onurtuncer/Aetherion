@@ -6,15 +6,18 @@
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-add_executable(test_snapshot          
+add_executable(test_simulation         
                     test_Snapshot1.cpp
-                   )
+                    test_Config.cpp
+                    test_Application.cpp)
 
-target_link_libraries(test_snapshot
+target_link_libraries(test_simulation
     PRIVATE
-        Aetherion
+        Aetherion::Simulation
+     #   CppAD::cppad  
         Catch2::Catch2WithMain
 )
+# target_include_directories(test_simulation PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
-catch_discover_tests(test_snapshot)
+catch_discover_tests(test_simulation)
