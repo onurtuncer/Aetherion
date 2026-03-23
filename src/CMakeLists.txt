@@ -40,7 +40,7 @@ target_include_directories(Aetherion
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/eigen>
         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/CppAD/include>
         # During install (if AETHERION_INSTALL=ON):
-        $<INSTALL_INTERFACE:include>
+        $<INSTALL_INTERFACE:Aetherion>
 )
 
 target_link_libraries(Aetherion

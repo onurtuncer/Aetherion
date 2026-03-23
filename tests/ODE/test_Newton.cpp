@@ -154,7 +154,7 @@ TEST_CASE("NewtonSolve: line-search fails when residual cannot decrease", "[newt
     const auto res = Core::NewtonSolve(eval, x, opt);
 
     REQUIRE_FALSE(res.converged);
-    REQUIRE(res.iters == 1); // now matches the implementation’s early-return path
+    REQUIRE(res.iters == 1); // now matches the implementation's early-return path
 }
 
 

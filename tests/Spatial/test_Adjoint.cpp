@@ -79,8 +79,8 @@ TEST_CASE("Adjoint: ad(xi) matches analytical motion cross formula", "[spatial][
     const auto res_vec = Aetherion::Spatial::ad(xi) * u.v;
 
     // Analytical:
-    // [ w1×w2
-    //   w1×v2 + v1×w2 ]
+    // [ w1x w2
+    //   w1x v2 + v1x w2 ]
     const Vec3<Scalar> expected_top = w1.cross(w2);
     const Vec3<Scalar> expected_bot = w1.cross(v2) + v1.cross(w2);
 
@@ -121,8 +121,8 @@ TEST_CASE("Adjoint: ad_star(xi) matches analytical force cross formula", "[spati
     const auto res_vec = Aetherion::Spatial::ad_star(xi) * f.f;
 
     // Analytical:
-    // [ w×M + v×F
-    //   w×F ]
+    // [ wx M + vx F
+    //   wx F ]
     const Vec3<Scalar> expected_top = w.cross(M) + v.cross(F);
     const Vec3<Scalar> expected_bot = w.cross(F);
 
