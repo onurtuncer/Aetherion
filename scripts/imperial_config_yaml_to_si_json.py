@@ -15,7 +15,7 @@ FT_TO_M = 0.3048
 FT2_TO_M2 = FT_TO_M ** 2
 LBM_TO_KG = 0.45359237
 SLUG_TO_KG = 14.5939029372
-DEG_TO_RAD = math.pi / 180.0  
+DEG_TO_RAD = math.pi / 180.0
 KNOT_TO_MPS = 0.514444
 
 def load_config(path: Path) -> dict:
@@ -51,7 +51,7 @@ def convert_imperial_to_si(cfg: dict) -> dict:
     Output schema (as requested):
       pose: lat_degree, lon_degree, azimuth_degree, zenith_degree, roll_degree, alt_m
       velocityNED: vn_mps, ve_mps, vd_mps
-      initialRotationAboutBodyAxes: p_rad_s, q_rad_s, r_rad_s
+      bodyRates: p_rad_s, q_rad_s, r_rad_s
       inertialParameters: mass_kg, Ixx/Iyy/Izz/Ixy/Iyz/Ixz (SI kg*m^2), xbar_m/ybar_m/zbar_m
       aerodynamicParameters: S (SI m^2)
 
@@ -137,9 +137,9 @@ def convert_imperial_to_si(cfg: dict) -> dict:
     out["velocityNED"] = v_out
 
     # -------------------------
-    # initialRotationAboutBodyAxes -> rad/s
+    # bodyRates -> rad/s
     # -------------------------
-    rot_in = out.get("initialRotationAboutBodyAxes", {}) or {}
+    rot_in = out.get("bodyRates", {}) or {}
     rot_out = {}
 
     def to_rad_s(component: str) -> float:
@@ -156,7 +156,7 @@ def convert_imperial_to_si(cfg: dict) -> dict:
     rot_out["q_rad_s"] = to_rad_s("q")
     rot_out["r_rad_s"] = to_rad_s("r")
 
-    out["initialRotationAboutBodyAxes"] = rot_out
+    out["bodyRates"] = rot_out
 
     # -------------------------
     # inertialParameters -> mass_kg, inertia SI kg*m^2, cg in m

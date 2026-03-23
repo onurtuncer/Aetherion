@@ -1,13 +1,14 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD,
+// Istanbul Technical University
 //
 // SPDX-License-Identifier: MIT
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
-#include <Aetherion/Simulation/Application.h>
 
-#include <iostream>
+#include "Aetherion/Simulation/Application.h"
+
 #include <stdexcept>
 #include <cstdlib>
 
@@ -21,10 +22,8 @@ namespace Aetherion::Simulation {
         try {
             parser_.parse(argc, argv);
         }
-        catch (const std::invalid_argument& e) {
-            std::cerr << "Error: " << e.what() << "\n\n";
-            parser_.printUsage();
-            throw;   // let the caller (EntryPoint / test) decide what to do
+        catch (const std::invalid_argument&) {
+            throw;   // let EntryPoint print and exit; tests catch cleanly
         }
     }
 

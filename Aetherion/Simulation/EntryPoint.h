@@ -29,7 +29,10 @@ int main(int argc, char* argv[]) {
     try {
         app = Aetherion::Simulation::CreateApplication(argc, argv);
     }
-    catch (const std::invalid_argument&) {
+    catch (const std::invalid_argument& e) {
+        std::cerr << "Error: " << e.what() << "\n\n";
+        // Re-create a temporary parser just to print usage, or store it — 
+        // simplest: just print the error and exit
         return EXIT_FAILURE;
     }
     app->run();

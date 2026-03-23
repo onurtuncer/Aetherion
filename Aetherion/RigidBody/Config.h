@@ -20,7 +20,7 @@ namespace Aetherion::RigidBody {
     {
         GeodeticPoseNED pose;
         VelocityNED velocityNED;
-        BodyRates initialRotationAboutBodyAxes;  //TODO [Onur] rename this!!!
+        BodyRates bodyRates;  
         InertialParameters inertialParameters;
         AerodynamicParameters aerodynamicParameters;
     };

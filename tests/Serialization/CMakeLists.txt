@@ -9,8 +9,7 @@
 add_executable(test_json
                     test_GeodeticPoseNEDJson.cpp
                     test_InertialParametersJson.cpp 
-                    test_RotationRateAboutBodyAxesJson.cpp 
-                    test_SimulationParametersJson.cpp
+                    test_BodyRatesJson.cpp              
                     test_AerodynamicParametersJson.cpp 
                     test_ConfigJson.cpp
                     test_VelocityNEDJson.cpp

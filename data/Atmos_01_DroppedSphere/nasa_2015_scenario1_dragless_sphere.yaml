@@ -16,9 +16,9 @@ velocityNED:
   ve_fps: 0.0 # feet/s
   vd_fps: 0.0 # feet/s
 
-initialRotationAboutBodyAxes:
+bodyRates:
   p_deg_s: -0.004178073 # degree/s
-  q_deg_s: 0.0          # degree/s    
+  q_deg_s: 0.0          # degree/s
   r_deg_s: 0.0          # degree/s
 
 inertialParameters:

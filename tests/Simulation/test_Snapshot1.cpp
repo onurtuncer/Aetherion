@@ -43,12 +43,17 @@ static std::vector<std::string> parse_header(const std::string& csv)
     return split_csv(csv.substr(0, nl));
 }
 
-/// Parse the first data row (second line) into value tokens.
 static std::vector<std::string> parse_first_row(const std::string& csv)
 {
     auto first_nl = csv.find('\n');
     auto second_nl = csv.find('\n', first_nl + 1);
-    return split_csv(csv.substr(first_nl + 1, second_nl - first_nl - 1));
+
+    // Extract the data line, then strip any trailing \r\n (MSVC emits \r\n on Windows)
+    std::string line = csv.substr(first_nl + 1, second_nl - first_nl - 1);
+    if (!line.empty() && line.back() == '\r')
+        line.pop_back();
+
+    return split_csv(line);
 }
 
 /// Build a Snapshot1 where every distinct scalar field = its 1-based column index,
@@ -258,8 +263,9 @@ TEST_CASE("Row: each sentinel value lands in the correct column", "[row][values]
 
 TEST_CASE("Row: zero snapshot produces correct default values", "[row][values]")
 {
-    // Snapshot1{} zero-initialises all scalars except q_body_to_eci,
-    // which Eigen default-constructs to the identity quaternion (w=1, x=y=z=0).
+    // Snapshot1{} zero-initialises all plain double members.
+    // Eigen::Quaterniond default constructor leaves coefficients UNINITIALIZED
+    // (undefined behaviour to read them) — so the quaternion columns are skipped!
     std::ostringstream oss;
     Snapshot1_WriteCsvHeader(oss);
     Snapshot1_WriteCsvRow(oss, Snapshot1{});
@@ -269,13 +275,17 @@ TEST_CASE("Row: zero snapshot produces correct default values", "[row][values]")
 
     REQUIRE(row.size() == 38);
 
+    // Columns to skip — Eigen::Quaterniond is uninitialized on default construction
+    const std::vector<std::string> skip = {
+        "q_body_to_eci_W", "q_body_to_eci_X", "q_body_to_eci_Y", "q_body_to_eci_Z"
+    };
+
     for (std::size_t i = 0; i < row.size(); ++i)
     {
-        double val = std::stod(row[i]);
-        if (header[i] == "q_body_to_eci_W")
-            REQUIRE(val == Catch::Approx(1.0).epsilon(1e-15));   // identity quaternion
-        else
-            REQUIRE(val == Catch::Approx(0.0).margin(1e-30));    // everything else is zero
+        if (std::find(skip.begin(), skip.end(), header[i]) != skip.end())
+            continue;
+        CAPTURE(header[i]);
+        REQUIRE(std::stod(row[i]) == Catch::Approx(0.0).margin(1e-30));
     }
 }
 
@@ -358,7 +368,7 @@ TEST_CASE("Multi-row: time column is monotonically increasing", "[multi-row]")
         Snapshot1_WriteCsvRow(oss, s);
     }
 
-    // Walk every data line and verify time column ascends
+    // Walk every data line (i.e. row) and verify time column ascends
     std::istringstream iss(oss.str());
     std::string line;
     std::getline(iss, line); // skip header

@@ -1,7 +1,6 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025-2026, Onur Tuncer, PhD,
-// Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
 // SPDX-License-Identifier: MIT
 // License-Filename: LICENSE
@@ -61,7 +60,7 @@ TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][external_
 
     REQUIRE(cfg.pose.alt_m >= 0.0);
 
-    // Earth rotation sanity 
-    REQUIRE(cfg.initialRotationAboutBodyAxes.roll_rad_s ==
+    // Earth rotation sanity
+    REQUIRE(cfg.bodyRates.roll_rad_s ==
         Catch::Approx(-7.292113023867705e-05));
 }

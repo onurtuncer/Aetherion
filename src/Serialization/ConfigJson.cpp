@@ -10,7 +10,7 @@
 #include "Aetherion/Serialization/ConfigJson.h"
 
 #include "Aetherion/Serialization/SimulationParametersJson.h"
-#include "Aetherion/Serialization/GeodeticPoseNEDJson.h"     
+#include "Aetherion/Serialization/GeodeticPoseNEDJson.h"
 #include "Aetherion/Serialization/InertialParametersJson.h"
 #include "Aetherion/Serialization/AerodynamicParametersJson.h"
 #include "Aetherion/Serialization/VelocityNEDJson.h"
@@ -25,7 +25,7 @@ namespace Aetherion::Serialization {
         // Fully qualify to avoid accidentally picking nlohmann::from_json
         ::Aetherion::Serialization::from_json(j.at("pose"), cfg.pose);
         ::Aetherion::Serialization::from_json(j.at("velocityNED"), cfg.velocityNED);
-        ::Aetherion::Serialization::from_json(j.at("initialRotationAboutBodyAxes"), cfg.initialRotationAboutBodyAxes);
+        ::Aetherion::Serialization::from_json(j.at("bodyRates"), cfg.bodyRates);
         ::Aetherion::Serialization::from_json(j.at("inertialParameters"), cfg.inertialParameters);
         ::Aetherion::Serialization::from_json(j.at("aerodynamicParameters"), cfg.aerodynamicParameters);
     }
@@ -35,14 +35,14 @@ namespace Aetherion::Serialization {
         nlohmann::json pose, vel, rot, inert, aero;
         to_json(pose, cfg.pose);
         ::Aetherion::Serialization::to_json(vel, cfg.velocityNED);
-        ::Aetherion::Serialization::to_json(rot, cfg.initialRotationAboutBodyAxes);
+        ::Aetherion::Serialization::to_json(rot, cfg.bodyRates);
         ::Aetherion::Serialization::to_json(inert, cfg.inertialParameters);
         ::Aetherion::Serialization::to_json(aero, cfg.aerodynamicParameters);
 
         j = nlohmann::json::object();
         j["pose"] = std::move(pose);
         j["velocityNED"] = std::move(vel);
-        j["initialRotationAboutBodyAxes"] = std::move(rot);
+        j["bodyRates"] = std::move(rot);
         j["inertialParameters"] = std::move(inert);
         j["aerodynamicParameters"] = std::move(aero);
     }

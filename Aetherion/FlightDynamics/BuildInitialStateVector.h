@@ -24,7 +24,7 @@
 // Inputs from SimulationConfig:
 //   cfg.pose                       → PoseWGS84_NED  (deg, deg, m, deg, deg, deg)
 //   cfg.velocityNED                → VelocityNED    (m/s, NED)
-//   cfg.initialRotationAboutBodyAxes → roll/pitch/yaw rates [rad/s] in body
+//   cfg.bodyRates → roll/pitch/yaw rates [rad/s] in body
 //   cfg.inertialParameters.mass_kg → initial mass  [kg]
 //   cfg.simulation.startTime       → t0 used to compute Earth rotation angle
 //
@@ -54,7 +54,7 @@
 //       ▼
 //     v_ECI                      ← state[IDX_V .. IDX_V+2]
 //
-//   InitialRotationAboutBodyAxes
+//   BodyRates
 //     (roll_rad_s, pitch_rad_s, yaw_rad_s)  ← state[IDX_W .. IDX_W+2]
 //
 //   InertialParameters.mass_kg             ← state[IDX_M]
@@ -163,7 +163,7 @@ namespace Aetherion::FlightDynamics {
 
         // ── 4) Body angular velocity ──────────────────────────────────────────
         //
-        //   InitialRotationAboutBodyAxes stores roll/pitch/yaw rates
+        //   BodyRates store roll/pitch/yaw rates
         //   in body-frame axes [rad/s].  The state stores ω_B = [ωx, ωy, ωz].
         //
         //   Convention (body frame, nose-forward, right-wing, down):
@@ -171,9 +171,9 @@ namespace Aetherion::FlightDynamics {
         //     ωy = pitch rate about body +y (right wing)
         //     ωz = yaw   rate about body +z (down)
         //
-        const double omega_x = cfg.initialRotationAboutBodyAxes.roll_rad_s;  //TODO [Onur] rename this RotationRateAboutBodyAxes
-        const double omega_y = cfg.initialRotationAboutBodyAxes.pitch_rad_s;
-        const double omega_z = cfg.initialRotationAboutBodyAxes.yaw_rad_s;
+        const double omega_x = cfg.bodyRates.roll_rad_s;
+        const double omega_y = cfg.bodyRates.pitch_rad_s;
+        const double omega_z = cfg.bodyRates.yaw_rad_s;
 
         // ── 5) Initial mass ───────────────────────────────────────────────────
         const double mass_kg = cfg.inertialParameters.mass_kg;

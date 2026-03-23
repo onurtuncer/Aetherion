@@ -201,10 +201,6 @@ namespace Aetherion::Simulation {
 
         // Explicit double — avoids MSVC rejecting Eigen expression templates via auto lambda
         const auto sep = [&os](double v) { os << ',' << v; };
-
-        os << s.time;
-
-        sep(s.gePosition_m.x());
       
         // --- time ---------------------------------------------------------------
         os << s.time;

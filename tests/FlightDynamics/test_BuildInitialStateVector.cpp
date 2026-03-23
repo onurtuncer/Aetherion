@@ -87,7 +87,7 @@ static RigidBody::Config MakeCfg(
     double omega_pitch = 0.0,
     double omega_yaw = 0.0,
     double mass_kg = 10'000.0)
-  //  double t0 = 0.0)
+
 {
     RigidBody::Config cfg{};
     cfg.pose.lat_deg = lat_deg;
@@ -101,13 +101,11 @@ static RigidBody::Config MakeCfg(
     cfg.velocityNED.east_mps = vE;
     cfg.velocityNED.down_mps = vD;
 
-    cfg.initialRotationAboutBodyAxes.roll_rad_s = omega_roll;
-    cfg.initialRotationAboutBodyAxes.pitch_rad_s = omega_pitch;
-    cfg.initialRotationAboutBodyAxes.yaw_rad_s = omega_yaw;
+    cfg.bodyRates.roll_rad_s = omega_roll;
+    cfg.bodyRates.pitch_rad_s = omega_pitch;
+    cfg.bodyRates.yaw_rad_s = omega_yaw;
 
     cfg.inertialParameters.mass_kg = mass_kg;
-   /* cfg.simulation.startTime = t0;
-    cfg.simulation.duration = 100.0;*/
 
     return cfg;
 }
@@ -251,7 +249,7 @@ TEST_CASE("BuildInitialStateVector - mass slot is independent of pose, velocity,
 // GROUP 3 - Angular-rate slots (IDX_W = 7..9)
 // =============================================================================
 
-TEST_CASE("BuildInitialStateVector - angular rate slots equal cfg.initialRotationAboutBodyAxes",
+TEST_CASE("BuildInitialStateVector - angular rate slots equal cfg.bodyRates",
     "[omega][initial_state]")
 {
     const double roll_s = 0.12;

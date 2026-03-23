@@ -17,7 +17,7 @@ namespace Ser = Aetherion::Serialization;
 
 using namespace Catch::Matchers;
 
-TEST_CASE("InitialRotationAboutBodyAxes JSON round-trip", "[serialization][FlightDynamics]")
+TEST_CASE("BodyRates JSON round-trip", "[serialization][RigidBody]")
 {
     SECTION("to_json produces correct keys and values")
     {

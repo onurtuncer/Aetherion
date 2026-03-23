@@ -8,4 +8,7 @@
 
 #pragma once
 
+// this header is for use by Aetherion client code only
+
 #include "Aetherion/Simulation/EntryPoint.h"
+#include "Aetherion/Simulation/Application.h"
