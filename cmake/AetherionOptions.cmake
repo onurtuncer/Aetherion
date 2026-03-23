@@ -30,11 +30,11 @@ option(AETHERION_BUILD_TESTS
     ON)
 
 option(AETHERION_BUILD_EXAMPLES
-    "Build the example executables under examples/src"
-    OFF)
+    "Build the example executables under src/Examples"
+    ON)
 
 option(AETHERION_BUILD_SIMULATION
-    "Build the AetherionSimulation post-processing layer (MakeSnapshot1, etc.)"
+    "Build the Aetherion application layer"
     ON)
 
 option(BUILD_DOCS

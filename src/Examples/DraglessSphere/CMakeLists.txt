@@ -5,3 +5,42 @@
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
 # ------------------------------------------------------------------------------
+# src/Examples/DraglessSphere/CMakeLists.txt
+#
+# Builds the DraglessSphere.exe example: NASA TM-2015-218675 Atmos Scenario 1.
+#
+# Links against:
+#   Aetherion::Aetherion    — core physics (SE(3) ODE, coordinate transforms,
+#                              FlightDynamics policies, RigidBody types)
+#   Aetherion::Simulation   — Application, ISimulator, Snapshot1, Log (spdlog)
+#   Eigen3::Eigen           — linear algebra (transitive via Aetherion)
+# ------------------------------------------------------------------------------
+
+add_executable(DraglessSphere
+    ${CMAKE_CURRENT_SOURCE_DIR}/DraglessSphere.cpp
+)
+
+target_compile_features(DraglessSphere PRIVATE cxx_std_23)
+
+# MSVC: force UTF-8 source encoding (needed for degree/SI unit symbols in comments)
+target_compile_options(DraglessSphere PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/utf-8>
+)
+
+target_link_libraries(DraglessSphere
+    PRIVATE
+        Aetherion::Aetherion
+        Aetherion::Simulation
+)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# Install the reference JSON config alongside the executable so users can run
+#   DraglessSphere.exe --inputFileName nasa_atmos_01_dragless_sphere.json
+# directly from the build directory.
+# ──────────────────────────────────────────────────────────────────────────────
+add_custom_command(TARGET DraglessSphere POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/data/nasa_atmos_01_dragless_sphere.json"
+        "$<TARGET_FILE_DIR:DraglessSphere>/nasa_atmos_01_dragless_sphere.json"
+    COMMENT "Copying NASA Atmos-01 config to build directory"
+)

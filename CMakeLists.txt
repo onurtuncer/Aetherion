@@ -100,7 +100,7 @@ endif()
 # Examples
 # ------------------------------------------------------------------------------
 if(AETHERION_BUILD_EXAMPLES)
-    add_subdirectory(examples)
+    add_subdirectory(src/Examples)
 endif()
 
 # ------------------------------------------------------------------------------

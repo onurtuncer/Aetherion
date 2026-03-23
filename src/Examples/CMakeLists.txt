@@ -9,3 +9,5 @@
 # Forwards to module subdirectories to build example executables.
 # Each subdirectory contains one or more examples.
 
+add_subdirectory(DraglessSphere)
+
