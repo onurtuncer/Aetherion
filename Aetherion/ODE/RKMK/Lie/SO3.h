@@ -1,106 +1,86 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
 // SPDX-License-Identifier: MIT
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
+//
+// SO3.h
+//
+// SO(3) exponential and left Jacobian via Rodrigues' formula.
+//
+// Refactored:
+//   - SO3::Skew   removed; all call sites use Spatial::skew<S>() directly.
+//     (Spatial::skew is AD-compatible and is the canonical skew operator in
+//      Aetherion.  The old local copy had a self-acknowledged TODO.)
+//
+//   - SO3::Coeffs removed; A/B/C are now computed by Core::so3_ABC which is
+//     the more accurate version (8-term series, CondExp-based AD branching).
+//     The old Coeffs used if-constexpr on std::is_same_v<S,double> which
+//     broke CppAD taping for the AD path.
+//
+// Public API (unchanged):
+//   SO3::Exp_R(w)       → 3×3 rotation matrix  (Rodrigues)
+//   SO3::LeftJacobian(w) → 3×3 left Jacobian  J_l(w)
+// ------------------------------------------------------------------------------
 
 #pragma once
 
-#include <type_traits>
 #include <Eigen/Dense>
-#include <Eigen/Geometry>
 
 #include <Aetherion/ODE/RKMK/Lie/Math.h>
+#include <Aetherion/ODE/RKMK/Core/Scalar.h>   // Core::so3_ABC  (canonical A/B/C)
+#include <Aetherion/Spatial/Skew.h>            // Spatial::skew<S>()
 
 namespace Aetherion::ODE::RKMK::Lie::SO3 {
 
-
-    // TODO [Onur] Use Skew operator from Spatial algebra headers
     // -------------------------------------------------------------------------
-    // Skew (hat) operator
+    // Exp_R(w)
+    //
+    // Rodrigues' rotation formula:
+    //   R = I + A·[w]× + B·[w]×²
+    //
+    // where A, B are the standard SO(3) sinc-like coefficients computed by
+    // Core::so3_ABC — AD-safe via CondExp and numerically stable near zero.
     // -------------------------------------------------------------------------
     template <class S>
-    [[nodiscard]] inline Eigen::Matrix<S, 3, 3> Skew(const Eigen::Matrix<S, 3, 1>& w) {
-        Eigen::Matrix<S, 3, 3> W;
-        W << S(0), -w(2), w(1),
-            w(2), S(0), -w(0),
-            -w(1), w(0), S(0);
-        return W;
-    }
-
-    // -------------------------------------------------------------------------
-    // Coefficients for Rodrigues + Jacobians
-    //
-    // A = sin(theta)/theta
-    // B = (1-cos(theta))/theta^2
-    // C = (theta - sin(theta))/theta^3
-    //
-    // IMPORTANT:
-    //  - For AD types: NO branching on theta using CppAD::Value.
-    //    Use series expansions unconditionally (analytic, AD-safe).
-    //  - For double: use a small-angle branch for numeric robustness.
-    // -------------------------------------------------------------------------
-    template <class S>
-    inline void Coeffs(const Eigen::Matrix<S, 3, 1>& w, S& A, S& B, S& C) {
+    [[nodiscard]] inline Eigen::Matrix<S, 3, 3>
+        Exp_R(const Eigen::Matrix<S, 3, 1>& w)
+    {
         const S theta2 = w.dot(w);
+        S A{}, B{}, C{};
+        Core::so3_ABC(theta2, A, B, C);
+        (void)C;  // C is only needed for LeftJacobian
 
-        auto series = [&]() {
-            const S t2 = theta2;
-            const S t4 = t2 * t2;
-            const S t6 = t4 * t2;
-
-            A = S(1) - t2 / S(6) + t4 / S(120) - t6 / S(5040);
-            B = S(0.5) - t2 / S(24) + t4 / S(720) - t6 / S(40320);
-            C = S(S(1) / S(6)) - t2 / S(120) + t4 / S(5040) - t6 / S(362880);
-            };
-
-        if constexpr (std::is_same_v<S, double>) {
-            const double th2 = theta2;
-            const double eps2 = 1e-16; // (1e-8)^2
-            if (th2 < eps2) {
-                series();
-            }
-            else {
-                const double th = std::sqrt(th2);
-                A = std::sin(th) / th;
-                B = (1.0 - std::cos(th)) / th2;
-                C = (th - std::sin(th)) / (th2 * th);
-            }
-        }
-        else {
-            // AD-safe path
-            series();
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // Rotation matrix exponential: Exp([w]x) = I + A W + B W^2
-    // -------------------------------------------------------------------------
-    template <class S>
-    [[nodiscard]] inline Eigen::Matrix<S, 3, 3> Exp_R(const Eigen::Matrix<S, 3, 1>& w) {
         const Eigen::Matrix<S, 3, 3> I = Eigen::Matrix<S, 3, 3>::Identity();
-        const auto W = Skew(w);
-        const auto W2 = W * W;
-
-        S A, B, C;
-        Coeffs(w, A, B, C);
+        const Eigen::Matrix<S, 3, 3> W = Spatial::skew(w);
+        const Eigen::Matrix<S, 3, 3> W2 = W * W;
 
         return I + A * W + B * W2;
     }
 
     // -------------------------------------------------------------------------
-    // Left Jacobian J_l(w) = I + B W + C W^2
+    // LeftJacobian(w)
+    //
+    // Left Jacobian of SO(3):
+    //   J_l(w) = I + B·[w]× + C·[w]×²
+    //
+    // Used in SE3::Exp to propagate the translational part:
+    //   p_exp = J_l(w) · v
     // -------------------------------------------------------------------------
     template <class S>
-    [[nodiscard]] inline Eigen::Matrix<S, 3, 3> LeftJacobian(const Eigen::Matrix<S, 3, 1>& w) {
-        const Eigen::Matrix<S, 3, 3> I = Eigen::Matrix<S, 3, 3>::Identity();
-        const auto W = Skew(w);
-        const auto W2 = W * W;
+    [[nodiscard]] inline Eigen::Matrix<S, 3, 3>
+        LeftJacobian(const Eigen::Matrix<S, 3, 1>& w)
+    {
+        const S theta2 = w.dot(w);
+        S A{}, B{}, C{};
+        Core::so3_ABC(theta2, A, B, C);
+        (void)A;  // A is only needed for Exp_R
 
-        S A, B, C;
-        Coeffs(w, A, B, C);
+        const Eigen::Matrix<S, 3, 3> I = Eigen::Matrix<S, 3, 3>::Identity();
+        const Eigen::Matrix<S, 3, 3> W = Spatial::skew(w);
+        const Eigen::Matrix<S, 3, 3> W2 = W * W;
 
         return I + B * W + C * W2;
     }

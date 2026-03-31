@@ -4,7 +4,10 @@
 // SPDX-License-Identifier: MIT
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
+
 #pragma once
+
+#include <Aetherion/Spatial/Skew.h>   // Spatial::skew<S>() — canonical skew operator
 
 namespace Aetherion::ODE::RKMK::Lie {
 
@@ -12,7 +15,7 @@ namespace Aetherion::ODE::RKMK::Lie {
     SE3<Scalar>::SE3(const Mat3& R_in, const Vec3& p_in)
         : q(Eigen::Quaternion<Scalar>(R_in).normalized()), R(R_in), p(p_in)
     {
-        R = q.toRotationMatrix(); // re-derive R from normalised q for consistency
+        R = q.toRotationMatrix();
     }
 
     template<class Scalar>
@@ -36,9 +39,13 @@ namespace Aetherion::ODE::RKMK::Lie {
     typename SE3<Scalar>::Mat6 SE3<Scalar>::ad_matrix(const Tangent& xi) {
         const Vec3 w = xi.template head<3>();
         const Vec3 v = xi.template tail<3>();
+
+        // Previously: SO3::Skew(w) / SO3::Skew(v)
+        // SO3::Skew was a duplicate of Spatial::skew — now deleted from SO3.h.
+        const Mat3 W = Spatial::skew(w);
+        const Mat3 V = Spatial::skew(v);
+
         Mat6 A = Mat6::Zero();
-        const Mat3 W = SO3::Skew(w);
-        const Mat3 V = SO3::Skew(v);
         A.template block<3, 3>(0, 0) = W;
         A.template block<3, 3>(3, 0) = V;
         A.template block<3, 3>(3, 3) = W;
