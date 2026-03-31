@@ -12,6 +12,11 @@
       "hidden": true,
       "displayName": "Windows Base",
       "generator": "Ninja",
+      "toolset": "host=x64",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "23",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",

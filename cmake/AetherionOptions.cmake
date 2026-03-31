@@ -29,20 +29,18 @@ option(AETHERION_BUILD_TESTS
     "Build the Aetherion unit and integration test suite (requires CTest)"
     ON)
 
-option(AETHERION_BUILD_EXAMPLES
-    "Build the example executables under src/Examples"
-    ON)
-
 option(AETHERION_BUILD_SIMULATION
     "Build the Aetherion application layer"
+    ON)
+
+option(AETHERION_BUILD_EXAMPLES
+    "Build the example executables under src/Examples"
     ON)
 
 option(BUILD_DOCS
     "Build Sphinx/Doxygen documentation. When ON, only the doc target \
 is configured and all other targets are skipped (early return in root)."
     OFF)
-
- 
 
 # ==============================================================================
 # Library Configuration

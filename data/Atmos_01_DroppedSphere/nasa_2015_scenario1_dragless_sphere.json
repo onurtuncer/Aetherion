@@ -1,10 +1,6 @@
 {
-  "simulation": {
-    "startTime": 0.0,
-    "duration": 30.0
-  },
-
-  "initialPose": {
+  
+  "pose": {
     "lat_deg": 0.0,
     "lon_deg": 0.0,
     "alt_m": 9144.0,
@@ -14,13 +10,13 @@
     "roll_deg": 0.0
   },
 
-  "initialVelocityNED": {
+  "velocityNED": {
     "vn_mps": 0.0,
     "ve_mps": 0.0,
     "vd_mps": 0.0
   },
 
-  "initialRotationAboutBodyAxes": {
+  "bodyRates": {
     "p_deg_s": -0.004178073,
     "q_deg_s": 0.0,
     "r_deg_s": 0.0
