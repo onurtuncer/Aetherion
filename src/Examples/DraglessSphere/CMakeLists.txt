@@ -40,7 +40,7 @@ target_link_libraries(DraglessSphere
 # ──────────────────────────────────────────────────────────────────────────────
 add_custom_command(TARGET DraglessSphere POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_SOURCE_DIR}/data/Atmos_01_DropppedSphere/nasa_2015_scenario1_dragless_sphere.json"
+        "${CMAKE_SOURCE_DIR}/data/Atmos_01_DroppedSphere/nasa_2015_scenario1_dragless_sphere.json"
         "$<TARGET_FILE_DIR:DraglessSphere>/nasa_2015_scenerio1_dragless_sphere.json"
     COMMENT "Copying NASA Atmos-01 config to build directory"
 )

@@ -1,4 +1,37 @@
-﻿#pragma once
+﻿// ------------------------------------------------------------------------------
+// Project: Aetherion
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+//
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
+// ------------------------------------------------------------------------------
+//
+// ISimulator.h
+//
+// Abstract base class for all Aetherion simulators.
+//
+// Template parameters:
+//   VectorField  -- Euclidean ODE right-hand side (must satisfy
+//                   VectorFieldOnProductSE3 concept)
+//   SnapshotType -- The concrete snapshot/telemetry struct produced by
+//                   snapshot().  Each simulator family defines its own:
+//                     DraglessSphereSimulator -> Snapshot1
+//                     (future)  AeroSimulator  -> Snapshot2
+//                     (future)  GNCSimulator    -> Snapshot3
+//                   This keeps the base class independent of any concrete
+//                   snapshot schema while still enforcing the contract that
+//                   every simulator can produce a snapshot.
+//
+// Usage:
+//   class MySimulator
+//       : public ISimulator<MyVF, MySnapshot>
+//   {
+//       [[nodiscard]] MySnapshot snapshot() const noexcept override { ... }
+//   };
+//
+// ------------------------------------------------------------------------------
+
+#pragma once
 
 #include <Aetherion/RigidBody/SixDofStepper.h>
 #include <Aetherion/RigidBody/State.h>
@@ -15,12 +48,13 @@
 
 namespace Aetherion::Simulation {
 
-    template<class VectorField>
+    template<class VectorField, class SnapshotType>
     class ISimulator
     {
     public:
         using Stepper = RigidBody::SixDoFStepper<VectorField>;
         using StepResult = typename Stepper::StepResult;
+        using Snapshot = SnapshotType;
 
         // -----------------------------------------------------------------------
         // Construction
@@ -29,7 +63,7 @@ namespace Aetherion::Simulation {
             RigidBody::StateD                    initialState,
             ODE::RKMK::Core::NewtonOptions       opt = {})
             : m_Stepper(ip, opt)
-            , m_State(initialState)
+            , m_State(std::move(initialState))
             , m_Time(0.0)
         {
         }
@@ -42,7 +76,7 @@ namespace Aetherion::Simulation {
         virtual ~ISimulator() = default;
 
         // -----------------------------------------------------------------------
-        // step() — advance by exactly m_StepSize seconds
+        // step() -- advance by h seconds
         // -----------------------------------------------------------------------
         [[nodiscard]] StepResult step(double h)
         {
@@ -55,7 +89,7 @@ namespace Aetherion::Simulation {
         }
 
         // -----------------------------------------------------------------------
-        // advance_to(t_target)
+        // advance_to(t_target, h)
         // -----------------------------------------------------------------------
         [[nodiscard]] StepResult advance_to(double t_target, double h)
         {
@@ -74,18 +108,25 @@ namespace Aetherion::Simulation {
         // -----------------------------------------------------------------------
         // Accessors
         // -----------------------------------------------------------------------
-        [[nodiscard]] double                     time()  const noexcept { return m_Time; }
+        [[nodiscard]] double                    time()  const noexcept { return m_Time; }
         [[nodiscard]] const RigidBody::StateD& state() const noexcept { return m_State; }
 
-        [[nodiscard]] virtual StepResult snapshot() const noexcept = 0;
+        // -----------------------------------------------------------------------
+        // snapshot() -- pure virtual
+        //
+        // Returns a SnapshotType populated from the current state.
+        // Each concrete simulator overrides this to produce its own telemetry
+        // schema (Snapshot1, Snapshot2, ...) without any coupling in this base.
+        // -----------------------------------------------------------------------
+        [[nodiscard]] virtual SnapshotType snapshot() const noexcept = 0;
 
     protected:
         virtual void validate() const {}
 
     private:
-        Stepper           m_Stepper;
-        double            m_Time;
-        RigidBody::StateD m_State;
+        Stepper            m_Stepper;
+        double             m_Time;
+        RigidBody::StateD  m_State;
     };
 
 } // namespace Aetherion::Simulation

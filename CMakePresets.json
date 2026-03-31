@@ -12,17 +12,14 @@
       "hidden": true,
       "displayName": "Windows Base",
       "generator": "Ninja",
-      "toolset": "host=x64",
-      "architecture": {
-        "value": "x64",
-        "strategy": "external"
-      },
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "23",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",
         "CMAKE_CXX_EXTENSIONS": "OFF",
         "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-        "AETHERION_BUILD_TESTS": "ON"
+        "AETHERION_BUILD_TESTS": "ON",
+        "AETHERION_BUILD_SIMULATION": "ON",
+        "AETHERION_BUILD_EXAMPLES": "ON"
       }
     },
     {

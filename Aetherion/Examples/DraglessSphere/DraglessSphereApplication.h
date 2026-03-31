@@ -90,27 +90,27 @@ namespace Aetherion::Examples::DraglessSphere {
             const RigidBody::Config rb_cfg =
                 Serialization::LoadConfig(cfg_sim.inputFileName);
 
-            AE_CORE_DEBUG("Vehicle config loaded:");
-            AE_CORE_DEBUG("  lat={:.4f} deg  lon={:.4f} deg  alt={:.2f} m",
+            AE_CORE_TRACE("Vehicle config loaded:");
+            AE_CORE_TRACE("  lat={:.4f} deg  lon={:.4f} deg  alt={:.2f} m",
                 rb_cfg.pose.lat_deg, rb_cfg.pose.lon_deg, rb_cfg.pose.alt_m);
-            AE_CORE_DEBUG("  azimuth={:.2f} deg  zenith={:.2f} deg  roll={:.2f} deg",
+            AE_CORE_TRACE("  azimuth={:.2f} deg  zenith={:.2f} deg  roll={:.2f} deg",
                 rb_cfg.pose.azimuth_deg, rb_cfg.pose.zenith_deg, rb_cfg.pose.roll_deg);
-            AE_CORE_DEBUG("  v_NED  = [{:.4f}, {:.4f}, {:.4f}] m/s",
+            AE_CORE_TRACE("  v_NED  = [{:.4f}, {:.4f}, {:.4f}] m/s",
                 rb_cfg.velocityNED.north_mps,
                 rb_cfg.velocityNED.east_mps,
                 rb_cfg.velocityNED.down_mps);
-            AE_CORE_DEBUG("  omega_B = [{:.6e}, {:.6e}, {:.6e}] rad/s",
+            AE_CORE_TRACE("  omega_B = [{:.6e}, {:.6e}, {:.6e}] rad/s",
                 rb_cfg.bodyRates.roll_rad_s,
                 rb_cfg.bodyRates.pitch_rad_s,
                 rb_cfg.bodyRates.yaw_rad_s);
-            AE_CORE_DEBUG("  mass   = {:.4f} kg", rb_cfg.inertialParameters.mass_kg);
+            AE_CORE_TRACE("  mass   = {:.4f} kg", rb_cfg.inertialParameters.mass_kg);
 
             // ── 2. Compute initial Earth Rotation Angle ───────────────────────
             //   theta0 = omega_E * t0   (simple linear ERA from J2000-like epoch)
             const double theta0 =
                 DraglessSphereSimulator::kOmegaEarth_rad_s * cfg_sim.startTime;
 
-            AE_CORE_DEBUG("Initial ERA theta0 = {:.10f} rad  ({:.6f} deg)",
+            AE_CORE_TRACE("Initial ERA theta0 = {:.10f} rad  ({:.6f} deg)",
                 theta0, theta0 * (180.0 / 3.14159265358979323846));
 
             // ── 3. Build initial StateD ───────────────────────────────────────
@@ -165,7 +165,7 @@ namespace Aetherion::Examples::DraglessSphere {
                     "Cannot open output file: " + cfg_sim.outputFileName);
 
             Simulation::Snapshot1_WriteCsvHeader(csv);
-            AE_CORE_DEBUG("CSV header written ({} columns).",
+            AE_CORE_TRACE("CSV header written ({} columns).",
                 Simulation::Snapshot1CsvTraits::kColumnCount);
 
             // ── 6. Write initial snapshot (t = startTime) ────────────────────
