@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <Aetherion/Spatial/Skew.h>   // Spatial::skew<S>() — canonical skew operator
+#include <Aetherion/Spatial/Skew.h> 
 
 namespace Aetherion::ODE::RKMK::Lie {
 
@@ -40,8 +40,6 @@ namespace Aetherion::ODE::RKMK::Lie {
         const Vec3 w = xi.template head<3>();
         const Vec3 v = xi.template tail<3>();
 
-        // Previously: SO3::Skew(w) / SO3::Skew(v)
-        // SO3::Skew was a duplicate of Spatial::skew — now deleted from SO3.h.
         const Mat3 W = Spatial::skew(w);
         const Mat3 V = Spatial::skew(v);
 

@@ -7,7 +7,7 @@
 //
 // Euclidean part of the 6-DoF rigid body ODE on SE(3) x R^7.
 //
-//   x    = [nu_B(6); m(1)]  ∈ R^7
+//   x    = [nu_B(6); m(1)]  in R^7
 //   xdot = operator()(t, g, x)
 //        = [dnu_B/dt(6); dm/dt(1)]
 //
@@ -19,7 +19,15 @@
 // where W_ext = sum of gravity + aero + propulsion wrenches in body frame.
 //
 // Templated on Scalar S -- works for both double and CppAD::AD<double>.
-// M_inv stored as double; cast<S>() inside operator().
+//
+// Changes vs original:
+//   1. Both M and M_inv are stored (built once at construction).
+//      The original stored only M_inv then called M_inv_S.inverse() on every
+//      Newton stage to recover M -- a full 6x6 inversion per call.
+//      Now operator() uses M.cast<S>(), which is a free type-widening.
+//   2. The CTAD deduction guide with defaulted template arguments has been
+//      removed.  MSVC (C2572) and the C++ standard forbid default arguments
+//      on deduction guide template parameter lists.
 //
 #pragma once
 
@@ -38,15 +46,6 @@ namespace Aetherion::RigidBody {
 
     namespace FD = Aetherion::FlightDynamics;
 
-    // -------------------------------------------------------------------------
-    // RigidBodyVectorField
-    //
-    // Four policies as template parameters; all have compile-time defaults so
-    // that the dragless sphere case requires only GravityPolicy:
-    //
-    //   using VF = RigidBodyVectorField<CentralGravityPolicy>;
-    //
-    // -------------------------------------------------------------------------
     template<
         FD::GravityPolicy    Gravity,
         FD::AeroPolicy       Aero = FD::ZeroAeroPolicy,
@@ -55,7 +54,7 @@ namespace Aetherion::RigidBody {
     >
     class VectorField {
     public:
-        // Pre-inverted 6x6 spatial inertia matrix (double, built once).
+        Eigen::Matrix<double, 6, 6> M;
         Eigen::Matrix<double, 6, 6> M_inv;
 
         Gravity   gravity;
@@ -63,7 +62,6 @@ namespace Aetherion::RigidBody {
         Thrust    thrust;
         MassMdot  mass_model;
 
-        // Build M_inv from InertialParameters.
         explicit VectorField(
             const InertialParameters& ip,
             Gravity   g = {},
@@ -75,45 +73,32 @@ namespace Aetherion::RigidBody {
             , thrust(std::move(th))
             , mass_model(std::move(mm))
         {
-            // Build 6x6 spatial inertia  M = [ J_B  -m*[r]x ; m*[r]x  m*I ]
-            // (Featherstone convention, body frame at CG)
             const double m = ip.mass_kg;
             const double Ixx = ip.Ixx, Iyy = ip.Iyy, Izz = ip.Izz;
             const double Ixy = ip.Ixy, Iyz = ip.Iyz, Ixz = ip.Ixz;
-
-            Eigen::Matrix<double, 6, 6> M = Eigen::Matrix<double, 6, 6>::Zero();
-
-            // Rotational inertia block (3x3, top-left)
-            M(0, 0) = Ixx; M(0, 1) = -Ixy; M(0, 2) = -Ixz;
-            M(1, 0) = -Ixy; M(1, 1) = Iyy; M(1, 2) = -Iyz;
-            M(2, 0) = -Ixz; M(2, 1) = -Iyz; M(2, 2) = Izz;
-
-            // Translational inertia block (3x3, bottom-right)
-            M(3, 3) = m; M(4, 4) = m; M(5, 5) = m;
-
-            // CG offset cross-coupling (off-diagonal 3x3 blocks)
-            // r_cg = [xbar, ybar, zbar]; [r]x skew-symmetric
             const double rx = ip.xbar_m, ry = ip.ybar_m, rz = ip.zbar_m;
-            // top-right:  -m * [r]x
-            M(0, 4) = m * rz; M(0, 5) = -m * ry;
-            M(1, 3) = -m * rz; M(1, 5) = m * rx;
-            M(2, 3) = m * ry; M(2, 4) = -m * rx;
-            // bottom-left: m * [r]x  (transpose of top-right)
-            M(3, 1) = -m * rz; M(3, 2) = m * ry;
-            M(4, 0) = m * rz; M(4, 2) = -m * rx;
-            M(5, 0) = -m * ry; M(5, 1) = m * rx;
+
+            M = Eigen::Matrix<double, 6, 6>::Zero();
+
+            // Rotational inertia block (top-left 3x3)
+            M(0, 0) = Ixx;  M(0, 1) = -Ixy;  M(0, 2) = -Ixz;
+            M(1, 0) = -Ixy;  M(1, 1) = Iyy;  M(1, 2) = -Iyz;
+            M(2, 0) = -Ixz;  M(2, 1) = -Iyz;  M(2, 2) = Izz;
+
+            // Translational inertia block (bottom-right 3x3)
+            M(3, 3) = m;  M(4, 4) = m;  M(5, 5) = m;
+
+            // CG offset cross-coupling
+            M(0, 4) = m * rz;  M(0, 5) = -m * ry;
+            M(1, 3) = -m * rz;  M(1, 5) = m * rx;
+            M(2, 3) = m * ry;  M(2, 4) = -m * rx;
+            M(3, 1) = -m * rz;  M(3, 2) = m * ry;
+            M(4, 0) = m * rz;  M(4, 2) = -m * rx;
+            M(5, 0) = -m * ry;  M(5, 1) = m * rx;
 
             M_inv = M.inverse();
         }
 
-        // ---------------------------------------------------------------------
-        // operator()(t, g, x) -> xdot
-        //
-        // x    = [nu_B(6); m(1)]
-        // xdot = [dnu_B(6); dm(1)]
-        //
-        // Works for S = double and S = CppAD::AD<double>.
-        // ---------------------------------------------------------------------
         template<class S>
         Eigen::Matrix<S, 7, 1>
             operator()(S t,
@@ -121,18 +106,19 @@ namespace Aetherion::RigidBody {
                 const Eigen::Matrix<S, 7, 1>& x) const
         {
             const Eigen::Matrix<S, 6, 1> nu_B = x.template head<6>();
-            const S                    m = x(6);
+            const S                      m = x(6);
 
-            // 1. External wrenches -- all in body frame at CG
+            // 1. External wrenches
             Spatial::Wrench<S> W_ext{};
             W_ext.f = gravity(g, m).f;
             W_ext.f += aero(g, nu_B, m, t).f;
             W_ext.f += thrust(g, nu_B, m, t).f;
 
             // 2. Newton-Euler:  M_inv * (W_ext - ad*(nu_B) * M * nu_B)
+            const Eigen::Matrix<S, 6, 6> M_S = M.template cast<S>();
             const Eigen::Matrix<S, 6, 6> M_inv_S = M_inv.template cast<S>();
-            const Eigen::Matrix<S, 6, 6> M_S = M_inv_S.inverse();  // 6x6, negligible cost
-            const Eigen::Matrix<S, 6, 1> h = M_S * nu_B;        // generalised momentum
+
+            const Eigen::Matrix<S, 6, 1> h = M_S * nu_B;
 
             Spatial::Twist<S> nu_twist;
             nu_twist.v = nu_B;
@@ -149,13 +135,5 @@ namespace Aetherion::RigidBody {
             return xdot;
         }
     };
-
-    // CTAD deduction guide -- omit trailing defaulted policies at call site.
-    template<class G,
-        class A = FD::ZeroAeroPolicy,
-        class T = FD::ZeroPropulsionPolicy,
-        class M = FD::ConstantMassPolicy>
-    VectorField(const InertialParameters&, G, A = {}, T = {}, M = {})
-        -> VectorField<G, A, T, M>;
 
 } // namespace Aetherion::RigidBody
