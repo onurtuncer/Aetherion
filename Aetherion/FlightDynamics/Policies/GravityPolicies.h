@@ -9,10 +9,13 @@
 #pragma once
 
 #include <Aetherion/Environment/Gravity.h>
+#include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Spatial/Wrench.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
 namespace Aetherion::FlightDynamics {
+
+    // ── Zero gravity ─────────────────────────────────────────────────────────
 
     struct ZeroGravityPolicy {
         template<class S>
@@ -27,8 +30,10 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(GravityPolicy<ZeroGravityPolicy>);
 
+    // ── Central (point-mass) gravity ─────────────────────────────────────────
+
     struct CentralGravityPolicy {
-        double mu{ 3.986004418e14 };
+        double mu{ Environment::WGS84::kGM_m3_s2 };
 
         template<class S>
         Spatial::Wrench<S>
@@ -36,22 +41,28 @@ namespace Aetherion::FlightDynamics {
         {
             const Environment::Vec3<S> r{ g.p(0), g.p(1), g.p(2) };
             const auto g_arr = Environment::CentralGravity(r, S(mu));
-            const Eigen::Matrix<S, 3, 1> F_W{ g_arr[0] * mass, g_arr[1] * mass, g_arr[2] * mass };
 
             Spatial::Wrench<S> w{};
             w.f.setZero();
-            // Rotate W -> B:  F_B = R^T * F_W
-            w.f.template tail<3>() = g.R.transpose().template cast<S>() * F_W;
+            w.f.template tail<3>() =
+                g.R.transpose().template cast<S>() *
+                Eigen::Matrix<S, 3, 1>{ g_arr[0] * mass,
+                g_arr[1] * mass,
+                g_arr[2] * mass };
             return w;
         }
     };
 
     static_assert(GravityPolicy<CentralGravityPolicy>);
-    
+
+    // ── J₂ gravity ───────────────────────────────────────────────────────────
+    //
+    // All three default values sourced from WGS84.h.
+
     struct J2GravityPolicy {
-        double mu{ 3.986004418e14 };
-        double Re{ 6378137.0 };
-        double J2{ 1.08262668e-3 };
+        double mu{ Environment::WGS84::kGM_m3_s2 };
+        double Re{ Environment::WGS84::kSemiMajorAxis_m };
+        double J2{ Environment::WGS84::kJ2 };
 
         template<class S>
         Spatial::Wrench<S>
@@ -59,11 +70,14 @@ namespace Aetherion::FlightDynamics {
         {
             const Environment::Vec3<S> r{ g.p(0), g.p(1), g.p(2) };
             const auto g_arr = Environment::J2(r, S(mu), S(Re), S(J2));
-            const Eigen::Matrix<S, 3, 1> F_W{ g_arr[0] * mass, g_arr[1] * mass, g_arr[2] * mass };
 
             Spatial::Wrench<S> w{};
             w.f.setZero();
-            w.f.template tail<3>() = g.R.transpose().template cast<S>() * F_W;
+            w.f.template tail<3>() =
+                g.R.transpose().template cast<S>() *
+                Eigen::Matrix<S, 3, 1>{ g_arr[0] * mass,
+                g_arr[1] * mass,
+                g_arr[2] * mass };
             return w;
         }
     };
