@@ -39,7 +39,7 @@ namespace Aetherion::Examples::DraglessSphere {
     {
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Aetherion — NASA TM-2015-218675 Atmospheric Scenario 1");
-        AE_CORE_INFO("Dragless sphere · J2 gravitation · US 1976 atmosphere");
+        AE_CORE_INFO("Dragless sphere - J2 gravitation - US 1976 atmosphere");
         AE_CORE_INFO("=======================================================");
     }
 
@@ -177,7 +177,7 @@ namespace Aetherion::Examples::DraglessSphere {
         return state;
     }
 
-    // Step 4 ──────────────────────────────────────────────────────────────────
+    // Step 4 --------------------------------------------------------------
     std::unique_ptr<DraglessSphereSimulator>
         DraglessSphereApplication::constructSimulator(
             const RigidBody::InertialParameters& ip,
@@ -190,9 +190,9 @@ namespace Aetherion::Examples::DraglessSphere {
 
 } // namespace Aetherion::Examples::DraglessSphere
 
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 // Client factory — called by the EntryPoint-generated main().
-// ─────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 namespace Aetherion::Simulation {
 
     Application* CreateApplication(int argc, char* argv[])
@@ -203,32 +203,3 @@ namespace Aetherion::Simulation {
 } // namespace Aetherion::Simulation
 
 #include <Aetherion/Simulation/EntryPoint.h>  
-
-//// ------------------------------------------------------------------------------
-//// Project: Aetherion
-//// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
-////
-//// SPDX-License-Identifier: MIT
-//// License-Filename: LICENSE
-//// ------------------------------------------------------------------------------
-
-//// The EntryPoint.h header defines main() and calls CreateApplication().
-//// This translation unit defines CreateApplication() so that
-//// DraglessSphereApplication is instantiated and returned.
-//// ------------------------------------------------------------------------------
-//
-//#include <Aetherion/Examples/DraglessSphere/DraglessSphereApplication.h>
-//#include <Aetherion/Simulation/EntryPoint.h>   // defines main(); must be last
-//
-//// ─────────────────────────────────────────────────────────────────────────────
-//// Client factory — called by the EntryPoint-generated main().
-//// Returns a heap-allocated DraglessSphereApplication; EntryPoint owns lifetime.
-//// ─────────────────────────────────────────────────────────────────────────────
-//namespace Aetherion::Simulation {
-//
-//    Application* CreateApplication(int argc, char* argv[])
-//    {
-//        return new Examples::DraglessSphere::DraglessSphereApplication(argc, argv);
-//    }
-//
-//} // namespace Aetherion::Simulation

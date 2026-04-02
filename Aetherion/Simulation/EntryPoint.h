@@ -35,7 +35,16 @@ int main(int argc, char* argv[]) {
         // simplest: just print the error and exit
         return EXIT_FAILURE;
     }
-    app->run();
+
+    try {
+        app->run();
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Fatal error during simulation: " << e.what() << "\n";
+        delete app;
+        return EXIT_FAILURE;
+    }
+   
     delete app;
     return EXIT_SUCCESS;
 }
