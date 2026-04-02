@@ -22,13 +22,37 @@ namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, RigidBody::Config& cfg)
     {
+        auto deserialize = [&](const char* section, auto fn)
+            {
+                try {
+                    if (!j.contains(section))
+                        throw std::runtime_error(
+                            std::string("missing top-level key '") + section + "'");
+                    fn(j.at(section));
+                }
+                catch (const std::exception& e) {
+                    throw std::runtime_error(
+                        std::string("Config[") + section + "]: " + e.what());
+                }
+            };
+
         // Fully qualify to avoid accidentally picking nlohmann::from_json
-        ::Aetherion::Serialization::from_json(j.at("pose"), cfg.pose);
-        ::Aetherion::Serialization::from_json(j.at("velocityNED"), cfg.velocityNED);
-        ::Aetherion::Serialization::from_json(j.at("bodyRates"), cfg.bodyRates);
-        ::Aetherion::Serialization::from_json(j.at("inertialParameters"), cfg.inertialParameters);
-        ::Aetherion::Serialization::from_json(j.at("aerodynamicParameters"), cfg.aerodynamicParameters);
+        deserialize("pose", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.pose); });
+        deserialize("velocityNED", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.velocityNED); });
+        deserialize("bodyRates", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.bodyRates); });
+        deserialize("inertialParameters", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.inertialParameters); });
+        deserialize("aerodynamicParameters", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.aerodynamicParameters); });
     }
+
+    //void from_json(const nlohmann::json& j, RigidBody::Config& cfg)
+    //{
+    //    // Fully qualify to avoid accidentally picking nlohmann::from_json
+    //    ::Aetherion::Serialization::from_json(j.at("pose"), cfg.pose);
+    //    ::Aetherion::Serialization::from_json(j.at("velocityNED"), cfg.velocityNED);
+    //    ::Aetherion::Serialization::from_json(j.at("bodyRates"), cfg.bodyRates);
+    //    ::Aetherion::Serialization::from_json(j.at("inertialParameters"), cfg.inertialParameters);
+    //    ::Aetherion::Serialization::from_json(j.at("aerodynamicParameters"), cfg.aerodynamicParameters);
+    //}
 
     void to_json(nlohmann::json& j, const RigidBody::Config& cfg)
     {

@@ -13,13 +13,28 @@ namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, RigidBody::AerodynamicParameters& aero)
     {
-        aero.S = j.at("S").get<double>();
-        aero.CL = j.at("CL").get<double>();
-        aero.CD = j.at("CD").get<double>();
-        aero.CY = j.at("CY").get<double>();
-        aero.Cl = j.at("Cl").get<double>();
-        aero.Cm = j.at("Cm").get<double>();
-        aero.Cn = j.at("Cn").get<double>();
+        auto get = [&](const char* key, double& field)
+            {
+                try {
+                    field = j.at(key).get<double>();
+                }
+                catch (const nlohmann::json::out_of_range&) {
+                    throw std::runtime_error(
+                        std::string("AerodynamicParameters: missing key '") + key + "'");
+                }
+                catch (const nlohmann::json::type_error&) {
+                    throw std::runtime_error(
+                        std::string("AerodynamicParameters: key '") + key + "' is not a number");
+                }
+            };
+
+        get("S", aero.S);
+        get("CL", aero.CL);
+        get("CD", aero.CD);
+        get("CY", aero.CY);
+        get("Cl", aero.Cl);
+        get("Cm", aero.Cm);
+        get("Cn", aero.Cn);
     }
 
     void to_json(nlohmann::json& j, const RigidBody::AerodynamicParameters& aero)

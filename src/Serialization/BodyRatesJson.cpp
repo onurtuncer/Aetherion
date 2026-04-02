@@ -13,9 +13,24 @@ namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, RigidBody::BodyRates& w)
     {
-        w.roll_rad_s = j.at("roll_rad_s").get<double>();
-        w.pitch_rad_s = j.at("pitch_rad_s").get<double>();
-        w.yaw_rad_s = j.at("yaw_rad_s").get<double>();
+        auto get = [&](const char* key, double& field)
+            {
+                try {
+                    field = j.at(key).get<double>();
+                }
+                catch (const nlohmann::json::out_of_range&) {
+                    throw std::runtime_error(
+                        std::string("BodyRates: missing key '") + key + "'");
+                }
+                catch (const nlohmann::json::type_error&) {
+                    throw std::runtime_error(
+                        std::string("BodyRates: key '") + key + "' is not a number");
+                }
+            };
+
+        get("roll_rad_s", w.roll_rad_s);
+        get("pitch_rad_s", w.pitch_rad_s);
+        get("yaw_rad_s", w.yaw_rad_s);
     }
 
     void to_json(nlohmann::json& j, const RigidBody::BodyRates& w)

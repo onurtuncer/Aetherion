@@ -13,20 +13,33 @@ namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, RigidBody::InertialParameters& ip)
     {
-        ip.mass_kg = j.at("mass_kg").get<double>();
+        try { ip.mass_kg = j.at("mass_kg").get<double>(); }
+        catch (const std::exception& e) {
+            throw std::runtime_error(std::string("inertialParameters.mass_kg: ") + e.what());
+        }
 
-        const auto& I = j.at("inertia_kgm2");
-        ip.Ixx = I.at("Ixx").get<double>();
-        ip.Iyy = I.at("Iyy").get<double>();
-        ip.Izz = I.at("Izz").get<double>();
-        ip.Ixy = I.at("Ixy").get<double>();
-        ip.Iyz = I.at("Iyz").get<double>();
-        ip.Ixz = I.at("Ixz").get<double>();
+        try {
+            const auto& I = j.at("inertia_kgm2");
+            ip.Ixx = I.at("Ixx").get<double>();
+            ip.Iyy = I.at("Iyy").get<double>();
+            ip.Izz = I.at("Izz").get<double>();
+            ip.Ixy = I.at("Ixy").get<double>();
+            ip.Iyz = I.at("Iyz").get<double>();
+            ip.Ixz = I.at("Ixz").get<double>();
+        }
+        catch (const std::exception& e) {
+            throw std::runtime_error(std::string("inertialParameters.inertia_kgm2: ") + e.what());
+        }
 
-        const auto& r = j.at("body_origin_wrt_cog_m");
-        ip.xbar_m = r.at("x").get<double>();
-        ip.ybar_m = r.at("y").get<double>();
-        ip.zbar_m = r.at("z").get<double>();
+        try {
+            const auto& r = j.at("body_origin_wrt_cog_m");
+            ip.xbar_m = r.at("x").get<double>();
+            ip.ybar_m = r.at("y").get<double>();
+            ip.zbar_m = r.at("z").get<double>();
+        }
+        catch (const std::exception& e) {
+            throw std::runtime_error(std::string("inertialParameters.body_origin_wrt_cog_m: ") + e.what());
+        }
     }
 
     void to_json(nlohmann::json& j, const RigidBody::InertialParameters& ip)

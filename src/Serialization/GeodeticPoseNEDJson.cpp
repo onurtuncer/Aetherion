@@ -13,13 +13,27 @@ namespace Aetherion::Serialization {
 
     void from_json(const nlohmann::json& j, RigidBody::GeodeticPoseNED& pose)
     {
-        pose.lat_deg = j.at("lat_deg").get<double>();
-        pose.lon_deg = j.at("lon_deg").get<double>();
-        pose.alt_m = j.at("alt_m").get<double>();
+        auto get = [&](const char* key, double& field)
+            {
+                try {
+                    field = j.at(key).get<double>();
+                }
+                catch (const nlohmann::json::out_of_range&) {
+                    throw std::runtime_error(
+                        std::string("GeodeticPoseNED: missing key '") + key + "'");
+                }
+                catch (const nlohmann::json::type_error&) {
+                    throw std::runtime_error(
+                        std::string("GeodeticPoseNED: key '") + key + "' is not a number");
+                }
+            };
 
-        pose.azimuth_deg = j.at("azimuth_deg").get<double>();
-        pose.zenith_deg = j.at("zenith_deg").get<double>();
-        pose.roll_deg = j.at("roll_deg").get<double>();
+        get("lat_deg", pose.lat_deg);
+        get("lon_deg", pose.lon_deg);
+        get("alt_m", pose.alt_m);
+        get("azimuth_deg", pose.azimuth_deg);
+        get("zenith_deg", pose.zenith_deg);
+        get("roll_deg", pose.roll_deg);
     }
 
     void to_json(nlohmann::json& j, const RigidBody::GeodeticPoseNED& pose)
