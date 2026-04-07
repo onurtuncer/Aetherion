@@ -1,5 +1,6 @@
 """
 compare_sim_validation.py
+Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 ─────────────────────────
 Compare Aetherion simulation results against validation data.
 

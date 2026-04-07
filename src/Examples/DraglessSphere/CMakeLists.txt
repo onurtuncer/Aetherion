@@ -42,5 +42,11 @@ add_custom_command(TARGET DraglessSphere POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${CMAKE_SOURCE_DIR}/data/Atmos_01_DroppedSphere/nasa_2015_scenario1_dragless_sphere.json"
         "$<TARGET_FILE_DIR:DraglessSphere>/nasa_2015_scenario1_dragless_sphere.json"
-    COMMENT "Copying NASA Atmos-01 config to build directory"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/data/Atmos_01_DroppedSphere/Atmos_01_sim_01_si_units.csv"
+        "$<TARGET_FILE_DIR:DraglessSphere>/Atmos_01_sim_01_si_units.csv"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        "${CMAKE_SOURCE_DIR}/scripts/compare_sim_validation.py"
+        "$<TARGET_FILE_DIR:DraglessSphere>/compare_sim_validation.py"
+    COMMENT "Copying NASA Atmos-01 config, validation data and comparison script to build directory"
 )
