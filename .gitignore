@@ -6,6 +6,7 @@ out/*
 
 # Repo dump file (via Python script under /scripts)
 output.txt
+out.txt
 
 
 # Repo structure dump file 
