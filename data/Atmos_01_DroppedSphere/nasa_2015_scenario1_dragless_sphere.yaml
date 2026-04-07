@@ -4,7 +4,7 @@ pose:
   alt_ft: 30000  # feet
 
   azimuth_degree: 0.0 # degree
-  zenith_degree: 0.0  # degree
+  zenith_degree: 90.0  # degree
   roll_degree: 0.0    # degree
 
 velocityNED:
