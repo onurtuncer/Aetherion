@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
 #include <Aetherion/Environment/Gravity.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Spatial/Wrench.h>

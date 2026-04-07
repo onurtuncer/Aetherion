@@ -8,6 +8,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/matchers/catch_matchers_string.hpp>
 #include <vendor/nlohmann/json.hpp>  //TODO [Onur] this should be nlohhmann/json.hpp later on
 #include "Aetherion/Serialization/BodyRatesJson.h"
 #include "Aetherion/RigidBody/BodyRates.h"
@@ -85,6 +86,9 @@ TEST_CASE("BodyRates JSON round-trip", "[serialization][RigidBody]")
         };
 
         RigidBody::BodyRates rot{};
-        REQUIRE_THROWS_AS(Ser::from_json(j, rot), nlohmann::json::out_of_range);
+        REQUIRE_THROWS_AS(Ser::from_json(j, rot), std::runtime_error);
+        REQUIRE_THROWS_WITH(Ser::from_json(j, rot),
+            ContainsSubstring("pitch_rad_s"));
     }
 }
+

@@ -54,7 +54,7 @@ namespace Aetherion::RigidBody {
     template<class VectorField>
         requires
     ODE::RKMK::KinematicsFieldOnSE3
-        <FlightDynamics::KinematicsXiField, double > &&
+        <FlightDynamics::KinematicsXiField, double >&&
         ODE::RKMK::VectorFieldOnProductSE3<VectorField, 7, double>
         class SixDoFStepper
     {
@@ -69,7 +69,7 @@ namespace Aetherion::RigidBody {
         using VecE = Eigen::Matrix<double, EuclidDim, 1>;
 
         using Integrator = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3
-            <KinematicsField, VectorField, EuclidDim> ;
+            <KinematicsField, VectorField, EuclidDim>;
 
         using StepResult = typename Integrator::StepResult;
 
@@ -88,7 +88,8 @@ namespace Aetherion::RigidBody {
         explicit SixDoFStepper(
             VectorField                    vf,
             ODE::RKMK::Core::NewtonOptions opt = {})
-            : integrator_(KinematicsField{}, std::move(vf))
+            : vf_(std::move(vf))
+            , integrator_(KinematicsField{}, vf_)
             , opt_(opt)
         {
         }
@@ -100,7 +101,8 @@ namespace Aetherion::RigidBody {
             const InertialParameters& ip,
             ODE::RKMK::Core::NewtonOptions opt = {})
             requires ODE::RKMK::ConstructibleFromInertialParameters<VectorField>
-        : integrator_(KinematicsField{}, VectorField(ip))
+        : vf_(ip)
+            , integrator_(KinematicsField{}, vf_)
             , opt_(opt)
         {
         }
@@ -143,6 +145,14 @@ namespace Aetherion::RigidBody {
         }
 
         // ------------------------------------------------------------------
+        // vectorField() -- exposes the VectorField instance so that callers
+        // (e.g. ISimulator::vectorField() -> MakeSnapshot1) can access the
+        // gravity policy and other sub-policies without duplicating constants.
+        // ------------------------------------------------------------------
+        [[nodiscard]] const VectorField& vectorField() const noexcept { return vf_; }
+        [[nodiscard]] VectorField& vectorField()       noexcept { return vf_; }
+
+        // ------------------------------------------------------------------
         // Newton options -- readable and writable for per-phase tuning
         // ------------------------------------------------------------------
         [[nodiscard]]
@@ -157,6 +167,10 @@ namespace Aetherion::RigidBody {
         }
 
     private:
+        // vf_ is stored here (not only inside integrator_) so that
+        // vectorField() can return a stable reference without requiring an
+        // accessor on the deeper integrator internals.
+        VectorField                    vf_;
         Integrator                     integrator_;
         ODE::RKMK::Core::NewtonOptions opt_;
     };

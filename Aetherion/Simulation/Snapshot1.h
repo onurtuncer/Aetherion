@@ -47,6 +47,7 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>   // provides Eigen::Quaterniond
 #include <iomanip>
+#include <limits>
 #include <ostream>
 #include <array>
 #include <string_view>
@@ -197,11 +198,16 @@ namespace Aetherion::Simulation {
         static_assert(Snapshot1CsvTraits::kColumnCount == 38,
             "Snapshot1_WriteCsvRow: column count mismatch.");
 
-        os << std::scientific << std::setprecision(15);
+        // std::numeric_limits<double>::max_digits10 == 17 guarantees that any
+        // double written with this precision reads back as the identical bit
+        // pattern.  The previous value of 15 was insufficient: large position
+        // values such as 6387280.999951441 were being rounded to 6387281.0
+        // (a loss of ~0.05 m) when parsed by downstream tools.
+        os << std::scientific << std::setprecision(std::numeric_limits<double>::max_digits10);
 
         // Explicit double — avoids MSVC rejecting Eigen expression templates via auto lambda
         const auto sep = [&os](double v) { os << ',' << v; };
-      
+
         // --- time ---------------------------------------------------------------
         os << s.time;
 

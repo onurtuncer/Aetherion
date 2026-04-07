@@ -108,8 +108,16 @@ namespace Aetherion::Simulation {
         // -----------------------------------------------------------------------
         // Accessors
         // -----------------------------------------------------------------------
-        [[nodiscard]] double                    time()  const noexcept { return m_Time; }
+        [[nodiscard]] double                     time()  const noexcept { return m_Time; }
         [[nodiscard]] const RigidBody::StateD& state() const noexcept { return m_State; }
+
+        // Expose the vector field so derived simulators can forward the gravity
+        // policy instance to MakeSnapshot1, ensuring the reported
+        // localGravity_m_s2 always matches the model used by the integrator.
+        [[nodiscard]] const VectorField& vectorField() const noexcept
+        {
+            return m_Stepper.vectorField();
+        }
 
         // -----------------------------------------------------------------------
         // snapshot() -- pure virtual
