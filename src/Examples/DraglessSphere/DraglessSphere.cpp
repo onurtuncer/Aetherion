@@ -38,7 +38,7 @@ namespace Aetherion::Examples::DraglessSphere {
     void DraglessSphereApplication::logStartupBanner() const
     {
         AE_CORE_INFO("=======================================================");
-        AE_CORE_INFO("Aetherion — NASA TM-2015-218675 Atmospheric Scenario 1");
+        AE_CORE_INFO("Aetherion - NASA TM-2015-218675 Atmospheric Scenario 1");
         AE_CORE_INFO("Dragless sphere - J2 gravitation - US 1976 atmosphere");
         AE_CORE_INFO("=======================================================");
     }
