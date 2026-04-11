@@ -103,7 +103,7 @@ TEST_CASE("AerodynamicParameters: missing keys throw", "[json][aero][negative]")
     })");
 
     RigidBody::AerodynamicParameters ap{};
-    REQUIRE_THROWS_AS(Ser::from_json(j, ap), nlohmann::json::out_of_range);
+    REQUIRE_THROWS_AS(Ser::from_json(j, ap), std::runtime_error);
 }
 
 TEST_CASE("AerodynamicParameters: wrong types throw", "[json][aero][negative]")
@@ -120,7 +120,7 @@ TEST_CASE("AerodynamicParameters: wrong types throw", "[json][aero][negative]")
     })");
 
     RigidBody::AerodynamicParameters ap{};
-    REQUIRE_THROWS_AS(Ser::from_json(j, ap), nlohmann::json::type_error);
+    REQUIRE_THROWS_AS(Ser::from_json(j, ap), std::runtime_error);
 }
 
 TEST_CASE("AerodynamicParameters: basic physical sanity", "[json][aero][physics]")

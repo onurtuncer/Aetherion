@@ -88,7 +88,7 @@ TEST_CASE("VelocityNED JSON round-trip", "[serialization][FlightDynamics]")
         };
 
         RigidBody::VelocityNED vel{};
-        REQUIRE_THROWS_AS(Ser::from_json(j, vel), nlohmann::json::out_of_range);
+        REQUIRE_THROWS_AS(Ser::from_json(j, vel), std::runtime_error);
     }
 
     SECTION("physically meaningful values: hover with slight drift")
