@@ -44,7 +44,7 @@ namespace Aetherion::Coordinate {
         h_m = h;
     }
 
-    // explicit instantiation for double (add more if needed)
-    template void ECEFToGeodeticWGS84<double>(const Vec3<double>&, double&, double&, double&);
+    // double is handled by the explicit specialization in ECEFtoGeodetic.cpp.
+    // Add explicit instantiations here for other scalar types as needed.
 
 } // namespace Aetherion::Coordinate
