@@ -20,7 +20,7 @@ where
 
 A schematic of this frame chain is:
 
-.. figure:: _static/frame_chain_launch.pdf
+.. figure:: _static/launch_frame_chain.pdf
    :alt: Frame chain for launch-site initialization
    :align: center
 

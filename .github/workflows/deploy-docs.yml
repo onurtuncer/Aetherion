@@ -2,7 +2,10 @@ name: Build & Deploy Docs to GitHub Pages
 
 on:
   push:
-    branches: [ main ]  # change if default branch is different
+    branches: [ main ]
+    paths:
+      - 'doc/**'
+      - 'src/**'
   workflow_dispatch:
 
 permissions:

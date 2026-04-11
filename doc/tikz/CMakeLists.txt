@@ -4,7 +4,9 @@ cmake_minimum_required(VERSION 3.16)
 find_program(PDFLATEX_EXECUTABLE pdflatex)
 
 if(NOT PDFLATEX_EXECUTABLE)
-    message(FATAL_ERROR "pdflatex not found; cannot build TikZ figures.")
+    message(WARNING "pdflatex not found; skipping TikZ figure generation. Pre-built figures in doc/sphinx/_static will be used.")
+    add_custom_target(tikz_figures)
+    return()
 endif()
 
 # Directories
