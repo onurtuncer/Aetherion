@@ -1,3 +1,11 @@
+# ------------------------------------------------------------------------------
+# Project: Aetherion
+# Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+#
+# SPDX-License-Identifier: MIT
+# License-Filename: LICENSE
+# ------------------------------------------------------------------------------
+
 
 #set(_fmu4cpp_cmake_dir "${CMAKE_CURRENT_LIST_DIR}")
 #get_filename_component(_fmu4cpp_root "${_fmu4cpp_cmake_dir}/.." ABSOLUTE)

@@ -1,9 +1,9 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
 #include <catch2/catch_test_macros.hpp>
@@ -52,7 +52,7 @@ TEST_CASE("US1976Atmosphere - CppAD derivatives vs finite differences", "[US1976
     using ADScalar = CppAD::AD<double>;
 
     // Choose an altitude safely inside a single layer (avoid boundaries).
-    // 5000 m is inside the 0–11 km gradient layer (Lb = -6.5 K/km).
+    // 5000 m is inside the 0â€“11 km gradient layer (Lb = -6.5 K/km).
     const double h0 = 5000.0;
 
     // ----- Build CppAD tape ---------------------------------------------------
@@ -111,7 +111,7 @@ TEST_CASE("US1976Atmosphere - CppAD works in an isothermal layer", "[US1976][Cpp
 {
     using ADScalar = CppAD::AD<double>;
 
-    // 15 km is inside the 11–20 km isothermal layer (Lb = 0).
+    // 15 km is inside the 11â€“20 km isothermal layer (Lb = 0).
     const double h0 = 15000.0;
 
     std::vector<ADScalar> ax(1);

@@ -1,11 +1,11 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD,
-// Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
 // ------------------------------------------------------------------------------
+
 //
 // File: Aetherion/ODE/RKMK/Core/StageResidual_RadauIIA_SE3.h
 //

@@ -2,9 +2,10 @@
 // Project: Aetherion
 // Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
 // ------------------------------------------------------------------------------
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 

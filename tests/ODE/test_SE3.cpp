@@ -1,11 +1,11 @@
-﻿// ------------------------------------------------------------------------------
-// Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD,
-// Istanbul Technical University
-//
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
 // ------------------------------------------------------------------------------
+// Project: Aetherion
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+//
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
+// ------------------------------------------------------------------------------
+
 //
 // Catch2 tests for: Aetherion/ODE/RKMK/Lie/SE3.h
 //
@@ -150,8 +150,6 @@ namespace {
         }
     };
 } // namespace
-
-
 
 TEST_CASE("SE3.Identity and composition", "[se3]") {
     const auto I = SE3d::Identity();

@@ -1,9 +1,9 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
 #include <catch2/catch_test_macros.hpp>
@@ -49,7 +49,7 @@ TEST_CASE("CentralGravity - direction is radial", "[environment][gravity]")
     const double mu = 3.986004418e14;
     const double Re = 6378137.0;
 
-    // Position at 45° in equatorial plane
+    // Position at 45Â° in equatorial plane
     const double angle = std::numbers::pi / 4.0;
     Vec3<double> r{
         Re * std::cos(angle),

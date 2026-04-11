@@ -1,8 +1,11 @@
-﻿// ------------------------------------------------------------------------------
-// Project: Aetherion
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
 // ------------------------------------------------------------------------------
+// Project: Aetherion
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+//
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
+// ------------------------------------------------------------------------------
+
 //
 // Catch2 tests for: Aetherion/ODE/RKMK/Integrators/RadauIIA_RKMK_SE3.h
 //
@@ -143,7 +146,6 @@ namespace {
             return xi;
         }
     };
-
 
        inline double so3_angle_error(const Eigen::Quaterniond& qa, const Eigen::Quaterniond& qb) {
         // relative rotation q_rel = qa * qb^{-1}

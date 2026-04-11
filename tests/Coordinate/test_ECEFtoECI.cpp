@@ -1,3 +1,11 @@
+// ------------------------------------------------------------------------------
+// Project: Aetherion
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+//
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
+// ------------------------------------------------------------------------------
+
 ﻿// -----------------------------------------------------------------------------
 // Project: Aetherion
 // File:    test_eci_ecef.cpp

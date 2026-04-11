@@ -1,9 +1,9 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
 #include <fmu4cpp/fmu_base.hpp>
@@ -33,12 +33,12 @@ public:
             .setInitial(initial_t::CALCULATED);
 
         // Parameter: path to the text file (string parameter is FMI-compliant;
-        // if your target tool doesn’t like strings, replace with an integer enum).
+        // if your target tool doesnâ€™t like strings, replace with an integer enum).
         register_string("file_path", &file_path_)
             .setCausality(causality_t::PARAMETER)
             .setVariability(variability_t::FIXED);
 
-        // Optional: time offset if your table doesn’t start at 0
+        // Optional: time offset if your table doesnâ€™t start at 0
         register_real("t_offset", &t_offset_)
             .setCausality(causality_t::PARAMETER)
             .setVariability(variability_t::FIXED);
@@ -166,7 +166,7 @@ model_info fmu4cpp::get_model_info()
 {
     model_info info;
     info.modelName = "TabulatedSignal";
-    info.description = "Outputs a linearly interpolated value from a time–value table";
+    info.description = "Outputs a linearly interpolated value from a timeâ€“value table";
     return info;
 }
 

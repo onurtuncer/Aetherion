@@ -1,11 +1,10 @@
-﻿// ------------------------------------------------------------------------------
-// Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
-//
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
 // ------------------------------------------------------------------------------
-
+// Project: Aetherion
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+//
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
+// ------------------------------------------------------------------------------
 
 // Catch2 tests for: Aetherion/ODE/RKMK/Core/Scalar.h
 //
@@ -179,7 +178,6 @@ TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: matches small-angle serie
 
     REQUIRE((J - J_ser).norm() == Approx(0.0).margin(1e-15));
 }
-
 
 TEST_CASE("Scalar.so3_ABC used in SE(3): p = J(w)v matches small-angle series", "[scalar][se3]") {
     const Eigen::Vector3d w_small(2e-6, 1e-6, -3e-6);

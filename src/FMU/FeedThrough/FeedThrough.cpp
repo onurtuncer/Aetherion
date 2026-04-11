@@ -1,9 +1,9 @@
 // ------------------------------------------------------------------------------
 // Project: Aetherion
-// Copyright(c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+// Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
-// SPDX - License - Identifier: MIT
-// License - Filename: LICENSE
+// SPDX-License-Identifier: MIT
+// License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
 // ------------------------------------------------------------------------------
@@ -38,7 +38,7 @@ public:
             .setCausality(causality_t::INPUT)
             .setVariability(variability_t::DISCRETE);
 
-        // Outputs – simple feed-through of the inputs
+        // Outputs â€“ simple feed-through of the inputs
         register_integer("integerOut", &integerOut_)
             .setCausality(causality_t::OUTPUT)
             .setVariability(variability_t::DISCRETE);
