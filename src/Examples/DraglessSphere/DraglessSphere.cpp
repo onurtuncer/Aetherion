@@ -71,12 +71,13 @@ namespace Aetherion::Examples::DraglessSphere {
             snap.feVelocity_m_s.norm());
     }
 
-    auto DraglessSphereApplication::stepAndRecord(std::ofstream& csv, double h) const
+    auto DraglessSphereApplication::stepAndRecord(std::ofstream& csv, double h, bool doWrite) const
         -> StepObservation
     {
         const auto res = m_Simulator->step(h);
         const auto snap = m_Simulator->snapshot();
-        Simulation::Snapshot1_WriteCsvRow(csv, snap);
+        if (doWrite)
+            Simulation::Snapshot1_WriteCsvRow(csv, snap);
 
         constexpr double kToDeg = 180.0 / 3.14159265358979323846;
 

@@ -20,6 +20,7 @@ namespace Aetherion::Simulation {
         double      timeStep = 0.01;
         double      startTime = 0.0;
         double      endTime = 1.0;
+        std::size_t writeInterval = 1;
         std::string inputFileName = "";
         std::string outputFileName = "output.txt";
 

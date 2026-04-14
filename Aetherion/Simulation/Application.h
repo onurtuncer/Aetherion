@@ -67,7 +67,10 @@ namespace Aetherion::Simulation {
             bool   converged = true;
             double residual = 0.0;
         };
-        virtual StepObservation stepAndRecord(std::ofstream& csv, double h) const = 0;
+        // doWrite: true when this step falls on a writeInterval boundary and
+        // the row should be written to csv; false when the step should only
+        // advance the simulation without producing CSV output.
+        virtual StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const = 0;
 
         // emit the final summary INFO block.
         virtual void logFinalSummary() const = 0;

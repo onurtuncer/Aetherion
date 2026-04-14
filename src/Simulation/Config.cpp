@@ -17,6 +17,7 @@ namespace Aetherion::Simulation {
             << "  timeStep       = " << timeStep << "\n"
             << "  startTime      = " << startTime << "\n"
             << "  endTime        = " << endTime << "\n"
+            << "  writeInterval  = " << writeInterval << "\n"
             << "  inputFileName  = " << inputFileName << "\n"
             << "  outputFileName = " << outputFileName << "\n";
     }

@@ -77,7 +77,7 @@ namespace Aetherion::Examples::DraglessSphere {
         void writeInitialSnapshot(std::ofstream& csv) const override;
 
         // Inner loop: advance one step, write CSV row, return observables
-        StepObservation stepAndRecord(std::ofstream& csv, double h) const override;
+        StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
 
         // Step 9: emit the final INFO block
         void logFinalSummary() const override;

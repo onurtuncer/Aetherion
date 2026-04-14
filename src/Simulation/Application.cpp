@@ -98,6 +98,22 @@ namespace Aetherion::Simulation {
                         "--outputFileName must not be empty.");
                 config_.outputFileName = val;
             });
+
+        parser_.addArgument(
+            "--writeInterval",
+            "<int>      Write a CSV row every N steps (default: 1 — write every step)",
+            [this](const std::string& val) {
+                try {
+                    const int n = std::stoi(val);
+                    if (n < 1)
+                        throw std::invalid_argument("--writeInterval must be >= 1.");
+                    config_.writeInterval = static_cast<std::size_t>(n);
+                }
+                catch (const std::invalid_argument& e) {
+                    throw std::invalid_argument(
+                        std::string("Invalid --writeInterval value: ") + e.what());
+                }
+            });
     }
 
     // ── logSimulationParameters ───────────────────────────────────────────────
@@ -107,6 +123,7 @@ namespace Aetherion::Simulation {
         AE_CORE_INFO("  startTime      = {:.6f} s", config_.startTime);
         AE_CORE_INFO("  endTime        = {:.6f} s", config_.endTime);
         AE_CORE_INFO("  timeStep       = {:.6f} s", config_.timeStep);
+        AE_CORE_INFO("  writeInterval  = {} step(s)", config_.writeInterval);
         AE_CORE_INFO("  inputFileName  = {}", config_.inputFileName);
         AE_CORE_INFO("  outputFileName = {}", config_.outputFileName);
     }
@@ -148,7 +165,10 @@ namespace Aetherion::Simulation {
         const double dt = cfg.timeStep;
         const double t_end = cfg.endTime;
 
-        AE_CORE_INFO("Starting integration: t_end={:.3f} s, dt={:.4f} s", t_end, dt);
+        const std::size_t writeInterval = cfg.writeInterval;
+
+        AE_CORE_INFO("Starting integration: t_end={:.3f} s, dt={:.4f} s, writeInterval={} step(s)",
+            t_end, dt, writeInterval);
 
         std::size_t step_count = 0;
         std::size_t failed_steps = 0;
@@ -157,8 +177,9 @@ namespace Aetherion::Simulation {
         while (t_current < t_end - 1e-12)
         {
             const double h = std::min(dt, t_end - t_current);
-            const auto   obs = stepAndRecord(csv, h);
             ++step_count;
+            const bool   doWrite = (step_count % writeInterval == 0);
+            const auto   obs = stepAndRecord(csv, h, doWrite);
 
             t_current = obs.time_s;
 
