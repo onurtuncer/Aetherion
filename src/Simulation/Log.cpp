@@ -27,15 +27,21 @@ namespace Aetherion::Simulation {
 		logSinks[0]->set_pattern("%^[%T] %n: %v%$");
 		logSinks[1]->set_pattern("[%T] [%l] %n: %v");
 
+#ifdef NDEBUG
+		constexpr auto runtimeLevel = spdlog::level::info;
+#else
+		constexpr auto runtimeLevel = spdlog::level::trace;
+#endif
+
 		s_CoreLogger = std::make_shared<spdlog::logger>("AETHERION", begin(logSinks), end(logSinks));
 		spdlog::register_logger(s_CoreLogger);
-		s_CoreLogger->set_level(spdlog::level::trace);
-		s_CoreLogger->flush_on(spdlog::level::trace);
+		s_CoreLogger->set_level(runtimeLevel);
+		s_CoreLogger->flush_on(runtimeLevel);
 
 		s_ClientLogger = std::make_shared<spdlog::logger>("APP", begin(logSinks), end(logSinks));
 		spdlog::register_logger(s_ClientLogger);
-		s_ClientLogger->set_level(spdlog::level::trace);
-		s_ClientLogger->flush_on(spdlog::level::trace);
+		s_ClientLogger->set_level(runtimeLevel);
+		s_ClientLogger->flush_on(runtimeLevel);
 	}
 
 } // Aetherion::Simulation

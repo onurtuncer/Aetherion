@@ -23,6 +23,13 @@ target_compile_features(AetherionSimulation PUBLIC cxx_std_23)
 
 target_compile_options(AetherionSimulation PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
+# Compile out TRACE calls entirely in Release/RelWithDebInfo builds.
+# SPDLOG_ACTIVE_LEVEL must be defined before any spdlog header is included,
+# so it is set as a public compile definition so downstream targets inherit it.
+target_compile_definitions(AetherionSimulation PUBLIC
+    $<$<NOT:$<CONFIG:Debug>>:SPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_INFO>
+)
+
 target_sources(AetherionSimulation PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/Application.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ArgumentParser.cpp
