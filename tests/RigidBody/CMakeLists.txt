@@ -7,7 +7,7 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_rigidBody
-                    test_AeroDynamicWrench.cpp 
+                    test_AerodynamicWrench.cpp
                     test_GravitationalWrench.cpp 
                     test_SixDofStepper.cpp)
 

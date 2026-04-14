@@ -40,6 +40,9 @@ else()
     # CppAD's build system creates a custom target named "test" which
     # conflicts with CTest's reserved target when testing is enabled.
     # All AD usage in this project is header-only; cppad_lib is not needed.
+    # CMP0169: suppress deprecation of FetchContent_Populate (still needed
+    # to skip CppAD's own CMakeLists, which conflicts with CTest's "test" target).
+    cmake_policy(SET CMP0169 OLD)
     FetchContent_GetProperties(cppad)
     if(NOT cppad_POPULATED)
         FetchContent_Populate(cppad)
