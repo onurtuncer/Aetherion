@@ -6,7 +6,7 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-﻿// tests/test_local_orientation_ned.cpp
+// tests/test_local_orientation_ned.cpp
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
