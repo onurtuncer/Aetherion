@@ -36,12 +36,18 @@ else()
         GIT_TAG        20240000.7
         GIT_SHALLOW    TRUE
     )
-    set(cppad_static_lib YES CACHE BOOL "" FORCE)
-    FetchContent_MakeAvailable(cppad)
+    # Download headers only — do NOT run CppAD's CMakeLists.txt.
+    # CppAD's build system creates a custom target named "test" which
+    # conflicts with CTest's reserved target when testing is enabled.
+    # All AD usage in this project is header-only; cppad_lib is not needed.
+    FetchContent_GetProperties(cppad)
+    if(NOT cppad_POPULATED)
+        FetchContent_Populate(cppad)
+    endif()
 
-    # cppad_lib is the real target produced by CppAD's own CMakeLists.
-    # Create the namespaced alias that all Aetherion targets link against.
-    add_library(CppAD::cppad ALIAS cppad_lib)
+    add_library(cppad_headers INTERFACE)
+    target_include_directories(cppad_headers INTERFACE ${cppad_SOURCE_DIR})
+    add_library(CppAD::cppad ALIAS cppad_headers)
 endif()
 
 # ------------------------------------------------------------------------------
