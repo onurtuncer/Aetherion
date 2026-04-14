@@ -23,7 +23,7 @@ public:
 protected:
     void prepareSimulation()                              const override {}
     void writeInitialSnapshot(std::ofstream&)             const override {}
-    StepObservation stepAndRecord(std::ofstream&, double) const override { return {}; }
+    StepObservation stepAndRecord(std::ofstream&, double, bool) const override { return {}; }
     void logFinalSummary()                                const override {}
 };
 
@@ -146,4 +146,29 @@ TEST_CASE("Application parses --outputFileName correctly", "[Application]") {
     FakeArgv args{ "test_program", "--outputFileName", "sim.csv" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().outputFileName == "sim.csv");
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tests — writeInterval
+// ─────────────────────────────────────────────────────────────
+TEST_CASE("Application default writeInterval is 1", "[Application]") {
+    FakeArgv args{ "test_program" };
+    StubApplication app(args.argc(), args.argv());
+    REQUIRE(app.getConfig().writeInterval == 1u);
+}
+
+TEST_CASE("Application parses --writeInterval correctly", "[Application]") {
+    FakeArgv args{ "test_program", "--writeInterval", "10" };
+    StubApplication app(args.argc(), args.argv());
+    REQUIRE(app.getConfig().writeInterval == 10u);
+}
+
+TEST_CASE("Application rejects --writeInterval of zero", "[Application]") {
+    FakeArgv args{ "test_program", "--writeInterval", "0" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
+TEST_CASE("Application rejects negative --writeInterval", "[Application]") {
+    FakeArgv args{ "test_program", "--writeInterval", "-5" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
