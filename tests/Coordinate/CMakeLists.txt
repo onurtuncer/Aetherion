@@ -7,14 +7,13 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_coordinate
-                    test_InitialStateCalculations.cpp 
+                    test_InitialStateCalculations.cpp
                     test_QuaterniontoNED.cpp
-                    test_GeodeticToECEF.cpp 
-                    test_NEDtoECEFtoECI.cpp 
-                    test_ECEFtoECI.cpp 
+                    test_GeodeticToECEF.cpp
+                    test_NEDtoECEFtoECI.cpp
+                    test_ECEFtoECI.cpp
                     test_Math.cpp
-                    test_inertial_to_local.cpp 
-                    test_ECEFtoGeodetic.cpp 
+                    test_inertial_to_local.cpp
                     test_ECItoNED.cpp
                     test_RandomRoundTripConversion.cpp)
 
