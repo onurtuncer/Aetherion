@@ -130,6 +130,10 @@ else()
 
     add_library(cppad_headers INTERFACE)
     target_include_directories(cppad_headers INTERFACE ${cppad_SOURCE_DIR}/include)
+    # Disable CppAD's NaN-checking feature: it calls CppAD::local::temp_file()
+    # which is defined in cppad_lib (compiled). We use CppAD header-only, so
+    # defining CPPAD_CHECK_FOR_NAN=0 removes the only cppad_lib dependency.
+    target_compile_definitions(cppad_headers INTERFACE CPPAD_CHECK_FOR_NAN=0)
     add_library(CppAD::cppad ALIAS cppad_headers)
 endif()
 
