@@ -18,7 +18,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 
-#include <Aetherion/RigidBody/SixDoFStepper.h>
+#include <Aetherion/RigidBody/SixDofStepper.h>
 #include <Aetherion/RigidBody/VectorField.h>
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/RigidBody/State.h>
