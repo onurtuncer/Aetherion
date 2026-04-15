@@ -51,11 +51,14 @@ else()
     # CppAD's cmake generates cppad/configure.hpp from configure.hpp.in.
     # Because we skip CppAD's CMakeLists (to avoid its conflicting "test"
     # custom target), we must synthesise configure.hpp ourselves.
-    set(_cppad_configure_hpp "${cppad_SOURCE_DIR}/cppad/configure.hpp")
+    # Note: CppAD 20240000.x stores headers under include/cppad/ — the
+    # include root is ${cppad_SOURCE_DIR}/include, not ${cppad_SOURCE_DIR}.
+    set(_cppad_configure_hpp "${cppad_SOURCE_DIR}/include/cppad/configure.hpp")
     if(NOT EXISTS "${_cppad_configure_hpp}")
         message(STATUS "Generating CppAD configure.hpp for Linux/non-MSVC build")
-        # Detect GNU-style vs MSVC C compiler flags
-        if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+        # Use the CXX compiler identity — this project declares LANGUAGES CXX
+        # only, so CMAKE_C_COMPILER_ID is never populated.
+        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
             set(_cppad_gnu_flags  1)
             set(_cppad_msvc_flags 0)
             set(_cppad_has_gettimeofday 1)
@@ -126,7 +129,7 @@ else()
     endif()
 
     add_library(cppad_headers INTERFACE)
-    target_include_directories(cppad_headers INTERFACE ${cppad_SOURCE_DIR})
+    target_include_directories(cppad_headers INTERFACE ${cppad_SOURCE_DIR}/include)
     add_library(CppAD::cppad ALIAS cppad_headers)
 endif()
 
