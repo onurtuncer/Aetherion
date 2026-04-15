@@ -133,12 +133,19 @@ else()
         )
     endif()
 
-    add_library(cppad_headers INTERFACE)
-    target_include_directories(cppad_headers INTERFACE ${cppad_SOURCE_DIR}/include)
-    # Disable CppAD's NaN-checking feature: it calls CppAD::local::temp_file()
-    # which is defined in cppad_lib (compiled). We use CppAD header-only, so
-    # defining CPPAD_CHECK_FOR_NAN=0 removes the only cppad_lib dependency.
-    target_compile_definitions(cppad_headers INTERFACE CPPAD_CHECK_FOR_NAN=0)
+    # cppad_headers is STATIC (not INTERFACE) so it can carry a compiled stub
+    # for CppAD::local::temp_file().  That symbol lives in cppad_lib which we
+    # don't build (we skip CppAD's CMakeLists to avoid its "test" target
+    # conflicting with CTest).  put_check_for_nan() — defined unconditionally
+    # in check_for_nan.hpp — calls temp_file() in Debug builds (#ifndef NDEBUG
+    # guard in forward.hpp), so the linker needs the symbol even in header-only
+    # mode.  The stub returns an empty path (NaN debug dump is a no-op).
+    add_library(cppad_headers STATIC
+        "${CMAKE_SOURCE_DIR}/cmake/cppad_temp_file_stub.cpp"
+    )
+    target_include_directories(cppad_headers
+        INTERFACE ${cppad_SOURCE_DIR}/include
+    )
     add_library(CppAD::cppad ALIAS cppad_headers)
 endif()
 
