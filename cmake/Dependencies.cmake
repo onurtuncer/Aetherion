@@ -122,6 +122,11 @@ else()
 # else
 # define CPPAD_NDEBUG_NOEXCEPT
 # endif
+// Disable NaN-check feature: its implementation (put_check_for_nan) calls
+// CppAD::local::temp_file() which lives in cppad_lib (compiled library).
+// We use CppAD header-only, so suppress this before check_for_nan.hpp
+// defines the default of 1.
+# define CPPAD_CHECK_FOR_NAN 0
 # endif
 "
             @ONLY
