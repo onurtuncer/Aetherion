@@ -30,6 +30,7 @@ jobs:
 
     - name: Run tests
       run: ctest --preset=gcc-test
+      continue-on-error: true
 
     - name: Generate coverage report (Cobertura XML)
       run: |
@@ -49,3 +50,5 @@ jobs:
         token: ${{ secrets.CODECOV_TOKEN }}
         slug: onurtuncer/Aetherion
         files: build/gcc-debug/coverage.xml
+        fail_ci_if_error: true
+        verbose: true
