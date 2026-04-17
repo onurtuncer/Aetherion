@@ -18,7 +18,9 @@ coverage:
         threshold: 10%
 
 ignore:
-  - "test/*"
-  - "_deps/*"
-  - "*/Catch2/*"
-  - "/usr/*"
+  - "tests/**"
+  - "vendor/**"
+  - "**/_deps/**"
+  - "**/CMakeFiles/**"
+  - "*/Catch2/**"
+  - "/usr/**"

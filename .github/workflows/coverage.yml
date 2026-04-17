@@ -37,8 +37,9 @@ jobs:
         gcovr \
           --root . \
           --exclude 'tests/.*' \
-          --exclude 'build/.*/_deps/.*' \
           --exclude 'vendor/.*' \
+          --exclude '.*/_deps/.*' \
+          --exclude '.*CMakeFiles.*' \
           --gcov-executable gcov-13 \
           --gcov-ignore-errors=no_working_dir_found \
           --xml build/gcc-debug/coverage.xml \
