@@ -23,3 +23,22 @@ target_include_directories(test_initial_state PRIVATE "${CMAKE_SOURCE_DIR}/vendo
 
 include(Catch)
 catch_discover_tests(test_initial_state)
+
+# --------------------------------------------------------------------------
+# Gravity policy tests
+# --------------------------------------------------------------------------
+
+add_executable(test_gravity_policies
+                    test_GravityPolicies.cpp)
+
+target_link_libraries(test_gravity_policies
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad
+        Eigen3::Eigen
+)
+
+target_include_directories(test_gravity_policies PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+catch_discover_tests(test_gravity_policies)
