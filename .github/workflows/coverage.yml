@@ -38,6 +38,7 @@ jobs:
           --root . \
           --exclude 'tests/.*' \
           --exclude 'vendor/.*' \
+          --exclude 'cmake/.*' \
           --exclude '.*/_deps/.*' \
           --exclude '.*CMakeFiles.*' \
           --gcov-executable gcov-13 \
