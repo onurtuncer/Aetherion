@@ -52,7 +52,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = 'sphinx_rtd_theme'
-html_static_path = ['_static', 'sphinx/_static']
+html_static_path = ['_static']
 
 # -- Breathe configuration ---------------------------------------------------
 
@@ -73,7 +73,6 @@ print("Breathe expects Doxygen XML at:", breathe_projects[project])
 # -- BibTeX references -------------------------------------------------------
 
 bibtex_bibfiles = ['references.bib']
-bibtex_encoding = 'latin'
 
 # -- ReadTheDocs fallback (optional) -----------------------------------------
 

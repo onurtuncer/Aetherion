@@ -45,8 +45,11 @@ jobs:
       - name: Configure (docs only)
         run: cmake -B build -DBUILD_DOCS=ON
 
-      - name: Build docs (Doxygen + Sphinx)
-        run: cmake --build build
+      - name: Build docs (Doxygen XML)
+        run: cmake --build build --target Aetherion_Docs_Doxygen
+
+      - name: Build docs (Sphinx HTML)
+        run: cmake --build build --target Aetherion_Docs_Sphinx
 
       - name: List Sphinx output
         run: ls -R build/doc/sphinx
