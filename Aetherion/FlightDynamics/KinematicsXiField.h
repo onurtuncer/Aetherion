@@ -34,21 +34,31 @@
 
 namespace Aetherion::FlightDynamics {
 
+/// @brief Stateless kinematics field for a free rigid body (right-trivialised SE(3)).
+///
+/// Implements the "where" equation on SE(3):
+/// @f[ \dot{g} = g\,\hat{\xi} @f]
+/// where @f$\xi = [\omega_B;\,v_B] \in \mathbb{R}^6@f$ is the body-frame twist and
+/// @f$\hat{\cdot}: \mathbb{R}^6 \to \mathfrak{se}(3)@f$ is the isomorphism.
+///
+/// In the RKMK setting the integrator calls this field to obtain the Lie-algebra
+/// element that drives the exponential update of @f$g@f$.  The result is @f$\xi@f$
+/// itself — the identity map — because the body-frame twist *is* the right-trivialised
+/// velocity.
+///
+/// The call operator is templated on @c S (not the class) so that the same instance
+/// is callable for both @c double (runtime) and @c CppAD::AD<double> (Newton Jacobian
+/// tape) without duplication.
     class KinematicsXiField
     {
     public:
-        // ------------------------------------------------------------------
-        // operator()<S>
-        //
-        // Templated on S so the same field instance works for both:
-        //   S = double            -- runtime integration path
-        //   S = CppAD::AD<double> -- Newton Jacobian tape path
-        //
-        // Returns xi unchanged -- in the right-trivialised RKMK formulation
-        // the Lie algebra element driving g is exactly the body-frame twist.
-        // The identity pass-through records a trivial operation on the CppAD
-        // tape and contributes a free identity block to the Jacobian.
-        // ------------------------------------------------------------------
+        /// @brief Return the Lie-algebra element (identity pass-through).
+        ///
+        /// @tparam S     Scalar type (@c double or @c CppAD::AD<double>).
+        /// @param t      Current time [s] (unused — kinematics are time-invariant).
+        /// @param g      Current SE(3) pose (unused — kinematics are state-independent).
+        /// @param xi     Body-frame twist @f$[\omega_B(3);\,v_B(3)]@f$ [rad/s | m/s].
+        /// @return       @c xi unchanged.
         template<class S>
         [[nodiscard]]
         Eigen::Matrix<S, 6, 1> operator()(
@@ -60,7 +70,7 @@ namespace Aetherion::FlightDynamics {
         }
     };
 
-    // Alias kept for call-site readability -- no longer a template itself.
+    /// @brief Convenience alias — @c KinematicsXiField is already double-precision only.
     using KinematicsXiFieldd = KinematicsXiField;
 
 } // namespace Aetherion::FlightDynamics

@@ -55,8 +55,14 @@ namespace Aetherion::Coordinate {
         };
     }
 
-    // ── 2. Unit direction in NED from azimuth + zenith ───────────────────────
-
+    /// @brief Compute the unit direction vector in NED from azimuth and zenith angles.
+    ///
+    /// @f[ \hat{d}^{NED} = [\sin\theta\cos\psi,\;\sin\theta\sin\psi,\;-\cos\theta] @f]
+    /// where @f$\psi@f$ = azimuth (from North toward East) and @f$\theta@f$ = zenith.
+    ///
+    /// @param azimuth_rad  Azimuth angle measured from North toward East [rad].
+    /// @param zenith_rad   Zenith angle from local Up toward the direction [rad, 0 … π].
+    /// @return             Unit 3-vector in NED frame @f$[N,\,E,\,D]@f$.
     template <class Scalar>
     inline Vec3<Scalar> DirectionNEDFromAzimuthZenith(
         const Scalar& azimuth_rad,
@@ -77,8 +83,16 @@ namespace Aetherion::Coordinate {
         };
     }
 
-    // ── 3. NED → ECEF vector rotation ────────────────────────────────────────
-
+    /// @brief Rotate a vector from NED to ECEF frame.
+    ///
+    /// Applies the direction-cosine matrix @f$R_{ECEF}^{NED}(\phi,\lambda)@f$
+    /// to @c v_ned.  The NED frame origin is the surface point at @c lat_rad,
+    /// @c lon_rad; only the rotation is applied (no translation).
+    ///
+    /// @param v_ned    3-vector expressed in NED frame.
+    /// @param lat_rad  Geodetic latitude of the NED origin [rad].
+    /// @param lon_rad  Geodetic longitude of the NED origin [rad].
+    /// @return         Same vector expressed in ECEF frame.
     template <class Scalar>
     inline Vec3<Scalar> NEDToECEF(
         const Vec3<Scalar>& v_ned,
@@ -108,7 +122,15 @@ namespace Aetherion::Coordinate {
         };
     }
 
-    /// ECEF → ECI: inverse of R₃(θ), i.e. R₃(−θ) rotation about Z.
+    /// @brief Rotate a vector from ECEF to ECI frame.
+    ///
+    /// Applies @f$R_3(-\theta)@f$ (rotation about Z by @f$-\theta@f$):
+    /// @f[ v^{ECI} = R_3(-\theta)\,v^{ECEF} @f]
+    /// where @f$\theta@f$ is the Earth Rotation Angle (ERA).
+    ///
+    /// @param v_ecef     3-vector in ECEF frame.
+    /// @param theta_rad  Earth Rotation Angle @f$\theta_{ERA}@f$ [rad].
+    /// @return           Same vector in ECI frame.
     template <class Scalar>
     inline Vec3<Scalar> ECEFToECI(
         const Vec3<Scalar>& v_ecef,
@@ -129,13 +151,28 @@ namespace Aetherion::Coordinate {
 
     // ── 4. Launch state in ECI ────────────────────────────────────────────────
 
+/// @brief ECI launch state derived from geodetic pose and heading.
     template <class Scalar>
     struct LaunchStateECI {
-        Vec3<Scalar> r0;
-        Vec3<Scalar> dir0_eci;
-        Quat<Scalar> q_EB;
+        Vec3<Scalar> r0;       ///< ECI position at launch [m].
+        Vec3<Scalar> dir0_eci; ///< Body forward direction (@f$x_B@f$) in ECI at launch.
+        Quat<Scalar> q_EB;     ///< Quaternion rotating body frame into ECI frame at launch.
     };
 
+    /// @brief Build the ECI launch state from geodetic pose, heading, and Earth orientation.
+    ///
+    /// Converts a geodetic launch position and heading (azimuth / zenith / roll)
+    /// into ECI-frame quantities: position vector, body-forward direction, and
+    /// attitude quaternion.  The body-frame convention is x forward, y right, z down.
+    ///
+    /// @param lat_rad                  Geodetic latitude [rad].
+    /// @param lon_rad                  Geodetic longitude [rad].
+    /// @param h_m                      Ellipsoidal height [m].
+    /// @param azimuth_rad              Heading azimuth from North toward East [rad].
+    /// @param zenith_rad               Heading zenith from local Up [rad].
+    /// @param roll_rad                 Body roll about the forward axis [rad].
+    /// @param earth_rotation_angle_rad Earth Rotation Angle @f$\theta_{ERA}@f$ [rad].
+    /// @return                         @c LaunchStateECI with ECI position, direction, and quaternion.
     template <class Scalar>
     inline LaunchStateECI<Scalar> MakeLaunchStateECI(
         const Scalar& lat_rad,
@@ -207,9 +244,15 @@ namespace Aetherion::Coordinate {
         return LaunchStateECI<Scalar>{ r_eci, x_b_eci, q_EB };
     }
 
-    // NED → ECI rotation matrix (frame NED to frame ECI).
-    // R_IN[3r+c] is the element at row r, column c (row-major).
-    // v^ECI = R_IN * v^NED
+    /// @brief Build the 3×3 NED-to-ECI rotation matrix (row-major).
+    ///
+    /// Returns @f$R_{IN}@f$ such that @f$v^{ECI} = R_{IN}\,v^{NED}@f$.
+    /// Element access: @c R_IN[3*r + c] is row @c r, column @c c.
+    ///
+    /// @param lat_rad       Geodetic latitude of the NED origin [rad].
+    /// @param lon_rad       Geodetic longitude of the NED origin [rad].
+    /// @param theta_era_rad Earth Rotation Angle @f$\theta_{ERA}@f$ [rad].
+    /// @return              Row-major 3×3 rotation matrix.
     template <class Scalar>
     inline Mat3<Scalar> NEDToInertialRotationMatrix(
         const Scalar& lat_rad,

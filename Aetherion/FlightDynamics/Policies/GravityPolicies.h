@@ -16,8 +16,10 @@
 
 namespace Aetherion::FlightDynamics {
 
-    // ── Zero gravity ─────────────────────────────────────────────────────────
-
+    /// @brief Gravity policy that returns a zero wrench (no gravity).
+    ///
+    /// Useful for unit tests and zero-gravity environments.
+    /// The compiler optimises the zero addition away entirely.
     struct ZeroGravityPolicy {
         template<class S>
         Spatial::Wrench<S>
@@ -31,10 +33,13 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(GravityPolicy<ZeroGravityPolicy>);
 
-    // ── Central (point-mass) gravity ─────────────────────────────────────────
-
+    /// @brief Central (point-mass) gravity wrench policy.
+    ///
+    /// Computes @f$\mathbf{F} = m\,\mathbf{g}@f$ using the inverse-square law,
+    /// then rotates the inertial-frame force into the body frame via
+    /// @f$R^\top@f$ from the SE(3) pose.  Moment component is zero (force at CoG).
     struct CentralGravityPolicy {
-        double mu{ Environment::WGS84::kGM_m3_s2 };
+        double mu{ Environment::WGS84::kGM_m3_s2 }; ///< Gravitational parameter @f$\mu@f$ [m³/s²].
 
         template<class S>
         Spatial::Wrench<S>
@@ -56,14 +61,16 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(GravityPolicy<CentralGravityPolicy>);
 
-    // ── J₂ gravity ───────────────────────────────────────────────────────────
-    //
-    // All three default values sourced from WGS84.h.
-
+    /// @brief J₂ oblateness gravity wrench policy.
+    ///
+    /// Extends @c CentralGravityPolicy with the first zonal harmonic @f$J_2@f$,
+    /// which accounts for Earth's equatorial bulge.  Significant for LEO
+    /// trajectories (nodal regression, perigee precession).
+    /// All default values are sourced from @c WGS84.h.
     struct J2GravityPolicy {
-        double mu{ Environment::WGS84::kGM_m3_s2 };
-        double Re{ Environment::WGS84::kSemiMajorAxis_m };
-        double J2{ Environment::WGS84::kJ2 };
+        double mu{ Environment::WGS84::kGM_m3_s2 };      ///< Gravitational parameter @f$\mu@f$ [m³/s²].
+        double Re{ Environment::WGS84::kSemiMajorAxis_m }; ///< Earth equatorial radius [m].
+        double J2{ Environment::WGS84::kJ2 };              ///< J₂ zonal harmonic coefficient [-].
 
         template<class S>
         Spatial::Wrench<S>

@@ -14,9 +14,9 @@
 
 namespace Aetherion::FlightDynamics {
 
-    // -------------------------------------------------------------------------
-    // Zero thrust -- coasting, unpowered phases.
-    // -------------------------------------------------------------------------
+    /// @brief Propulsion policy that returns a zero wrench (coasting / unpowered phase).
+    ///
+    /// Satisfies @c PropulsionPolicy.  The compiler eliminates the zero addition.
     struct ZeroPropulsionPolicy {
         template<class S>
         Spatial::Wrench<S>
@@ -32,11 +32,12 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(PropulsionPolicy<ZeroPropulsionPolicy>);
 
-    // -------------------------------------------------------------------------
-    // Constant axial thrust along body +z axis.
-    // -------------------------------------------------------------------------
+    /// @brief Constant axial thrust along the body +z axis.
+    ///
+    /// Sets @f$F_z = \text{thrust\_N}@f$ in the body frame; all other
+    /// wrench components are zero.  Satisfies @c PropulsionPolicy.
     struct ConstantThrustPolicy {
-        double thrust_N{ 0.0 };  // [N]
+        double thrust_N{ 0.0 }; ///< Axial thrust magnitude [N] (positive = thrust along +z body axis).
 
         template<class S>
         Spatial::Wrench<S>

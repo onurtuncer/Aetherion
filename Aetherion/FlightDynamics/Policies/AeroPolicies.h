@@ -13,8 +13,10 @@
 
 namespace Aetherion::FlightDynamics {
 
-    // Dragless sphere -- satisfies AeroPolicy, returns zero.
-    // Optimised away entirely by the compiler.
+/// @brief Aerodynamic policy that returns a zero wrench (no aerodynamic forces).
+///
+/// Models a dragless, liftless body (e.g. vacuum trajectory or baseline case).
+/// Satisfies @c AeroPolicy; the compiler optimises the zero addition away entirely.
     struct ZeroAeroPolicy {
         template<class S>
         Spatial::Wrench<S>
