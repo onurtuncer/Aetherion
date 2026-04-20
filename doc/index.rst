@@ -40,5 +40,6 @@ Flight Dynamics with Spatial Vector Algebra
    rkmk
    unified_notation
    appendices
+   api
 
 :ref:`genindex`
