@@ -70,6 +70,27 @@ add_function_parentheses = True
 # Optional: helpful print for debugging
 print("Breathe expects Doxygen XML at:", breathe_projects[project])
 
+# -- MathJax macros ----------------------------------------------------------
+
+mathjax3_config = {
+    "tex": {
+        "macros": {
+            "SO":     r"\mathrm{SO}",
+            "SE":     r"\mathrm{SE}",
+            "so":     r"\mathfrak{so}",
+            "R":      r"\mathbb{R}",
+            "Exp":    r"\mathrm{Exp}",
+            "Log":    r"\mathrm{Log}",
+            "Lie":    [r"\mathfrak{#1}", 1],
+            "dexp":   r"\mathrm{dexp}",
+            "ad":     r"\operatorname{ad}",
+            "norm":   [r"\left\lVert #1 \right\rVert", 1],
+            "twist":  r"\boldsymbol{\mathcal{T}}",
+            "wrench": r"\boldsymbol{\mathcal{W}}",
+        }
+    }
+}
+
 # -- BibTeX references -------------------------------------------------------
 
 bibtex_bibfiles = ['references.bib']
