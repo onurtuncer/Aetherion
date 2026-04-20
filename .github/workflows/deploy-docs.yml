@@ -6,6 +6,7 @@ on:
     paths:
       - 'doc/**'
       - 'src/**'
+      - 'get_project_name.py'
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
