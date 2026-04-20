@@ -41,5 +41,6 @@ Flight Dynamics with Spatial Vector Algebra
    unified_notation
    appendices
    api
+   examples
 
 :ref:`genindex`
