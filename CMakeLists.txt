@@ -17,12 +17,12 @@ project(Aetherion
 )
 
 # ------------------------------------------------------------------------------
-# CMake module path — must come before any include() that uses it
+# CMake module pathï¿½ -- must come before any include() that uses it
 # ------------------------------------------------------------------------------
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 
 # ------------------------------------------------------------------------------
-# Options — all option() declarations live here, parsed before anything else
+# Options ï¿½ all option() declarations live here, parsed before anything else
 # ------------------------------------------------------------------------------
 include(cmake/AetherionOptions.cmake)
 
@@ -50,7 +50,7 @@ if(AETHERION_ENABLE_COVERAGE)
 endif()
 
 # ------------------------------------------------------------------------------
-# Docs-only build — configure only the doc target and exit early
+# Docs-only build ï¿½ configure only the doc target and exit early
 # ------------------------------------------------------------------------------
 if(BUILD_DOCS)
     add_subdirectory(doc)
@@ -71,7 +71,7 @@ set(FMU4CPP_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(vendor/fmu4cpp/export EXCLUDE_FROM_ALL)
 
 # ------------------------------------------------------------------------------
-# Other vendored dependencies (Eigen, nlohmann_json, CppAD, ecos, …)
+# Other vendored dependencies (Eigen, nlohmann_json, CppAD, ecos, ï¿½)
 # ------------------------------------------------------------------------------
 include(Dependencies)
 
