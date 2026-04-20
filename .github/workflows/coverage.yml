@@ -41,6 +41,7 @@ jobs:
           --exclude 'cmake/.*' \
           --exclude '.*/_deps/.*' \
           --exclude '.*CMakeFiles.*' \
+          --exclude 'src/Examples/.*' \
           --gcov-executable gcov-13 \
           --gcov-ignore-errors=no_working_dir_found \
           --xml build/gcc-debug/coverage.xml \
