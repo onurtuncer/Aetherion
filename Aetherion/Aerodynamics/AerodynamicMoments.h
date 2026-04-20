@@ -45,70 +45,90 @@
 
 namespace Aetherion::Aerodynamics {
 
-    // --- Moments from nondimensional moment coefficients --------------------------
-    //
-    // Inputs:
-    // - density_kg_m3: air density [kg/m^3]
-    // - v_body_m_s: air-relative velocity in body axes [m/s]
-    // - S_ref_m2: reference area [m^2]
-    // - b_ref_m: reference span [m]
-    // - cbar_ref_m: reference mean aerodynamic chord [m]
-    // - Cl, Cm, Cn: nondimensional roll/pitch/yaw moment coefficients
-    //
-    // Output:
-    // - M_body_Nm = [L, M, N] [N*m]
-    template <class Scalar>
-    inline Vec3<Scalar> AerodynamicMomentBodyFromClCmCn(
-        const Vec3<Scalar>& v_body_m_s,
-        const Scalar& density_kg_m3,
-        const Scalar& S_ref_m2,
-        const Scalar& b_ref_m,
-        const Scalar& cbar_ref_m,
-        const Scalar& Cl,
-        const Scalar& Cm,
-        const Scalar& Cn,
-        const Scalar& eps = Scalar(1e-12))
-    {
-        const Scalar V = SpeedFromVelocity(v_body_m_s, eps);
-        const Scalar q = DynamicPressure(density_kg_m3, V);
+/// @brief Aerodynamic moment in body axes from nondimensional moment coefficients, inferring speed from velocity.
+///
+/// Computes @f$ [L, M, N] = q S [b\,C_l,\; \bar{c}\,C_m,\; b\,C_n] @f$ where
+/// @f$ q = \tfrac{1}{2}\rho V^2 @f$ and @f$ V = \|v_\text{body}\| @f$.
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @param v_body_m_s Air-relative velocity vector in body axes [m/s]; used to compute dynamic pressure.
+/// @param density_kg_m3 Air density [kg/m³].
+/// @param S_ref_m2 Aerodynamic reference area [m²].
+/// @param b_ref_m Reference span used for roll and yaw moments [m].
+/// @param cbar_ref_m Mean aerodynamic chord used for pitch moment [m].
+/// @param Cl Nondimensional roll moment coefficient.
+/// @param Cm Nondimensional pitch moment coefficient.
+/// @param Cn Nondimensional yaw moment coefficient.
+/// @param eps Smoothing parameter for the speed norm; default 1e-12.
+/// @return Aerodynamic moment vector [L, M, N] in body axes [N·m].
+template <class Scalar>
+inline Vec3<Scalar> AerodynamicMomentBodyFromClCmCn(
+    const Vec3<Scalar>& v_body_m_s,
+    const Scalar& density_kg_m3,
+    const Scalar& S_ref_m2,
+    const Scalar& b_ref_m,
+    const Scalar& cbar_ref_m,
+    const Scalar& Cl,
+    const Scalar& Cm,
+    const Scalar& Cn,
+    const Scalar& eps = Scalar(1e-12))
+{
+    const Scalar V = SpeedFromVelocity(v_body_m_s, eps);
+    const Scalar q = DynamicPressure(density_kg_m3, V);
 
-        const Scalar L = q * S_ref_m2 * b_ref_m * Cl;
-        const Scalar M = q * S_ref_m2 * cbar_ref_m * Cm;
-        const Scalar N = q * S_ref_m2 * b_ref_m * Cn;
+    const Scalar L = q * S_ref_m2 * b_ref_m * Cl;
+    const Scalar M = q * S_ref_m2 * cbar_ref_m * Cm;
+    const Scalar N = q * S_ref_m2 * b_ref_m * Cn;
 
-        return Vec3<Scalar>{ L, M, N };
-    }
+    return Vec3<Scalar>{ L, M, N };
+}
 
-    // If you already have speed computed (e.g., from AnglesFromVelocityBody), use this:
-    template <class Scalar>
-    inline Vec3<Scalar> AerodynamicMomentBodyFromClCmCn_Speed(
-        const Scalar& speed_m_s,
-        const Scalar& density_kg_m3,
-        const Scalar& S_ref_m2,
-        const Scalar& b_ref_m,
-        const Scalar& cbar_ref_m,
-        const Scalar& Cl,
-        const Scalar& Cm,
-        const Scalar& Cn)
-    {
-        const Scalar q = DynamicPressure(density_kg_m3, speed_m_s);
+/// @brief Aerodynamic moment in body axes from nondimensional moment coefficients, using a pre-computed airspeed.
+///
+/// Avoids recomputing the speed norm when it has already been derived (e.g. from AnglesFromVelocityBody()).
+/// Otherwise equivalent to AerodynamicMomentBodyFromClCmCn().
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @param speed_m_s Pre-computed airspeed magnitude [m/s].
+/// @param density_kg_m3 Air density [kg/m³].
+/// @param S_ref_m2 Aerodynamic reference area [m²].
+/// @param b_ref_m Reference span [m].
+/// @param cbar_ref_m Mean aerodynamic chord [m].
+/// @param Cl Nondimensional roll moment coefficient.
+/// @param Cm Nondimensional pitch moment coefficient.
+/// @param Cn Nondimensional yaw moment coefficient.
+/// @return Aerodynamic moment vector [L, M, N] in body axes [N·m].
+template <class Scalar>
+inline Vec3<Scalar> AerodynamicMomentBodyFromClCmCn_Speed(
+    const Scalar& speed_m_s,
+    const Scalar& density_kg_m3,
+    const Scalar& S_ref_m2,
+    const Scalar& b_ref_m,
+    const Scalar& cbar_ref_m,
+    const Scalar& Cl,
+    const Scalar& Cm,
+    const Scalar& Cn)
+{
+    const Scalar q = DynamicPressure(density_kg_m3, speed_m_s);
 
-        const Scalar L = q * S_ref_m2 * b_ref_m * Cl;
-        const Scalar M = q * S_ref_m2 * cbar_ref_m * Cm;
-        const Scalar N = q * S_ref_m2 * b_ref_m * Cn;
+    const Scalar L = q * S_ref_m2 * b_ref_m * Cl;
+    const Scalar M = q * S_ref_m2 * cbar_ref_m * Cm;
+    const Scalar N = q * S_ref_m2 * b_ref_m * Cn;
 
-        return Vec3<Scalar>{ L, M, N };
-    }
+    return Vec3<Scalar>{ L, M, N };
+}
 
-    // --- Moments from CP offset and body force -----------------------------------
-    //
-    // M = r_cp_cg × F_body
-    template <class Scalar>
-    inline Vec3<Scalar> AerodynamicMomentBodyFromCPForce(
-        const Vec3<Scalar>& r_cp_minus_cg_m,
-        const Vec3<Scalar>& F_body_N)
-    {
-        return Cross(r_cp_minus_cg_m, F_body_N);
-    }
+/// @brief Aerodynamic moment in body axes from a center-of-pressure offset and a body-frame force.
+///
+/// Computes the moment arm cross product: @f$ M = r_\text{CP/CG} \times F_\text{body} @f$.
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @param r_cp_minus_cg_m Position of the center of pressure relative to the center of gravity, in body axes [m].
+/// @param F_body_N Aerodynamic force vector in body axes [N].
+/// @return Aerodynamic moment vector in body axes [N·m].
+template <class Scalar>
+inline Vec3<Scalar> AerodynamicMomentBodyFromCPForce(
+    const Vec3<Scalar>& r_cp_minus_cg_m,
+    const Vec3<Scalar>& F_body_N)
+{
+    return Cross(r_cp_minus_cg_m, F_body_N);
+}
 
 } // namespace Aetherion::Aerodynamics

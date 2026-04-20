@@ -16,85 +16,103 @@
 
 namespace Aetherion::Simulation {
 
-    // ─────────────────────────────────────────────────────────────
-    // Application — base class for all Aetherion simulations.
-    //
-    // Implements the Template Method pattern:
-    //   run() orchestrates the loop and calls virtual hooks.
-    //   Subclasses override hooks to inject simulation-specific
-    //   behaviour without re-implementing the loop skeleton.
-    // ─────────────────────────────────────────────────────────────
-    class Application {
-    public:
-        explicit Application(int argc, char* argv[]);
-        virtual ~Application() = default;
+/// @brief Abstract base class for all Aetherion simulations.
+///
+/// Implements the **Template Method** pattern: run() provides the fixed integration
+/// loop skeleton (argument parsing, CSV setup, time-step loop, logging) and delegates
+/// simulation-specific behaviour to a set of protected virtual hooks that concrete
+/// subclasses must or may override.
+///
+/// Subclasses must implement:
+/// - prepareSimulation() — build the simulator from the loaded Config.
+/// - writeInitialSnapshot() — write the t = startTime CSV row.
+/// - stepAndRecord() — advance one step and optionally write a CSV row.
+/// - logFinalSummary() — emit the end-of-run log block.
+///
+/// Application is non-copyable; one instance per process is expected.
+class Application {
+public:
+    /// @brief Constructs the Application, registers CLI flags, and parses argv.
+    /// @param argc Argument count from main().
+    /// @param argv Argument vector from main(); must remain valid for the lifetime of this object.
+    /// @throws std::invalid_argument if unrecognised flags are present or required values are missing.
+    explicit Application(int argc, char* argv[]);
 
-        // Non-copyable
-        Application(const Application&) = delete;
-        Application& operator=(const Application&) = delete;
+    virtual ~Application() = default;
 
-        // ── Template-method entry point ───────────────────────────
-        // Final: subclasses extend via the virtual hooks below,
-        // not by overriding run() directly.
-        void run() const;
+    Application(const Application&)            = delete;
+    Application& operator=(const Application&) = delete;
 
-        const Config& getConfig() const { return config_; }
+    /// @brief Runs the full simulation lifecycle.
+    ///
+    /// Orchestrates: startup logging → prepareSimulation() → CSV open →
+    /// writeInitialSnapshot() → time-step loop → logFinalSummary().
+    /// @note Declared `final` in intent: subclasses extend via the virtual hooks, not by overriding run().
+    void run() const;
 
-    protected:
-        // ── Virtual hooks (override in subclass) ─────────────────
+    /// @brief Returns the simulation Config populated during construction.
+    /// @return Const reference to the loaded Config.
+    const Config& getConfig() const { return config_; }
 
-        // print an application-specific startup banner.
-        virtual void logStartupBanner() const {}
+protected:
+    // ── Virtual hooks (override in subclass) ─────────────────────────────────
 
-        // Steps 1-4 — build the simulator from the loaded config.
-        // Called once before the time-step loop. Subclasses must
-        // initialise whatever internal simulator state they own.
-        virtual void prepareSimulation() const = 0;
+    /// @brief Prints an application-specific startup banner to the log.
+    ///        Default implementation is a no-op.
+    virtual void logStartupBanner() const {}
 
-        // write the t = startTime snapshot to the CSV and
-        // emit the initial INFO log line.
-        virtual void writeInitialSnapshot(std::ofstream& csv) const = 0;
+    /// @brief Builds the simulator from the loaded Config (steps 1–4 of the run protocol).
+    ///
+    /// Called once by run() before the time-step loop. Subclasses must initialise all
+    /// internal simulator state they own (e.g. allocate the integrator, set initial conditions).
+    virtual void prepareSimulation() const = 0;
 
-        // Called inside the loop after each accepted step.
-        // Writes one CSV row and returns the values needed by the
-        // generic INFO log (time, altitude, speed, lat, lon).
-        struct StepObservation {
-            double time_s = 0.0;
-            double altitude_m = 0.0;
-            double speed_mps = 0.0;
-            double latitude_rad = 0.0;
-            double longitude_rad = 0.0;
-            bool   converged = true;
-            double residual = 0.0;
-        };
-        // doWrite: true when this step falls on a writeInterval boundary and
-        // the row should be written to csv; false when the step should only
-        // advance the simulation without producing CSV output.
-        virtual StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const = 0;
+    /// @brief Writes the t = startTime snapshot to the CSV and emits the initial INFO log line.
+    /// @param csv Open output file stream positioned after the column-header row.
+    virtual void writeInitialSnapshot(std::ofstream& csv) const = 0;
 
-        // emit the final summary INFO block.
-        virtual void logFinalSummary() const = 0;
-
-        // ── Non-virtual helpers (available to all subclasses) ─────
-
-        // Logs the five Config fields at INFO level.
-        void logSimulationParameters() const;
-
-        // Opens cfg.outputFileName for writing; throws on failure.
-        // Writes a simulation-generic header comment line.
-        // Returns the open stream (caller writes the column header).
-        [[nodiscard]] std::ofstream openOutputCsv() const;
-
-    private:
-        Config         config_;
-        ArgumentParser parser_;
-
-        void registerArguments();
-
-        // ── Core loop (non-virtual) ───────────────────────────────
-        // Called by run() after prepareSimulation() and the initial
-        // snapshot. Drives the dt loop and calls stepAndRecord().
-        void runTimeStepLoop(std::ofstream& csv) const;
+    /// @brief Observable quantities returned by stepAndRecord() for the generic loop log line.
+    struct StepObservation {
+        double time_s       = 0.0;  ///< Simulation time at the end of the step [s].
+        double altitude_m   = 0.0;  ///< Geometric altitude above MSL [m].
+        double speed_mps    = 0.0;  ///< Earth-relative speed [m/s].
+        double latitude_rad = 0.0;  ///< Geodetic latitude [rad].
+        double longitude_rad= 0.0;  ///< Geodetic longitude [rad].
+        bool   converged    = true; ///< Whether the implicit solver converged on this step.
+        double residual     = 0.0;  ///< Final Newton residual norm (0 for explicit integrators).
     };
+
+    /// @brief Advances the simulation by one step and optionally writes a CSV row.
+    /// @param csv Open output file stream.
+    /// @param h Integration step size [s].
+    /// @param doWrite `true` when the step index is on a writeInterval boundary and a CSV row should be written; `false` to advance without output.
+    /// @return StepObservation containing the observables needed by the generic INFO log line.
+    virtual StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const = 0;
+
+    /// @brief Emits the final summary INFO block after the integration loop completes.
+    virtual void logFinalSummary() const = 0;
+
+    // ── Non-virtual helpers (available to all subclasses) ─────────────────────
+
+    /// @brief Logs the five Config fields (timeStep, startTime, endTime, writeInterval, outputFileName) at INFO level.
+    void logSimulationParameters() const;
+
+    /// @brief Opens the output CSV file for writing and writes a simulation-generic comment header.
+    ///
+    /// The returned stream is positioned for the caller to write the column-name row next.
+    /// @return Open std::ofstream ready for column-header and data rows.
+    /// @throws std::runtime_error if the file cannot be opened.
+    [[nodiscard]] std::ofstream openOutputCsv() const;
+
+private:
+    Config         config_;
+    ArgumentParser parser_;
+
+    void registerArguments();
+
+    /// @brief Drives the dt loop, calling stepAndRecord() at each step.
+    ///        Called by run() after prepareSimulation() and writeInitialSnapshot().
+    void runTimeStepLoop(std::ofstream& csv) const;
+};
 
 } // namespace Aetherion::Simulation
