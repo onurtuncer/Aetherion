@@ -117,4 +117,22 @@ target_include_directories(test_radauiia_se3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor
 include(Catch)
 catch_discover_tests(test_radauiia_se3)        
 
+add_executable(test_so3
+                    test_SO3.cpp)
+
+target_compile_options(test_so3 PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_link_libraries(test_so3
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad
+        Eigen3::Eigen
+)
+
+target_include_directories(test_so3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+include(Catch)
+catch_discover_tests(test_so3)
+
 add_subdirectory(RKMK)

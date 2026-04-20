@@ -42,3 +42,24 @@ target_link_libraries(test_gravity_policies
 target_include_directories(test_gravity_policies PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 catch_discover_tests(test_gravity_policies)
+
+# --------------------------------------------------------------------------
+# Mass, propulsion, and aero policy tests
+# --------------------------------------------------------------------------
+
+add_executable(test_mass_propulsion_aero_policies
+                    test_MassPropulsionAeroPolicies.cpp)
+
+target_compile_options(test_mass_propulsion_aero_policies PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_link_libraries(test_mass_propulsion_aero_policies
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad
+        Eigen3::Eigen
+)
+
+target_include_directories(test_mass_propulsion_aero_policies PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+catch_discover_tests(test_mass_propulsion_aero_policies)

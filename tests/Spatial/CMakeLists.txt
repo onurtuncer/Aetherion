@@ -7,14 +7,15 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_spatial
-                    test_Inertia.cpp 
-                    test_Skew.cpp 
-                    test_Transform.cpp 
+                    test_Inertia.cpp
+                    test_Skew.cpp
+                    test_Transform.cpp
                     test_CrossForce.cpp
-                    test_CrossMotion.cpp 
-                    test_Adjoint.cpp 
+                    test_CrossMotion.cpp
+                    test_Adjoint.cpp
                     test_Power.cpp
-                    test_Momentum.cpp)
+                    test_Momentum.cpp
+                    test_WrenchOps.cpp)
 
 target_compile_options(test_spatial PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
