@@ -29,6 +29,10 @@
 
 namespace Aetherion::Spatial {
 
+/// @brief Instantaneous spatial power @f$ P = \mathbf{f}^\top \mathbf{v} @f$ [W].
+/// @param f  Wrench @f$[M;\,F]@f$.
+/// @param v  Twist @f$[\omega;\,v]@f$.
+/// @return   Scalar power [W] = M·ω + F·v.
     template<typename Scalar>
     inline Scalar Power(const Wrench<Scalar>& f, const Twist<Scalar>& v)
     {
@@ -36,6 +40,12 @@ namespace Aetherion::Spatial {
         return f.f.dot(v.v);
     }
 
+/// @brief Instantaneous power from split moment/force and split angular/linear velocity [W].
+/// @param M_Nm        Moment vector [N·m].
+/// @param F_N         Force vector [N].
+/// @param omega_rad_s Angular velocity [rad/s].
+/// @param v_m_s       Linear velocity [m/s].
+/// @return            Scalar power [W].
     template<typename Scalar>
     inline Scalar Power(
         const Eigen::Matrix<Scalar, 3, 1>& M_Nm,

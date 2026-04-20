@@ -34,18 +34,17 @@
 
 namespace Aetherion::Spatial {
 
-    // -------------------------------------------------------------------------
-    // ad(xi)  -- motion adjoint (6x6)
-    //
-    // xi = [ω; v]
-    //
-    // ad(xi) =
-    //   [ [ω]x   0
-    //     [v]x  [ω]x ]
-    //
-    // Used for:
-    //   xi × u = ad(xi) u
-    // -------------------------------------------------------------------------
+    /// @brief Lie algebra adjoint (motion cross-product matrix).
+    ///
+    /// Returns the 6×6 matrix @f$ \mathrm{ad}(\xi) @f$ such that
+    /// @f[ \xi \times \mathbf{u} = \mathrm{ad}(\xi)\,\mathbf{u} @f]
+    /// with @f$ \xi = [\omega;\, v] @f$:
+    /// @f[
+    ///   \mathrm{ad}(\xi) = \begin{bmatrix} [\omega]_\times & 0 \\ [v]_\times & [\omega]_\times \end{bmatrix}
+    /// @f]
+    ///
+    /// @param xi  Input twist @f$[\omega;\,v]@f$.
+    /// @return    6×6 motion adjoint matrix.
     template<typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 6>
         ad(const Twist<Scalar>& xi)
@@ -69,14 +68,13 @@ namespace Aetherion::Spatial {
         return out;
     }
 
-    // -------------------------------------------------------------------------
-    // ad*(xi) -- force adjoint (dual)
-    //
-    // ad*(xi) = - ad(xi)^T
-    //
-    // Used for:
-    //   xi ×* f = ad*(xi) f
-    // -------------------------------------------------------------------------
+    /// @brief Lie algebra co-adjoint (force cross-product matrix).
+    ///
+    /// Returns @f$ \mathrm{ad}^*(\xi) = -\mathrm{ad}(\xi)^\top @f$, used as
+    /// @f[ \xi \times^* \mathbf{f} = \mathrm{ad}^*(\xi)\,\mathbf{f} @f]
+    ///
+    /// @param xi  Input twist @f$[\omega;\,v]@f$.
+    /// @return    6×6 force adjoint matrix.
     template<typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 6>
         ad_star(const Twist<Scalar>& xi)
@@ -84,15 +82,16 @@ namespace Aetherion::Spatial {
         return -ad(xi).transpose();
     }
 
-    // -------------------------------------------------------------------------
-    // Efficient ad*(xi) * y without building 6x6
-    //
-    // For y = [a; b]:
-    //
-    // ad*(xi) y =
-    //   [ ω×a + v×b
-    //     ω×b ]
-    // -------------------------------------------------------------------------
+    /// @brief Efficient product @f$ \mathrm{ad}^*(\xi)\,\mathbf{y} @f$ without forming the 6×6 matrix.
+    ///
+    /// For @f$ \mathbf{y} = [a;\, b] @f$:
+    /// @f[
+    ///   \mathrm{ad}^*(\xi)\,\mathbf{y} = \begin{bmatrix} \omega\times a + v\times b \\ \omega\times b \end{bmatrix}
+    /// @f]
+    ///
+    /// @param xi  Input twist @f$[\omega;\,v]@f$.
+    /// @param y   6-vector to multiply (e.g. spatial momentum @f$[h_\omega;\,h_v]@f$).
+    /// @return    6-vector result.
     template<typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 1>
         ad_star_times(

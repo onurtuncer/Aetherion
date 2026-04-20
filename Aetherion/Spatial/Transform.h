@@ -45,9 +45,15 @@ namespace Aetherion::Spatial {
     template<typename Scalar>
     using Mat6 = Eigen::Matrix<Scalar, 6, 6>;
 
-    // -------------------------------------------------------------------------
-    // Spatial Motion Transform Matrix
-    // -------------------------------------------------------------------------
+    /// @brief Build the 6×6 spatial motion transform matrix.
+    ///
+    /// Maps a @c Twist expressed in frame A to frame B:
+    /// @f[ X = \begin{bmatrix} R & 0 \\ [r]_\times R & R \end{bmatrix} @f]
+    /// so that @f$ \mathbf{v}_B = X\,\mathbf{v}_A @f$.
+    ///
+    /// @param R  Rotation matrix from A to B (3×3).
+    /// @param r  Translation from A-origin to B-origin, expressed in B (3×1) [m].
+    /// @return   6×6 spatial motion transform.
     template<typename Scalar>
     inline Mat6<Scalar> MotionTransformMatrix(
         const Mat3<Scalar>& R,
@@ -65,9 +71,15 @@ namespace Aetherion::Spatial {
         return X;
     }
 
-    // -------------------------------------------------------------------------
-    // Spatial Force Transform Matrix (dual)
-    // -------------------------------------------------------------------------
+    /// @brief Build the 6×6 spatial force transform matrix (dual of motion transform).
+    ///
+    /// Maps a @c Wrench expressed in frame A to frame B:
+    /// @f[ X^* = \begin{bmatrix} R & [r]_\times R \\ 0 & R \end{bmatrix} @f]
+    /// so that @f$ \mathbf{f}_B = X^*\,\mathbf{f}_A @f$.
+    ///
+    /// @param R  Rotation matrix from A to B (3×3).
+    /// @param r  Translation from A-origin to B-origin, expressed in B (3×1) [m].
+    /// @return   6×6 spatial force transform.
     template<typename Scalar>
     inline Mat6<Scalar> ForceTransformMatrix(
         const Mat3<Scalar>& R,
@@ -85,9 +97,11 @@ namespace Aetherion::Spatial {
         return X;
     }
 
-    // -------------------------------------------------------------------------
-    // Apply Motion Transform
-    // -------------------------------------------------------------------------
+    /// @brief Apply spatial motion transform to a @c Twist.
+    /// @param R    Rotation from source to target frame.
+    /// @param r    Translation from source to target origin (in target frame) [m].
+    /// @param v_A  Input twist in source frame A.
+    /// @return     Equivalent twist in target frame B.
     template<typename Scalar>
     inline Twist<Scalar> TransformMotion(
         const Mat3<Scalar>& R,
@@ -99,9 +113,11 @@ namespace Aetherion::Spatial {
         return v_B;
     }
 
-    // -------------------------------------------------------------------------
-    // Apply Force Transform
-    // -------------------------------------------------------------------------
+    /// @brief Apply spatial force transform to a @c Wrench.
+    /// @param R    Rotation from source to target frame.
+    /// @param r    Translation from source to target origin (in target frame) [m].
+    /// @param f_A  Input wrench in source frame A.
+    /// @return     Equivalent wrench in target frame B.
     template<typename Scalar>
     inline Wrench<Scalar> TransformForce(
         const Mat3<Scalar>& R,

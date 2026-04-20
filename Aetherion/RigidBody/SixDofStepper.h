@@ -51,6 +51,27 @@ namespace Aetherion::RigidBody {
     // KinematicsXiField<double> is the fixed kinematic model -- not a template
     // parameter. For a different kinematic model, derive a new stepper.
     // --------------------------------------------------------------------------
+/// @brief High-level 6-DoF integrator facade for rigid-body flight dynamics.
+///
+/// Combines the @c KinematicsXiField (SE(3) kinematic ODE) with a user-supplied
+/// @c VectorField (Newton-Euler ODE) into a single @c step() call that advances
+/// the full state @f$ (g, \nu_B, m) \in SE(3) \times \mathbb{R}^7 @f$.
+///
+/// Internally uses a 3-stage Radau IIA RKMK integrator with implicit Newton solve.
+/// The Newton convergence options can be tuned via @c options().
+///
+/// @tparam VectorField Must satisfy @c VectorFieldOnProductSE3<VF, 7, double>.
+///
+/// **Typical usage:**
+/// @code
+/// using VF      = RigidBody::VectorField<CentralGravityPolicy>;
+/// using Stepper = RigidBody::SixDoFStepper<VF>;
+///
+/// Stepper stepper(ip);
+/// auto res = stepper.step(t0, state, h);
+/// if (res.converged)
+///     state = SixDoFStepper<VF>::unpack(res);
+/// @endcode
     template<class VectorField>
         requires
     ODE::RKMK::KinematicsFieldOnSE3
@@ -84,7 +105,9 @@ namespace Aetherion::RigidBody {
         // Constructors
         // ------------------------------------------------------------------
 
-        // Primary: accepts a fully-constructed VectorField.
+        /// @brief Construct from a fully-built @c VectorField.
+        /// @param vf   Vector-field instance (moved in).
+        /// @param opt  Newton solver options (tolerance, max iterations).
         explicit SixDoFStepper(
             VectorField                    vf,
             ODE::RKMK::Core::NewtonOptions opt = {})
@@ -94,9 +117,12 @@ namespace Aetherion::RigidBody {
         {
         }
 
-        // Convenience: builds VectorField from InertialParameters directly.
-        // Only participates in overload resolution when VF models
-        // ConstructibleFromInertialParameters.
+        /// @brief Convenience constructor — builds @c VectorField from @c InertialParameters.
+        ///
+        /// Only participates in overload resolution when @c VectorField is
+        /// constructible from @c InertialParameters (concept-constrained).
+        /// @param ip   Inertial parameters.
+        /// @param opt  Newton solver options.
         explicit SixDoFStepper(
             const InertialParameters& ip,
             ODE::RKMK::Core::NewtonOptions opt = {})
@@ -110,6 +136,15 @@ namespace Aetherion::RigidBody {
         // ------------------------------------------------------------------
         // step()
         // ------------------------------------------------------------------
+        /// @brief Advance the state by one time step using Radau IIA RKMK.
+        ///
+        /// @param t0  Start of the step [s].
+        /// @param s   Current state @f$(g, \nu_B, m)@f$.
+        /// @param h   Step size [s] (must be positive).
+        /// @return    @c StepResult containing @c g1, @c x1, and @c converged.
+        ///            If @c converged is @c false the Newton iteration did not
+        ///            reach the requested tolerance; the returned state is the
+        ///            last iterate and should be treated with caution.
         [[nodiscard]]
         StepResult step(double t0, const StateD& s, double h) const
         {
@@ -119,6 +154,10 @@ namespace Aetherion::RigidBody {
         // ------------------------------------------------------------------
         // pack() / unpack()
         // ------------------------------------------------------------------
+
+        /// @brief Pack a @c StateD into the flat @f$\mathbb{R}^7@f$ Euclidean vector.
+        /// @param s  State to pack.
+        /// @return   Vector @f$[\nu_B(6);\, m(1)]@f$.
         [[nodiscard]]
         static VecE pack(const StateD& s) noexcept
         {
@@ -128,6 +167,10 @@ namespace Aetherion::RigidBody {
             return x;
         }
 
+        /// @brief Unpack an SE(3) pose and Euclidean vector into a @c StateD.
+        /// @param g  SE(3) pose.
+        /// @param x  Euclidean vector @f$[\nu_B(6);\, m(1)]@f$.
+        /// @return   Assembled @c StateD.
         [[nodiscard]]
         static StateD unpack(const SE3d& g, const VecE& x) noexcept
         {
@@ -138,6 +181,9 @@ namespace Aetherion::RigidBody {
             return s;
         }
 
+        /// @brief Unpack a @c StepResult into a @c StateD.
+        /// @param r  Result from @c step().
+        /// @return   Assembled @c StateD.
         [[nodiscard]]
         static StateD unpack(const StepResult& r) noexcept
         {

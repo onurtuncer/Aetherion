@@ -46,6 +46,26 @@ namespace Aetherion::RigidBody {
 
     namespace FD = Aetherion::FlightDynamics;
 
+/// @brief Euclidean part of the 6-DoF rigid-body ODE on @f$ SE(3) \times \mathbb{R}^7 @f$.
+///
+/// Implements the Newton-Euler equations of motion in the body frame:
+/// @f[
+///   \mathbf{M}\,\dot{\nu}_B = \mathbf{W}_\mathrm{ext} - \mathrm{ad}^*(\nu_B)\,\mathbf{M}\,\nu_B
+/// @f]
+/// @f[
+///   \dot{m} = \dot{m}(t, m)
+/// @f]
+/// where @f$\mathbf{M}@f$ is the 6×6 spatial inertia, @f$\nu_B = [\omega_B;\,v_B]@f$
+/// is the body twist, and @f$\mathbf{W}_\mathrm{ext}@f$ is the sum of gravity,
+/// aerodynamic, and propulsion wrenches (all in body frame).
+///
+/// The callable @c operator()(t, g, x) returns @f$\dot{\mathbf{x}} \in \mathbb{R}^7@f$
+/// with layout @f$[\dot{\nu}_B(6);\, \dot{m}(1)]@f$.
+///
+/// @tparam Gravity    Gravity policy satisfying @c GravityPolicy concept.
+/// @tparam Aero       Aerodynamic policy satisfying @c AeroPolicy concept (default: zero).
+/// @tparam Thrust     Propulsion policy satisfying @c PropulsionPolicy concept (default: zero).
+/// @tparam MassMdot   Mass-rate policy satisfying @c MassPolicy concept (default: constant).
     template<
         FD::GravityPolicy    Gravity,
         FD::AeroPolicy       Aero = FD::ZeroAeroPolicy,
@@ -54,14 +74,20 @@ namespace Aetherion::RigidBody {
     >
     class VectorField {
     public:
-        Eigen::Matrix<double, 6, 6> M;
-        Eigen::Matrix<double, 6, 6> M_inv;
+        Eigen::Matrix<double, 6, 6> M;     ///< 6×6 spatial inertia matrix (body frame).
+        Eigen::Matrix<double, 6, 6> M_inv; ///< Inverse of @c M (precomputed at construction).
 
-        Gravity   gravity;
-        Aero      aero;
-        Thrust    thrust;
-        MassMdot  mass_model;
+        Gravity   gravity;     ///< Gravity wrench policy instance.
+        Aero      aero;        ///< Aerodynamic wrench policy instance.
+        Thrust    thrust;      ///< Propulsion wrench policy instance.
+        MassMdot  mass_model;  ///< Mass-rate model policy instance.
 
+        /// @brief Construct from inertial parameters and optional policy instances.
+        /// @param ip  Inertial parameters (mass, inertia tensor, CoG offset).
+        /// @param g   Gravity policy (default-constructed if omitted).
+        /// @param a   Aerodynamic policy (default-constructed if omitted).
+        /// @param th  Propulsion policy (default-constructed if omitted).
+        /// @param mm  Mass-rate policy (default-constructed if omitted).
         explicit VectorField(
             const InertialParameters& ip,
             Gravity   g = {},
@@ -99,6 +125,12 @@ namespace Aetherion::RigidBody {
             M_inv = M.inverse();
         }
 
+        /// @brief Evaluate the ODE right-hand side @f$\dot{\mathbf{x}}@f$.
+        ///
+        /// @param t  Current time [s].
+        /// @param g  Current SE(3) pose (rotation + ECI position).
+        /// @param x  Current Euclidean state @f$[\nu_B(6);\, m(1)]@f$.
+        /// @return   Time derivative @f$[\dot{\nu}_B(6);\, \dot{m}(1)]@f$.
         template<class S>
         Eigen::Matrix<S, 7, 1>
             operator()(S t,
