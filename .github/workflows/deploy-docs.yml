@@ -46,10 +46,15 @@ jobs:
         run: cmake -B build -DBUILD_DOCS=ON
 
       - name: Build docs (Doxygen XML)
-        run: cmake --build build --target Aetherion_Docs_Doxygen
+        run: |
+          doxygen build/doc/Doxyfile
+          ls build/doc/doxygen/xml/index.xml
 
       - name: Build docs (Sphinx HTML)
-        run: cmake --build build --target Aetherion_Docs_Sphinx
+        run: |
+          sphinx-build -b html \
+            -Dbreathe_projects.Aetherion=$(pwd)/build/doc/doxygen/xml \
+            doc/ build/doc/sphinx
 
       - name: List Sphinx output
         run: ls -R build/doc/sphinx
