@@ -13,65 +13,75 @@
 
 namespace Aetherion::Coordinate {
 
+/// @brief 3-element column vector (CppAD-friendly, no Eigen dependency).
     template <class Scalar>
     using Vec3 = std::array<Scalar, 3>;
 
+/// @brief Unit quaternion @f$[w,\,x,\,y,\,z]@f$ — body → ECI convention.
     template <class Scalar>
     using Quat = std::array<Scalar, 4>; // [w, x, y, z], body->ECI
 
+/// @brief Row-major 3×3 rotation matrix stored as a flat 9-element array.
     template <class Scalar>
     using Mat3 = std::array<Scalar, 9>; // row-major 3x3
 
 
     namespace detail {
 
+        /// @brief Dot product of two 3-vectors.
         template <class S>
         inline S Dot(const Vec3<S>& a, const Vec3<S>& b) {
             return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
         }
 
-        // NED [N,E,D] -> NEU [N,E,U] where U = -D
+        /// @brief Convert NED @f$[N,E,D]@f$ to NEU @f$[N,E,U]@f$ (negate Down).
         template <class S>
         inline Vec3<S> NEDToNEU(const Vec3<S>& v_ned) {
             return Vec3<S>{ v_ned[0], v_ned[1], -v_ned[2] };
         }
 
-        // (optional but often handy)
+        /// @brief Convert NEU @f$[N,E,U]@f$ to NED @f$[N,E,D]@f$ (negate Up).
         template <class S>
         inline Vec3<S> NEUToNED(const Vec3<S>& v_neu) {
             return Vec3<S>{ v_neu[0], v_neu[1], -v_neu[2] };
         }
 
+        /// @brief @c std::sin wrapper — enables ADL for CppAD scalars.
         template <class S>
         inline S Sine(const S& x) {
             using std::sin;
             return sin(x);
         }
 
+        /// @brief @c std::cos wrapper — enables ADL for CppAD scalars.
         template <class S>
         inline S Cosine(const S& x) {
             using std::cos;
             return cos(x);
         }
 
+        /// @brief @c std::atan2 wrapper — enables ADL for CppAD scalars.
         template <class S>
         inline S ArcTangent2(const S& y, const S& x) {
             using std::atan2;
             return atan2(y, x);
         }
 
+        /// @brief @c std::acos wrapper — enables ADL for CppAD scalars.
         template <class S>
         inline S ArcCos(const S& x) {
             using std::acos;
             return acos(x);
         }
 
+        /// @brief @c std::sqrt wrapper — enables ADL for CppAD scalars.
         template <class S>
         inline S SquareRoot(const S& x) {
             using std::sqrt;
             return sqrt(x);
         }
 
+        /// @brief Cross product @f$\mathbf{a} \times \mathbf{b}@f$.
         template <class S>
         inline Vec3<S> Cross(const Vec3<S>& a, const Vec3<S>& b) {
             return Vec3<S>{
@@ -81,6 +91,7 @@ namespace Aetherion::Coordinate {
             };
         }
 
+        /// @brief Normalise a 3-vector to unit length.
         template <class S>
         inline Vec3<S> Normalize(const Vec3<S>& v) {
             const S n2 = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
@@ -88,8 +99,16 @@ namespace Aetherion::Coordinate {
             return Vec3<S>{ v[0] * inv_n, v[1] * inv_n, v[2] * inv_n };
         }
 
-        /// Convert rotation matrix (columns = body axes in some world frame)
-        /// to quaternion q_WB (body->world), robust for all rotations.
+        /// @brief Convert a rotation matrix (given as three column vectors) to a unit quaternion.
+        ///
+        /// Uses the numerically robust Shepperd method to avoid near-zero denominators.
+        /// The input columns are the body-frame axes expressed in the world frame,
+        /// so the quaternion represents the body → world rotation @f$q_{WB}@f$.
+        ///
+        /// @param x_b  First column (body x-axis in world frame).
+        /// @param y_b  Second column (body y-axis in world frame).
+        /// @param z_b  Third column (body z-axis in world frame).
+        /// @return     Unit quaternion @f$[w,\,x,\,y,\,z]@f$ (normalised).
         template <class S>
         inline Quat<S> RotationMatrixToQuaternion(
             const Vec3<S>& x_b, // column 0
@@ -149,8 +168,14 @@ namespace Aetherion::Coordinate {
             return Quat<S>{ w* inv_n, x* inv_n, y* inv_n, z* inv_n };
         }
 
-        // Quaternion -> 3x3 rotation matrix (row-major), AD-friendly.
-      // q_AB: rotates frame B into frame A, v^A = R(q_AB) v^B.
+        /// @brief Convert a unit quaternion to a row-major 3×3 rotation matrix.
+        ///
+        /// @f$ v^A = R(q_{AB})\, v^B @f$ — i.e. @c q_in rotates vectors from
+        /// frame B into frame A.  The quaternion is normalised internally to
+        /// guard against accumulated drift (branch-free, CppAD-friendly).
+        ///
+        /// @param q_in  Quaternion @f$[w,\,x,\,y,\,z]@f$.
+        /// @return      Row-major 3×3 rotation matrix.
         template <class S>
         inline Mat3<S> QuaternionToRotationMatrix(const Quat<S>& q_in) {
             S w = q_in[0];

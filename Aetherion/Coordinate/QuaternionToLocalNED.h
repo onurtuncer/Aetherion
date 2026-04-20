@@ -18,32 +18,29 @@ namespace Aetherion::Coordinate {
      // -------------------------------------------------------------------------
     // Output type: local NED azimuth, zenith, roll (all in radians)
     // -------------------------------------------------------------------------
+/// @brief Local NED orientation angles (azimuth, zenith, roll).
+///
+/// All angles in radians.  Frame conventions:
+/// - NED is right-handed: x = North, y = East, z = Down.
+/// - Body: x forward, y right, z down.
     template <class Scalar>
     struct LocalOrientationNED {
-        Scalar azimuth; // angle in horizontal plane, from North toward East
-        Scalar zenith;  // angle from local Up toward body forward
-        Scalar roll;    // rotation about body x_B (forward) axis
+        Scalar azimuth; ///< Angle from North toward East in the horizontal plane [rad, −π … π].
+        Scalar zenith;  ///< Angle from local Up (0) toward body forward (π) [rad, 0 … π].
+        Scalar roll;    ///< Rotation about body forward axis @f$x_B@f$ [rad].
     };
 
-    // -------------------------------------------------------------------------
-    // QuaternionToAzZenRollNED
-    //
-    // Inputs:
-    //   q_body_to_inertial : body -> inertial attitude quaternion
-    //   q_ned_to_inertial  : NED  -> inertial attitude quaternion
-    //
-    // Conventions:
-    //   - NED is right-handed: x=N, y=E, z=D.
-    //   - Body: x forward, y right, z down.
-    //
-    // Returns:
-    //   LocalOrientationNED<Scalar> with:
-    //     azimuth : angle from North toward East (rad, [-pi, pi])
-    //     zenith  : angle from Up (0) down to direction (pi) (rad, [0, pi])
-    //     roll    : body roll about x_B (rad)
-    //
-    // This is AD-friendly: only uses +, -, *, /, sqrt, sin, cos, atan2, acos.
-    // -------------------------------------------------------------------------
+/// @brief Decompose body attitude into local NED azimuth, zenith, and roll angles.
+///
+/// Computes @f$R_{NB} = R_{IN}^\top\,R_{IB}@f$ (body → NED DCM) and extracts
+/// the standard yaw–pitch–roll Euler angles using a 3-2-1 (ψ, θ, φ) sequence.
+///
+/// @note AD-friendly — uses only @c +, @c -, @c *, @c /, @c sqrt, @c sin,
+///       @c cos, @c atan2, @c acos.
+///
+/// @param q_body_to_inertial  Quaternion rotating body frame into ECI frame.
+/// @param q_ned_to_inertial   Quaternion rotating local NED frame into ECI frame.
+/// @return                    @c LocalOrientationNED with azimuth, zenith, roll in radians.
     template <class Scalar>
     inline LocalOrientationNED<Scalar>
         QuaternionToAzZenRollNED(const Quat<Scalar>& q_body_to_inertial,

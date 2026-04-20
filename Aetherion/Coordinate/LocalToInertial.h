@@ -13,8 +13,15 @@
 
 namespace Aetherion::Coordinate {
 
-    // ── 1. WGS-84 geodetic → ECEF ────────────────────────────────────────────
-
+    /// @brief Convert WGS-84 geodetic coordinates to ECEF Cartesian position.
+    ///
+    /// Uses the standard prime-vertical radius formula:
+    /// @f[ N = a / \sqrt{1 - e^2 \sin^2\phi} @f]
+    ///
+    /// @param lat_rad  Geodetic latitude [rad].
+    /// @param lon_rad  Geodetic longitude [rad].
+    /// @param h_m      Ellipsoidal height above WGS-84 ellipsoid [m].
+    /// @return         ECEF position vector @f$[X,\,Y,\,Z]@f$ [m].
     template <class Scalar>
     inline Vec3<Scalar> GeodeticToECEF(
         const Scalar& lat_rad,
