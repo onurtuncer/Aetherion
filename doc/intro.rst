@@ -6,12 +6,12 @@ Abstract
 
 This document starts with a brief justification for the choice of
 **spatial vector algebra** (SVA) for flight simulation and
-GNC (guidance–navigation and control) applications. It then presents a
+GNC (guidanceâ€“navigation and control) applications. It then presents a
 complete, clean formulation of rigid-body flight dynamics using this
 formalism.
 
 All equations are written in a global **inertial** frame :math:`W`.
-Therefore, Earth’s rotation influences only the atmospheric velocity,
+Therefore, Earthâ€™s rotation influences only the atmospheric velocity,
 not the equations of motion themselves. This preserves the standard
 Featherstone free-body form.
 
@@ -51,9 +51,9 @@ Nomenclature
    * - :math:`B`
      - Body-fixed frame at the vehicle CoM
    * - :math:`I`
-     - Earth–Centered Inertial (ECI) frame
+     - Earthâ€“Centered Inertial (ECI) frame
    * - :math:`E`
-     - Earth–fixed rotating frame (ECEF)
+     - Earthâ€“fixed rotating frame (ECEF)
    * - :math:`t`
      - Time
    * - :math:`x(t)`

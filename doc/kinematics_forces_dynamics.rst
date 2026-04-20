@@ -164,7 +164,7 @@ Total Spatial Wrench
 Spatial Dynamics
 ----------------
 
-Instead of a plain Newton–Euler formalism, six degree-of-freedom motion can
+Instead of a plain Newtonâ€“Euler formalism, six degree-of-freedom motion can
 be expressed with a single equation using SVA (all terms in body frame):
 
 .. math::

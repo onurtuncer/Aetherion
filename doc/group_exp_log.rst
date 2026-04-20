@@ -14,12 +14,12 @@ The group exponential and logarithm are best understood as the *curved-space*
 versions of operations you already know on :math:`\mathbb{R}` and
 :math:`\mathbb{R}^n`:
 
-- In :math:`\mathbb{R}`, ìintegrate a constant velocity for 1 secondî is just adding a number.
+- In :math:`\mathbb{R}`, ‚Äúintegrate a constant velocity for 1 second‚Äù is just adding a number.
 - In :math:`\mathbb{R}^n`, it is adding a vector.
 - On a Lie group :math:`G`, it is multiplying by a group element obtained from an algebra element via :math:`\Exp`.
 
 The Lie algebra :math:`\mathfrak{g}` plays the role of a *linearization* of
-:math:`G` at the identity: it is the ìtangent vector spaceî where one can do
+:math:`G` at the identity: it is the ‚Äútangent vector space‚Äù where one can do
 vector addition, scaling, and linear algebra.
 
 Number line example: :math:`(\mathbb{R}, +)`
@@ -50,7 +50,7 @@ Thus the group exponential is simply
 
    \Exp(v) = v,
 
-because ìmoving from :math:`0` by velocity :math:`v` for unit timeî lands at
+because ‚Äúmoving from :math:`0` by velocity :math:`v` for unit time‚Äù lands at
 :math:`v`.
 
 Logarithm
@@ -62,7 +62,7 @@ The group logarithm is the inverse map, again the identity:
 
    \Log(x)=x.
 
-Composition vs BakerñCampbellñHausdorff
+Composition vs Baker‚ÄìCampbell‚ÄìHausdorff
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 On :math:`\mathbb{R}` we have
@@ -72,7 +72,7 @@ On :math:`\mathbb{R}` we have
    \Exp(v)+\Exp(w)=v+w=\Exp(v+w),
 
 so there are *no* higher-order commutator corrections (the Lie bracket is
-identically zero). This is the ìflatî case.
+identically zero). This is the ‚Äúflat‚Äù case.
 
 Euclidean vector space: :math:`(\mathbb{R}^n, +)`
 -------------------------------------------------
@@ -105,8 +105,8 @@ still separate them from, say, :math:`\SO(3)` is practical:
 - Euclidean parts update by addition: :math:`x^+ = x + \delta x`.
 - Rotations update by group multiplication: :math:`R^+ = R\,\Exp(\delta\phi^\wedge)`.
 
-So the ìRungeñKuttañMunthe-Kaas for product manifoldsî view becomes: do additive
-RungeñKutta for the :math:`\mathbb{R}^n` factors and multiplicative RungeñKutta
+So the ‚ÄúRunge‚ÄìKutta‚ÄìMunthe-Kaas for product manifolds‚Äù view becomes: do additive
+Runge‚ÄìKutta for the :math:`\mathbb{R}^n` factors and multiplicative Runge‚ÄìKutta
 for the :math:`\SO(3)` factors, but *in one unified framework*.
 
 A second number-line example: :math:`(\mathbb{R}_{>0}, \times)`
@@ -160,7 +160,7 @@ looks exactly like the rotation update
 
 except scalars commute and matrices generally do not.
 
-Euclidean ìcounterpartî of :math:`\SO(3)`: small-angle approximation
+Euclidean ‚Äúcounterpart‚Äù of :math:`\SO(3)`: small-angle approximation
 --------------------------------------------------------------------
 
 For :math:`R\in\SO(3)`, the Lie algebra :math:`\so(3)` is linear (a vector space).
@@ -170,7 +170,7 @@ For small :math:`\phi\in\mathbb{R}^3`,
 
    \Exp(\phi^\wedge) \approx I + \phi^\wedge \quad (\|\phi\|\ll 1).
 
-This mirrors the Euclidean idea ìmove by a small vectorî:
+This mirrors the Euclidean idea ‚Äúmove by a small vector‚Äù:
 
 .. math::
 
@@ -228,7 +228,7 @@ Compare the Euclidean counterpart:
 
    \Delta x = x_2 - x_1.
 
-So ìdifferenceî on a group is obtained by *relative element + log*:
+So ‚Äúdifference‚Äù on a group is obtained by *relative element + log*:
 
 .. math::
 
@@ -247,7 +247,7 @@ under addition in a physically consistent way. On :math:`\SE(3)`, a pose update 
    T^+ = T\,\Exp(\xi^\wedge),
 
 where :math:`\xi=(\rho,\phi)\in\mathbb{R}^6` is a twist (tangent increment). The
-ìdifferenceî between two poses is
+‚Äúdifference‚Äù between two poses is
 
 .. math::
 

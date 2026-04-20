@@ -21,7 +21,7 @@ Flight Dynamics with Spatial Vector Algebra
 
    <p><strong>Author:</strong> Onur Tuncer, PhD<br>
    Istanbul Technical University, Dept. of Aeronautical Engineering<br>
-   Maslak, Istanbul, Türkiye<br>
+   Maslak, Istanbul, TÃ¼rkiye<br>
    <a href="mailto:onur.tuncer@itu.edu.tr">onur.tuncer@itu.edu.tr</a><br>
    <strong>Version:</strong> 0.1.1 (December 15th, 2025)</p>
 

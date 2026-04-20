@@ -131,7 +131,7 @@ where :math:`\Phi` is internal. This is useful when
 - the FMU is used in real-time HIL setups.
 
 SVA-based dynamics benefit from co-simulation for high update rates
-(1–10 kHz) inside embedded GNC pipelines.
+(1â€“10 kHz) inside embedded GNC pipelines.
 
 Mapping SVA Dynamics to FMU Variables
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

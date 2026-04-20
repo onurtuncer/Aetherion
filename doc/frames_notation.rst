@@ -7,8 +7,8 @@ Coordinate Frames
 We adopt the following reference frames for mathematical modeling:
 
 - :math:`W`: a mathematically inertial frame (often chosen as ECI),
-- :math:`I`: a physical Earth–Centered Inertial frame (ECI),
-- :math:`E`: Earth–fixed rotating frame (ECEF).
+- :math:`I`: a physical Earthâ€“Centered Inertial frame (ECI),
+- :math:`E`: Earthâ€“fixed rotating frame (ECEF).
 
 Atmospheric velocity expressed in :math:`W` is
 

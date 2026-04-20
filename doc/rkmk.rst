@@ -3,7 +3,7 @@
 RKMK Numerical Integration on Product Manifolds
 ===============================================
 
-Lie Group ◊ Euclidean Factors
+Lie Group √ó Euclidean Factors
 -----------------------------
 
 .. contents::
@@ -14,8 +14,8 @@ Lie Group ◊ Euclidean Factors
 
 Many flight-dynamics and GNC state vectors naturally live on *product manifolds*,
 e.g., attitude on :math:`\SO(3)` (or unit quaternions) together with translational
-states in :math:`\R^n`. Standard RungeñKutta methods assume a vector space and can
-break manifold constraints (e.g. orthonormality, unit norm). RungeñKuttañMunthe-Kaas
+states in :math:`\R^n`. Standard Runge‚ÄìKutta methods assume a vector space and can
+break manifold constraints (e.g. orthonormality, unit norm). Runge‚ÄìKutta‚ÄìMunthe-Kaas
 (RKMK) methods lift the integration to the Lie algebra and update the group by an
 exponential (or a retraction), achieving high order while preserving the manifold
 structure.
@@ -35,7 +35,7 @@ A common state layout is
    \in \SO(3)\times \R^3\times \R^3\times \R^3\times \R^m \times \cdots.
 
 The *configuration* (attitude) is not a vector: :math:`R\in \SO(3)` satisfies
-:math:`R^\top R = I` and :math:`\det(R)=1`. If we apply a vanilla RungeñKutta scheme
+:math:`R^\top R = I` and :math:`\det(R)=1`. If we apply a vanilla Runge‚ÄìKutta scheme
 directly to a matrix parameterization (or integrate a quaternion and re-normalize),
 we risk:
 
@@ -46,7 +46,7 @@ we risk:
 
 RKMK addresses this by:
 
-1. performing RungeñKutta stages in the *Lie algebra* (a vector space),
+1. performing Runge‚ÄìKutta stages in the *Lie algebra* (a vector space),
 2. mapping algebra increments back to the group via :math:`\exp` (or a retraction),
 3. integrating Euclidean factors normally (addition).
 
@@ -117,7 +117,7 @@ dynamics is:
    \dot g = g\, \Omega(g,r), \qquad
    \dot r = f(g,r),
 
-where :math:`\Omega(g,r)\in \Lie{g}` is the left-trivialized ìangularî rate (for
+where :math:`\Omega(g,r)\in \Lie{g}` is the left-trivialized ‚Äúangular‚Äù rate (for
 :math:`G=\SO(3)` this corresponds to body angular velocity), and
 :math:`f:\,G\times \R^n\to \R^n` is the Euclidean part.
 
@@ -162,7 +162,7 @@ and on :math:`\R^n` by :math:`+`.
 From classical RK to RKMK
 -------------------------
 
-Classical RungeñKutta (RK) methods are defined for ODEs in a vector space:
+Classical Runge‚ÄìKutta (RK) methods are defined for ODEs in a vector space:
 
 .. math::
 
@@ -447,7 +447,7 @@ Implicit RKMK on product manifolds (stiff dynamics)
 
 When dynamics are stiff (e.g. strong aerodynamic damping, tight actuator models,
 flexible modes, or coupled constraints), implicit R-K methods (Radau IIA,
-GaussñLegendre) are attractive.
+Gauss‚ÄìLegendre) are attractive.
 
 In implicit RKMK, the stage equations
 
@@ -488,7 +488,7 @@ This is a projection back to :math:`S^3`. It can work well, but:
 
 - the normalization is an extra nonlinear operation not accounted for in R-K order conditions,
 - it can reduce the global order (especially for higher-order schemes) or complicate consistent linearization,
-- the EKF propagation Jacobians become sensitive to the chosen ìprojectionî step.
+- the EKF propagation Jacobians become sensitive to the chosen ‚Äúprojection‚Äù step.
 
 RKMK instead updates by a group exponential (or a retraction) and stays on the
 manifold by construction:

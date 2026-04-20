@@ -62,7 +62,7 @@ At a point :math:`x=(x_1,\dots,x_k)\in\mathcal{M}`, the tangent space splits as
    \;\cong\;
    T_{x_1}\mathcal{M}_1 \oplus \cdots \oplus T_{x_k}\mathcal{M}_k.
 
-Intuitively, an ìinfinitesimal motionî on the product is just a tuple of
+Intuitively, an ‚Äúinfinitesimal motion‚Äù on the product is just a tuple of
 infinitesimal motions on each factor. In coordinates, derivatives and Jacobians
 often become block-structured, mirroring this direct-sum decomposition.
 
@@ -116,7 +116,7 @@ state space
 is (also) a Lie group under :math:`(R,a)\cdot(S,b)=(RS,a+b)`, with Lie algebra
 :math:`\mathfrak{so}(3)\oplus\mathbb{R}^n`.
 
-Engineering view: ìmixedî state vectors in flight dynamics
+Engineering view: ‚Äúmixed‚Äù state vectors in flight dynamics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Many GNC/flight-sim states are naturally tuples of heterogeneous components, e.g.
@@ -132,7 +132,7 @@ The product-manifold viewpoint says:
 - Euclidean components update by addition; rotational components update by
   group composition (or a retraction).
 
-A convenient way to formalize this is with ìbox-plus / box-minusî operators.
+A convenient way to formalize this is with ‚Äúbox-plus / box-minus‚Äù operators.
 Let :math:`\oplus_i` be the update rule for :math:`\mathcal{M}_i` (e.g. :math:`+` on
 :math:`\mathbb{R}^n`, left-multiplication by :math:`\exp(\cdot)` on :math:`SO(3)`).
 Then define for the product:
@@ -148,11 +148,11 @@ and similarly for :math:`\ominus` component-wise.
 This is exactly what error-state EKFs and Lie-group / RKMK integrators exploit:
 propagate on the product manifold, and linearize in the (direct-sum) tangent space.
 
-Why ìseparateî :math:`\mathbb{R}^n` even though it is a Lie group?
+Why ‚Äúseparate‚Äù :math:`\mathbb{R}^n` even though it is a Lie group?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You *can* treat everything as a Lie group if you want (e.g. :math:`SO(3)\times\mathbb{R}^n`).
-In practice we keep :math:`\mathbb{R}^n` as ìplain Euclideanî because:
+In practice we keep :math:`\mathbb{R}^n` as ‚Äúplain Euclidean‚Äù because:
 
 - its group operation is already :math:`+`, so the manifold machinery adds no
   complexity where it is unnecessary;

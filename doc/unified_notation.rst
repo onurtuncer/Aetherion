@@ -132,7 +132,7 @@ In Lie notation these are precisely the adjoint actions:
    \qquad
    \ad_{\twist}^{\*}(\cdot)\ \equiv\ \twist \times^{\*}(\cdot).
 
-Therefore “spatial algebra dynamics” can be re-written in a Lie-algebraic form
+Therefore â€œspatial algebra dynamicsâ€ can be re-written in a Lie-algebraic form
 without changing the underlying computations.
 
 Rigid-body dynamics in unified form
@@ -151,7 +151,7 @@ is equivalently
 
    I\,\dot{\twist} + \ad_{\twist}^{\*}\!\big(I\twist\big) = \wrench.
 
-This is the central “unified” dynamics statement:
+This is the central â€œunifiedâ€ dynamics statement:
 
 - pose lives on :math:`\SE(3)`,
 - velocities live in :math:`\Lie{se}(3)\cong\R^6`,
@@ -175,7 +175,7 @@ dynamics + constraints + controls) and :math:`f(g,y)\in\R^m` is the Euclidean pa
 RKMK integration in the same notation
 -------------------------------------
 
-Runge–Kutta–Munthe-Kaas (RKMK) integrates the Lie-group factor by evolving an
+Rungeâ€“Kuttaâ€“Munthe-Kaas (RKMK) integrates the Lie-group factor by evolving an
 algebra increment
 
 .. math::
@@ -188,7 +188,7 @@ and updating the pose using the group exponential:
 
    g_{n+1} = g_n\,\Exp(\eta_{n+1}).
 
-The Euclidean part advances by standard Runge–Kutta addition:
+The Euclidean part advances by standard Rungeâ€“Kutta addition:
 
 .. math::
 
@@ -197,7 +197,7 @@ The Euclidean part advances by standard Runge–Kutta addition:
 Stage reconstruction on :math:`\SE(3)\times\R^m`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Let :math:`(a_{ij},b_i,c_i)` be a Runge–Kutta tableau with :math:`s` stages and
+Let :math:`(a_{ij},b_i,c_i)` be a Rungeâ€“Kutta tableau with :math:`s` stages and
 step size :math:`h`. Maintain stage variables
 
 .. math::
@@ -228,7 +228,7 @@ be interpreted as :math:`\R^6` coordinates.)
 Explicit stage accumulation
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For an explicit Runge–Kutta tableau:
+For an explicit Rungeâ€“Kutta tableau:
 
 .. math::
 
@@ -270,9 +270,9 @@ Appendix
 Hat/Vee Operators: From a Twist in :math:`\mathbb{R}^6` to :math:`\Lie{se}(3)`
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-This appendix explains the “hat” operator :math:`(\cdot)^\wedge` used throughout
+This appendix explains the â€œhatâ€ operator :math:`(\cdot)^\wedge` used throughout
 the document to map a 6D spatial motion vector (twist) into the Lie algebra
-:math:`\Lie{se}(3)`, and its inverse “vee” operator :math:`(\cdot)^\vee` mapping
+:math:`\Lie{se}(3)`, and its inverse â€œveeâ€ operator :math:`(\cdot)^\vee` mapping
 back to coordinates in :math:`\R^6`.
 
 The hat map on :math:`\R^3`: :math:`\omega \mapsto [\omega]_\times`
@@ -299,8 +299,8 @@ It is characterized by the identity
    [\omega]_\times\,a \;=\; \omega \times a,
    \qquad \forall\, a\in\R^3,
 
-so “multiplication by :math:`[\omega]_\times`” is exactly the linear map “cross
-with :math:`\omega`.”
+so â€œmultiplication by :math:`[\omega]_\times`â€ is exactly the linear map â€œcross
+with :math:`\omega`.â€
 
 The hat map on :math:`\R^6`: :math:`(\omega,v)\mapsto \Lie{se}(3)`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -417,7 +417,7 @@ coordinates, the kinematics take the form
    \dot g = \twist^\wedge g,
 
 and the coordinate interpretation of :math:`(\omega,v)` changes accordingly. If
-the world frame is an inertial frame then it is an “inertial twist”. The document
-adopts the left-trivialized convention to match the common “body” form used in
+the world frame is an inertial frame then it is an â€œinertial twistâ€. The document
+adopts the left-trivialized convention to match the common â€œbodyâ€ form used in
 many Lie-group integrators and in Featherstone-style rigid-body dynamics.
 
