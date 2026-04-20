@@ -26,9 +26,18 @@ catch_discover_tests(test_json)
                                                
 add_executable(test_load_file "test_LoadConfig.cpp")
 
-target_link_libraries(test_load_file 
+target_link_libraries(test_load_file
     PRIVATE
         Aetherion
         Catch2::Catch2)
 
 catch_discover_tests(test_load_file TEST_SPEC "~[external_file]")
+
+add_executable(test_load_config_from_string "test_LoadConfigFromString.cpp")
+
+target_link_libraries(test_load_config_from_string
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain)
+
+catch_discover_tests(test_load_config_from_string)

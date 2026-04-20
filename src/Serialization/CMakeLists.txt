@@ -16,11 +16,12 @@
 # ------------------------------------------------------------------------------
 
 target_sources(Aetherion PRIVATE
-    # Adapter (foundation — keep first)
+    # Adapter (foundation ï¿½ keep first)
     ${CMAKE_CURRENT_SOURCE_DIR}/JsonConfigNlohmannAdapter.cpp
 
     # Config loaders
     ${CMAKE_CURRENT_SOURCE_DIR}/LoadConfig.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/LoadConfigFromString.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ConfigJson.cpp
 
     # Physical parameter serializers

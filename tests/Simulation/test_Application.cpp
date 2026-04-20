@@ -8,7 +8,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 
+#include <sstream>
+
 #include <Aetherion/Simulation/Application.h>
+#include <Aetherion/Simulation/ArgumentParser.h>
 
 using namespace Aetherion::Simulation;
 
@@ -171,4 +174,37 @@ TEST_CASE("Application rejects --writeInterval of zero", "[Application]") {
 TEST_CASE("Application rejects negative --writeInterval", "[Application]") {
     FakeArgv args{ "test_program", "--writeInterval", "-5" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tests — ArgumentParser error paths
+// ─────────────────────────────────────────────────────────────
+TEST_CASE("Application rejects unknown flag", "[Application][ArgumentParser]") {
+    FakeArgv args{ "test_program", "--unknownFlag", "value" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
+TEST_CASE("Application rejects flag with no value", "[Application][ArgumentParser]") {
+    // --timeStep at the end of argv with no following token
+    FakeArgv args{ "test_program", "--timeStep" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tests — ArgumentParser::printUsage
+// ─────────────────────────────────────────────────────────────
+TEST_CASE("ArgumentParser::printUsage writes Usage header to cerr", "[ArgumentParser][printUsage]") {
+    Aetherion::Simulation::ArgumentParser parser("my_program");
+    parser.addArgument("--foo", "A foo argument", [](const std::string&) {});
+
+    std::ostringstream buf;
+    auto* old = std::cerr.rdbuf(buf.rdbuf());
+    parser.printUsage();
+    std::cerr.rdbuf(old);
+
+    const std::string out = buf.str();
+    CHECK(out.find("Usage:") != std::string::npos);
+    CHECK(out.find("my_program") != std::string::npos);
+    CHECK(out.find("--foo") != std::string::npos);
+    CHECK(out.find("--help") != std::string::npos);
 }
