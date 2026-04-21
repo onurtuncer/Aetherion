@@ -26,3 +26,4 @@ ignore:
   - "*/Catch2/**"
   - "/usr/**"
   - "src/Examples/**"
+  - "Aetherion/Examples/**"
