@@ -18,7 +18,7 @@
 //   0..2   IDX_P     r_ECI      Position in ECI frame                  [m]
 //   3..6   IDX_Q     q_EB       Attitude quaternion body→ECI  [w, x, y, z]
 //   7..9   IDX_W     ω_B        Angular velocity in body frame      [rad/s]
-//   10..12 IDX_V     v_ECI      Linear velocity in ECI frame            [m/s]
+//   10..12 IDX_V     v_B        Linear velocity in body frame           [m/s]
 //   13     IDX_M     m          Vehicle mass                            [kg]
 //
 // Inputs from SimulationConfig:
@@ -50,9 +50,9 @@
 //     q_EB  [w,x,y,z]            ← state[IDX_Q .. IDX_Q+3]
 //
 //   VelocityNED (vN, vE, vD)
-//       │  NEDToECEF()  →  ECEFToECI()  →  + ω_E × r_eci
+//       │  NEDToECEF()  →  ECEFToECI()  →  + ω_E × r_eci  →  R^T
 //       ▼
-//     v_ECI                      ← state[IDX_V .. IDX_V+2]
+//     v_B                        ← state[IDX_V .. IDX_V+2]
 //
 //   InitialRotationAboutBodyAxes
 //     (roll_rad_s, pitch_rad_s, yaw_rad_s)  ← state[IDX_W .. IDX_W+2]
@@ -183,6 +183,12 @@ namespace Aetherion::FlightDynamics {
             v_eci_kinematic[2]
         };
 
+        // Convert ECI velocity to body frame: v_B = R^T * v_eci = q_EB^{-1} ⊗ v_eci
+        // IDX_V stores body-frame velocity; MakeSnapshot1 reconstructs v_eci via v_eci = R * v_B.
+        const Eigen::Quaterniond q_EB_eigen(q_EB[0], q_EB[1], q_EB[2], q_EB[3]);
+        const Eigen::Vector3d v_eci_eigen(v_eci[0], v_eci[1], v_eci[2]);
+        const Eigen::Vector3d v_B_eigen = q_EB_eigen.conjugate() * v_eci_eigen;
+
         // ── 4) Body angular velocity ──────────────────────────────────────────
         //
         //   InitialRotationAboutBodyAxes stores roll/pitch/yaw rates
@@ -220,10 +226,10 @@ namespace Aetherion::FlightDynamics {
         x0[StateLayout::IDX_W + 1] = omega_y;
         x0[StateLayout::IDX_W + 2] = omega_z;
 
-        // IDX_V = 10 → ECI velocity [m/s]
-        x0[StateLayout::IDX_V + 0] = v_eci[0];
-        x0[StateLayout::IDX_V + 1] = v_eci[1];
-        x0[StateLayout::IDX_V + 2] = v_eci[2];
+        // IDX_V = 10 → body-frame linear velocity [m/s]
+        x0[StateLayout::IDX_V + 0] = v_B_eigen.x();
+        x0[StateLayout::IDX_V + 1] = v_B_eigen.y();
+        x0[StateLayout::IDX_V + 2] = v_B_eigen.z();
 
         // IDX_M = 13 → mass [kg]
         x0[StateLayout::IDX_M] = mass_kg;

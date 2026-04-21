@@ -28,6 +28,7 @@
 #include <Aetherion/Coordinate/InertialToLocal.h>   // ECIToECEF, ECEFToGeodeticWGS84,
                                                      // ECEFToNED, NEDToInertialRotationMatrix
 #include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
 
 #include <Eigen/Dense>
@@ -66,13 +67,18 @@ namespace Aetherion::Simulation {
         // ── 1. Time ──────────────────────────────────────────────────────────
         snap.time = t;
 
-        // ── 2. ECI position ──────────────────────────────────────────────────
+        // ── 2. ECI position (retained for internal use) ──────────────────────
         const Vec3d r_eci = s.g.p;
-        snap.gePosition_m = r_eci;
 
         // ── 3. Geodetic position (WGS-84) ────────────────────────────────────
         const CArr3 r_eci_arr = { r_eci.x(), r_eci.y(), r_eci.z() };
         const CArr3 r_ecef_arr = Coord::ECIToECEF(r_eci_arr, theta_gst);
+
+        // Report the Earth-fixed (ECEF) position so gePosition_m matches the
+        // NASA TM-2015-218675 convention (starts near [6387281,0,0] at t=0 and
+        // stays Earth-relative as the body falls).  ECI Y would diverge by
+        // ~14 km over 30 s purely due to Earth's rotation.
+        snap.gePosition_m = Vec3d(r_ecef_arr[0], r_ecef_arr[1], r_ecef_arr[2]);
 
         double lat_rad{}, lon_rad{}, alt_m{};
         Coord::ECEFToGeodeticWGS84(r_ecef_arr, lat_rad, lon_rad, alt_m);
@@ -115,8 +121,20 @@ namespace Aetherion::Simulation {
         const Vec3d v_eci_vec = s.g.R * v_B;
         snap.v_eci = v_eci_vec;
 
+        // Convert ECI velocity to Earth-relative ECEF velocity:
+        //   v_ECEF = R_EI * v_ECI - omega_E x r_ECEF
+        // The rotation-only step ECIToECEF is correct for positions but omits
+        // the omega x r Coriolis term for velocities.
         const CArr3 v_eci_arr = { v_eci_vec.x(), v_eci_vec.y(), v_eci_vec.z() };
-        const CArr3 v_ecef_arr = Coord::ECIToECEF(v_eci_arr, theta_gst);
+        const CArr3 v_ecef_rot_arr = Coord::ECIToECEF(v_eci_arr, theta_gst);
+
+        const Vec3d r_ecef_vec(r_ecef_arr[0], r_ecef_arr[1], r_ecef_arr[2]);
+        constexpr double kOmegaE = Aetherion::Environment::WGS84::kRotationRate_rad_s;
+        const Vec3d omega_E(0.0, 0.0, kOmegaE);
+        const Vec3d v_ecef_vec = Vec3d(v_ecef_rot_arr[0], v_ecef_rot_arr[1], v_ecef_rot_arr[2])
+                                 - omega_E.cross(r_ecef_vec);
+
+        const CArr3 v_ecef_arr = { v_ecef_vec.x(), v_ecef_vec.y(), v_ecef_vec.z() };
         const CArr3 v_ned_arr = Coord::ECEFToNED(v_ecef_arr, lat_rad, lon_rad);
 
         snap.feVelocity_m_s = Vec3d(v_ned_arr[0], v_ned_arr[1], v_ned_arr[2]);
