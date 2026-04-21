@@ -172,7 +172,6 @@ def plot_column(time: np.ndarray,
     l3, = ax2.plot(time, err, color=ERR_COLOR, lw=0.9, alpha=0.85,
                    label=err_label, zorder=2)
     ax2.axhline(0, color=ERR_COLOR, lw=0.6, ls=":", alpha=0.5)
-    ax2.fill_between(time, err, 0, color=ERR_COLOR, alpha=FILL_ALPHA)
     ax2.set_ylabel(err_label, color=ERR_COLOR)
     ax2.tick_params(axis="y", labelcolor=ERR_COLOR)
 
@@ -229,7 +228,6 @@ def plot_summary(time: np.ndarray,
         ax1.plot(time, v, color=VAL_COLOR, lw=1.2, label="Val")
         ax1.plot(time, s, color=SIM_COLOR, lw=1.2, ls="--", label="Sim")
         ax2.plot(time, e, color=ERR_COLOR, lw=0.8, alpha=0.7)
-        ax2.fill_between(time, e, 0, color=ERR_COLOR, alpha=FILL_ALPHA)
         ax2.tick_params(axis="y", labelsize=6, labelcolor=ERR_COLOR)
         ax2.yaxis.set_major_formatter(ticker.FormatStrFormatter("%.2g"))
 
