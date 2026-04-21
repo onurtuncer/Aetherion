@@ -54,8 +54,10 @@
 //       ▼
 //     v_B                        ← state[IDX_V .. IDX_V+2]
 //
-//   InitialRotationAboutBodyAxes
-//     (roll_rad_s, pitch_rad_s, yaw_rad_s)  ← state[IDX_W .. IDX_W+2]
+//   InitialRotationAboutBodyAxes (ECEF-relative body rates)
+//       │  + R^T · ω_E_ECI  (convert ECEF-relative → ECI-relative)
+//       ▼
+//     ω_B/ECI                    ← state[IDX_W .. IDX_W+2]
 //
 //   InertialParameters.mass_kg             ← state[IDX_M]
 //
@@ -189,19 +191,26 @@ namespace Aetherion::FlightDynamics {
         const Eigen::Vector3d v_eci_eigen(v_eci[0], v_eci[1], v_eci[2]);
         const Eigen::Vector3d v_B_eigen = q_EB_eigen.conjugate() * v_eci_eigen;
 
-        // ── 4) Body angular velocity ──────────────────────────────────────────
+        // ── 4) Body angular velocity (ECI-relative) ───────────────────────────
         //
-        //   InitialRotationAboutBodyAxes stores roll/pitch/yaw rates
-        //   in body-frame axes [rad/s].  The state stores ω_B = [ωx, ωy, ωz].
+        // Config gives body rates relative to the ECEF frame (Earth-fixed).
+        // IDX_W must hold ω_B/ECI (body rate relative to ECI in body frame)
+        // so the SE(3) Euler equations integrate correctly.
         //
-        //   Convention (body frame, nose-forward, right-wing, down):
-        //     ωx = roll  rate about body +x (forward)
-        //     ωy = pitch rate about body +y (right wing)
-        //     ωz = yaw   rate about body +z (down)
+        // Angular velocity composition:
+        //   ω_B/ECI_body = ω_B/ECEF_body + R^T · ω_E_ECI
         //
-        const double omega_x = cfg.bodyRates.roll_rad_s;  
-        const double omega_y = cfg.bodyRates.pitch_rad_s;
-        const double omega_z = cfg.bodyRates.yaw_rad_s;
+        // where ω_E_ECI = [0, 0, ω_E] is Earth's spin in the ECI frame.
+        // For the NASA Atmos-01 dragless sphere: ω_B/ECEF = [−ω_E, 0, 0]
+        // and R^T · [0,0,ω_E] ≈ [+ω_E, 0, 0], giving ω_B/ECI = 0 (space-fixed).
+        //
+        const Eigen::Vector3d omega_B_ecef(
+            cfg.bodyRates.roll_rad_s,
+            cfg.bodyRates.pitch_rad_s,
+            cfg.bodyRates.yaw_rad_s);
+        const Eigen::Vector3d omega_E_eci(0.0, 0.0, kEarthRotationRate_rad_s);
+        const Eigen::Vector3d omega_B_eci =
+            omega_B_ecef + q_EB_eigen.conjugate() * omega_E_eci;
 
         // ── 5) Initial mass ───────────────────────────────────────────────────
         const double mass_kg = cfg.inertialParameters.mass_kg;
@@ -221,10 +230,10 @@ namespace Aetherion::FlightDynamics {
         x0[StateLayout::IDX_Q + 2] = q_EB[2]; // y
         x0[StateLayout::IDX_Q + 3] = q_EB[3]; // z
 
-        // IDX_W = 7  → body angular velocity [rad/s]
-        x0[StateLayout::IDX_W + 0] = omega_x;
-        x0[StateLayout::IDX_W + 1] = omega_y;
-        x0[StateLayout::IDX_W + 2] = omega_z;
+        // IDX_W = 7  → body angular velocity wrt ECI in body frame [rad/s]
+        x0[StateLayout::IDX_W + 0] = omega_B_eci.x();
+        x0[StateLayout::IDX_W + 1] = omega_B_eci.y();
+        x0[StateLayout::IDX_W + 2] = omega_B_eci.z();
 
         // IDX_V = 10 → body-frame linear velocity [m/s]
         x0[StateLayout::IDX_V + 0] = v_B_eigen.x();

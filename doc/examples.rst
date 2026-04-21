@@ -352,13 +352,6 @@ but deliberate modelling or convention differences:
      - A sphere has no preferred roll orientation.  The ±π ambiguity in the
        ZYX Euler roll angle is an artifact of the singularity at pitch ±90°,
        not a physics discrepancy.
-   * - ``bodyAngularRateWrtEi_rad_s_Roll``
-     - −ω\ :sub:`E` = −7.29 × 10⁻⁵ rad/s
-     - The sphere is initialised with roll rate −ω\ :sub:`E` to yield zero
-       angular momentum in the ECI frame.  Aetherion reports the stored body
-       rate; the NASA reference reports the inertial (ECI) angular velocity
-       which is zero by construction.
-
 Architecture
 ^^^^^^^^^^^^
 
