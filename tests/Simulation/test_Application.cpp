@@ -13,6 +13,7 @@
 
 #include <Aetherion/Simulation/Application.h>
 #include <Aetherion/Simulation/ArgumentParser.h>
+#include <Aetherion/Simulation/Log.h>
 
 using namespace Aetherion::Simulation;
 
@@ -208,4 +209,20 @@ TEST_CASE("ArgumentParser::printUsage writes Usage header to cerr", "[ArgumentPa
     CHECK(out.find("my_program") != std::string::npos);
     CHECK(out.find("--foo") != std::string::npos);
     CHECK(out.find("--help") != std::string::npos);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Tests — Log
+// Log::Init() registers named spdlog loggers and may only be
+// called once per process. All assertions are in a single
+// TEST_CASE so Init() is invoked exactly once.
+// ─────────────────────────────────────────────────────────────
+TEST_CASE("Log: Init populates core and client loggers", "[Log]") {
+    using namespace Aetherion::Simulation;
+    Log::Init();
+
+    REQUIRE(Log::GetCoreLogger() != nullptr);
+    REQUIRE(Log::GetClientLogger() != nullptr);
+    REQUIRE(Log::GetCoreLogger() == Log::GetCoreLogger());
+    REQUIRE(Log::GetClientLogger() == Log::GetClientLogger());
 }

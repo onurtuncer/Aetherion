@@ -27,3 +27,4 @@ ignore:
   - "/usr/**"
   - "src/Examples/**"
   - "Aetherion/Examples/**"
+  - "Aetherion/Simulation/EntryPoint.h"
