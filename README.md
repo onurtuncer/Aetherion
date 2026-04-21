@@ -1,8 +1,8 @@
 ﻿# ΑETHERION — Flight Dynamics Library
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![ci](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml)
-[![ci](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml)
+[![Linux Build](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml)
+[![Windows Build](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml)
 [![codecov](https://codecov.io/gh/onurtuncer/Aetherion/branch/main/graph/badge.svg)](https://codecov.io/gh/onurtuncer/Aetherion)
 
 <p align="center">
