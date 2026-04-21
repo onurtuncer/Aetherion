@@ -154,7 +154,8 @@ build directory next to the executable:
        --outputFileName atmos_01_output.csv                      \
        --startTime      0.0                                       \
        --endTime        30.0                                      \
-       --timeStep       0.01
+       --timeStep       0.002                                     \
+       --writeInterval  50
 
 All flags and their defaults are documented in
 :cpp:class:`Aetherion::Simulation::ArgumentParser`.
