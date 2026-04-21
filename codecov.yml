@@ -26,5 +26,6 @@ ignore:
   - "*/Catch2/**"
   - "/usr/**"
   - "src/Examples/**"
+  - "src/FMU/**"
   - "Aetherion/Examples/**"
   - "Aetherion/Simulation/EntryPoint.h"
