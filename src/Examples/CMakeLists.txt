@@ -10,4 +10,5 @@
 # Each subdirectory contains one or more examples.
 
 add_subdirectory(DraglessSphere)
+add_subdirectory(SphereWithAtmosphericDrag)
 

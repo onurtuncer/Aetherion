@@ -15,12 +15,12 @@
 //
 //   [structural]     -- vector size, all-finite, StateLayout index offsets
 //   [mass]           -- mass slot passthrough, independence from all other fields
-//   [omega]          -- angular-rate slots passthrough, independence from pose/vel
+//   [omega]          -- ECI-relative body rates: omega_B_eci = omega_B_ecef + R^T*omega_E_eci
 //   [position]       -- ECI position vs. independent GeodeticToECEF->ECEFToECI chain
 //   [attitude]       -- quaternion unit-norm, body +x aligned with launch direction,
 //                       full orthonormal frame, direct match to MakeLaunchStateECI
-//   [velocity]       -- ECI velocity vs. independent NEDToECEF->ECEFToECI+omega×r chain,
-//                       speed preservation, independence from attitude angles
+//   [velocity]       -- body-frame velocity (v_B = R^T*v_eci) vs. independent reference,
+//                       speed preservation (via recovered v_eci = R*v_B)
 //   [earth_rotation] -- omega×r term: magnitude, direction, ERA independence,
 //                       equator/pole values, NED-round-trip, NASA Atmos-01 IC
 //   [corner]         -- equator/prime-meridian/theta=0, north pole, due-East heading,
@@ -241,30 +241,48 @@ TEST_CASE("BuildInitialStateVector - mass slot is independent of pose, velocity,
 // GROUP 3 - Angular-rate slots (IDX_W = 7..9)
 // =============================================================================
 
-TEST_CASE("BuildInitialStateVector - angular rate slots equal cfg.bodyRates",
+TEST_CASE("BuildInitialStateVector - omega slots store ECI-relative body rates",
     "[omega][initial_state]")
 {
+    // IDX_W = omega_B_ecef + R^T * omega_E_eci  (angular velocity composition)
     const double roll_s = 0.12, pitch_s = -0.07, yaw_s = 0.03;
+    const double theta = 0.5;
     const auto cfg = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, roll_s, pitch_s, yaw_s);
-    const auto x0 = FD::BuildInitialStateVector(cfg, 0.5);
+    const auto x0 = FD::BuildInitialStateVector(cfg, theta);
 
-    REQUIRE(x0[SL::IDX_W + 0] == Approx(roll_s).epsilon(1e-15));
-    REQUIRE(x0[SL::IDX_W + 1] == Approx(pitch_s).epsilon(1e-15));
-    REQUIRE(x0[SL::IDX_W + 2] == Approx(yaw_s).epsilon(1e-15));
+    const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
+                                   x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
+    const Eigen::Vector3d omega_B_ecef(roll_s, pitch_s, yaw_s);
+    const Eigen::Vector3d expected =
+        omega_B_ecef + q_EB.conjugate() * Eigen::Vector3d(0.0, 0.0, kOmegaE);
+
+    REQUIRE(x0[SL::IDX_W + 0] == Approx(expected.x()).epsilon(1e-12));
+    REQUIRE(x0[SL::IDX_W + 1] == Approx(expected.y()).epsilon(1e-12));
+    REQUIRE(x0[SL::IDX_W + 2] == Approx(expected.z()).epsilon(1e-12));
 }
 
-TEST_CASE("BuildInitialStateVector - zero angular rates produce zero omega slots",
+TEST_CASE("BuildInitialStateVector - zero ECEF body rates give omega equal to R^T * omega_E_eci",
     "[omega][initial_state]")
 {
+    // With zero ECEF body rates the ECI-relative body rate equals
+    // R^T * omega_E_eci (Earth's spin expressed in the body frame).
     const auto x0 = FD::BuildInitialStateVector(MakeCfg(), 0.0);
-    REQUIRE(x0[SL::IDX_W + 0] == Approx(0.0).margin(1e-20));
-    REQUIRE(x0[SL::IDX_W + 1] == Approx(0.0).margin(1e-20));
-    REQUIRE(x0[SL::IDX_W + 2] == Approx(0.0).margin(1e-20));
+
+    const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
+                                   x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
+    const Eigen::Vector3d expected =
+        q_EB.conjugate() * Eigen::Vector3d(0.0, 0.0, kOmegaE);
+
+    REQUIRE(x0[SL::IDX_W + 0] == Approx(expected.x()).margin(1e-15));
+    REQUIRE(x0[SL::IDX_W + 1] == Approx(expected.y()).margin(1e-15));
+    REQUIRE(x0[SL::IDX_W + 2] == Approx(expected.z()).margin(1e-15));
 }
 
-TEST_CASE("BuildInitialStateVector - omega slots are independent of pose and velocity",
+TEST_CASE("BuildInitialStateVector - omega slots satisfy ECI composition for any pose",
     "[omega][initial_state]")
 {
+    // omega_B_eci depends on pose through R^T: omega_B_eci = omega_B_ecef + R^T * omega_E_eci.
+    // Verify the formula holds independently for two poses sharing the same ECEF body rates.
     const double roll_s = 0.05, pitch_s = -0.02, yaw_s = 0.01;
     const auto cfg_a = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, roll_s, pitch_s, yaw_s);
     const auto cfg_b = MakeCfg(45, 30, 500, 60, 20, 15, 50, -20, 3, roll_s, pitch_s, yaw_s);
@@ -272,9 +290,24 @@ TEST_CASE("BuildInitialStateVector - omega slots are independent of pose and vel
     const auto x_a = FD::BuildInitialStateVector(cfg_a, 0.2);
     const auto x_b = FD::BuildInitialStateVector(cfg_b, 1.0);
 
-    REQUIRE(x_a[SL::IDX_W + 0] == Approx(x_b[SL::IDX_W + 0]).epsilon(1e-15));
-    REQUIRE(x_a[SL::IDX_W + 1] == Approx(x_b[SL::IDX_W + 1]).epsilon(1e-15));
-    REQUIRE(x_a[SL::IDX_W + 2] == Approx(x_b[SL::IDX_W + 2]).epsilon(1e-15));
+    const Eigen::Vector3d omega_B_ecef(roll_s, pitch_s, yaw_s);
+    const Eigen::Vector3d omega_E_eci(0.0, 0.0, kOmegaE);
+
+    const Eigen::Quaterniond q_EB_a(x_a[SL::IDX_Q+0], x_a[SL::IDX_Q+1],
+                                     x_a[SL::IDX_Q+2], x_a[SL::IDX_Q+3]);
+    const Eigen::Quaterniond q_EB_b(x_b[SL::IDX_Q+0], x_b[SL::IDX_Q+1],
+                                     x_b[SL::IDX_Q+2], x_b[SL::IDX_Q+3]);
+
+    const Eigen::Vector3d exp_a = omega_B_ecef + q_EB_a.conjugate() * omega_E_eci;
+    const Eigen::Vector3d exp_b = omega_B_ecef + q_EB_b.conjugate() * omega_E_eci;
+
+    REQUIRE(x_a[SL::IDX_W + 0] == Approx(exp_a.x()).epsilon(1e-12));
+    REQUIRE(x_a[SL::IDX_W + 1] == Approx(exp_a.y()).epsilon(1e-12));
+    REQUIRE(x_a[SL::IDX_W + 2] == Approx(exp_a.z()).epsilon(1e-12));
+
+    REQUIRE(x_b[SL::IDX_W + 0] == Approx(exp_b.x()).epsilon(1e-12));
+    REQUIRE(x_b[SL::IDX_W + 1] == Approx(exp_b.y()).epsilon(1e-12));
+    REQUIRE(x_b[SL::IDX_W + 2] == Approx(exp_b.z()).epsilon(1e-12));
 }
 
 
@@ -426,10 +459,11 @@ TEST_CASE("BuildInitialStateVector - body frame axes are orthonormal in ECI",
 // GROUP 6 - ECI velocity (IDX_V = 10..12)
 // =============================================================================
 
-TEST_CASE("BuildInitialStateVector - ECI velocity matches independent NEDToECEF->ECEFToECI+omega*r",
+TEST_CASE("BuildInitialStateVector - body-frame velocity matches R^T*(NEDToECEF->ECEFToECI+omega*r)",
     "[velocity][initial_state]")
 {
-    // Full reference: v_eci = ECEFToECI(NEDToECEF(v_ned)) + omega_E × r_eci
+    // IDX_V stores v_B = q_EB^{-1} * v_eci.
+    // Reference: v_eci = ECEFToECI(NEDToECEF(v_ned)) + omega_E × r_eci.
     const double lat_deg = 45.0, lon_deg = 30.0, theta = 1.0;
     const double vN = 100.0, vE = -50.0, vD = 20.0;
 
@@ -441,23 +475,25 @@ TEST_CASE("BuildInitialStateVector - ECI velocity matches independent NEDToECEF-
     const Vec3d v_ecef = AC::NEDToECEF(Vec3d{ vN, vE, vD }, lat_deg * kD2R, lon_deg * kD2R);
     const Vec3d v_eci_kinematic = AC::ECEFToECI(v_ecef, theta);
     const Vec3d ocr = OmegaCrossR(r_eci);
-    const Vec3d v_eci_ref = {
+    const Eigen::Vector3d v_eci_ref(
         v_eci_kinematic[0] + ocr[0],
         v_eci_kinematic[1] + ocr[1],
-        v_eci_kinematic[2] + ocr[2]
-    };
+        v_eci_kinematic[2] + ocr[2]);
 
-    REQUIRE(x0[SL::IDX_V + 0] == Approx(v_eci_ref[0]).margin(1e-6));
-    REQUIRE(x0[SL::IDX_V + 1] == Approx(v_eci_ref[1]).margin(1e-6));
-    REQUIRE(x0[SL::IDX_V + 2] == Approx(v_eci_ref[2]).margin(1e-6));
+    const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
+                                   x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
+    const Eigen::Vector3d v_B_expected = q_EB.conjugate() * v_eci_ref;
+
+    REQUIRE(x0[SL::IDX_V + 0] == Approx(v_B_expected.x()).margin(1e-6));
+    REQUIRE(x0[SL::IDX_V + 1] == Approx(v_B_expected.y()).margin(1e-6));
+    REQUIRE(x0[SL::IDX_V + 2] == Approx(v_B_expected.z()).margin(1e-6));
 }
 
-TEST_CASE("BuildInitialStateVector - zero NED velocity gives ECI velocity equal to omega*r only",
+TEST_CASE("BuildInitialStateVector - zero NED velocity gives body-frame velocity equal to R^T*(omega*r)",
     "[velocity][initial_state]")
 {
-    // When v_NED = 0 the vehicle is at rest on the Earth surface.
-    // Its ECI velocity must be the surface velocity: omega_E × r_eci.
-    // It must NOT be zero.
+    // When v_NED = 0, v_eci = omega_E × r_eci (surface velocity only).
+    // IDX_V stores v_B = q_EB^{-1} * v_eci, so v_B = R^T * (omega_E × r_eci).
     const double lat_deg = 28.6, lon_deg = -80.6, theta = 0.5;
 
     const auto x0 = FD::BuildInitialStateVector(
@@ -467,9 +503,14 @@ TEST_CASE("BuildInitialStateVector - zero NED velocity gives ECI velocity equal 
     const Vec3d r_eci = AC::ECEFToECI(r_ecef, theta);
     const Vec3d ocr = OmegaCrossR(r_eci);
 
-    REQUIRE(x0[SL::IDX_V + 0] == Approx(ocr[0]).margin(1e-6));
-    REQUIRE(x0[SL::IDX_V + 1] == Approx(ocr[1]).margin(1e-6));
-    REQUIRE(x0[SL::IDX_V + 2] == Approx(ocr[2]).margin(1e-6));
+    const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
+                                   x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
+    const Eigen::Vector3d v_B_expected =
+        q_EB.conjugate() * Eigen::Vector3d(ocr[0], ocr[1], ocr[2]);
+
+    REQUIRE(x0[SL::IDX_V + 0] == Approx(v_B_expected.x()).margin(1e-6));
+    REQUIRE(x0[SL::IDX_V + 1] == Approx(v_B_expected.y()).margin(1e-6));
+    REQUIRE(x0[SL::IDX_V + 2] == Approx(v_B_expected.z()).margin(1e-6));
 }
 
 TEST_CASE("BuildInitialStateVector - NED-to-ECI rotation preserves speed magnitude",
@@ -478,22 +519,28 @@ TEST_CASE("BuildInitialStateVector - NED-to-ECI rotation preserves speed magnitu
     // The NED->ECEF->ECI kinematic rotation is isometric, so the speed
     // contribution from v_NED is preserved.  The total ECI speed also includes
     // omega×r, so we check the NED contribution specifically.
+    // IDX_V stores v_B = R^T * v_eci; recover v_eci = R * v_B first.
     const double vN = 200.0, vE = -100.0, vD = 50.0;
     const double lat_deg = 60.0, lon_deg = -120.0, theta = 0.7;
 
     const auto x0 = FD::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, 0.0, 0, 0, 0, vN, vE, vD), theta);
 
-    // Subtract the omega×r contribution and check the remaining speed.
     const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, 0.0);
     const Vec3d r_eci = AC::ECEFToECI(r_ecef, theta);
     const Vec3d ocr = OmegaCrossR(r_eci);
 
+    // Recover v_eci from body-frame velocity: v_eci = q_EB * v_B
+    const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
+                                   x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
+    const Eigen::Vector3d v_eci =
+        q_EB * Eigen::Vector3d(x0[SL::IDX_V+0], x0[SL::IDX_V+1], x0[SL::IDX_V+2]);
+
     const double speed_ned = std::sqrt(vN * vN + vE * vE + vD * vD);
     const Eigen::Vector3d v_eci_ned_part{
-        x0[SL::IDX_V + 0] - ocr[0],
-        x0[SL::IDX_V + 1] - ocr[1],
-        x0[SL::IDX_V + 2] - ocr[2]
+        v_eci.x() - ocr[0],
+        v_eci.y() - ocr[1],
+        v_eci.z() - ocr[2]
     };
     REQUIRE(v_eci_ned_part.norm() == Approx(speed_ned).epsilon(1e-12));
 }
@@ -501,6 +548,9 @@ TEST_CASE("BuildInitialStateVector - NED-to-ECI rotation preserves speed magnitu
 TEST_CASE("BuildInitialStateVector - ECI velocity is independent of launch attitude angles",
     "[velocity][initial_state]")
 {
+    // IDX_V stores body-frame velocity which depends on attitude.
+    // The ECI velocity (recovered via v_eci = q_EB * v_B) must be the same
+    // regardless of attitude for identical site and NED velocity.
     const double theta = 0.9;
     const double vN = 50.0, vE = -30.0, vD = 10.0;
 
@@ -509,8 +559,18 @@ TEST_CASE("BuildInitialStateVector - ECI velocity is independent of launch attit
     const auto x_b = FD::BuildInitialStateVector(
         MakeCfg(20, -40, 0, 90, 45, 15, vN, vE, vD), theta);
 
-    for (int i = SL::IDX_V; i < SL::IDX_V + 3; ++i)
-        REQUIRE(x_a[i] == Approx(x_b[i]).margin(1e-10));
+    const Eigen::Quaterniond q_EB_a(x_a[SL::IDX_Q+0], x_a[SL::IDX_Q+1],
+                                     x_a[SL::IDX_Q+2], x_a[SL::IDX_Q+3]);
+    const Eigen::Quaterniond q_EB_b(x_b[SL::IDX_Q+0], x_b[SL::IDX_Q+1],
+                                     x_b[SL::IDX_Q+2], x_b[SL::IDX_Q+3]);
+    const Eigen::Vector3d v_eci_a =
+        q_EB_a * Eigen::Vector3d(x_a[SL::IDX_V+0], x_a[SL::IDX_V+1], x_a[SL::IDX_V+2]);
+    const Eigen::Vector3d v_eci_b =
+        q_EB_b * Eigen::Vector3d(x_b[SL::IDX_V+0], x_b[SL::IDX_V+1], x_b[SL::IDX_V+2]);
+
+    REQUIRE(v_eci_a.x() == Approx(v_eci_b.x()).margin(1e-10));
+    REQUIRE(v_eci_a.y() == Approx(v_eci_b.y()).margin(1e-10));
+    REQUIRE(v_eci_a.z() == Approx(v_eci_b.z()).margin(1e-10));
 }
 
 
@@ -564,7 +624,8 @@ TEST_CASE("BuildInitialStateVector - earth rotation: north pole surface speed is
 TEST_CASE("BuildInitialStateVector - earth rotation: omega*r is perpendicular to spin axis",
     "[earth_rotation][initial_state]")
 {
-    // omega × r has no Z-component regardless of site or ERA.
+    // omega × r has no Z-component in ECI regardless of site or ERA.
+    // IDX_V stores body-frame velocity; recover v_eci = q_EB * v_B to check.
     for (const auto& [lat, lon, theta] : std::initializer_list<std::tuple<double, double, double>>{
             {0.0,   0.0,  0.0},
             {45.0, 90.0,  0.5},
@@ -572,8 +633,12 @@ TEST_CASE("BuildInitialStateVector - earth rotation: omega*r is perpendicular to
             {28.6, -80.6,  2.7} })
     {
         const auto x0 = FD::BuildInitialStateVector(MakeCfg(lat, lon, 0.0), theta);
+        const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
+                                       x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
+        const Eigen::Vector3d v_eci =
+            q_EB * Eigen::Vector3d(x0[SL::IDX_V+0], x0[SL::IDX_V+1], x0[SL::IDX_V+2]);
         INFO("lat=" << lat << " lon=" << lon << " theta=" << theta);
-        REQUIRE(x0[SL::IDX_V + 2] == Approx(0.0).margin(1e-6));
+        REQUIRE(v_eci.z() == Approx(0.0).margin(1e-6));
     }
 }
 
@@ -583,15 +648,20 @@ TEST_CASE("BuildInitialStateVector - earth rotation: v_eci round-trips to zero N
     // The fundamental contract: if we convert the computed v_eci back to NED
     // (using ECIToECEF then ECEFToNED then subtracting omega×r_ecef), we must
     // recover the original v_NED = [0, 0, 0].
+    // IDX_V stores body-frame velocity; recover v_eci = q_EB * v_B first.
     const double lat_deg = 28.6, lon_deg = -80.6, theta = 0.5;
 
     const auto x0 = FD::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, 0.0), theta);
 
+    // Recover v_eci from body-frame velocity stored at IDX_V
+    const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
+                                   x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
+    const Eigen::Vector3d v_eci_eig =
+        q_EB * Eigen::Vector3d(x0[SL::IDX_V+0], x0[SL::IDX_V+1], x0[SL::IDX_V+2]);
+    const Vec3d v_eci_vec{ v_eci_eig.x(), v_eci_eig.y(), v_eci_eig.z() };
+
     // Convert v_eci back to ECEF frame
-    const Vec3d v_eci_vec{
-        x0[SL::IDX_V + 0], x0[SL::IDX_V + 1], x0[SL::IDX_V + 2]
-    };
     const Vec3d v_ecef_frame = AC::ECIToECEF(v_eci_vec, theta);
 
     // Subtract Earth surface velocity (omega × r_ecef)
@@ -619,6 +689,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: non-zero NED velocity round
     "[earth_rotation][initial_state]")
 {
     // Same round-trip as above but with a non-zero initial NED velocity.
+    // IDX_V stores body-frame velocity; recover v_eci = q_EB * v_B first.
     const double lat_deg = 51.5, lon_deg = -0.1, theta = 1.3;
     const double vN = 150.0, vE = -75.0, vD = 10.0;
 
@@ -626,9 +697,14 @@ TEST_CASE("BuildInitialStateVector - earth rotation: non-zero NED velocity round
         MakeCfg(lat_deg, lon_deg, 500.0, 0, 0, 0, vN, vE, vD), theta);
 
     const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, 500.0);
-    const Vec3d v_eci_vec{
-        x0[SL::IDX_V + 0], x0[SL::IDX_V + 1], x0[SL::IDX_V + 2]
-    };
+
+    // Recover v_eci from body-frame velocity stored at IDX_V
+    const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
+                                   x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
+    const Eigen::Vector3d v_eci_eig =
+        q_EB * Eigen::Vector3d(x0[SL::IDX_V+0], x0[SL::IDX_V+1], x0[SL::IDX_V+2]);
+    const Vec3d v_eci_vec{ v_eci_eig.x(), v_eci_eig.y(), v_eci_eig.z() };
+
     const Vec3d v_ecef_frame = AC::ECIToECEF(v_eci_vec, theta);
     const Vec3d v_ecef_relative{
         v_ecef_frame[0] - (-kOmegaE * r_ecef[1]),

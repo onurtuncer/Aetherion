@@ -68,6 +68,20 @@ namespace Aetherion::Simulation {
         {
         }
 
+        /// @brief Construct from a pre-built @c VectorField.
+        ///
+        /// Use this overload when the aerodynamic, propulsion, or other policies
+        /// require non-default construction (e.g. @c DragOnlyAeroPolicy with CD
+        /// and S_ref parameters).
+        explicit ISimulator(VectorField                    vf,
+            RigidBody::StateD              initialState,
+            ODE::RKMK::Core::NewtonOptions opt = {})
+            : m_Stepper(std::move(vf), opt)
+            , m_State(std::move(initialState))
+            , m_Time(0.0)
+        {
+        }
+
         // Non-copyable, movable
         ISimulator(const ISimulator&) = delete;
         ISimulator& operator=(const ISimulator&) = delete;
