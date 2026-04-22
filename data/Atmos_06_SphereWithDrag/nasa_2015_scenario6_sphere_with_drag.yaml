@@ -1,0 +1,50 @@
+# ------------------------------------------------------------------------------
+# NASA TM-2015-218675  —  Atmospheric Scenario 6
+# Sphere with aerodynamic drag  |  J2 gravity  |  US 1976 atmosphere
+#
+# All values in SI units.
+# Reference: NASA TM-2015-218675, Section B.1.6 / Table 30.
+# ------------------------------------------------------------------------------
+
+pose:
+  lat_deg:     0.0    # deg  — geodetic latitude
+  lon_deg:     0.0    # deg  — geodetic longitude
+  alt_m:    9144.0    # m    — geometric altitude MSL  (= 30 000 ft)
+
+  azimuth_deg:  0.0   # deg  — heading (nose azimuth from North)
+  zenith_deg:  90.0   # deg  — zenith angle of body +z axis (90 = horizontal)
+  roll_deg:     0.0   # deg  — roll about body +z axis
+
+velocityNED:
+  vn_mps: 0.0         # m/s  — north component
+  ve_mps: 0.0         # m/s  — east component
+  vd_mps: 0.0         # m/s  — down component (positive downward)
+
+bodyRates:
+  p_rad_s: -7.292113023867705e-05  # rad/s  — roll  rate wrt ECI (= −ω_Earth)
+  q_rad_s:  0.0                    # rad/s  — pitch rate wrt ECI
+  r_rad_s:  0.0                    # rad/s  — yaw   rate wrt ECI
+
+inertialParameters:
+  mass_kg: 14.5939029372           # kg     (= 1.0 slug)
+
+  Ixx_kg_m2: 4.880944613990913    # kg·m²  (= 3.6 slug·ft²)
+  Iyy_kg_m2: 4.880944613990913    # kg·m²
+  Izz_kg_m2: 4.880944613990913    # kg·m²
+  Ixy_kg_m2: 0.0                  # kg·m²
+  Iyz_kg_m2: 0.0                  # kg·m²
+  Ixz_kg_m2: 0.0                  # kg·m²
+
+  xbar_m: 0.0                     # m  — body-origin offset from CoG (x)
+  ybar_m: 0.0                     # m  — body-origin offset from CoG (y)
+  zbar_m: 0.0                     # m  — body-origin offset from CoG (z)
+
+aerodynamicParameters:
+  S_m2: 0.018241465452480003      # m²    reference area  (= 0.1963495 ft²)
+
+  CL:  0.0                        # —     lift coefficient
+  CD:  0.47                       # —     drag coefficient (sphere, incompressible)
+  CY:  0.0                        # —     side-force coefficient
+  Cl:  0.0                        # —     roll-moment coefficient
+  Cm:  0.0                        # —     pitch-moment coefficient
+  Cn:  0.0                        # —     yaw-moment coefficient
