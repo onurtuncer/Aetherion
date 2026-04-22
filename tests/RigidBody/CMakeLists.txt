@@ -8,8 +8,9 @@
 
 add_executable(test_rigidBody
                     test_AerodynamicWrench.cpp
-                    test_GravitationalWrench.cpp 
-                    test_SixDofStepper.cpp)
+                    test_GravitationalWrench.cpp
+                    test_SixDofStepper.cpp
+                    test_Config.cpp)
 
 target_link_libraries(test_rigidBody
     PRIVATE
