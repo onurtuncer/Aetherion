@@ -15,12 +15,14 @@ Examples
    :depth: 2
    :local:
 
+.. _NASA TM-2015-218675: https://ntrs.nasa.gov/citations/20150001263
+
 .. _example_dragless_sphere:
 
 Dragless Sphere (NASA TM-2015-218675 Atmospheric Scenario 1)
 ------------------------------------------------------------
 
-**Reference:** NASA Technical Memorandum TM-2015-218675,
+**Reference:** `NASA TM-2015-218675`_,
 *Atmospheric and Space Flight Vehicle Equations of Motion*,
 Appendix B, Section B.1.1 — Atmospheric Simulation 01.
 
@@ -213,7 +215,7 @@ Each row of the output CSV corresponds to one :cpp:struct:`Aetherion::Simulation
 Validation Results
 ^^^^^^^^^^^^^^^^^^
 
-The table below compares Aetherion output against the NASA TM-2015-218675
+The table below compares Aetherion output against the `NASA TM-2015-218675`_
 check-case data at selected time steps.  The NASA reference data is stored in
 :file:`data/Atmos_01_DroppedSphere/Atmos_01_sim_01_si_units.csv`.
 
@@ -272,7 +274,7 @@ onto the Aetherion time grid and plots each column.  The output directory
    :align: center
    :width: 100%
 
-   Side-by-side comparison of Aetherion vs. NASA TM-2015-218675 reference for
+   Side-by-side comparison of Aetherion vs. `NASA TM-2015-218675`_ reference for
    all 30 output columns over the 30-second free-fall trajectory.
 
 **Altitude** — :math:`h(t)` vs. NASA reference (max absolute error < 0.53 m):
@@ -352,6 +354,7 @@ but deliberate modelling or convention differences:
      - A sphere has no preferred roll orientation.  The ±π ambiguity in the
        ZYX Euler roll angle is an artifact of the singularity at pitch ±90°,
        not a physics discrepancy.
+
 Architecture
 ^^^^^^^^^^^^
 
@@ -382,3 +385,191 @@ Initialisation proceeds in four steps inside ``prepareSimulation()``:
    attitude quaternion from azimuth / zenith / roll.
 4. **Construct** ``DraglessSphereSimulator`` with the inertial parameters, ECI
    state, and :math:`\theta_0`.
+
+.. _example_sphere_with_drag:
+
+Sphere with Atmospheric Drag (NASA TM-2015-218675 Atmospheric Scenario 6)
+--------------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.6 — Atmospheric Simulation 06.
+
+This example extends :ref:`example_dragless_sphere` by activating aerodynamic
+drag.  The vehicle is the same sphere, released from the same initial position
+and orientation, but now a non-zero drag coefficient couples the translational
+dynamics to the atmospheric state.  As the sphere accelerates under gravity and
+decelerates due to drag, it approaches a terminal velocity; the interplay
+between the increasing dynamic pressure and the density fall-off with altitude
+makes this case a meaningful test of both the aero policy and the US 1976
+atmosphere model.
+
+Physics Model
+^^^^^^^^^^^^^
+
+The simulation uses the following policy combination, defined in
+:file:`Aetherion/Examples/SphereWithAtmosphericDrag/SphereWithAtmosphereicDragTypes.h`:
+
+.. code-block:: cpp
+
+   using SphereWithAtmosphericDragVF = RigidBody::VectorField<
+       FlightDynamics::J2GravityPolicy,        // J2 gravity (WGS-84 second harmonic)
+       FlightDynamics::DragOnlyAeroPolicy,     // CD = 0.47, no lift or side force
+       FlightDynamics::ZeroPropulsionPolicy,   // no thrust
+       FlightDynamics::ConstantMassPolicy      // mass does not change
+   >;
+
+   using SphereWithAtmosphericDragStepper =
+       RigidBody::SixDoFStepper<SphereWithAtmosphericDragVF>;
+
+The only change relative to Scenario 1 is the replacement of
+``ZeroAeroPolicy`` with ``DragOnlyAeroPolicy``.
+
+Aerodynamic drag model
+""""""""""""""""""""""
+
+``DragOnlyAeroPolicy`` evaluates the drag force in the body frame at every
+function evaluation of the integrator:
+
+.. math::
+
+   \mathbf{F}_{\mathrm{drag}} =
+       -\tfrac{1}{2}\,\rho(h)\,C_D\,S_{\mathrm{ref}}\,\lVert\mathbf{v}_B\rVert\,\mathbf{v}_B
+
+where :math:`\mathbf{v}_B` is the body-frame linear velocity (the lower three
+components of the body twist :math:`\nu_B`), :math:`\rho(h)` is the US Standard
+Atmosphere 1976 density at the current geocentric altitude, :math:`C_D` is the
+constant drag coefficient, and :math:`S_{\mathrm{ref}}` is the reference
+(frontal) area.  No lift, side, or moment contributions are generated.
+
+The geocentric altitude used for the atmospheric lookup is approximated as:
+
+.. math::
+
+   h \approx \lVert \mathbf{r}_{\mathrm{ECI}} \rVert - R_e
+
+where :math:`R_e = 6\,378\,137.0\ \text{m}` is the WGS-84 semi-major axis.
+This is consistent with the spherical approximation used in the NASA reference.
+
+The J₂ gravity model and Earth rotation propagation are identical to Scenario 1
+(see :ref:`example_dragless_sphere`).
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+The vehicle configuration is read from
+:file:`data/Atmos_06_SphereWithDrag/nasa_2015_scenario6_sphere_with_drag.json`.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Geodetic latitude
+     - 0.0°
+     - Equatorial drop
+   * - Geodetic longitude
+     - 0.0°
+     - Prime meridian
+   * - Altitude (MSL)
+     - 9 144.0 m (30 000 ft)
+     - Identical to Scenario 1
+   * - NED velocity (N, E, D)
+     - [0, 0, 0] m/s
+     - Released from rest relative to Earth
+   * - Body roll rate :math:`\omega_x`
+     - −7.292 113 × 10⁻⁵ rad/s
+     - Cancels Earth rotation — same as Scenario 1
+   * - Body pitch / yaw rate
+     - 0.0 rad/s
+     - —
+   * - Mass
+     - 14.5939029372 kg
+     - Identical to Scenario 1
+   * - Inertia :math:`I_{xx} = I_{yy} = I_{zz}`
+     - 4.880944614 kg·m²
+     - Uniform sphere
+   * - Drag coefficient :math:`C_D`
+     - 0.47
+     - Constant — does not depend on Mach or angle of attack
+   * - Reference area :math:`S_{\mathrm{ref}}`
+     - 0.018241 m²
+     - Frontal area of the sphere
+
+The atmospheric state at :math:`h_0 = 9\,144\ \text{m}` (US Standard
+Atmosphere 1976) is the same as in Scenario 1.
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+CMake automatically copies the vehicle config and validation script into the
+build directory next to the executable:
+
+.. code-block:: bash
+
+   cmake --build build --target SphereWithAtmosphericDrag
+
+   ./build/SphereWithAtmosphericDrag \
+       --inputFileName  nasa_2015_scenario6_sphere_with_drag.json \
+       --outputFileName atmos_06_output.csv                        \
+       --startTime      0.0                                         \
+       --endTime        30.0                                        \
+       --timeStep       0.01                                        \
+       --writeInterval  10
+
+All flags and their defaults are documented in
+:cpp:class:`Aetherion::Simulation::ArgumentParser`.
+
+Output Format
+^^^^^^^^^^^^^
+
+The output CSV has the same 38-column ``Snapshot1`` schema as Scenario 1
+(see :ref:`example_dragless_sphere`).  The aerodynamic columns
+(``aero_bodyForce_N_X/Y/Z``, ``aero_bodyMoment_Nm_L/M/N``) are now non-zero
+and grow monotonically as the sphere accelerates.
+
+Validation Data
+^^^^^^^^^^^^^^^
+
+The NASA reference provides six sub-simulations for Scenario 6
+(``Atmos_06_sim_01`` through ``Atmos_06_sim_06``), stored in
+:file:`data/Atmos_06_SphereWithDrag/`.  Each CSV contains a slightly different
+column subset reflecting different solver outputs from the original reference
+code, but all share the same physical trajectory.  The SI-unit variants
+(``*_si_units.csv``) are used for direct numerical comparison.
+
+Architecture
+^^^^^^^^^^^^
+
+``SphereWithAtmosphericDragApplication`` follows the same
+:cpp:class:`Aetherion::Simulation::Application` **Template Method** pattern as
+the DraglessSphere example:
+
+.. code-block:: text
+
+   Simulation::Application              (base — defines run() loop)
+       └── SphereWithAtmosphericDragApplication
+               prepareSimulation()         load JSON → build ECI state → construct simulator
+               writeInitialSnapshot()      write t=0 row
+               stepAndRecord()             advance by Δt, write CSV row
+               logFinalSummary()           print geodetic position, speed, Mach at t_end
+
+   Simulation::ISimulator<SphereWithAtmosphericDragVF, Snapshot1>
+       └── SphereWithAtmosphericDragSimulator
+               step()                      advance via SixDoFStepper (Radau IIA RKMK)
+               snapshot()                  convert state → Snapshot1 (ECI→Geodetic, US1976 atm)
+               currentTheta()              θ(t) = θ₀ + ωE · t  (linear ERA propagation)
+
+Initialisation inside ``prepareSimulation()`` follows the same four-step
+sequence as Scenario 1:
+
+1. **Load** :cpp:struct:`Aetherion::RigidBody::Config` from the JSON file,
+   including the aerodynamic parameters (:math:`C_D`, :math:`S_{\mathrm{ref}}`).
+2. **Compute** the initial Earth Rotation Angle :math:`\theta_0 = \omega_E t_0`.
+3. **Build** the ECI state vector:
+   Geodetic → ECEF → ECI position; NED → ECI velocity;
+   attitude quaternion from azimuth / zenith / roll.
+4. **Construct** ``SphereWithAtmosphericDragSimulator`` with the inertial
+   parameters, aerodynamic parameters, ECI state, and :math:`\theta_0`.
