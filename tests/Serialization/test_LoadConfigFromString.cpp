@@ -25,9 +25,11 @@ const std::string kValidJson = R"({
     "bodyRates":   { "roll_rad_s": 0.0, "pitch_rad_s": 0.0, "yaw_rad_s": 0.0 },
     "inertialParameters": {
         "mass_kg": 10.0,
-        "Ixx": 0.1, "Iyy": 0.2, "Izz": 0.3,
-        "Ixy": 0.0, "Iyz": 0.0, "Ixz": 0.0,
-        "xbar_m": 0.0, "ybar_m": 0.0, "zbar_m": 0.0
+        "inertia_kgm2": {
+            "Ixx": 0.1, "Iyy": 0.2, "Izz": 0.3,
+            "Ixy": 0.0, "Iyz": 0.0, "Ixz": 0.0
+        },
+        "body_origin_wrt_cog_m": { "x": 0.0, "y": 0.0, "z": 0.0 }
     },
     "aerodynamicParameters": {
         "S": 0.1, "CL": 0.0, "CD": 0.0, "CY": 0.0,
