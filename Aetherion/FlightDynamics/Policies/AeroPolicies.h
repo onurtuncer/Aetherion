@@ -60,8 +60,16 @@ namespace Aetherion::FlightDynamics {
         {
             using Environment::detail::SquareRoot;
 
-            // Body-frame linear velocity
+            // ECI-relative body-frame linear velocity (includes Earth rotation)
             const Eigen::Matrix<S, 3, 1> v_B = nu_B.template tail<3>();
+
+            // Earth surface velocity at r_ECI expressed in the body frame:
+            //   v_surface_body = R^T * (omega_E x r_ECI)
+            // Subtracting this gives the atmosphere-relative (aerodynamic) airspeed.
+            constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
+            const Eigen::Matrix<S, 3, 1> omega_E(S(0), S(0), S(kOmegaE));
+            const Eigen::Matrix<S, 3, 1> v_surface_body = g.R.transpose() * omega_E.cross(g.p);
+            const Eigen::Matrix<S, 3, 1> v_rel = v_B - v_surface_body;
 
             // Geocentric altitude: alt ≈ |r_ECI| − Re  (spherical approximation)
             const S alt = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
@@ -70,15 +78,15 @@ namespace Aetherion::FlightDynamics {
             const S rho = Environment::US1976Atmosphere(alt).rho;
 
             // Speed — AD-safe sqrt: avoids undefined derivative at v=0
-            const S v2     = v_B.squaredNorm();
+            const S v2     = v_rel.squaredNorm();
             const S v_safe = SquareRoot(v2 + S(1.0e-30));
 
-            // F_drag = −½ ρ CD S_ref |v_B| v_B  (body frame, opposes velocity)
+            // F_drag = −½ ρ CD S_ref |v_rel| v_rel  (body frame, opposes airspeed)
             const S k = S(0.5) * rho * S(CD) * S(S_ref) * v_safe;
 
             Spatial::Wrench<S> w{};
             w.f.setZero();
-            w.f.template tail<3>() = -k * v_B;
+            w.f.template tail<3>() = -k * v_rel;
             return w;
         }
     };
