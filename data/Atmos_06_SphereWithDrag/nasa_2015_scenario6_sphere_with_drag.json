@@ -35,7 +35,7 @@
   },
   "aerodynamicParameters": {
     "CL": 0.0,
-    "CD": 0.47,
+    "CD": 0.1,
     "CY": 0.0,
     "Cl": 0.0,
     "Cm": 0.0,

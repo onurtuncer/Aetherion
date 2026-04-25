@@ -43,7 +43,7 @@ aerodynamicParameters:
   S_m2: 0.018241465452480003      # m²    reference area  (= 0.1963495 ft²)
 
   CL:  0.0                        # —     lift coefficient
-  CD:  0.47                       # —     drag coefficient (sphere, incompressible)
+  CD:  0.1                        # —     drag coefficient (sphere, incompressible)
   CY:  0.0                        # —     side-force coefficient
   Cl:  0.0                        # —     roll-moment coefficient
   Cm:  0.0                        # —     pitch-moment coefficient

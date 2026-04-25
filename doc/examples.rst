@@ -414,7 +414,7 @@ The simulation uses the following policy combination, defined in
 
    using SphereWithAtmosphericDragVF = RigidBody::VectorField<
        FlightDynamics::J2GravityPolicy,        // J2 gravity (WGS-84 second harmonic)
-       FlightDynamics::DragOnlyAeroPolicy,     // CD = 0.47, no lift or side force
+       FlightDynamics::DragOnlyAeroPolicy,     // CD = 0.1, no lift or side force
        FlightDynamics::ZeroPropulsionPolicy,   // no thrust
        FlightDynamics::ConstantMassPolicy      // mass does not change
    >;
@@ -492,7 +492,7 @@ The vehicle configuration is read from
      - 4.880944614 kg·m²
      - Uniform sphere
    * - Drag coefficient :math:`C_D`
-     - 0.47
+     - 0.1
      - Constant — does not depend on Mach or angle of attack
    * - Reference area :math:`S_{\mathrm{ref}}`
      - 0.018241 m²
