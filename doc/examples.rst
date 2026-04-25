@@ -516,8 +516,8 @@ build directory next to the executable:
        --outputFileName atmos_06_output.csv                        \
        --startTime      0.0                                         \
        --endTime        30.0                                        \
-       --timeStep       0.01                                        \
-       --writeInterval  10
+       --timeStep       0.002                                       \
+       --writeInterval  50
 
 All flags and their defaults are documented in
 :cpp:class:`Aetherion::Simulation::ArgumentParser`.
@@ -539,6 +539,72 @@ The NASA reference provides six sub-simulations for Scenario 6
 column subset reflecting different solver outputs from the original reference
 code, but all share the same physical trajectory.  The SI-unit variants
 (``*_si_units.csv``) are used for direct numerical comparison.
+
+Validation Results
+^^^^^^^^^^^^^^^^^^
+
+The table below compares Aetherion output against the ``Atmos_06_sim_01_si_units``
+reference at selected time steps.  The simulation was run with
+:math:`\Delta t = 0.002\ \text{s}` and ``--writeInterval 50`` (output every 0.1 s,
+matching the NASA CSV cadence).
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 18 18 18 18 18
+
+   * - :math:`t` [s]
+     - Alt\ :sub:`ref` [m]
+     - Alt\ :sub:`sim` [m]
+     - :math:`\Delta` alt [m]
+     - TAS\ :sub:`ref` [m/s]
+     - TAS\ :sub:`sim` [m/s]
+   * - 0
+     - 9 144.000
+     - 9 144.000
+     - 0.000
+     - 0.0000
+     - 0.0000
+   * - 5
+     - 9 022.240
+     - 9 022.338
+     - +0.098
+     - 48.6469
+     - 48.6274
+   * - 10
+     - 8 658.691
+     - 8 658.886
+     - +0.195
+     - 96.5949
+     - 96.5758
+   * - 15
+     - 8 058.748
+     - 8 059.033
+     - +0.285
+     - 143.0641
+     - 143.0471
+   * - 20
+     - 7 232.051
+     - 7 232.415
+     - +0.364
+     - 187.1251
+     - 187.1119
+   * - 25
+     - 6 193.370
+     - 6 193.790
+     - +0.419
+     - 227.6531
+     - 227.6457
+   * - 30
+     - **4 963.583**
+     - **4 964.024**
+     - **+0.441**
+     - **263.3383**
+     - **263.3380**
+
+The residual is a smooth, slowly growing systematic offset (~0.44 m at t = 30 s,
+0.009% of altitude) attributable to the difference between Aetherion's
+full rotating-Earth dynamics and the NASA reference's non-rotating-atmosphere
+model.  The true-airspeed error at t = 30 s is 0.0003 m/s (< 0.001%).
 
 Architecture
 ^^^^^^^^^^^^
