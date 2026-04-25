@@ -352,6 +352,16 @@ def main():
     print(f"\nComparing {len(columns)} columns over {len(time)} time steps.")
     print(f"Output → {os.path.abspath(args.output)}\n")
 
+    # ── Unwrap angle columns (removes unphysical 2π jumps from atan2) ────────
+    def _is_angle_col(name: str) -> bool:
+        n = name.lower()
+        return ("_rad" in n or "angle" in n) and "rate" not in n
+
+    for col in columns:
+        if _is_angle_col(col):
+            df_sim[col] = np.unwrap(df_sim[col].values.astype(float))
+            df_val[col] = np.unwrap(df_val[col].values.astype(float))
+
     # ── Individual plots ──────────────────────────────────────────────────────
     for col in columns:
         s = df_sim[col].values.astype(float)
