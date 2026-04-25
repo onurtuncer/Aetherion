@@ -386,6 +386,261 @@ Initialisation proceeds in four steps inside ``prepareSimulation()``:
 4. **Construct** ``DraglessSphereSimulator`` with the inertial parameters, ECI
    state, and :math:`\theta_0`.
 
+.. _example_tumbling_brick:
+
+Tumbling Brick, No Damping (NASA TM-2015-218675 Atmospheric Scenario 2)
+------------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.2 — Atmospheric Simulation 02.
+
+This example exercises the **rotational** degrees of freedom.  A non-symmetric
+rigid body (principal inertia ratio 1 : 2 : 3) is released from the same
+altitude and position as Scenario 1, but with significant initial body angular
+rates about all three principal axes.  Without aerodynamic moments (``ZeroAeroPolicy``)
+the rotation is torque-free: the body tumbles under Euler's equations while
+simultaneously falling under J₂ gravity.
+
+Because the intermediate principal axis (\ :math:`I_{yy}`) is the **unstable**
+axis of torque-free rotation (tennis-racket theorem / Dzhanibekov effect), small
+numerical differences between simulators cause the angular rate trajectories to
+diverge, even when the translational trajectories agree to engineering tolerance.
+This is an expected feature of the scenario, not a defect.
+
+Physics Model
+^^^^^^^^^^^^^
+
+.. code-block:: cpp
+
+   using TumblingBrickNoDampingVF = RigidBody::VectorField<
+       FlightDynamics::J2GravityPolicy,       // J2 gravity (WGS-84 second harmonic)
+       FlightDynamics::ZeroAeroPolicy,        // no aerodynamic force or moment
+       FlightDynamics::ZeroPropulsionPolicy,  // no thrust
+       FlightDynamics::ConstantMassPolicy     // mass does not change
+   >;
+
+The rotational dynamics are governed by the torque-free Euler equations in the
+body frame:
+
+.. math::
+
+   \mathbf{I}\,\dot{\boldsymbol{\omega}} + \boldsymbol{\omega} \times
+   (\mathbf{I}\,\boldsymbol{\omega}) = \mathbf{0}
+
+where :math:`\mathbf{I} = \operatorname{diag}(I_{xx}, I_{yy}, I_{zz})` with
+:math:`I_{xx} < I_{yy} < I_{zz}` (1 : 2 : 3 slug·ft² ratio).
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+The vehicle configuration is read from
+:file:`data/Atmos_02_TumblingBrickNoDamping/nasa_2015_scenario2_tumbling_brick_no_damping.json`.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Geodetic latitude
+     - 0.0°
+     - Equatorial drop
+   * - Geodetic longitude
+     - 0.0°
+     - Prime meridian
+   * - Altitude (MSL)
+     - 9 144.0 m (30 000 ft)
+     - Identical to Scenario 1
+   * - NED velocity (N, E, D)
+     - [0, 0, 0] m/s
+     - Released from rest relative to Earth
+   * - Mass
+     - 14.5939029372 kg
+     - Identical to Scenario 1
+   * - :math:`I_{xx}` (roll axis)
+     - 1.355 818 kg·m²
+     - = 1 slug·ft² — minor axis (stable)
+   * - :math:`I_{yy}` (pitch axis)
+     - 2.711 636 kg·m²
+     - = 2 slug·ft² — intermediate axis (unstable)
+   * - :math:`I_{zz}` (yaw axis)
+     - 4.067 454 kg·m²
+     - = 3 slug·ft² — major axis (stable)
+   * - Initial :math:`\omega_x` (ECI)
+     - 10 deg/s
+     - Roll rate about minor axis
+   * - Initial :math:`\omega_y` (ECI)
+     - 20 deg/s
+     - Pitch rate about **unstable** intermediate axis
+   * - Initial :math:`\omega_z` (ECI)
+     - 30 deg/s
+     - Yaw rate about major axis
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   cmake --build build --target TumblingBrickNoDamping
+
+   ./build/TumblingBrickNoDamping \
+       --inputFileName  nasa_2015_scenario2_tumbling_brick_no_damping.json \
+       --outputFileName atmos_02_output.csv                                \
+       --startTime      0.0                                                 \
+       --endTime        30.0                                                \
+       --timeStep       0.002                                               \
+       --writeInterval  50
+
+Validation Results
+^^^^^^^^^^^^^^^^^^
+
+The table below compares Aetherion output against the ``Atmos_02_sim_01_si_units``
+reference (converted from US customary via ``scripts/convert_atmos02_to_si.py``).
+Simulation run with :math:`\Delta t = 0.002\ \text{s}`, output every 0.1 s.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 18 18 14 18 18
+
+   * - :math:`t` [s]
+     - Alt\ :sub:`ref` [m]
+     - Alt\ :sub:`sim` [m]
+     - :math:`\Delta` alt [m]
+     - TAS\ :sub:`ref` [m/s]
+     - TAS\ :sub:`sim` [m/s]
+   * - 0
+     - 9 144.000
+     - 9 144.000
+     - 0.000
+     - 0.000
+     - 0.000
+   * - 5
+     - 9 022.098
+     - 9 022.196
+     - +0.098
+     - 48.762
+     - 48.742
+   * - 10
+     - 8 656.382
+     - 8 656.578
+     - +0.196
+     - 97.526
+     - 97.506
+   * - 15
+     - 8 046.825
+     - 8 047.119
+     - +0.294
+     - 146.298
+     - 146.279
+   * - 20
+     - 7 193.380
+     - 7 193.771
+     - +0.391
+     - 195.082
+     - 195.062
+   * - 25
+     - 6 095.982
+     - 6 096.471
+     - +0.489
+     - 243.880
+     - 243.861
+   * - 30
+     - **4 754.547**
+     - **4 755.134**
+     - **+0.587**
+     - **292.697**
+     - **292.678**
+
+Translational accuracy is identical to Scenario 1 (altitude error < 0.6 m,
+speed error < 0.02 m/s at t = 30 s).  Angular rate trajectories diverge from
+the reference due to the chaotic nature of torque-free rotation near the
+unstable intermediate axis — this is the intended behaviour of this test case.
+
+Comparison Plots
+^^^^^^^^^^^^^^^^
+
+The figures below were generated by ``compare_sim_validation.py`` against
+``Atmos_02_sim_01_si_units.csv``.
+
+**Overview dashboard** — all 30 output columns:
+
+.. figure:: _static/atmos02/overview_dashboard.png
+   :alt: Overview comparison dashboard (all columns)
+   :align: center
+   :width: 100%
+
+   Side-by-side comparison of Aetherion vs. `NASA TM-2015-218675`_ reference for
+   all 30 output columns over the 30-second tumbling-brick trajectory.
+
+**Altitude** — translational dynamics match to < 0.6 m over 30 s:
+
+.. figure:: _static/atmos02/altitudeMsl_m.png
+   :alt: Altitude MSL comparison
+   :align: center
+   :width: 85%
+
+**Earth-relative downward velocity** :math:`v_z` (NED):
+
+.. figure:: _static/atmos02/feVelocity_m_s_Z.png
+   :alt: Earth-frame velocity Z comparison
+   :align: center
+   :width: 85%
+
+**Body angular rates** — roll, pitch, yaw (ECI-relative):
+
+.. figure:: _static/atmos02/bodyAngularRateWrtEi_rad_s_Roll.png
+   :alt: Body roll rate comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos02/bodyAngularRateWrtEi_rad_s_Pitch.png
+   :alt: Body pitch rate comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos02/bodyAngularRateWrtEi_rad_s_Yaw.png
+   :alt: Body yaw rate comparison
+   :align: center
+   :width: 85%
+
+**Euler angles** (ZYX, body → NED):
+
+.. figure:: _static/atmos02/eulerAngle_rad_Roll.png
+   :alt: Euler roll angle comparison
+   :align: center
+   :width: 85%
+
+**Local gravitational acceleration** (J₂ model):
+
+.. figure:: _static/atmos02/localGravity_m_s2.png
+   :alt: Local gravity comparison
+   :align: center
+   :width: 85%
+
+**Atmospheric state** (US Standard Atmosphere 1976):
+
+.. figure:: _static/atmos02/ambientTemperature_K.png
+   :alt: Ambient temperature comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos02/airDensity_kg_m3.png
+   :alt: Air density comparison
+   :align: center
+   :width: 85%
+
+Architecture
+^^^^^^^^^^^^
+
+``TumblingBrickNoDampingApplication`` follows the same
+:cpp:class:`Aetherion::Simulation::Application` **Template Method** pattern
+as the other examples.  The only structural difference is that
+``prepareSimulation()`` logs initial angular rates (in deg/s) instead of
+aerodynamic coefficients, and ``stepAndRecord()`` includes
+:math:`[\omega_x, \omega_y, \omega_z]` in the per-step TRACE line.
+
 .. _example_sphere_with_drag:
 
 Sphere with Atmospheric Drag (NASA TM-2015-218675 Atmospheric Scenario 6)
