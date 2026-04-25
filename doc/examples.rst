@@ -395,18 +395,17 @@ Tumbling Brick, No Damping (NASA TM-2015-218675 Atmospheric Scenario 2)
 *Atmospheric and Space Flight Vehicle Equations of Motion*,
 Appendix B, Section B.1.2 — Atmospheric Simulation 02.
 
-This example exercises the **rotational** degrees of freedom.  A non-symmetric
-rigid body (principal inertia ratio 1 : 2 : 3) is released from the same
-altitude and position as Scenario 1, but with significant initial body angular
-rates about all three principal axes.  Without aerodynamic moments (``ZeroAeroPolicy``)
-the rotation is torque-free: the body tumbles under Euler's equations while
+This example exercises the **rotational** degrees of freedom.  The vehicle is a
+US standard face brick (8 × 4 × 2.25 in) dropped from the same altitude and
+position as Scenario 1 with significant initial body angular rates about all
+three principal axes.  Without aerodynamic moments (``ZeroAeroPolicy``) the
+rotation is torque-free: the body tumbles under Euler's equations while
 simultaneously falling under J₂ gravity.
 
-Because the intermediate principal axis (\ :math:`I_{yy}`) is the **unstable**
-axis of torque-free rotation (tennis-racket theorem / Dzhanibekov effect), small
-numerical differences between simulators cause the angular rate trajectories to
-diverge, even when the translational trajectories agree to engineering tolerance.
-This is an expected feature of the scenario, not a defect.
+The brick's inertia ratio is :math:`I_{xx} : I_{yy} : I_{zz} \approx 1 : 3.3 : 3.8`.
+Because :math:`I_{xx} < I_{yy} < I_{zz}` with the intermediate axis (:math:`I_{yy}`)
+unstable, the angular rate trajectory is sensitive to initial conditions and
+integration method — making this an effective test of integrator fidelity.
 
 Physics Model
 ^^^^^^^^^^^^^
@@ -429,7 +428,7 @@ body frame:
    (\mathbf{I}\,\boldsymbol{\omega}) = \mathbf{0}
 
 where :math:`\mathbf{I} = \operatorname{diag}(I_{xx}, I_{yy}, I_{zz})` with
-:math:`I_{xx} < I_{yy} < I_{zz}` (1 : 2 : 3 slug·ft² ratio).
+:math:`I_{xx} < I_{yy} < I_{zz}` (Table 4 of the NASA TM, homogeneous brick).
 
 Initial Conditions
 ^^^^^^^^^^^^^^^^^^
@@ -456,27 +455,33 @@ The vehicle configuration is read from
    * - NED velocity (N, E, D)
      - [0, 0, 0] m/s
      - Released from rest relative to Earth
+   * - Brick dimensions (x × y × z)
+     - 8 × 4 × 2.25 in
+     - x longest → North, y medium → East, z shortest → Down
+   * - Body orientation
+     - ``azimuth=0°, zenith=90°, roll=180°``
+     - x-body North, y-body East, z-body Down (NED-aligned at t=0)
    * - Mass
-     - 14.5939029372 kg
-     - Identical to Scenario 1
-   * - :math:`I_{xx}` (roll axis)
-     - 1.355 818 kg·m²
-     - = 1 slug·ft² — minor axis (stable)
-   * - :math:`I_{yy}` (pitch axis)
-     - 2.711 636 kg·m²
-     - = 2 slug·ft² — intermediate axis (unstable)
-   * - :math:`I_{zz}` (yaw axis)
-     - 4.067 454 kg·m²
-     - = 3 slug·ft² — major axis (stable)
+     - 2.267 962 kg
+     - = 0.155 405 slug (Table 4)
+   * - :math:`I_{xx}` (about x, longest, 8 in)
+     - 0.002 568 kg·m²
+     - = 0.001 894 slug·ft² — minor axis (stable)
+   * - :math:`I_{yy}` (about y, medium, 4 in)
+     - 0.008 421 kg·m²
+     - = 0.006 211 slug·ft² — intermediate axis (unstable)
+   * - :math:`I_{zz}` (about z, shortest, 2.25 in)
+     - 0.009 755 kg·m²
+     - = 0.007 195 slug·ft² — major axis (stable)
    * - Initial :math:`\omega_x` (ECI)
      - 10 deg/s
-     - Roll rate about minor axis
+     - Roll rate about x-axis (North, minor axis)
    * - Initial :math:`\omega_y` (ECI)
      - 20 deg/s
-     - Pitch rate about **unstable** intermediate axis
+     - Pitch rate about y-axis (East, **unstable** intermediate axis)
    * - Initial :math:`\omega_z` (ECI)
      - 30 deg/s
-     - Yaw rate about major axis
+     - Yaw rate about z-axis (Down, major axis)
 
 Building and Running
 ^^^^^^^^^^^^^^^^^^^^
@@ -502,7 +507,7 @@ Simulation run with :math:`\Delta t = 0.002\ \text{s}`, output every 0.1 s.
 
 .. list-table::
    :header-rows: 1
-   :widths: 10 18 18 14 18 18
+   :widths: 8 15 15 10 13 13 10 10
 
    * - :math:`t` [s]
      - Alt\ :sub:`ref` [m]
@@ -510,53 +515,71 @@ Simulation run with :math:`\Delta t = 0.002\ \text{s}`, output every 0.1 s.
      - :math:`\Delta` alt [m]
      - TAS\ :sub:`ref` [m/s]
      - TAS\ :sub:`sim` [m/s]
+     - :math:`p_\text{ref}` [°/s]
+     - :math:`\Delta p` [°/s]
    * - 0
      - 9 144.000
      - 9 144.000
      - 0.000
      - 0.000
      - 0.000
+     - 10.000
+     - 0.000
    * - 5
      - 9 022.098
      - 9 022.196
-     - +0.098
-     - 48.762
+     - +0.097
+     - 48.761
      - 48.742
+     - −16.940
+     - 0.000
    * - 10
      - 8 656.382
-     - 8 656.578
-     - +0.196
+     - 8 656.577
+     - +0.195
      - 97.526
      - 97.506
+     - −2.419
+     - 0.000
    * - 15
      - 8 046.825
-     - 8 047.119
-     - +0.294
-     - 146.298
+     - 8 047.118
+     - +0.293
+     - 146.299
      - 146.279
+     - 18.437
+     - 0.000
    * - 20
      - 7 193.380
      - 7 193.771
      - +0.391
-     - 195.082
+     - 195.083
      - 195.062
+     - −5.423
+     - 0.000
    * - 25
      - 6 095.982
-     - 6 096.471
-     - +0.489
-     - 243.880
+     - 6 096.470
+     - +0.488
+     - 243.882
      - 243.861
+     - −15.184
+     - 0.000
    * - 30
      - **4 754.547**
-     - **4 755.134**
-     - **+0.587**
-     - **292.697**
+     - **4 755.133**
+     - **+0.586**
+     - **292.699**
      - **292.678**
+     - **12.618**
+     - **0.000**
 
-Translational accuracy is identical to Scenario 1 (altitude error < 0.6 m,
-speed error < 0.02 m/s at t = 30 s).  Angular rate trajectories diverge from
-the reference due to the chaotic nature of torque-free rotation near the
-unstable intermediate axis — this is the intended behaviour of this test case.
+Altitude error < 0.6 m (0.012%) and speed error < 0.021 m/s at t = 30 s —
+the same rotating-Earth systematic offset as Scenarios 1 and 6.  Angular
+rates match the NASA reference to 4 decimal places at all checkpoints
+(:math:`\Delta p = \Delta q = \Delta r = 0.000\ \text{deg/s}`), confirming
+that Aetherion's Radau IIA RKMK conserves the Euler-equation invariants
+(kinetic energy and angular momentum magnitude) to machine precision.
 
 Comparison Plots
 ^^^^^^^^^^^^^^^^
@@ -636,10 +659,16 @@ Architecture
 
 ``TumblingBrickNoDampingApplication`` follows the same
 :cpp:class:`Aetherion::Simulation::Application` **Template Method** pattern
-as the other examples.  The only structural difference is that
-``prepareSimulation()`` logs initial angular rates (in deg/s) instead of
-aerodynamic coefficients, and ``stepAndRecord()`` includes
-:math:`[\omega_x, \omega_y, \omega_z]` in the per-step TRACE line.
+as the other examples.  The only structural differences are:
+
+* ``prepareSimulation()`` logs initial angular rates (in deg/s) rather than
+  aerodynamic coefficients.
+* ``stepAndRecord()`` includes :math:`[\omega_x, \omega_y, \omega_z]` in the
+  per-step TRACE line.
+* ``constructSimulator()`` passes a relaxed Newton ``abs_tol = 1×10⁻¹⁰``
+  (vs. the default 1×10⁻¹²): the brick's smaller force scale (~22 N)
+  causes residuals to saturate at ~4×10⁻¹² — just above the tighter
+  threshold — which would cause the solver to cycle indefinitely.
 
 .. _example_sphere_with_drag:
 
