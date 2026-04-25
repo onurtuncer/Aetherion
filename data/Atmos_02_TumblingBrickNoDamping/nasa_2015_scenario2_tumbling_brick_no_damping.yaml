@@ -3,16 +3,24 @@
 # Tumbling brick, no aerodynamic damping  |  J2 gravity  |  US 1976 atmosphere
 #
 # All values in SI units.
-# Reference: NASA TM-2015-218675, Section B.1.2 / Table 26.
+# Reference: NASA TM-2015-218675, Section B.1.2 / Table 26, Table 4.
 #
-# Inertia tensor (1 : 2 : 3 slug·ft² ratio):
-#   1 slug·ft² = 14.593902937206 kg × (0.3048 m)² = 1.355817948329 kg·m²
+# Brick dimensions: 8 in × 4 in × 2.25 in  (x × y × z body axes)
+#   x-body (8 in, longest)  → North   (points along x-body, Ixx = smallest)
+#   y-body (4 in, medium)   → East    (roll_deg = 180 puts y-body East)
+#   z-body (2.25 in, short) → Down    (roll_deg = 180 puts z-body Down)
+#
+# Mass and inertia from Table 4 (US Standard Face Brick, homogeneous):
+#   m   = 0.155404754 slug  = 0.155404754 × 14.593903 = 2.267962 kg
+#   Ixx = 0.001894220 slug·ft² = 0.001894220 × 1.355818 = 0.002568 kg·m²
+#   Iyy = 0.006211019 slug·ft² = 0.006211019 × 1.355818 = 0.008421 kg·m²
+#   Izz = 0.007194665 slug·ft² = 0.007194665 × 1.355818 = 0.009755 kg·m²
 #
 # Initial angular rates (body wrt ECI, in body frame):
-#   p₀ = 10 deg/s,  q₀ = 20 deg/s,  r₀ = 30 deg/s
-# Stored as ECEF-relative rates; BuildInitialStateVector adds R^T · ω_E
-# to recover the inertial rate:  ω_B/ECI = ω_B/ECEF + R^T · [0, 0, ω_E]
-#   roll  = 10°/s − ω_E  (R^T·ω_E ≈ [ω_E, 0, 0] at equator)
+#   p₀ = 10 deg/s (about x = North),  q₀ = 20 deg/s,  r₀ = 30 deg/s
+# Stored as ECEF-relative rates (Table 26); BuildInitialStateVector adds
+# R^T · ω_E to recover inertial rate: ω_B/ECI = ω_B/ECEF + R^T · [0, 0, ω_E]
+#   roll  = 10°/s − ω_E  (R^T·ω_E ≈ [ω_E, 0, 0] for x-body pointing North)
 #   pitch = 20°/s
 #   yaw   = 30°/s
 # ------------------------------------------------------------------------------
@@ -22,9 +30,9 @@ pose:
   lon_deg:    0.0    # deg  — geodetic longitude
   alt_m:   9144.0    # m    — geometric altitude MSL  (= 30 000 ft)
 
-  azimuth_deg: 0.0   # deg  — heading (nose azimuth from North)
-  zenith_deg: 90.0   # deg  — zenith angle of body +z axis (90 = horizontal)
-  roll_deg:    0.0   # deg  — roll about body +z axis
+  azimuth_deg:   0.0   # deg  — x-body points North (azimuth 0 = North)
+  zenith_deg:   90.0   # deg  — x-body is horizontal (zenith 90 = horizontal)
+  roll_deg:    180.0   # deg  — 180° roll puts y-body East, z-body Down (NASA Table 4 orientation)
 
 velocityNED:
   vn_mps: 0.0        # m/s  — north component
@@ -37,25 +45,25 @@ bodyRates:
   r_rad_s:  0.52359877559829883   # rad/s  — yaw   rate (ECEF-relative) = 30°/s
 
 inertialParameters:
-  mass_kg: 14.5939029372          # kg     (= 1.0 slug)
+  mass_kg: 2.267961895            # kg  (= 0.155404754 slug)
 
-  Ixx_kg_m2: 1.355817948329279   # kg·m²  (= 1 slug·ft²)
-  Iyy_kg_m2: 2.711635896658559   # kg·m²  (= 2 slug·ft²)
-  Izz_kg_m2: 4.067453844987838   # kg·m²  (= 3 slug·ft²)
+  Ixx_kg_m2: 0.002568217         # kg·m²  (= 0.001894220 slug·ft², about x = longest = 8 in)
+  Iyy_kg_m2: 0.008421012         # kg·m²  (= 0.006211019 slug·ft², about y = medium  = 4 in)
+  Izz_kg_m2: 0.009754656         # kg·m²  (= 0.007194665 slug·ft², about z = short   = 2.25 in)
   Ixy_kg_m2: 0.0                 # kg·m²
   Iyz_kg_m2: 0.0                 # kg·m²
   Ixz_kg_m2: 0.0                 # kg·m²
 
-  xbar_m: 0.0                    # m  — body-origin offset from CoG (x)
-  ybar_m: 0.0                    # m  — body-origin offset from CoG (y)
-  zbar_m: 0.0                    # m  — body-origin offset from CoG (z)
+  xbar_m: 0.0                    # m  — body-origin offset from CoG
+  ybar_m: 0.0                    # m
+  zbar_m: 0.0                    # m
 
 aerodynamicParameters:
-  S_m2: 0.0    # m²   — reference area (no drag)
+  S_m2: 0.0    # m²   — all coefficients zero for no-damping scenario
 
-  CL:  0.0    # —    lift coefficient
-  CD:  0.0    # —    drag coefficient (no aero damping)
-  CY:  0.0    # —    side-force coefficient
-  Cl:  0.0    # —    roll-moment coefficient
-  Cm:  0.0    # —    pitch-moment coefficient
-  Cn:  0.0    # —    yaw-moment coefficient
+  CL:  0.0
+  CD:  0.0
+  CY:  0.0
+  Cl:  0.0
+  Cm:  0.0
+  Cn:  0.0

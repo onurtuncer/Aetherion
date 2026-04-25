@@ -209,7 +209,14 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
         AE_CORE_INFO("Constructing TumblingBrickNoDampingSimulator "
                      "(J2 gravity, zero aero, Ixx={:.6f} Iyy={:.6f} Izz={:.6f} kg·m²)...",
             ip.Ixx, ip.Iyy, ip.Izz);
-        return std::make_unique<TumblingBrickNoDampingSimulator>(ip, x0, theta0);
+
+        // The brick's forces (~22 N) are ~6× smaller than the sphere's (~143 N),
+        // so residuals saturate near 1e-11 rather than 1e-13.  Loosen abs_tol
+        // to 1e-10 so the solver declares convergence instead of cycling.
+        ODE::RKMK::Core::NewtonOptions opt{};
+        opt.abs_tol = 1.0e-10;
+
+        return std::make_unique<TumblingBrickNoDampingSimulator>(ip, x0, theta0, opt);
     }
 
 } // namespace Aetherion::Examples::TumblingBrickNoDamping
