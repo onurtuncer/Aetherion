@@ -1,0 +1,45 @@
+{
+  "pose": {
+    "lat_deg": 0.0,
+    "lon_deg": 0.0,
+    "azimuth_deg": 0.0,
+    "zenith_deg": 90.0,
+    "roll_deg": 0.0,
+    "alt_m": 9144.0
+  },
+  "velocityNED": {
+    "north_mps": 0.0,
+    "east_mps": 0.0,
+    "down_mps": 0.0
+  },
+  "bodyRates": {
+    "roll_rad_s":  0.17446000406919428,
+    "pitch_rad_s": 0.34906585039886591,
+    "yaw_rad_s":   0.52359877559829883
+  },
+  "inertialParameters": {
+    "mass_kg": 14.5939029372,
+    "inertia_kgm2": {
+      "Ixx": 1.355817948329279,
+      "Iyy": 2.711635896658559,
+      "Izz": 4.067453844987838,
+      "Ixy": 0.0,
+      "Iyz": 0.0,
+      "Ixz": 0.0
+    },
+    "body_origin_wrt_cog_m": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": 0.0
+    }
+  },
+  "aerodynamicParameters": {
+    "CL": 0.0,
+    "CD": 0.0,
+    "CY": 0.0,
+    "Cl": 0.0,
+    "Cm": 0.0,
+    "Cn": 0.0,
+    "S": 0.0
+  }
+}
