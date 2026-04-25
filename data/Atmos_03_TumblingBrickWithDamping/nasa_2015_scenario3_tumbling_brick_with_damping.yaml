@@ -1,0 +1,69 @@
+# ------------------------------------------------------------------------------
+# NASA TM-2015-218675  —  Atmospheric Scenario 3
+# Tumbling brick WITH aerodynamic damping  |  J2 gravity  |  US 1976 atmosphere
+#
+# All values in SI units.
+# Reference: NASA TM-2015-218675, Section B.1.3 / Tables 4 & 5.
+#
+# Identical initial conditions to Scenario 2 (no-damping brick).
+# Aerodynamic parameters from Table 5 (fictitious US Standard Face Brick):
+#   S    = 2/9 ft²        = 0.020645120 m²  (reference area)
+#   b    = 1/3 ft = 4 in  = 0.101600000 m   (span: roll/yaw scaling)
+#   cbar = 2/3 ft = 8 in  = 0.203200000 m   (chord: pitch scaling)
+#   CD   = 0.01  (drag)
+#   Clp  = -1.0  (roll damping:  L = ¼ρ|V|S b² Clp p)
+#   Cmq  = -1.0  (pitch damping: M = ¼ρ|V|S c̄² Cmq q)
+#   Cnr  = -1.0  (yaw damping:   N = ¼ρ|V|S b² Cnr r)
+#
+# Body orientation: roll_deg=180 → x-body North, y-body East, z-body Down.
+# ------------------------------------------------------------------------------
+
+pose:
+  lat_deg:    0.0
+  lon_deg:    0.0
+  alt_m:   9144.0
+  azimuth_deg:   0.0
+  zenith_deg:   90.0
+  roll_deg:    180.0    # x→N, y→E, z→D  (Table 4 orientation)
+
+velocityNED:
+  vn_mps: 0.0
+  ve_mps: 0.0
+  vd_mps: 0.0
+
+bodyRates:
+  p_rad_s:  0.17446000406919428   # 10°/s − ω_E
+  q_rad_s:  0.34906585039886591   # 20°/s
+  r_rad_s:  0.52359877559829883   # 30°/s
+
+inertialParameters:
+  mass_kg: 2.267961895            # 0.155405 slug  (Table 4)
+
+  Ixx_kg_m2: 0.002568217         # 0.001894 slug·ft²
+  Iyy_kg_m2: 0.008421012         # 0.006211 slug·ft²
+  Izz_kg_m2: 0.009754656         # 0.007195 slug·ft²
+  Ixy_kg_m2: 0.0
+  Iyz_kg_m2: 0.0
+  Ixz_kg_m2: 0.0
+
+  xbar_m: 0.0
+  ybar_m: 0.0
+  zbar_m: 0.0
+
+aerodynamicParameters:
+  S_m2:    0.020645120   # 2/9 ft²        (Table 5)
+  b_m:     0.101600000   # 1/3 ft = 4 in  (span)
+  cbar_m:  0.203200000   # 2/3 ft = 8 in  (chord)
+
+  CL:   0.0
+  CD:   0.01             # drag
+  CY:   0.0
+  Cl:   0.0
+  Cm:   0.0
+  Cn:   0.0
+
+  Clp: -1.0              # roll damping
+  Clr:  0.0
+  Cmq: -1.0              # pitch damping
+  Cnp:  0.0
+  Cnr: -1.0              # yaw damping

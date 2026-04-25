@@ -93,4 +93,83 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(AeroPolicy<DragOnlyAeroPolicy>);
 
+/// @brief Aerodynamic policy for an asymmetric rigid body with drag and
+///        rotary damping moments (no lift or cross-coupling terms).
+///
+/// Computes:
+///   - **Drag force**:   @f$ \mathbf{F} = -\tfrac{1}{2}\rho\,C_D\,S\,|v_\text{rel}|\,v_\text{rel} @f$
+///   - **Roll  moment**: @f$ L = \tfrac{1}{4}\rho\,|V|\,S\,b^2\,C_{lp}\,p @f$
+///   - **Pitch moment**: @f$ M = \tfrac{1}{4}\rho\,|V|\,S\,\bar{c}^2\,C_{mq}\,q @f$
+///   - **Yaw   moment**: @f$ N = \tfrac{1}{4}\rho\,|V|\,S\,b^2\,C_{nr}\,r @f$
+///
+/// All quantities in SI (m, kg, s, rad).  Reference lengths @p b and @p cbar
+/// follow the standard non-dimensional rate convention:
+///   @f$ \hat{p} = pb/(2V),\; \hat{q} = q\bar{c}/(2V),\; \hat{r} = rb/(2V) @f$
+///
+/// Uses atmosphere-relative airspeed for both drag and moment scaling,
+/// consistent with @c DragOnlyAeroPolicy.  AD-safe for use with CppAD.
+///
+/// Satisfies @c AeroPolicy.
+    struct BrickDampingAeroPolicy {
+        double CD  { 0.0 }; ///< Drag coefficient [-].
+        double S   { 0.0 }; ///< Reference area [m²].
+        double b   { 0.0 }; ///< Span reference length [m] (roll and yaw scaling).
+        double cbar{ 0.0 }; ///< Chord reference length [m] (pitch scaling).
+        double Clp { 0.0 }; ///< Roll damping derivative @f$C_{l_p}@f$ [-].
+        double Cmq { 0.0 }; ///< Pitch damping derivative @f$C_{m_q}@f$ [-].
+        double Cnr { 0.0 }; ///< Yaw damping derivative @f$C_{n_r}@f$ [-].
+
+        BrickDampingAeroPolicy() = default;
+        BrickDampingAeroPolicy(double cd, double s, double b_,
+                               double cbar_, double clp, double cmq, double cnr)
+            : CD(cd), S(s), b(b_), cbar(cbar_), Clp(clp), Cmq(cmq), Cnr(cnr) {}
+
+        template<class Sc>
+        Spatial::Wrench<Sc>
+            operator()(const ODE::RKMK::Lie::SE3<Sc>& g,
+                const Eigen::Matrix<Sc, 6, 1>& nu_B,
+                Sc /*mass*/, Sc /*t*/) const
+        {
+            using Environment::detail::SquareRoot;
+
+            // Body angular rates (ECI-relative; Earth-rate correction ~0.015%, neglected)
+            const Eigen::Matrix<Sc, 3, 1> omega_B = nu_B.template head<3>();
+
+            // Atmosphere-relative linear velocity (same as DragOnlyAeroPolicy)
+            const Eigen::Matrix<Sc, 3, 1> v_B = nu_B.template tail<3>();
+            constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
+            const Eigen::Matrix<Sc, 3, 1> omega_E(Sc(0), Sc(0), Sc(kOmegaE));
+            const Eigen::Matrix<Sc, 3, 1> v_surface = g.R.transpose() * omega_E.cross(g.p);
+            const Eigen::Matrix<Sc, 3, 1> v_rel = v_B - v_surface;
+
+            // Geocentric altitude and US 1976 density
+            const Sc alt = g.p.norm() - Sc(Environment::WGS84::kSemiMajorAxis_m);
+            const Sc rho = Environment::US1976Atmosphere(alt).rho;
+
+            // True airspeed — AD-safe sqrt
+            const Sc v2     = v_rel.squaredNorm();
+            const Sc v_safe = SquareRoot(v2 + Sc(1.0e-30));
+
+            // Drag force: −½ ρ CD S |v_rel| v_rel
+            const Sc k_drag = Sc(0.5) * rho * Sc(CD) * Sc(S) * v_safe;
+
+            // Damping moments: ¼ ρ |V| S (ref_len²) C_xrate * rate
+            const Sc k_mom = Sc(0.25) * rho * v_safe * Sc(S);
+            const Sc b2    = Sc(b * b);
+            const Sc cb2   = Sc(cbar * cbar);
+
+            Spatial::Wrench<Sc> w{};
+            w.f.setZero();
+            // Moments (head<3>): [L, M, N]
+            w.f(0) = k_mom * b2  * Sc(Clp) * omega_B(0);
+            w.f(1) = k_mom * cb2 * Sc(Cmq) * omega_B(1);
+            w.f(2) = k_mom * b2  * Sc(Cnr) * omega_B(2);
+            // Force (tail<3>)
+            w.f.template tail<3>() = -k_drag * v_rel;
+            return w;
+        }
+    };
+
+    static_assert(AeroPolicy<BrickDampingAeroPolicy>);
+
 } // namespace Aetherion::FlightDynamics

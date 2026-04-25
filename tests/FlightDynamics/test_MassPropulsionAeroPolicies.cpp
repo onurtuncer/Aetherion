@@ -368,3 +368,150 @@ TEST_CASE("DragOnlyAeroPolicy: evaluates with AD<double> scalars",
     // drag must be negative in x (opposing +x relative motion)
     CHECK(CppAD::Value(w.f(3)) < 0.0);
 }
+
+// =============================================================================
+// BrickDampingAeroPolicy — regression tests
+//
+// Key invariants:
+//   1. Zero velocity → zero drag AND zero damping moments.
+//   2. Moments oppose angular rates (Clp<0 → L opposes p).
+//   3. Moments scale with ρ·|V|·S·ref²·rate (correct formula).
+//   4. Drag part is identical to DragOnlyAeroPolicy.
+//   5. AD<double> evaluates without error.
+// =============================================================================
+
+TEST_CASE("BrickDampingAeroPolicy: zero velocity gives zero wrench",
+    "[FlightDynamics][aero][brickdamping]")
+{
+    using namespace Aetherion::Environment;
+    const double r = WGS84::kSemiMajorAxis_m + 9144.0;
+    const Vec3d  v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+
+    SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    Vec6d nu;
+    nu << 0.1, 0.2, 0.3,                          // body angular rates
+          v_surf.x(), v_surf.y(), v_surf.z();      // co-rotating = zero airspeed
+
+    Aetherion::FlightDynamics::BrickDampingAeroPolicy p{
+        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0};
+    auto w = p(g, nu, 2.268, 0.0);
+
+    // Zero airspeed → no drag, no damping moments (all scale with |V|)
+    for (int i = 0; i < 6; ++i)
+        CHECK_THAT(w.f(i), WithinAbs(0.0, 1e-6));
+}
+
+TEST_CASE("BrickDampingAeroPolicy: moments oppose angular rates",
+    "[FlightDynamics][aero][brickdamping]")
+{
+    // Body co-rotating + extra roll rate p = +0.5 rad/s → roll moment must be negative
+    using namespace Aetherion::Environment;
+    const double r = WGS84::kSemiMajorAxis_m + 9144.0;
+    const Vec3d  v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    const double V_airspeed = 50.0;   // add downward airspeed to activate moments
+
+    SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    Vec6d nu;
+    nu << 0.5, 0.3, -0.2,
+          v_surf.x(), v_surf.y(), v_surf.z() + (-V_airspeed); // downward
+
+    Aetherion::FlightDynamics::BrickDampingAeroPolicy p{
+        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0};
+    auto w = p(g, nu, 2.268, 0.0);
+
+    // Clp = -1 → roll moment opposes positive p → L < 0
+    CHECK(w.f(0) < 0.0);
+    // Cmq = -1 → pitch moment opposes positive q → M < 0
+    CHECK(w.f(1) < 0.0);
+    // Cnr = -1 → yaw moment opposes negative r → N > 0
+    CHECK(w.f(2) > 0.0);
+    // Moments are zero: drag force must be non-zero (opposing downward airspeed)
+    CHECK(w.f(5) > 0.0);
+}
+
+TEST_CASE("BrickDampingAeroPolicy: roll moment formula matches expected value",
+    "[FlightDynamics][aero][brickdamping]")
+{
+    // L = ¼ ρ |V| S b² Clp p
+    using namespace Aetherion::Environment;
+    constexpr double alt_m = 9144.0;
+    constexpr double Vair  = 100.0;   // m/s airspeed
+    constexpr double p_rad = 0.5;     // rad/s roll rate
+    const double     r     = WGS84::kSemiMajorAxis_m + alt_m;
+    const Vec3d      v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+
+    SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    Vec6d nu;
+    nu << p_rad, 0.0, 0.0,
+          v_surf.x(), v_surf.y(), v_surf.z() + (-Vair);
+
+    constexpr double CD=0.01, S=0.020645, b=0.1016, cbar=0.2032, Clp=-1.0, Cmq=-1.0, Cnr=-1.0;
+    Aetherion::FlightDynamics::BrickDampingAeroPolicy pol{CD, S, b, cbar, Clp, Cmq, Cnr};
+    auto w = pol(g, nu, 2.268, 0.0);
+
+    const double rho     = US1976Atmosphere(alt_m).rho;
+    const double L_expected = 0.25 * rho * Vair * S * b * b * Clp * p_rad;
+
+    CHECK_THAT(w.f(0), WithinAbs(L_expected, std::abs(L_expected) * 1e-9 + 1e-15));
+    // q=r=0 → no pitch or yaw moment
+    CHECK_THAT(w.f(1), WithinAbs(0.0, 1e-12));
+    CHECK_THAT(w.f(2), WithinAbs(0.0, 1e-12));
+}
+
+TEST_CASE("BrickDampingAeroPolicy: drag part matches DragOnlyAeroPolicy",
+    "[FlightDynamics][aero][brickdamping]")
+{
+    // With zero angular rates, the drag force should equal DragOnlyAeroPolicy
+    using namespace Aetherion::Environment;
+    const double r = WGS84::kSemiMajorAxis_m + 9144.0;
+    const Vec3d  v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    const Vec3d  dv(20.0, -15.0, -10.0);
+
+    SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    Vec6d nu;
+    nu << 0.0, 0.0, 0.0,
+          v_surf.x() + dv.x(), v_surf.y() + dv.y(), v_surf.z() + dv.z();
+
+    Aetherion::FlightDynamics::BrickDampingAeroPolicy   bd{0.01, 0.020645, 0.1016, 0.2032, 0.0, 0.0, 0.0};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy       donly{0.01, 0.020645};
+
+    auto wb = bd(g, nu, 2.268, 0.0);
+    auto wd = donly(g, nu, 2.268, 0.0);
+
+    // Forces must match; moments are zero in both cases
+    for (int i = 3; i < 6; ++i)
+        CHECK_THAT(wb.f(i), WithinAbs(wd.f(i), std::abs(wd.f(i)) * 1e-12 + 1e-20));
+    for (int i = 0; i < 3; ++i)
+        CHECK_THAT(wb.f(i), WithinAbs(0.0, 1e-15));
+}
+
+TEST_CASE("BrickDampingAeroPolicy: evaluates with AD<double>",
+    "[FlightDynamics][aero][brickdamping][AD]")
+{
+    using AD   = CppAD::AD<double>;
+    using SE3AD  = Aetherion::ODE::RKMK::Lie::SE3<AD>;
+    using Vec6AD = Eigen::Matrix<AD, 6, 1>;
+    using Mat3AD = Eigen::Matrix<AD, 3, 3>;
+    using Vec3AD = Eigen::Matrix<AD, 3, 1>;
+    using namespace Aetherion::Environment;
+
+    const double r = WGS84::kSemiMajorAxis_m + 9144.0;
+    constexpr double omegaE = WGS84::kRotationRate_rad_s;
+    const Vec3AD rECI(AD(r), AD(0.0), AD(0.0));
+    const Vec3AD omega_E(AD(0.0), AD(0.0), AD(omegaE));
+    const Vec3AD v_surf = Mat3AD::Identity().transpose() * omega_E.cross(rECI);
+
+    SE3AD g(Mat3AD::Identity(), rECI);
+    Vec6AD nu;
+    nu << AD(0.5), AD(0.3), AD(-0.2),
+          v_surf(0) + AD(20.0), v_surf(1), v_surf(2) + AD(-50.0);
+
+    Aetherion::FlightDynamics::BrickDampingAeroPolicy pol{
+        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0};
+    auto w = pol(g, nu, AD(2.268), AD(0.0));
+
+    // roll moment must oppose positive p
+    CHECK(CppAD::Value(w.f(0)) < 0.0);
+    // drag must be non-zero
+    CHECK(CppAD::Value(w.f(3)) != 0.0);
+}

@@ -12,4 +12,5 @@
 add_subdirectory(DraglessSphere)
 add_subdirectory(SphereWithAtmosphericDrag)
 add_subdirectory(TumblingBrickNoDamping)
+add_subdirectory(TumblingBrickWithDamping)
 
