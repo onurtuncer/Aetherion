@@ -56,7 +56,7 @@ aerodynamicParameters:
   cbar_m:  0.203200000   # 2/3 ft = 8 in  (chord)
 
   CL:   0.0
-  CD:   0.01             # drag
+  CD:   0.0              # no translational drag (Scenario 3 isolates rotational damping)
   CY:   0.0
   Cl:   0.0
   Cm:   0.0
