@@ -670,6 +670,234 @@ as the other examples.  The only structural differences are:
   causes residuals to saturate at ~4×10⁻¹² — just above the tighter
   threshold — which would cause the solver to cycle indefinitely.
 
+.. _example_tumbling_brick_damped:
+
+Tumbling Brick, With Aerodynamic Damping (NASA TM-2015-218675 Atmospheric Scenario 3)
+--------------------------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.3 — Atmospheric Simulation 03.
+
+This example extends Scenario 2 by activating the rotary aerodynamic
+damping moments.  The vehicle, initial position, and initial angular
+rates are identical to Scenario 2; the only difference is that
+``BrickDampingAeroPolicy`` now applies negative-damping moments
+(:math:`C_{l_p} = C_{m_q} = C_{n_r} = -1`) that act against the angular
+velocity, draining rotational kinetic energy as the airspeed builds up.
+
+Translational drag (:math:`C_D`) is set to zero so that the scenario
+isolates the rotational damping physics — the translational trajectory is
+therefore identical to Scenario 2 to within floating-point noise.
+
+Physics Model
+^^^^^^^^^^^^^
+
+.. code-block:: cpp
+
+   using TumblingBrickWithDampingVF = RigidBody::VectorField<
+       FlightDynamics::J2GravityPolicy,          // J2 gravity (WGS-84)
+       FlightDynamics::BrickDampingAeroPolicy,   // rotary damping: Clp=Cmq=Cnr=−1
+       FlightDynamics::ZeroPropulsionPolicy,
+       FlightDynamics::ConstantMassPolicy
+   >;
+
+The damping moments in the body frame follow the standard non-dimensional
+rate formulation:
+
+.. math::
+
+   L = \tfrac{1}{4}\rho\,|V|\,S\,b^2\,C_{l_p}\,p, \quad
+   M = \tfrac{1}{4}\rho\,|V|\,S\,\bar{c}^2\,C_{m_q}\,q, \quad
+   N = \tfrac{1}{4}\rho\,|V|\,S\,b^2\,C_{n_r}\,r
+
+where :math:`|V|` is the atmosphere-relative airspeed,
+:math:`b = 0.1016\ \text{m}` (span), and
+:math:`\bar{c} = 0.2032\ \text{m}` (chord).
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+Identical to :ref:`example_tumbling_brick` (Scenario 2). Configuration
+read from
+:file:`data/Atmos_03_TumblingBrickWithDamping/nasa_2015_scenario3_tumbling_brick_with_damping.json`.
+
+Key aerodynamic parameters (NASA TM Table 5):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 50
+
+   * - Parameter
+     - Value
+     - Notes
+   * - :math:`C_D`
+     - 0.0
+     - No translational drag — scenario isolates rotational damping
+   * - :math:`S`
+     - 0.020645 m²
+     - = 2/9 ft²
+   * - :math:`b`
+     - 0.1016 m
+     - = 1/3 ft (4 in span, y-axis)
+   * - :math:`\bar{c}`
+     - 0.2032 m
+     - = 2/3 ft (8 in chord, x-axis)
+   * - :math:`C_{l_p}`
+     - −1.0
+     - Roll damping
+   * - :math:`C_{m_q}`
+     - −1.0
+     - Pitch damping
+   * - :math:`C_{n_r}`
+     - −1.0
+     - Yaw damping
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   cmake --build build --target TumblingBrickWithDamping
+
+   ./build/TumblingBrickWithDamping \
+       --inputFileName  nasa_2015_scenario3_tumbling_brick_with_damping.json \
+       --outputFileName atmos_03_output.csv                                  \
+       --startTime      0.0                                                  \
+       --endTime        30.0                                                 \
+       --timeStep       0.002                                                \
+       --writeInterval  50
+
+Validation Results
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 8 15 15 12 14 14 12 10
+
+   * - :math:`t` [s]
+     - Alt\ :sub:`ref` [m]
+     - Alt\ :sub:`sim` [m]
+     - :math:`\Delta` alt [m]
+     - TAS\ :sub:`ref` [m/s]
+     - TAS\ :sub:`sim` [m/s]
+     - :math:`p_\text{ref}` [°/s]
+     - :math:`\Delta p` [°/s]
+   * - 0
+     - 9 144.000
+     - 9 144.000
+     - 0.000
+     - 0.000
+     - 0.000
+     - 10.000
+     - 0.000
+   * - 5
+     - 9 022.098
+     - 9 022.196
+     - +0.098
+     - 48.761
+     - 48.742
+     - −4.105
+     - −0.035
+   * - 10
+     - 8 656.382
+     - 8 656.578
+     - +0.196
+     - 97.526
+     - 97.507
+     - −0.118
+     - −0.002
+   * - 15
+     - 8 046.825
+     - 8 047.119
+     - +0.293
+     - 146.298
+     - 146.279
+     - 0.000
+     - 0.000
+   * - 20
+     - 7 193.380
+     - 7 193.771
+     - +0.391
+     - 195.082
+     - 195.063
+     - 0.000
+     - 0.000
+   * - 25
+     - 6 095.982
+     - 6 096.471
+     - +0.489
+     - 243.881
+     - 243.861
+     - 0.000
+     - 0.000
+   * - 30
+     - **4 754.546**
+     - **4 755.134**
+     - **+0.588**
+     - **292.698**
+     - **292.678**
+     - **0.000**
+     - **0.000**
+
+Translational accuracy is the same as Scenarios 1 and 2 (Δalt < 0.6 m,
+Δv < 0.02 m/s — rotating-Earth systematic offset).  The angular rates
+damp to zero by t ≈ 18 s; from t = 15 s onward Δp = Δq = Δr = 0.000°/s.
+
+Comparison Plots
+^^^^^^^^^^^^^^^^
+
+.. figure:: _static/atmos03/overview_dashboard.png
+   :alt: Overview comparison dashboard — all columns
+   :align: center
+   :width: 100%
+
+   Side-by-side comparison of Aetherion vs. `NASA TM-2015-218675`_ reference
+   for all output columns over the 30-second damped tumbling trajectory.
+
+**Altitude** and **true airspeed** — identical to Scenario 2 (no drag):
+
+.. figure:: _static/atmos03/altitudeMsl_m.png
+   :alt: Altitude MSL comparison
+   :align: center
+   :width: 85%
+
+**Body angular rates** — all three axes damp to zero by t ≈ 18 s:
+
+.. figure:: _static/atmos03/bodyAngularRateWrtEi_rad_s_Roll.png
+   :alt: Body roll rate comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos03/bodyAngularRateWrtEi_rad_s_Pitch.png
+   :alt: Body pitch rate comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos03/bodyAngularRateWrtEi_rad_s_Yaw.png
+   :alt: Body yaw rate comparison
+   :align: center
+   :width: 85%
+
+**Euler angles** (ZYX body → NED) converge once rotation ceases:
+
+.. figure:: _static/atmos03/eulerAngle_rad_Roll.png
+   :alt: Euler roll angle comparison
+   :align: center
+   :width: 85%
+
+**Atmospheric state**:
+
+.. figure:: _static/atmos03/ambientTemperature_K.png
+   :alt: Ambient temperature comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos03/airDensity_kg_m3.png
+   :alt: Air density comparison
+   :align: center
+   :width: 85%
+
 .. _example_sphere_with_drag:
 
 Sphere with Atmospheric Drag (NASA TM-2015-218675 Atmospheric Scenario 6)
