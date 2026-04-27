@@ -34,14 +34,12 @@
 
 namespace Aetherion::Examples::EastwardCannonball {
 
-    using DraglessSphere::DraglessSphereSimulator;
-
     void EastwardCannonballApplication::logStartupBanner() const
     {
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Aetherion - NASA TM-2015-218675 Atmospheric Scenario 9");
-        AE_CORE_INFO("Eastward cannonball - J2 gravitation - dragless sphere");
-        AE_CORE_INFO("  alt=0 m (sea level)  v_E=304.8 m/s  v_U=304.8 m/s");
+        AE_CORE_INFO("Eastward cannonball - J2 gravity - sphere with drag");
+        AE_CORE_INFO("  alt=0 m  v_E=304.8 m/s  v_U=304.8 m/s  CD=0.1");
         AE_CORE_INFO("=======================================================");
     }
 
@@ -58,8 +56,11 @@ namespace Aetherion::Examples::EastwardCannonball {
         AE_CORE_INFO("Initial body twist nu_B = [{:.6e}, {:.6e}, {:.6e}, {:.6e}, {:.6e}, {:.6e}]",
             x0.nu_B(0), x0.nu_B(1), x0.nu_B(2),
             x0.nu_B(3), x0.nu_B(4), x0.nu_B(5));
+        AE_CORE_INFO("Drag: CD={:.4f}  S_ref={:.6f} m²",
+            rb_cfg.aerodynamicParameters.CD, rb_cfg.aerodynamicParameters.S);
 
-        m_Simulator = constructSimulator(rb_cfg.inertialParameters, x0, theta0);
+        m_Simulator = constructSimulator(
+            rb_cfg.inertialParameters, rb_cfg.aerodynamicParameters, x0, theta0);
     }
 
     void EastwardCannonballApplication::writeInitialSnapshot(std::ofstream& csv) const
@@ -106,9 +107,6 @@ namespace Aetherion::Examples::EastwardCannonball {
         AE_CORE_INFO("  Final latitude  : {:.8f} deg", snap.latitude_rad  * kToDeg);
         AE_CORE_INFO("  Final longitude : {:.8f} deg", snap.longitude_rad * kToDeg);
         AE_CORE_INFO("  Final Mach      : {:.6f}",    snap.mach);
-        AE_CORE_INFO("  Final q (body→ECI) : [{:.6f}, {:.6f}, {:.6f}, {:.6f}]",
-            snap.q_body_to_eci.w(), snap.q_body_to_eci.x(),
-            snap.q_body_to_eci.y(), snap.q_body_to_eci.z());
         AE_CORE_INFO("Output written to '{}'", getConfig().outputFileName);
         AE_CORE_INFO("=======================================================");
     }
@@ -121,26 +119,21 @@ namespace Aetherion::Examples::EastwardCannonball {
     {
         const auto& fname = getConfig().inputFileName;
         if (fname.empty())
-            throw std::runtime_error(
-                "No --inputFileName specified.");
+            throw std::runtime_error("No --inputFileName specified.");
 
         AE_CORE_INFO("Loading vehicle config from '{}'", fname);
         const RigidBody::Config cfg = Serialization::LoadConfig(fname);
 
-        AE_CORE_TRACE("Vehicle config loaded:");
         AE_CORE_TRACE("  lat={:.4f} deg  lon={:.4f} deg  alt={:.2f} m",
             cfg.pose.lat_deg, cfg.pose.lon_deg, cfg.pose.alt_m);
         AE_CORE_TRACE("  v_NED = [{:.2f}, {:.2f}, {:.2f}] m/s",
             cfg.velocityNED.north_mps, cfg.velocityNED.east_mps, cfg.velocityNED.down_mps);
-        AE_CORE_TRACE("  mass  = {:.4f} kg", cfg.inertialParameters.mass_kg);
         return cfg;
     }
 
     double EastwardCannonballApplication::computeInitialERA(double t0) noexcept
     {
-        const double theta0 = DraglessSphereSimulator::kOmegaEarth_rad_s * t0;
-        AE_CORE_TRACE("Initial ERA theta0 = {:.10f} rad", theta0);
-        return theta0;
+        return SWADSim::kOmegaEarth_rad_s * t0;
     }
 
     RigidBody::StateD EastwardCannonballApplication::buildInitialState(
@@ -168,14 +161,17 @@ namespace Aetherion::Examples::EastwardCannonball {
         return state;
     }
 
-    std::unique_ptr<DraglessSphereSimulator>
+    std::unique_ptr<SWADSim>
         EastwardCannonballApplication::constructSimulator(
-            const RigidBody::InertialParameters& ip,
-            const RigidBody::StateD&             x0,
-            double                               theta0)
+            const RigidBody::InertialParameters&    ip,
+            const RigidBody::AerodynamicParameters& aero,
+            const RigidBody::StateD&                x0,
+            double                                  theta0)
     {
-        AE_CORE_INFO("Constructing DraglessSphereSimulator (J2 gravity, zero aero)...");
-        return std::make_unique<DraglessSphereSimulator>(ip, x0, theta0);
+        AE_CORE_INFO("Constructing SphereWithAtmosphericDragSimulator "
+                     "(J2 gravity, CD={:.4f}, S_ref={:.6f} m²)...",
+            aero.CD, aero.S);
+        return std::make_unique<SWADSim>(ip, aero, x0, theta0);
     }
 
 } // namespace Aetherion::Examples::EastwardCannonball
