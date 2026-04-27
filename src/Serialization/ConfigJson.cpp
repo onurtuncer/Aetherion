@@ -42,6 +42,17 @@ namespace Aetherion::Serialization {
         deserialize("bodyRates", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.bodyRates); });
         deserialize("inertialParameters", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.inertialParameters); });
         deserialize("aerodynamicParameters", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.aerodynamicParameters); });
+
+        // Optional: ambient wind in NED frame (defaults to calm if absent)
+        if (j.contains("wind")) {
+            const auto& w = j.at("wind");
+            auto get_opt = [&](const char* key, double& field) {
+                if (w.contains(key)) field = w.at(key).get<double>();
+            };
+            get_opt("north_mps", cfg.wind.north_mps);
+            get_opt("east_mps",  cfg.wind.east_mps);
+            get_opt("down_mps",  cfg.wind.down_mps);
+        }
     }
 
     //void from_json(const nlohmann::json& j, RigidBody::Config& cfg)

@@ -15,4 +15,5 @@ add_subdirectory(TumblingBrickNoDamping)
 add_subdirectory(TumblingBrickWithDamping)
 add_subdirectory(EastwardCannonball)
 add_subdirectory(NorthwardCannonball)
+add_subdirectory(DroppedSphereSteadyWind)
 

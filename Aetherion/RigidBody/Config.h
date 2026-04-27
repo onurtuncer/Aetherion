@@ -13,6 +13,7 @@
 #include "AerodynamicParameters.h"
 #include "VelocityNED.h"
 #include "BodyRates.h"
+#include <Aetherion/Environment/Wind.h>
 
 namespace Aetherion::RigidBody {
 
@@ -24,11 +25,12 @@ namespace Aetherion::RigidBody {
 /// Aetherion::Serialization::LoadConfig().
 struct Config
 {
-    GeodeticPoseNED      pose;                  ///< Initial geodetic position and attitude in the NED frame.
-    VelocityNED          velocityNED;           ///< Initial velocity expressed in the local NED frame [m/s].
-    BodyRates            bodyRates;             ///< Initial angular rates expressed in the body frame [rad/s].
-    InertialParameters   inertialParameters;    ///< Mass and inertia properties of the rigid body.
+    GeodeticPoseNED       pose;                  ///< Initial geodetic position and attitude in the NED frame.
+    VelocityNED           velocityNED;           ///< Initial velocity expressed in the local NED frame [m/s].
+    BodyRates             bodyRates;             ///< Initial angular rates expressed in the body frame [rad/s].
+    InertialParameters    inertialParameters;    ///< Mass and inertia properties of the rigid body.
     AerodynamicParameters aerodynamicParameters;///< Reference geometry and aerodynamic coefficients.
+    Environment::ConstantWind wind;             ///< Ambient wind in NED frame [m/s]; defaults to calm (zero).
 };
 
 } // namespace Aetherion::RigidBody

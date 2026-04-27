@@ -30,4 +30,16 @@ namespace Aetherion::Environment::detail {
         return exp(x);
     }
 
+    template <class S>
+    inline S Sine(const S& x) {
+        using std::sin;
+        return sin(x);
+    }
+
+    template <class S>
+    inline S Cosine(const S& x) {
+        using std::cos;
+        return cos(x);
+    }
+
 } // namespace Aetherion::Environment::detail
