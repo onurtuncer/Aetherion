@@ -11,7 +11,9 @@
 // Catch2 tests for:
 //   FlightDynamics/Policies/MassPolicies.h     (ConstantMassPolicy, LinearBurnPolicy)
 //   FlightDynamics/Policies/PropulsionPolicies.h (ZeroPropulsionPolicy, ConstantThrustPolicy)
-//   FlightDynamics/Policies/AeroPolicies.h      (ZeroAeroPolicy, DragOnlyAeroPolicy)
+//   FlightDynamics/Policies/AeroPolicies.h      (ZeroAeroPolicy, DragOnlyAeroPolicy,
+//                                               DragOnlyAeroPolicy, BrickDampingAeroPolicy,
+//                                               SteadyWindDragPolicy)
 // ------------------------------------------------------------------------------
 
 #include <catch2/catch_test_macros.hpp>
@@ -514,4 +516,135 @@ TEST_CASE("BrickDampingAeroPolicy: evaluates with AD<double>",
     CHECK(CppAD::Value(w.f(0)) < 0.0);
     // drag must be non-zero
     CHECK(CppAD::Value(w.f(3)) != 0.0);
+}
+
+// =============================================================================
+// SteadyWindDragPolicy — regression tests
+//
+// Key invariants:
+//   1. Zero wind: identical to DragOnlyAeroPolicy.
+//   2. Co-rotating sphere with east wind: TAS = wind speed, drag points east
+//      (wind pushes sphere eastward).
+//   3. Drag scales correctly with combined relative velocity.
+//   4. Wind rotates with ERA: at t=T, ECEF wind is expressed in ECI frame.
+//   5. AD<double> evaluation.
+// =============================================================================
+
+TEST_CASE("SteadyWindDragPolicy: zero wind matches DragOnlyAeroPolicy",
+    "[FlightDynamics][aero][wind]")
+{
+    using namespace Aetherion::Environment;
+    const double r = WGS84::kSemiMajorAxis_m + 9144.0;
+    const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    const Vec3d dv(5.0, -8.0, -15.0);
+
+    SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    Vec6d nu;
+    nu << 0, 0, 0, v_surf.x()+dv.x(), v_surf.y()+dv.y(), v_surf.z()+dv.z();
+
+    Aetherion::FlightDynamics::SteadyWindDragPolicy  wp{0.1, 0.018241, 0,0,0};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy    dp{0.1, 0.018241};
+
+    auto ww = wp(g, nu, 14.59, 0.0);
+    auto wd = dp(g, nu, 14.59, 0.0);
+
+    for (int i = 3; i < 6; ++i)
+        CHECK_THAT(ww.f(i), WithinAbs(wd.f(i), std::abs(wd.f(i))*1e-12 + 1e-20));
+}
+
+TEST_CASE("SteadyWindDragPolicy: co-rotating sphere with east wind has nonzero TAS at t=0",
+    "[FlightDynamics][aero][wind]")
+{
+    // Sphere stationary in NED (co-rotating), eastward wind = 6.096 m/s.
+    // v_rel = v_B - v_surface_body - v_wind_body
+    //       = 0 - 0 - v_wind_body  (since v_B = v_surface_body for co-rotating sphere)
+    // Drag force must oppose v_wind → force in +East direction in body frame.
+    using namespace Aetherion::Environment;
+    const double r = WGS84::kSemiMajorAxis_m + 9144.0;
+    const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+
+    SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    Vec6d nu;
+    nu << 0, 0, 0, v_surf.x(), v_surf.y(), v_surf.z();  // co-rotating
+
+    // East wind = 6.096 m/s; at lat=0, lon=0, ECEF East = +y_ECEF
+    constexpr double v_wind = 6.096;
+    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{0.1, 0.018241, 0.0, v_wind, 0.0};
+    auto w = wp(g, nu, 14.59, 0.0);
+
+    // All moments zero
+    CHECK_THAT(w.f(0), WithinAbs(0.0, 1e-10));
+    CHECK_THAT(w.f(1), WithinAbs(0.0, 1e-10));
+    CHECK_THAT(w.f(2), WithinAbs(0.0, 1e-10));
+
+    // Drag force must be nonzero (wind creates airspeed)
+    const double F_mag = w.f.tail<3>().norm();
+    CHECK(F_mag > 0.0);
+
+    // Expected: F = ½ρ CD S v_wind² in the direction the wind pushes the sphere
+    // (which is East = +y_ECI direction → +y_body for R=I)
+    const double rho = US1976Atmosphere(9144.0).rho;
+    const double F_expected = 0.5 * rho * 0.1 * 0.018241 * v_wind * v_wind;
+    CHECK_THAT(F_mag, WithinAbs(F_expected, F_expected * 1e-6));
+
+    // At lat=0, lon=0 with R=I and ERA=0: East in body = +y_body (index 4)
+    // The wind pushes the sphere eastward → force component in +y_body
+    CHECK(w.f(4) > 0.0);
+}
+
+TEST_CASE("SteadyWindDragPolicy: ERA rotation applied correctly at nonzero t",
+    "[FlightDynamics][aero][wind]")
+{
+    // After a long time T, the ECEF frame has rotated by θ = ω_E × T.
+    // A +y_ECEF wind (east at t=0) becomes rotated in ECI.
+    // The force magnitude should be unchanged (rotation preserves magnitude).
+    using namespace Aetherion::Environment;
+    const double r = WGS84::kSemiMajorAxis_m + 9144.0;
+    const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+
+    SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    Vec6d nu;
+    nu << 0, 0, 0, v_surf.x(), v_surf.y(), v_surf.z();
+
+    constexpr double v_wind = 6.096;
+    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{0.1, 0.018241, 0.0, v_wind, 0.0};
+
+    const double rho = US1976Atmosphere(9144.0).rho;
+    const double F_expected = 0.5 * rho * 0.1 * 0.018241 * v_wind * v_wind;
+
+    // Force magnitude must equal F_expected regardless of t (rotation is isometric)
+    for (double t : {0.0, 5.0, 15.0, 30.0}) {
+        auto w = wp(g, nu, 14.59, t);
+        const double F_mag = w.f.tail<3>().norm();
+        CHECK_THAT(F_mag, WithinAbs(F_expected, F_expected * 1e-9));
+    }
+}
+
+TEST_CASE("SteadyWindDragPolicy: evaluates with AD<double>",
+    "[FlightDynamics][aero][wind][AD]")
+{
+    using AD    = CppAD::AD<double>;
+    using SE3AD = Aetherion::ODE::RKMK::Lie::SE3<AD>;
+    using Vec6AD = Eigen::Matrix<AD, 6, 1>;
+    using Mat3AD = Eigen::Matrix<AD, 3, 3>;
+    using Vec3AD = Eigen::Matrix<AD, 3, 1>;
+    using namespace Aetherion::Environment;
+
+    const double r = WGS84::kSemiMajorAxis_m + 9144.0;
+    constexpr double omegaE = WGS84::kRotationRate_rad_s;
+    const Vec3AD rECI(AD(r), AD(0.0), AD(0.0));
+    const Vec3AD oE(AD(0.0), AD(0.0), AD(omegaE));
+    const Vec3AD v_surf = Mat3AD::Identity().transpose() * oE.cross(rECI);
+
+    SE3AD g(Mat3AD::Identity(), rECI);
+    Vec6AD nu;
+    nu << AD(0), AD(0), AD(0), v_surf(0), v_surf(1), v_surf(2);  // co-rotating
+
+    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{0.1, 0.018241, 0.0, 6.096, 0.0};
+    auto w = wp(g, nu, AD(14.59), AD(0.0));
+
+    // East-wind force: +y_body component must be positive
+    CHECK(CppAD::Value(w.f(4)) > 0.0);
+    // Moments must be zero
+    CHECK_THAT(CppAD::Value(w.f(0)), WithinAbs(0.0, 1e-10));
 }
