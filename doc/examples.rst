@@ -898,6 +898,296 @@ Comparison Plots
    :align: center
    :width: 85%
 
+.. _example_eastward_cannonball:
+
+Eastward Cannonball (NASA TM-2015-218675 Atmospheric Scenario 9)
+-----------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.9 — Atmospheric Simulation 09.
+
+The same sphere as Scenario 6 (CD = 0.1) is fired from sea level (altitude = 0 m)
+at 45° into the east-upward quadrant: initial NED velocity
+:math:`[0,\;+304.8,\;-304.8]\ \text{m/s}` (1 000 ft/s each component).
+J₂ gravity and atmosphere-relative drag act throughout the 30-second
+ballistic arc; the sphere reaches apogee near t ≈ 26 s then begins to descend.
+
+Physics Model
+^^^^^^^^^^^^^
+
+Identical to :ref:`example_sphere_with_drag` — reuses
+``SphereWithAtmosphericDragSimulator`` directly with Scenario 9 initial
+conditions.  No new VF or Simulator type is introduced.
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Altitude (MSL)
+     - 0.0 m (sea level)
+     - Fired from ground level
+   * - NED velocity (N, E, D)
+     - [0, +304.8, −304.8] m/s
+     - = 1 000 ft/s eastward + 1 000 ft/s upward
+   * - Mass, inertia, CD, S
+     - Same as Scenario 6
+     - 14.594 kg, CD = 0.1, S = 0.018241 m²
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   cmake --build build --target EastwardCannonball
+
+   ./build/EastwardCannonball \
+       --inputFileName  nasa_2015_scenario9_eastward_cannonball.json \
+       --outputFileName atmos_09_output.csv                          \
+       --startTime      0.0                                          \
+       --endTime        30.0                                         \
+       --timeStep       0.002                                        \
+       --writeInterval  50
+
+Validation Results
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 18 18 14 18 18
+
+   * - :math:`t` [s]
+     - Alt\ :sub:`ref` [m]
+     - Alt\ :sub:`sim` [m]
+     - :math:`\Delta` alt [m]
+     - TAS\ :sub:`ref` [m/s]
+     - TAS\ :sub:`sim` [m/s]
+   * - 0
+     - 0.000
+     - 0.000
+     - 0.000
+     - 431.052
+     - 431.052
+   * - 5
+     - 1 301.340
+     - 1 301.377
+     - +0.037
+     - 344.434
+     - 344.337
+   * - 10
+     - 2 226.770
+     - 2 227.004
+     - +0.235
+     - 283.972
+     - 283.907
+   * - 15
+     - 2 840.160
+     - 2 840.661
+     - +0.501
+     - 240.739
+     - 240.691
+   * - 20
+     - 3 176.450
+     - 3 177.243
+     - +0.793
+     - 211.852
+     - 211.802
+   * - 25
+     - 3 256.730
+     - 3 257.816
+     - +1.086
+     - 196.608
+     - 196.559
+   * - 30
+     - **3 095.800**
+     - **3 097.169**
+     - **+1.369**
+     - **194.179**
+     - **194.132**
+
+Altitude error 1.37 m (0.044%) and speed error 0.047 m/s at t = 30 s —
+same rotating-Earth systematic offset as all other scenarios.
+
+Comparison Plots
+^^^^^^^^^^^^^^^^
+
+.. figure:: _static/atmos09/overview_dashboard.png
+   :alt: Overview comparison dashboard — all columns
+   :align: center
+   :width: 100%
+
+   Aetherion vs. `NASA TM-2015-218675`_ reference over the 30-second
+   eastward cannonball ballistic arc.
+
+.. figure:: _static/atmos09/altitudeMsl_m.png
+   :alt: Altitude MSL comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos09/trueAirspeed_m_s.png
+   :alt: True airspeed comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos09/feVelocity_m_s_Z.png
+   :alt: Downward velocity comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos09/dynamicPressure_Pa.png
+   :alt: Dynamic pressure comparison
+   :align: center
+   :width: 85%
+
+.. _example_northward_cannonball:
+
+Northward Cannonball (NASA TM-2015-218675 Atmospheric Scenario 10)
+-------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.10 — Atmospheric Simulation 10.
+
+Identical setup to Scenario 9 but the horizontal component is directed
+**northward**: initial NED velocity :math:`[+304.8,\;0,\;-304.8]\ \text{m/s}`.
+Coriolis coupling causes a small westward drift (longitude ≈ −0.00012°)
+that is absent in Scenario 9.
+
+Physics Model
+^^^^^^^^^^^^^
+
+Identical to Scenarios 6 and 9 — reuses ``SphereWithAtmosphericDragSimulator``.
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Altitude (MSL)
+     - 0.0 m (sea level)
+     - Fired from ground level
+   * - NED velocity (N, E, D)
+     - [+304.8, 0, −304.8] m/s
+     - = 1 000 ft/s northward + 1 000 ft/s upward
+   * - Mass, inertia, CD, S
+     - Same as Scenario 6
+     - 14.594 kg, CD = 0.1, S = 0.018241 m²
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   cmake --build build --target NorthwardCannonball
+
+   ./build/NorthwardCannonball \
+       --inputFileName  nasa_2015_scenario10_northward_cannonball.json \
+       --outputFileName atmos_10_output.csv                            \
+       --startTime      0.0                                            \
+       --endTime        30.0                                           \
+       --timeStep       0.002                                          \
+       --writeInterval  50
+
+Validation Results
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 18 18 14 18 18
+
+   * - :math:`t` [s]
+     - Alt\ :sub:`ref` [m]
+     - Alt\ :sub:`sim` [m]
+     - :math:`\Delta` alt [m]
+     - TAS\ :sub:`ref` [m/s]
+     - TAS\ :sub:`sim` [m/s]
+   * - 0
+     - 0.000
+     - 0.000
+     - 0.000
+     - 431.052
+     - 431.052
+   * - 5
+     - 1 300.840
+     - 1 300.897
+     - +0.062
+     - 344.446
+     - 344.457
+   * - 10
+     - 2 224.880
+     - 2 225.131
+     - +0.244
+     - 284.021
+     - 284.053
+   * - 15
+     - 2 836.160
+     - 2 836.625
+     - +0.473
+     - 240.857
+     - 240.901
+   * - 20
+     - 3 169.650
+     - 3 170.373
+     - +0.718
+     - 212.073
+     - 212.111
+   * - 25
+     - 3 246.550
+     - 3 247.512
+     - +0.961
+     - 196.955
+     - 196.988
+   * - 30
+     - **3 081.730**
+     - **3 082.927**
+     - **+1.198**
+     - **194.646**
+     - **194.671**
+
+Altitude error 1.20 m (0.039%) and speed error 0.025 m/s at t = 30 s.
+
+Comparison Plots
+^^^^^^^^^^^^^^^^
+
+.. figure:: _static/atmos10/overview_dashboard.png
+   :alt: Overview comparison dashboard — all columns
+   :align: center
+   :width: 100%
+
+   Aetherion vs. `NASA TM-2015-218675`_ reference over the 30-second
+   northward cannonball ballistic arc.
+
+.. figure:: _static/atmos10/altitudeMsl_m.png
+   :alt: Altitude MSL comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos10/trueAirspeed_m_s.png
+   :alt: True airspeed comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos10/feVelocity_m_s_X.png
+   :alt: Northward velocity comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos10/dynamicPressure_Pa.png
+   :alt: Dynamic pressure comparison
+   :align: center
+   :width: 85%
+
 .. _example_sphere_with_drag:
 
 Sphere with Atmospheric Drag (NASA TM-2015-218675 Atmospheric Scenario 6)
