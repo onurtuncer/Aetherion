@@ -21,4 +21,17 @@ struct ConstantWind
     double down_mps { 0.0 }; ///< Downward  wind component [m/s] (usually zero).
 };
 
+/// @brief Altitude-varying wind profile specification (NED frame at h_ref_m).
+///
+/// Wind speed at altitude h scales as (h / h_ref_m)^shear_exp.
+/// Use with WindAwareDragPolicy<PowerLawWindShear>.
+struct WindShear
+{
+    double north_ref_mps{ 0.0 };   ///< North wind at h_ref_m [m/s].
+    double east_ref_mps { 0.0 };   ///< East  wind at h_ref_m [m/s].
+    double down_ref_mps { 0.0 };   ///< Down  wind at h_ref_m [m/s] (usually zero).
+    double h_ref_m      { 9144.0 };///< Reference altitude [m].
+    double shear_exp    { 1.3333 };///< Power-law exponent (4/3 ≈ 1.333 fits Scenario 8).
+};
+
 } // namespace Aetherion::Environment

@@ -13,6 +13,7 @@
 #include <Aetherion/Environment/Atmosphere.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
+#include <Aetherion/FlightDynamics/WindModels.h>
 
 namespace Aetherion::FlightDynamics {
 
@@ -249,5 +250,78 @@ namespace Aetherion::FlightDynamics {
     };
 
     static_assert(AeroPolicy<SteadyWindDragPolicy>);
+
+/// @brief General drag policy that supports any pluggable wind model.
+///
+/// Combines atmosphere-relative drag with an arbitrary @c WindModel:
+/// @f[
+///   \mathbf{v}_\text{rel} = \mathbf{v}_B
+///     - \underbrace{R^T(\omega_E \times r_\text{ECI})}_\text{Earth surface}
+///     - \underbrace{R^T R_\text{ECEF\to ECI}(t)\,\mathbf{v}_\text{wind,ECEF}(h,t)}_\text{wind}
+/// @f]
+///
+/// The wind velocity is obtained from the WindModel via
+/// @c WindModel::velocity_ecef(h, t), which may depend on altitude, time,
+/// or any other quantity.  Concrete models: @c ZeroWind, @c ConstantECEFWind,
+/// @c PowerLawWindShear (all in WindModels.h).
+///
+/// @tparam Wind  A type satisfying the @c WindModel concept.
+/// Satisfies @c AeroPolicy.
+    template<WindModel Wind>
+    struct WindAwareDragPolicy {
+        double CD   { 0.0 }; ///< Drag coefficient [-].
+        double S_ref{ 0.0 }; ///< Reference area [m²].
+        Wind   wind {};      ///< Wind model instance.
+
+        WindAwareDragPolicy() = default;
+        WindAwareDragPolicy(double cd, double s_ref, Wind w)
+            : CD(cd), S_ref(s_ref), wind(std::move(w)) {}
+
+        template<class S>
+        Spatial::Wrench<S>
+            operator()(const ODE::RKMK::Lie::SE3<S>& g,
+                const Eigen::Matrix<S, 6, 1>& nu_B,
+                S /*mass*/, S t) const
+        {
+            using Environment::detail::SquareRoot;
+            using Environment::detail::Sine;
+            using Environment::detail::Cosine;
+
+            // ── Earth surface velocity in body frame ──────────────────────
+            constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
+            const Eigen::Matrix<S, 3, 1> omega_E(S(0), S(0), S(kOmegaE));
+            const Eigen::Matrix<S, 3, 1> v_surface_body =
+                g.R.transpose() * omega_E.cross(g.p);
+
+            // ── Geocentric altitude ───────────────────────────────────────
+            const S h = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
+
+            // ── Wind in ECEF from model, rotated to ECI via ERA ───────────
+            const Eigen::Matrix<S, 3, 1> v_wind_ecef = wind.template velocity_ecef<S>(h, t);
+            const S theta = S(kOmegaE) * t;
+            const S ct = Cosine(theta), st = Sine(theta);
+            const Eigen::Matrix<S, 3, 1> v_wind_eci(
+                ct * v_wind_ecef(0) - st * v_wind_ecef(1),
+                st * v_wind_ecef(0) + ct * v_wind_ecef(1),
+                v_wind_ecef(2));
+            const Eigen::Matrix<S, 3, 1> v_wind_body = g.R.transpose() * v_wind_eci;
+
+            // ── Atmosphere-relative velocity and drag ─────────────────────
+            const Eigen::Matrix<S, 3, 1> v_B   = nu_B.template tail<3>();
+            const Eigen::Matrix<S, 3, 1> v_rel  = v_B - v_surface_body - v_wind_body;
+            const S rho    = Environment::US1976Atmosphere(h).rho;
+            const S v_safe = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
+            const S k      = S(0.5) * rho * S(CD) * S(S_ref) * v_safe;
+
+            Spatial::Wrench<S> w{};
+            w.f.setZero();
+            w.f.template tail<3>() = -k * v_rel;
+            return w;
+        }
+    };
+
+    static_assert(AeroPolicy<WindAwareDragPolicy<ZeroWind>>);
+    static_assert(AeroPolicy<WindAwareDragPolicy<ConstantECEFWind>>);
+    static_assert(AeroPolicy<WindAwareDragPolicy<PowerLawWindShear>>);
 
 } // namespace Aetherion::FlightDynamics

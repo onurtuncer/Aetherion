@@ -43,6 +43,19 @@ namespace Aetherion::Serialization {
         deserialize("inertialParameters", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.inertialParameters); });
         deserialize("aerodynamicParameters", [&](const auto& v) { ::Aetherion::Serialization::from_json(v, cfg.aerodynamicParameters); });
 
+        // Optional: altitude-varying wind shear
+        if (j.contains("windShear")) {
+            const auto& ws = j.at("windShear");
+            auto get_ws = [&](const char* key, double& field) {
+                if (ws.contains(key)) field = ws.at(key).get<double>();
+            };
+            get_ws("north_ref_mps", cfg.windShear.north_ref_mps);
+            get_ws("east_ref_mps",  cfg.windShear.east_ref_mps);
+            get_ws("down_ref_mps",  cfg.windShear.down_ref_mps);
+            get_ws("h_ref_m",       cfg.windShear.h_ref_m);
+            get_ws("shear_exp",     cfg.windShear.shear_exp);
+        }
+
         // Optional: ambient wind in NED frame (defaults to calm if absent)
         if (j.contains("wind")) {
             const auto& w = j.at("wind");
