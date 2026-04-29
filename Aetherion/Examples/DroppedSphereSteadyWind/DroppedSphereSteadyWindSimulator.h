@@ -16,6 +16,7 @@
 #include <Aetherion/RigidBody/AerodynamicParameters.h>
 #include <Aetherion/Environment/Wind.h>
 #include <Aetherion/ODE/RKMK/Core/NewtonOptions.h>
+#include <Eigen/Dense>
 
 namespace Aetherion::Examples::DroppedSphereSteadyWind {
 
@@ -41,14 +42,26 @@ public:
                 makeDragPolicy(aero, wind, lat0_rad, lon0_rad, theta0_rad)),
             std::move(initialState), opt)
         , m_Theta0(theta0_rad)
+        , m_WindNED(wind.north_mps, wind.east_mps, wind.down_mps)
     {
     }
 
     [[nodiscard]]
     Simulation::Snapshot1 snapshot() const noexcept override
     {
-        return Simulation::MakeSnapshot1(
+        auto snap = Simulation::MakeSnapshot1(
             time(), state(), currentTheta(), vectorField().gravity);
+
+        // Correct TAS, Mach, and dynamic pressure to use wind-relative airspeed.
+        // MakeSnapshot1 computes TAS = |v_NED| (Earth-relative); the correct
+        // atmosphere-relative TAS subtracts the ambient wind.
+        const Eigen::Vector3d v_air = snap.feVelocity_m_s - m_WindNED;
+        snap.trueAirspeed_m_s  = v_air.norm();
+        snap.mach              = snap.trueAirspeed_m_s / snap.speedOfSound_m_s;
+        snap.dynamicPressure_Pa = 0.5 * snap.airDensity_kg_m3
+                                      * snap.trueAirspeed_m_s
+                                      * snap.trueAirspeed_m_s;
+        return snap;
     }
 
     [[nodiscard]]
@@ -61,7 +74,8 @@ protected:
     void validate() const override {}
 
 private:
-    double m_Theta0;
+    double          m_Theta0;
+    Eigen::Vector3d m_WindNED;
 
     /// Convert NED wind → ECEF at the initial launch position, then construct policy.
     static FlightDynamics::SteadyWindDragPolicy
