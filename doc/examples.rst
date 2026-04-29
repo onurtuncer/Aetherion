@@ -1188,6 +1188,199 @@ Comparison Plots
    :align: center
    :width: 85%
 
+.. _example_steady_wind:
+
+Dropped Sphere, Steady Wind (NASA TM-2015-218675 Atmospheric Scenario 7)
+-------------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.7 — Atmospheric Simulation 07.
+
+The same sphere as Scenario 6 (CD = 0.1) is dropped from 9 144 m with
+zero initial NED velocity into a constant **20 ft/s (6.096 m/s) eastward
+wind**.  Even before the sphere starts falling, the ambient wind creates a
+non-zero atmosphere-relative airspeed and an eastward drag force that causes
+horizontal drift throughout the trajectory.
+
+The drag force is computed using the **wind-relative** velocity
+:math:`\mathbf{v}_\text{rel} = \mathbf{v}_B - \mathbf{v}_\text{surface,body} - \mathbf{v}_\text{wind,body}`
+where the ECEF wind vector is rotated to ECI at every function evaluation
+using the current Earth Rotation Angle :math:`\theta_{ERA} = \omega_E t`.
+
+Physics Model
+^^^^^^^^^^^^^
+
+.. code-block:: cpp
+
+   using DroppedSphereSteadyWindVF = RigidBody::VectorField<
+       FlightDynamics::J2GravityPolicy,
+       FlightDynamics::SteadyWindDragPolicy,   // CD=0.1, v_wind=(0, 6.096, 0) m/s ECEF
+       FlightDynamics::ZeroPropulsionPolicy,
+       FlightDynamics::ConstantMassPolicy
+   >;
+
+``SteadyWindDragPolicy`` extends ``DragOnlyAeroPolicy`` with an additional
+wind-velocity subtraction step and an ERA-based ECEF → ECI rotation so that
+the wind remains Earth-fixed even as the inertial frame rotates.
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Altitude (MSL)
+     - 9 144.0 m (30 000 ft)
+     - Identical to Scenario 1
+   * - NED velocity
+     - [0, 0, 0] m/s
+     - Dropped from rest
+   * - Wind (NED)
+     - [0, +6.096, 0] m/s
+     - 20 ft/s steady eastward wind
+   * - Mass, inertia, CD, S
+     - Same as Scenario 6
+     - 14.594 kg, CD = 0.1, S = 0.018241 m²
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   cmake --build build --target DroppedSphereSteadyWind
+
+   ./build/DroppedSphereSteadyWind \
+       --inputFileName  nasa_2015_scenario7_dropped_sphere_steady_wind.json \
+       --outputFileName atmos_07_output.csv                                 \
+       --startTime      0.0                                                  \
+       --endTime        30.0                                                 \
+       --timeStep       0.002                                                \
+       --writeInterval  50
+
+Validation Results
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 8 15 15 10 14 14 10
+
+   * - :math:`t` [s]
+     - Alt\ :sub:`ref` [m]
+     - Alt\ :sub:`sim` [m]
+     - :math:`\Delta` alt [m]
+     - TAS\ :sub:`ref` [m/s]
+     - TAS\ :sub:`sim` [m/s]
+     - :math:`\Delta` TAS
+   * - 0
+     - 9 144.000
+     - 9 144.000
+     - 0.000
+     - 6.0960
+     - 6.0960
+     - 0.0000
+   * - 5
+     - 9 022.246
+     - 9 022.344
+     - +0.098
+     - 49.020
+     - 49.007
+     - −0.013
+   * - 10
+     - 8 658.715
+     - 8 658.911
+     - +0.195
+     - 96.772
+     - 96.756
+     - −0.016
+   * - 15
+     - 8 058.804
+     - 8 059.090
+     - +0.286
+     - 143.172
+     - 143.156
+     - −0.015
+   * - 20
+     - 7 232.151
+     - 7 232.517
+     - +0.365
+     - 187.195
+     - 187.183
+     - −0.012
+   * - 25
+     - 6 193.525
+     - 6 193.947
+     - +0.422
+     - 227.698
+     - 227.692
+     - −0.006
+   * - 30
+     - **4 963.802**
+     - **4 964.246**
+     - **+0.444**
+     - **263.366**
+     - **263.366**
+     - **0.000**
+
+Altitude error 0.444 m (0.009%) and TAS error < 0.001% at t = 30 s.
+The wind-corrected TAS matches at t = 0 (6.096 m/s = wind speed) as well
+as throughout the fall.
+
+Comparison Plots
+^^^^^^^^^^^^^^^^
+
+.. figure:: _static/atmos07/overview_dashboard.png
+   :alt: Overview comparison dashboard — all columns
+   :align: center
+   :width: 100%
+
+   Aetherion vs. `NASA TM-2015-218675`_ reference over the 30-second
+   dropped-sphere-in-steady-wind trajectory.
+
+**Altitude** — matches Scenario 6 closely (horizontal wind barely affects vertical fall):
+
+.. figure:: _static/atmos07/altitudeMsl_m.png
+   :alt: Altitude MSL comparison
+   :align: center
+   :width: 85%
+
+**True airspeed** — starts at wind speed (6.096 m/s) and grows as the sphere falls:
+
+.. figure:: _static/atmos07/trueAirspeed_m_s.png
+   :alt: True airspeed comparison
+   :align: center
+   :width: 85%
+
+**Eastward drift** (feVelocity East component) — wind pushes sphere eastward:
+
+.. figure:: _static/atmos07/feVelocity_m_s_Y.png
+   :alt: Eastward velocity comparison
+   :align: center
+   :width: 85%
+
+**Dynamic pressure** and **Mach number**:
+
+.. figure:: _static/atmos07/dynamicPressure_Pa.png
+   :alt: Dynamic pressure comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos07/mach.png
+   :alt: Mach number comparison
+   :align: center
+   :width: 85%
+
+**Atmospheric state**:
+
+.. figure:: _static/atmos07/ambientTemperature_K.png
+   :alt: Ambient temperature comparison
+   :align: center
+   :width: 85%
+
 .. _example_sphere_with_drag:
 
 Sphere with Atmospheric Drag (NASA TM-2015-218675 Atmospheric Scenario 6)
