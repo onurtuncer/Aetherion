@@ -63,3 +63,23 @@ target_link_libraries(test_mass_propulsion_aero_policies
 target_include_directories(test_mass_propulsion_aero_policies PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 catch_discover_tests(test_mass_propulsion_aero_policies)
+
+# --------------------------------------------------------------------------
+# Wind model and WindAwareDragPolicy tests
+# --------------------------------------------------------------------------
+
+add_executable(test_wind_models test_WindModels.cpp)
+
+target_compile_options(test_wind_models PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_link_libraries(test_wind_models
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad
+        Eigen3::Eigen
+)
+
+target_include_directories(test_wind_models PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+catch_discover_tests(test_wind_models)

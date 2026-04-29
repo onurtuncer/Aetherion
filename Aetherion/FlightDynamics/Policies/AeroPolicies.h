@@ -13,6 +13,7 @@
 #include <Aetherion/Environment/Atmosphere.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
+#include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
 #include <Aetherion/FlightDynamics/WindModels.h>
 
 namespace Aetherion::FlightDynamics {
@@ -267,8 +268,10 @@ namespace Aetherion::FlightDynamics {
 ///
 /// @tparam Wind  A type satisfying the @c WindModel concept.
 /// Satisfies @c AeroPolicy.
-    template<WindModel Wind>
+    template<class Wind>
     struct WindAwareDragPolicy {
+        static_assert(is_wind_model_v<Wind>,
+            "Wind must be a registered WindModel (specialise is_wind_model<Wind>).");
         double CD   { 0.0 }; ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].
         Wind   wind {};      ///< Wind model instance.
@@ -296,8 +299,15 @@ namespace Aetherion::FlightDynamics {
             // ── Geocentric altitude ───────────────────────────────────────
             const S h = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
 
-            // ── Wind in ECEF from model, rotated to ECI via ERA ───────────
-            const Eigen::Matrix<S, 3, 1> v_wind_ecef = wind.template velocity_ecef<S>(h, t);
+            // ── Wind in ECI from model (model receives full ECI position) ─
+            // The model is responsible for ECEF→ECI rotation if it works in
+            // ECEF internally.  For models that return an ECEF vector
+            // independently (ZeroWind, ConstantECEFWind, PowerLawWindShear),
+            // velocity_ecef returns the ECEF wind and we rotate it here.
+            // GeodesicCallbackWind returns ECI directly.
+            //
+            // Convention: all built-in models return ECEF; we apply ERA here.
+            const Eigen::Matrix<S, 3, 1> v_wind_ecef = wind.template velocity_ecef<S>(g.p, t);
             const S theta = S(kOmegaE) * t;
             const S ct = Cosine(theta), st = Sine(theta);
             const Eigen::Matrix<S, 3, 1> v_wind_eci(
@@ -320,8 +330,6 @@ namespace Aetherion::FlightDynamics {
         }
     };
 
-    static_assert(AeroPolicy<WindAwareDragPolicy<ZeroWind>>);
-    static_assert(AeroPolicy<WindAwareDragPolicy<ConstantECEFWind>>);
-    static_assert(AeroPolicy<WindAwareDragPolicy<PowerLawWindShear>>);
+    // AeroPolicy static_asserts for WindAwareDragPolicy are in test_WindModels.cpp
 
 } // namespace Aetherion::FlightDynamics
