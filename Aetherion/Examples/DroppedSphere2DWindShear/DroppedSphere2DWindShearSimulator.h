@@ -50,7 +50,8 @@ public:
     Simulation::Snapshot1 snapshot() const noexcept override
     {
         auto snap = Simulation::MakeSnapshot1(
-            time(), state(), currentTheta(), vectorField().gravity);
+            time(), state(), currentTheta(),
+            vectorField().gravity, vectorField().aero);
 
         // Correct TAS to wind-relative airspeed (same correction as Scenario 7).
         // The reference altitude wind is stored in m_WindNED; we use it as an

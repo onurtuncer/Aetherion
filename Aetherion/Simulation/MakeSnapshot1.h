@@ -30,6 +30,8 @@
 #include <Aetherion/Environment/Atmosphere.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
+#include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
+#include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
 #include <Eigen/Dense>
 #include <algorithm>   // std::clamp
@@ -171,7 +173,47 @@ namespace Aetherion::Simulation {
         snap.mach = tas / atm.a;
         snap.dynamicPressure_Pa = 0.5 * atm.rho * tas * tas;
 
-        // ── 10. Aerodynamics: populated by caller for non-dragless cases ──────
+        // ── 10. Aerodynamics: zero — caller uses the two-policy overload
+        //        MakeSnapshot1(t, s, theta_gst, gravity, aero) to populate. ──
+
+        return snap;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // MakeSnapshot1<GravityPolicy, AeroPolicy>  (two-policy overload)
+    //
+    // Extends the single-policy form by evaluating the AeroPolicy at the
+    // current state and filling in the six aerodynamic fields:
+    //   aero_bodyForce_N_X/Y/Z     — wrench.f(3:5)  [N]
+    //   aero_bodyMoment_Nm_L/M/N   — wrench.f(0:2)  [N·m]
+    //
+    // All other fields are identical to the single-policy form.
+    // ─────────────────────────────────────────────────────────────────────────
+    template <FlightDynamics::GravityPolicy GravityPol,
+              FlightDynamics::AeroPolicy    AeroPol>
+    [[nodiscard]]
+    Snapshot1 MakeSnapshot1(
+        double                       t,
+        const RigidBody::StateD&     s,
+        double                       theta_gst,
+        const GravityPol&            gravity,
+        const AeroPol&               aero)
+    {
+        // Delegate all kinematic/atmospheric fields to the single-policy form.
+        Snapshot1 snap = MakeSnapshot1(t, s, theta_gst, gravity);
+
+        // Evaluate aero wrench at the current state.
+        // Wrench layout (Featherstone): [moment(0:2); force(3:5)]
+        using SE3d = ODE::RKMK::Lie::SE3<double>;
+        const SE3d g(s.g.R, s.g.p);
+        const auto wrench = aero(g, s.nu_B, s.m, t);
+
+        snap.aero_bodyMoment_Nm_L = wrench.f(0);
+        snap.aero_bodyMoment_Nm_M = wrench.f(1);
+        snap.aero_bodyMoment_Nm_N = wrench.f(2);
+        snap.aero_bodyForce_N_X   = wrench.f(3);
+        snap.aero_bodyForce_N_Y   = wrench.f(4);
+        snap.aero_bodyForce_N_Z   = wrench.f(5);
 
         return snap;
     }

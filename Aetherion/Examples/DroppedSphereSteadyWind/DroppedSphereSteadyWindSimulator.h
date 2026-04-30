@@ -50,7 +50,8 @@ public:
     Simulation::Snapshot1 snapshot() const noexcept override
     {
         auto snap = Simulation::MakeSnapshot1(
-            time(), state(), currentTheta(), vectorField().gravity);
+            time(), state(), currentTheta(),
+            vectorField().gravity, vectorField().aero);
 
         // Correct TAS, Mach, and dynamic pressure to use wind-relative airspeed.
         // MakeSnapshot1 computes TAS = |v_NED| (Earth-relative); the correct

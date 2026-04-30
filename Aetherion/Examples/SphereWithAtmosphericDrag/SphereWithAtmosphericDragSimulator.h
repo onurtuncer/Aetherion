@@ -63,7 +63,8 @@ namespace Aetherion::Examples::SphereWithAtmosphericDrag {
                 time(),
                 state(),
                 currentTheta(),
-                vectorField().gravity);
+                vectorField().gravity,
+                vectorField().aero);
         }
 
         [[nodiscard]]

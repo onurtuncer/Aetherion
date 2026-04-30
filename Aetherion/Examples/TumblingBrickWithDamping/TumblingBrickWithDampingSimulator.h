@@ -58,7 +58,8 @@ public:
             time(),
             state(),
             currentTheta(),
-            vectorField().gravity);
+            vectorField().gravity,
+            vectorField().aero);
     }
 
     [[nodiscard]]
