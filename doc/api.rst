@@ -80,6 +80,83 @@ Flight Dynamics
 
 State-vector construction, kinematics field, and physics policy interfaces.
 
+**VectorField composition** — the four policy slots of
+:cpp:class:`Aetherion::RigidBody::VectorField`:
+
+.. graphviz::
+   :caption: VectorField<Gravity, Aero, Thrust, Mass> — policy composition
+
+   digraph VectorField {
+     graph [rankdir=TB fontname="sans-serif" fontsize=11]
+     node  [shape=box style="filled,rounded" fontname="sans-serif" fontsize=10]
+     edge  [fontname="sans-serif" fontsize=9]
+
+     VF [label="VectorField\<Gravity, Aero, Thrust, Mass\>"
+         fillcolor="#D1E8FF" color="#2563EB"]
+
+     G  [label="GravityPolicy" fillcolor="#D1FAE5" color="#059669"]
+     A  [label="AeroPolicy"    fillcolor="#FEF3C7" color="#D97706"]
+     T  [label="PropulsionPolicy" fillcolor="#FEF3C7" color="#D97706"]
+     M  [label="MassPolicy"    fillcolor="#FCE7F3" color="#DB2777"]
+
+     VF -> G [label="gravity"]
+     VF -> A [label="aero"]
+     VF -> T [label="thrust"]
+     VF -> M [label="mass_model"]
+   }
+
+**Policy hierarchy** — built-in implementations for each slot:
+
+.. graphviz::
+   :caption: Gravity, Aero, Propulsion, and Mass policy families
+
+   digraph Policies {
+     graph [rankdir=LR fontname="sans-serif" fontsize=11 nodesep=0.4]
+     node  [shape=box style="filled,rounded" fontname="sans-serif" fontsize=9]
+     edge  [arrowhead=empty color="#555"]
+
+     // Gravity
+     GBase [label="«concept»\nGravityPolicy"  fillcolor="#D1FAE5" color="#059669"]
+     G0 [label="ZeroGravityPolicy"            fillcolor="#ECFDF5" color="#059669"]
+     G1 [label="CentralGravityPolicy"         fillcolor="#ECFDF5" color="#059669"]
+     G2 [label="J2GravityPolicy"              fillcolor="#ECFDF5" color="#059669"]
+     GBase -> G0
+     GBase -> G1
+     GBase -> G2
+
+     // Aero
+     ABase [label="«concept»\nAeroPolicy"     fillcolor="#FEF3C7" color="#D97706"]
+     A0 [label="ZeroAeroPolicy"               fillcolor="#FFFBEB" color="#D97706"]
+     A1 [label="DragOnlyAeroPolicy"           fillcolor="#FFFBEB" color="#D97706"]
+     A2 [label="BrickDampingAeroPolicy"       fillcolor="#FFFBEB" color="#D97706"]
+     A3 [label="WindAwareDragPolicy\<Wind\>"  fillcolor="#FFFBEB" color="#D97706"]
+     ABase -> A0
+     ABase -> A1
+     ABase -> A2
+     ABase -> A3
+
+     // Wind models (sub-hierarchy)
+     WBase [label="is_wind_model\<W\>" fillcolor="#FFF7ED" color="#EA580C"]
+     W0 [label="ZeroWind"             fillcolor="#FFF7ED" color="#EA580C"]
+     W1 [label="ConstantECEFWind"     fillcolor="#FFF7ED" color="#EA580C"]
+     W2 [label="PowerLawWindShear"    fillcolor="#FFF7ED" color="#EA580C"]
+     W3 [label="GeodesicCallbackWind" fillcolor="#FFF7ED" color="#EA580C"]
+     WBase -> W0; WBase -> W1; WBase -> W2; WBase -> W3
+     A3 -> WBase [label="Wind" style=dashed arrowhead=open]
+
+     // Propulsion
+     TBase [label="«concept»\nPropulsionPolicy" fillcolor="#EDE9FE" color="#7C3AED"]
+     T0 [label="ZeroPropulsionPolicy"           fillcolor="#F5F3FF" color="#7C3AED"]
+     T1 [label="ConstantThrustPolicy"           fillcolor="#F5F3FF" color="#7C3AED"]
+     TBase -> T0; TBase -> T1
+
+     // Mass
+     MBase [label="«concept»\nMassPolicy"  fillcolor="#FCE7F3" color="#DB2777"]
+     M0 [label="ConstantMassPolicy"        fillcolor="#FDF2F8" color="#DB2777"]
+     M1 [label="LinearBurnPolicy"          fillcolor="#FDF2F8" color="#DB2777"]
+     MBase -> M0; MBase -> M1
+   }
+
 **Policy system** — :cpp:class:`Aetherion::RigidBody::VectorField` is templated on
 four policy types.  Each policy must satisfy the corresponding C++20 concept:
 
@@ -213,6 +290,77 @@ Simulation Framework
 --------------------
 
 Application base class, argument parser, simulator interface, and telemetry types.
+
+**Simulator class hierarchy** — all concrete simulators inherit from
+:cpp:class:`Aetherion::Simulation::ISimulator`:
+
+.. graphviz::
+   :caption: ISimulator inheritance — one concrete class per NASA scenario group
+
+   digraph Simulators {
+     graph [rankdir=TB fontname="sans-serif" fontsize=11]
+     node  [shape=box style="filled,rounded" fontname="sans-serif" fontsize=9]
+     edge  [arrowhead=empty color="#555"]
+
+     IS [label="ISimulator\<VF, Snapshot\>"
+         fillcolor="#DBEAFE" color="#1D4ED8" shape=box]
+
+     DS  [label="DraglessSphereSimulator\n(Scenarios 1, 9, 10)"
+          fillcolor="#EFF6FF" color="#1D4ED8"]
+     SW  [label="SphereWithAtmosphericDragSimulator\n(Scenario 6)"
+          fillcolor="#EFF6FF" color="#1D4ED8"]
+     TN  [label="TumblingBrickNoDampingSimulator\n(Scenario 2)"
+          fillcolor="#EFF6FF" color="#1D4ED8"]
+     TW  [label="TumblingBrickWithDampingSimulator\n(Scenario 3)"
+          fillcolor="#EFF6FF" color="#1D4ED8"]
+     SSW [label="DroppedSphereSteadyWindSimulator\n(Scenario 7)"
+          fillcolor="#EFF6FF" color="#1D4ED8"]
+     S2W [label="DroppedSphere2DWindShearSimulator\n(Scenario 8)"
+          fillcolor="#EFF6FF" color="#1D4ED8"]
+
+     IS -> DS
+     IS -> SW
+     IS -> TN
+     IS -> TW
+     IS -> SSW
+     IS -> S2W
+   }
+
+**Application class hierarchy** — concrete applications follow the
+**Template Method** pattern defined in
+:cpp:class:`Aetherion::Simulation::Application`:
+
+.. graphviz::
+   :caption: Application inheritance — one concrete subclass per scenario executable
+
+   digraph Applications {
+     graph [rankdir=TB fontname="sans-serif" fontsize=11]
+     node  [shape=box style="filled,rounded" fontname="sans-serif" fontsize=9]
+     edge  [arrowhead=empty color="#555"]
+
+     App [label="Application\n(defines run() loop + virtual hooks)"
+          fillcolor="#D1FAE5" color="#065F46" shape=box]
+
+     DA  [label="DraglessSphereApplication\n(Scenario 1)"
+          fillcolor="#ECFDF5" color="#065F46"]
+     SWA [label="SphereWithAtmosphericDragApplication\n(Scenario 6)"
+          fillcolor="#ECFDF5" color="#065F46"]
+     TNA [label="TumblingBrickNoDampingApplication\n(Scenario 2)"
+          fillcolor="#ECFDF5" color="#065F46"]
+     TWA [label="TumblingBrickWithDampingApplication\n(Scenario 3)"
+          fillcolor="#ECFDF5" color="#065F46"]
+     ECA [label="EastwardCannonballApplication\n(Scenario 9)"
+          fillcolor="#ECFDF5" color="#065F46"]
+     NCA [label="NorthwardCannonballApplication\n(Scenario 10)"
+          fillcolor="#ECFDF5" color="#065F46"]
+     SWW [label="DroppedSphereSteadyWindApplication\n(Scenario 7)"
+          fillcolor="#ECFDF5" color="#065F46"]
+     S2A [label="DroppedSphere2DWindShearApplication\n(Scenario 8)"
+          fillcolor="#ECFDF5" color="#065F46"]
+
+     App -> DA;  App -> SWA; App -> TNA; App -> TWA
+     App -> ECA; App -> NCA; App -> SWW; App -> S2A
+   }
 
 **Template Method pattern** — :cpp:class:`Aetherion::Simulation::Application` defines
 the simulation loop in ``run()`` and exposes the following virtual hooks for
