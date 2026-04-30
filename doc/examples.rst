@@ -1381,6 +1381,195 @@ Comparison Plots
    :align: center
    :width: 85%
 
+.. _example_2d_wind_shear:
+
+Dropped Sphere, 2D Wind Shear (NASA TM-2015-218675 Atmospheric Scenario 8)
+---------------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.8 — Atmospheric Simulation 08.
+
+Same sphere as Scenario 6 (CD = 0.1) dropped from 9 144 m, but now with a
+**power-law altitude wind shear**: the eastward wind grows from zero at sea
+level to 70 ft/s (21.336 m/s) at 30 000 ft (9 144 m) following
+
+.. math::
+
+   v_E(h) = 21.336 \left(\frac{h}{9144}\right)^{4/3} \text{ m/s}.
+
+The exponent :math:`n = 4/3 \approx 1.333` was fitted by least-squares to the
+NASA reference data (:math:`n_\text{fit} = 1.338`).  Even before the sphere
+starts falling, the non-zero wind at the initial altitude creates a TAS of
+21.336 m/s and an eastward drag force.
+
+Physics Model
+^^^^^^^^^^^^^
+
+.. code-block:: cpp
+
+   using DroppedSphere2DWindShearVF = RigidBody::VectorField<
+       FlightDynamics::J2GravityPolicy,
+       FlightDynamics::WindAwareDragPolicy<PowerLawWindShear>,
+       FlightDynamics::ZeroPropulsionPolicy,
+       FlightDynamics::ConstantMassPolicy
+   >;
+
+The ``PowerLawWindShear`` model and the general ``WindAwareDragPolicy`` are
+described in detail in :ref:`aero_wind_policies`.
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+Identical to :ref:`example_steady_wind` (Scenario 7) except for the wind model.
+Configuration read from
+:file:`data/Atmos_08_DroppedSphere2DWindShear/nasa_2015_scenario8_dropped_sphere_2d_wind_shear.json`.
+
+Key wind parameters:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 25 40
+
+   * - Parameter
+     - Value
+     - Notes
+   * - East wind at h = 9 144 m
+     - 21.336 m/s (70 ft/s)
+     - Reference wind speed
+   * - Shear exponent :math:`n`
+     - 4/3 ≈ 1.333
+     - Least-squares fit to Atmos_08_sim_01
+   * - North wind
+     - 0.0 m/s
+     - East-only shear
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   cmake --build build --target DroppedSphere2DWindShear
+
+   ./build/DroppedSphere2DWindShear \
+       --inputFileName  nasa_2015_scenario8_dropped_sphere_2d_wind_shear.json \
+       --outputFileName atmos_08_output.csv                                   \
+       --startTime      0.0                                                   \
+       --endTime        30.0                                                  \
+       --timeStep       0.002                                                 \
+       --writeInterval  50
+
+Validation Results
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 8 15 15 10 14 14 10
+
+   * - :math:`t` [s]
+     - Alt\ :sub:`ref` [m]
+     - Alt\ :sub:`sim` [m]
+     - :math:`\Delta` alt [m]
+     - TAS\ :sub:`ref` [m/s]
+     - TAS\ :sub:`sim` [m/s]
+     - :math:`\Delta` TAS
+   * - 0
+     - 9 144.000
+     - 9 144.000
+     - 0.000
+     - 21.336
+     - 21.336
+     - 0.000
+   * - 5
+     - 9 022.292
+     - 9 022.390
+     - +0.098
+     - 52.905
+     - 52.902
+     - −0.003
+   * - 10
+     - 8 658.937
+     - 8 659.133
+     - +0.196
+     - 98.488
+     - 98.471
+     - −0.017
+   * - 15
+     - 8 059.325
+     - 8 059.611
+     - +0.286
+     - 144.023
+     - 144.006
+     - −0.017
+   * - 20
+     - 7 233.060
+     - 7 233.426
+     - +0.366
+     - 187.569
+     - 187.560
+     - −0.009
+   * - 25
+     - 6 194.871
+     - 6 195.294
+     - +0.422
+     - 227.792
+     - 227.796
+     - +0.004
+   * - 30
+     - **4 965.582**
+     - **4 966.030**
+     - **+0.447**
+     - **263.313**
+     - **263.328**
+     - **+0.015**
+
+Altitude error 0.447 m (0.009%) and TAS error < 0.006% at t = 30 s —
+the same rotating-Earth systematic offset as all previous scenarios.
+The eastward drift (NED east velocity) matches to ~0.05 m/s throughout,
+a small residual from the empirical n = 4/3 wind-profile approximation.
+
+Comparison Plots
+^^^^^^^^^^^^^^^^
+
+.. figure:: _static/atmos08/overview_dashboard.png
+   :alt: Overview comparison dashboard — all columns
+   :align: center
+   :width: 100%
+
+   Aetherion vs. `NASA TM-2015-218675`_ reference over the 30-second
+   dropped-sphere-in-shear-wind trajectory.
+
+**Altitude** and **true airspeed** — starts at wind speed (21.336 m/s), grows as sphere falls:
+
+.. figure:: _static/atmos08/altitudeMsl_m.png
+   :alt: Altitude MSL comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos08/trueAirspeed_m_s.png
+   :alt: True airspeed comparison
+   :align: center
+   :width: 85%
+
+**Eastward drift** — wind pushes sphere eastward; grows as TAS increases:
+
+.. figure:: _static/atmos08/feVelocity_m_s_Y.png
+   :alt: Eastward velocity comparison
+   :align: center
+   :width: 85%
+
+**Dynamic pressure** and **Mach number**:
+
+.. figure:: _static/atmos08/dynamicPressure_Pa.png
+   :alt: Dynamic pressure comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos08/mach.png
+   :alt: Mach number comparison
+   :align: center
+   :width: 85%
+
 .. _example_sphere_with_drag:
 
 Sphere with Atmospheric Drag (NASA TM-2015-218675 Atmospheric Scenario 6)
