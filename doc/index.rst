@@ -39,6 +39,7 @@ Flight Dynamics with Spatial Vector Algebra
    group_exp_log
    rkmk
    unified_notation
+   aero_wind_policies
    appendices
    api
    examples
