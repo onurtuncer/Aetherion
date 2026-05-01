@@ -35,6 +35,7 @@
 
 #include <Aetherion/RigidBody/SixDofStepper.h>
 #include <Aetherion/RigidBody/State.h>
+#include <Aetherion/Simulation/SnapshotTraits.h>
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/RigidBody/VectorField.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
@@ -141,6 +142,49 @@ namespace Aetherion::Simulation {
         // schema (Snapshot1, Snapshot2, ...) without any coupling in this base.
         // -----------------------------------------------------------------------
         [[nodiscard]] virtual SnapshotType snapshot() const noexcept = 0;
+
+        // -----------------------------------------------------------------------
+        // snapshot2() -- NASA 31-column format
+        //
+        // Default: converts snapshot() (Snapshot1) → Snapshot2 by copying the
+        // 31 shared fields.  Simulators with active aero policies should override
+        // this to call MakeSnapshot2 directly so that aero_bodyForce/Moment are
+        // populated from the policy rather than from the already-computed (and
+        // populated) Snapshot1 fields.
+        // -----------------------------------------------------------------------
+        [[nodiscard]] virtual Snapshot2 snapshot2() const noexcept
+        {
+            const auto& s1 = snapshot();
+            Snapshot2 s2;
+            s2.time                              = s1.time;
+            s2.gePosition_m                      = s1.gePosition_m;
+            s2.feVelocity_m_s                    = s1.feVelocity_m_s;
+            s2.altitudeMsl_m                     = s1.altitudeMsl_m;
+            s2.longitude_rad                     = s1.longitude_rad;
+            s2.latitude_rad                      = s1.latitude_rad;
+            s2.localGravity_m_s2                 = s1.localGravity_m_s2;
+            s2.eulerAngle_rad_Yaw                = s1.eulerAngle_rad_Yaw;
+            s2.eulerAngle_rad_Pitch              = s1.eulerAngle_rad_Pitch;
+            s2.eulerAngle_rad_Roll               = s1.eulerAngle_rad_Roll;
+            s2.bodyAngularRateWrtEi_rad_s_Roll   = s1.bodyAngularRateWrtEi_rad_s_Roll;
+            s2.bodyAngularRateWrtEi_rad_s_Pitch  = s1.bodyAngularRateWrtEi_rad_s_Pitch;
+            s2.bodyAngularRateWrtEi_rad_s_Yaw    = s1.bodyAngularRateWrtEi_rad_s_Yaw;
+            s2.altitudeRateWrtMsl_m_s            = s1.altitudeRateWrtMsl_m_s;
+            s2.speedOfSound_m_s                  = s1.speedOfSound_m_s;
+            s2.airDensity_kg_m3                  = s1.airDensity_kg_m3;
+            s2.ambientPressure_Pa                = s1.ambientPressure_Pa;
+            s2.ambientTemperature_K              = s1.ambientTemperature_K;
+            s2.aero_bodyForce_N_X                = s1.aero_bodyForce_N_X;
+            s2.aero_bodyForce_N_Y                = s1.aero_bodyForce_N_Y;
+            s2.aero_bodyForce_N_Z                = s1.aero_bodyForce_N_Z;
+            s2.aero_bodyMoment_Nm_L              = s1.aero_bodyMoment_Nm_L;
+            s2.aero_bodyMoment_Nm_M              = s1.aero_bodyMoment_Nm_M;
+            s2.aero_bodyMoment_Nm_N              = s1.aero_bodyMoment_Nm_N;
+            s2.mach                              = s1.mach;
+            s2.dynamicPressure_Pa                = s1.dynamicPressure_Pa;
+            s2.trueAirspeed_m_s                  = s1.trueAirspeed_m_s;
+            return s2;
+        }
 
     protected:
         virtual void validate() const {}

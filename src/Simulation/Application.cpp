@@ -9,13 +9,19 @@
 #include "Aetherion/Simulation/Application.h"
 
 #include <Aetherion/Simulation/Log.h>
-#include <Aetherion/Simulation/Snapshot1.h>
+#include <Aetherion/Simulation/SnapshotTraits.h>
 
 #include <stdexcept>
 #include <cstdlib>
 #include <fstream>
 
 namespace Aetherion::Simulation {
+
+    // ── writeCsvHeader default ────────────────────────────────────────────────
+    void Application::writeCsvHeader(std::ofstream& csv) const
+    {
+        SnapshotTraits<SnapshotFormat::One>::write_header(csv);
+    }
 
     // ── Constructor ───────────────────────────────────────────────────────────
     Application::Application(int argc, char* argv[])
@@ -149,7 +155,7 @@ namespace Aetherion::Simulation {
         prepareSimulation();
 
         std::ofstream csv = openOutputCsv();
-        Simulation::Snapshot1_WriteCsvHeader(csv);
+        writeCsvHeader(csv);
 
         writeInitialSnapshot(csv);
         runTimeStepLoop(csv);

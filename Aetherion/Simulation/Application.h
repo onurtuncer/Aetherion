@@ -10,6 +10,7 @@
 
 #include <Aetherion/Simulation/Config.h>
 #include <Aetherion/Simulation/ArgumentParser.h>
+#include <Aetherion/Simulation/SnapshotTraits.h>
 
 #include <fstream>
 #include <string>
@@ -60,6 +61,23 @@ protected:
     /// @brief Prints an application-specific startup banner to the log.
     ///        Default implementation is a no-op.
     virtual void logStartupBanner() const {}
+
+    /// @brief Writes the CSV column-header row.
+    ///
+    /// Default: ``SnapshotTraits<SnapshotFormat::One>::write_header()``
+    /// (38-column Snapshot1).  Override to use Snapshot2 format:
+    ///
+    /// @code
+    /// void MyApp::writeCsvHeader(std::ofstream& csv) const override {
+    ///     SnapshotTraits<SnapshotFormat::Two>::write_header(csv);
+    /// }
+    /// @endcode
+    ///
+    /// The corresponding ``writeInitialSnapshot()`` and ``stepAndRecord()``
+    /// overrides must call the matching
+    /// ``SnapshotTraits<SnapshotFormat::Two>::write_row(csv, sim->snapshot2())``
+    /// to maintain header/row consistency.
+    virtual void writeCsvHeader(std::ofstream& csv) const;
 
     /// @brief Builds the simulator from the loaded Config (steps 1–4 of the run protocol).
     ///

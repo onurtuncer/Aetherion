@@ -22,9 +22,9 @@ add_executable(DraglessSphere
 
 target_compile_features(DraglessSphere PRIVATE cxx_std_23)
 
-# MSVC: force UTF-8 source encoding (needed for degree/SI unit symbols in comments)
+# MSVC: force UTF-8 source encoding; /bigobj for ISimulator::snapshot2() inline body
 target_compile_options(DraglessSphere PRIVATE
-    $<$<CXX_COMPILER_ID:MSVC>:/utf-8>
+    $<$<CXX_COMPILER_ID:MSVC>:/utf-8 /bigobj>
 )
 
 target_link_libraries(DraglessSphere
