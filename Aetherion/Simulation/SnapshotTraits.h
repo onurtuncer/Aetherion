@@ -34,13 +34,21 @@
 
 #include <Aetherion/Simulation/Snapshot1.h>
 #include <Aetherion/Simulation/Snapshot2.h>
+#include <Aetherion/Simulation/Snapshot3.h>
+#include <Aetherion/Simulation/Snapshot4.h>
+#include <Aetherion/Simulation/Snapshot5.h>
+#include <Aetherion/Simulation/Snapshot6.h>
 
 namespace Aetherion::Simulation {
 
 /// @brief Selects the output column schema for simulation CSV files.
 enum class SnapshotFormat : int {
-    One = 1,   ///< 38 columns — all Aetherion fields (Snapshot1).
-    Two = 2,   ///< 31 columns — exact NASA reference schema (Snapshot2).
+    One   = 1, ///< 38 cols — Aetherion-extended (Snapshot1).
+    Two   = 2, ///< 31 cols — NASA reference (Snapshot2).
+    Three = 3, ///< Placeholder — extend Snapshot3 for the assigned scenario.
+    Four  = 4, ///< Placeholder — extend Snapshot4 for the assigned scenario.
+    Five  = 5, ///< Placeholder — extend Snapshot5 for the assigned scenario.
+    Six   = 6, ///< Placeholder — extend Snapshot6 for the assigned scenario.
 };
 
 /// @brief Primary template — intentionally undefined; specialise for each format.
@@ -76,9 +84,65 @@ struct SnapshotTraits<SnapshotFormat::Two>
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SnapshotFormat::Three  →  Snapshot3  (placeholder — 31 cols, mirrors Two)
+// ─────────────────────────────────────────────────────────────────────────────
+template<>
+struct SnapshotTraits<SnapshotFormat::Three>
+{
+    using type = Snapshot3;
+    static constexpr SnapshotFormat format = SnapshotFormat::Three;
+    static constexpr int column_count = static_cast<int>(Snapshot3CsvTraits::kColumnCount);
+    static void write_header(std::ostream& os) { Snapshot3_WriteCsvHeader(os); }
+    static void write_row(std::ostream& os, const Snapshot3& s) { Snapshot3_WriteCsvRow(os, s); }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SnapshotFormat::Four  →  Snapshot4  (placeholder)
+// ─────────────────────────────────────────────────────────────────────────────
+template<>
+struct SnapshotTraits<SnapshotFormat::Four>
+{
+    using type = Snapshot4;
+    static constexpr SnapshotFormat format = SnapshotFormat::Four;
+    static constexpr int column_count = static_cast<int>(Snapshot4CsvTraits::kColumnCount);
+    static void write_header(std::ostream& os) { Snapshot4_WriteCsvHeader(os); }
+    static void write_row(std::ostream& os, const Snapshot4& s) { Snapshot4_WriteCsvRow(os, s); }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SnapshotFormat::Five  →  Snapshot5  (placeholder)
+// ─────────────────────────────────────────────────────────────────────────────
+template<>
+struct SnapshotTraits<SnapshotFormat::Five>
+{
+    using type = Snapshot5;
+    static constexpr SnapshotFormat format = SnapshotFormat::Five;
+    static constexpr int column_count = static_cast<int>(Snapshot5CsvTraits::kColumnCount);
+    static void write_header(std::ostream& os) { Snapshot5_WriteCsvHeader(os); }
+    static void write_row(std::ostream& os, const Snapshot5& s) { Snapshot5_WriteCsvRow(os, s); }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SnapshotFormat::Six  →  Snapshot6  (placeholder)
+// ─────────────────────────────────────────────────────────────────────────────
+template<>
+struct SnapshotTraits<SnapshotFormat::Six>
+{
+    using type = Snapshot6;
+    static constexpr SnapshotFormat format = SnapshotFormat::Six;
+    static constexpr int column_count = static_cast<int>(Snapshot6CsvTraits::kColumnCount);
+    static void write_header(std::ostream& os) { Snapshot6_WriteCsvHeader(os); }
+    static void write_row(std::ostream& os, const Snapshot6& s) { Snapshot6_WriteCsvRow(os, s); }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Convenience aliases
 // ─────────────────────────────────────────────────────────────────────────────
 using Snapshot1Traits = SnapshotTraits<SnapshotFormat::One>;
 using Snapshot2Traits = SnapshotTraits<SnapshotFormat::Two>;
+using Snapshot3Traits = SnapshotTraits<SnapshotFormat::Three>;
+using Snapshot4Traits = SnapshotTraits<SnapshotFormat::Four>;
+using Snapshot5Traits = SnapshotTraits<SnapshotFormat::Five>;
+using Snapshot6Traits = SnapshotTraits<SnapshotFormat::Six>;
 
 } // namespace Aetherion::Simulation
