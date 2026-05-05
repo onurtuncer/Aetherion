@@ -27,6 +27,7 @@
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
 #include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Environment/GeometricAltitude.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
 #include <Aetherion/Spatial/Wrench.h>
@@ -109,8 +110,8 @@ public:
         // ── Body angular rates (ECI-relative ≈ aerodynamic rates) ─────────────
         const Eigen::Matrix<S, 3, 1> omega_B = nu_B.template head<3>();
 
-        // ── Altitude and atmospheric density ──────────────────────────────────
-        const S alt_m    = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
+        // ── Geometric altitude and atmospheric density ────────────────────────
+        const S alt_m    = Environment::GeometricAltitude_m(g.p);
         const S rho_slug = Environment::US1976Atmosphere(alt_m).rho / S(kSlugFt3_kg_m3);
 
         // ── Dynamic pressure [lbf/ft²] ────────────────────────────────────────

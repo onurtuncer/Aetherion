@@ -127,7 +127,8 @@ static S evalNode(const pugi::xml_node& node,
             if constexpr (std::is_same_v<S, double>) {
                 lhsD = lhs; rhsD = rhs;
             } else {
-                lhsD = CppAD::Value(lhs); rhsD = CppAD::Value(rhs);
+                lhsD = CppAD::Value(CppAD::Var2Par(lhs));
+                rhsD = CppAD::Value(CppAD::Var2Par(rhs));
             }
             bool cond = (opName == "lt")  ? lhsD <  rhsD :
                         (opName == "gt")  ? lhsD >  rhsD :
@@ -157,7 +158,7 @@ static S evalNode(const pugi::xml_node& node,
                 S condVal = evalNode<S>(cond, vars);
                 double condD;
                 if constexpr (std::is_same_v<S, double>) condD = condVal;
-                else condD = CppAD::Value(condVal);
+                else condD = CppAD::Value(CppAD::Var2Par(condVal));
                 if (condD != 0.0 && !matched) {
                     result = evalNode<S>(val, vars);
                     matched = true;
@@ -195,7 +196,7 @@ static S ndInterp(const std::vector<double>& data,
         const auto& bp = *bps[d];
         double xd;
         if constexpr (std::is_same_v<S, double>) xd = inputs[d];
-        else xd = CppAD::Value(inputs[d]);
+        else xd = CppAD::Value(CppAD::Var2Par(inputs[d]));
 
         // Clamp to breakpoint range
         xd = std::max(bp.front(), std::min(bp.back(), xd));
@@ -206,7 +207,10 @@ static S ndInterp(const std::vector<double>& data,
         idx[d] = i;
 
         double span = bp[i + 1] - bp[i];
-        wt[d] = (span > 0.0) ? S((xd - bp[i]) / span) : S(0.0);
+        // Use the original AD input for the weight so CppAD records the correct
+        // derivative (d wt/d input = 1/span). The double xd is only used above
+        // for index selection, which is non-differentiable and treated as constant.
+        wt[d] = (span > 0.0) ? (inputs[d] - S(bp[i])) / S(span) : S(0.0);
     }
 
     // N-D bilinear interpolation: iterate over 2^ndim vertices

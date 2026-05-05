@@ -28,6 +28,7 @@
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
 #include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Environment/GeometricAltitude.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
 #include <Aetherion/Spatial/Wrench.h>
@@ -42,6 +43,7 @@ namespace Aetherion::FlightDynamics {
 class F16PropPolicy
 {
 public:
+    //TODO [Onur]: Move this constant to a more general unit conversion header.
     static constexpr double kFt_m           = 0.3048;
 
     double pwr_pct{ 0.0 };  ///< Throttle [0–100 %]
@@ -69,8 +71,8 @@ public:
         const Eigen::Matrix<S, 3, 1> v_rel = nu_B.template tail<3>() - v_surface;
         const S vt_mps = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
 
-        // ── Altitude (ft) and Mach ────────────────────────────────────────────
-        const S alt_m  = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
+        // ── Geometric altitude (ft) and Mach ─────────────────────────────────
+        const S alt_m  = Environment::GeometricAltitude_m(g.p);
         const S alt_ft = alt_m / S(kFt_m);
         const S a_mps  = Environment::US1976Atmosphere(alt_m).a;
         const S mach   = vt_mps / a_mps;
