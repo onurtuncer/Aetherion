@@ -24,7 +24,7 @@ jobs:
 
       - name: Run CMake Lang Format Check
         run: |
-          pip3 install --break-system-packages cmakelang
+          sudo pip3 install --break-system-packages cmakelang
           RED='\033[0;31m'
           NC='\033[0m' # No Color
           bash .run-cmake-format
