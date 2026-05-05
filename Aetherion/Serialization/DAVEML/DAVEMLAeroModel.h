@@ -97,6 +97,13 @@ public:
     template<class S>
     Outputs<S> evaluate(const Inputs<S>& in) const;
 
+    /// @brief Generic evaluation: caller supplies any varID→value map;
+    ///        returns the full computed variable map including all outputs.
+    ///        Used by PropModel and other specialisations.
+    template<class S>
+    std::unordered_map<std::string, S>
+    evaluateRaw(std::unordered_map<std::string, S> inputs) const;
+
     // ── Internal data (public for the .cpp template helpers) ─────────────────
 
     /// @brief Sorted breakpoint vector for one dimension.

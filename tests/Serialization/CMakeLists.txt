@@ -85,3 +85,26 @@ target_link_libraries(test_daveml_aero_model
         CppAD::cppad)
 
 catch_discover_tests(test_daveml_aero_model)
+
+# DAVE-ML propulsion model smoke tests
+set(DAVEML_F16_PROP "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_prop.dml")
+
+add_executable(test_daveml_prop_model test_DAVEMLPropModel.cpp)
+
+target_compile_definitions(test_daveml_prop_model PRIVATE
+    "DAVEML_PROP_FILE=\"${DAVEML_F16_PROP}\"")
+
+target_compile_options(test_daveml_prop_model PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_include_directories(test_daveml_prop_model PRIVATE
+    "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml"
+    "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+target_link_libraries(test_daveml_prop_model
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad)
+
+catch_discover_tests(test_daveml_prop_model)

@@ -241,7 +241,12 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         throw std::runtime_error(
             "DAVEMLAeroModel: cannot open '" + path + "': " + res.description());
 
-    // ── Step 1: parse breakpointDef ─────────────────────────────────────────
+    // ── Step 1a: parse top-level griddedTableDef by gtID (for griddedTableRef) ─
+    std::unordered_map<std::string, pugi::xml_node> topLevelTableDefs;
+    for (auto& xn : doc.select_nodes("/DAVEfunc/griddedTableDef"))
+        topLevelTableDefs[xn.node().attribute("gtID").as_string()] = xn.node();
+
+    // ── Step 1b: parse breakpointDef ────────────────────────────────────────
     for (auto& xn : doc.select_nodes("//breakpointDef")) {
         auto node = xn.node();
         std::string bpID = node.attribute("bpID").as_string();
@@ -312,9 +317,16 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         if (!dvr) continue;
         std::string depVarID = dvr.attribute("varID").as_string();
 
-        // Gridded table definition
+        // Gridded table definition — inline or referenced
         auto gdef = fnode.select_node(".//griddedTableDef").node();
-        if (!gdef) continue;
+        if (!gdef) {
+            // Try <griddedTableRef gtID="..."> → resolve from top-level defs
+            auto ref = fnode.select_node(".//griddedTableRef").node();
+            if (!ref) continue;
+            auto it = topLevelTableDefs.find(ref.attribute("gtID").as_string());
+            if (it == topLevelTableDefs.end()) continue;
+            gdef = it->second;
+        }
 
         GridTable gt;
         gt.inputVarIDs = inputVarIDs;
@@ -424,15 +436,11 @@ DAVEMLAeroModel::evaluate(const Inputs<S>& in) const
         const auto& id = step.varID;
         if (vars.count(id)) continue;  // already set (e.g. an input)
 
-        if (step.isConst) {
-            vars[id] = S(step.constVal);
-        } else if (step.isTable) {
-            vars[id] = interpolate<S>(m_tables.at(id), vars);
-        } else if (!step.mathmlXml.empty()) {
-            vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
-        }
-        // vars without a definition (missing data) remain unset → 0
-        if (!vars.count(id)) vars[id] = S(0.0);
+        // Table > MathML calc > const initialValue (table overrides default)
+        if (step.isTable)                    vars[id] = interpolate<S>(m_tables.at(id), vars);
+        else if (!step.mathmlXml.empty())    vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
+        else if (step.isConst)               vars[id] = S(step.constVal);
+        if (!vars.count(id))                 vars[id] = S(0.0);
     }
 
     Outputs<S> out;
@@ -485,11 +493,37 @@ S DAVEMLAeroModel::evalMathMLStr(
     return evalNode<S>(d.first_child(), vars);
 }
 
+// =============================================================================
+// DAVEMLAeroModel::evaluateRaw<S>  — generic, map-based entry point
+// =============================================================================
+
+template<class S>
+std::unordered_map<std::string, S>
+DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, S> vars) const
+{
+    for (const auto& step : m_steps) {
+        const auto& id = step.varID;
+        if (vars.count(id)) continue;
+        // Table takes priority over initialValue (initialValue is just a default)
+        if (step.isTable)                    vars[id] = interpolate<S>(m_tables.at(id), vars);
+        else if (!step.mathmlXml.empty())    vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
+        else if (step.isConst)               vars[id] = S(step.constVal);
+        if (!vars.count(id))                 vars[id] = S(0.0);
+    }
+    return vars;
+}
+
 // Explicit template instantiations for double and AD<double>
 template DAVEMLAeroModel::Outputs<double>
 DAVEMLAeroModel::evaluate(const Inputs<double>&) const;
 
 template DAVEMLAeroModel::Outputs<CppAD::AD<double>>
 DAVEMLAeroModel::evaluate(const Inputs<CppAD::AD<double>>&) const;
+
+template std::unordered_map<std::string, double>
+DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, double>) const;
+
+template std::unordered_map<std::string, CppAD::AD<double>>
+DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, CppAD::AD<double>>) const;
 
 } // namespace Aetherion::Serialization
