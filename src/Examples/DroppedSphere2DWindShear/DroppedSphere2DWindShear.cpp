@@ -28,7 +28,7 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Aetherion - NASA TM-2015-218675 Atmospheric Scenario 8");
         AE_CORE_INFO("Dropped sphere - 2D wind shear - J2 gravity");
-        AE_CORE_INFO("  v_E(h) = 21.336*(h/9144)^(4/3) m/s  [70 ft/s at 30 000 ft]");
+        AE_CORE_INFO("  v_E(h) = 0.003*h - 6.096 m/s  [(0.003h_ft - 20) ft/s from west]");
         AE_CORE_INFO("=======================================================");
     }
 
@@ -41,10 +41,11 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
 
         AE_CORE_INFO("Initial ECI position  = [{:.3f}, {:.3f}, {:.3f}] m",
             x0.g.p.x(), x0.g.p.y(), x0.g.p.z());
-        AE_CORE_INFO("Wind shear: E_ref={:.4f} m/s  h_ref={:.1f} m  n={:.4f}",
-            rb_cfg.windShear.east_ref_mps,
-            rb_cfg.windShear.h_ref_m,
-            rb_cfg.windShear.shear_exp);
+        AE_CORE_INFO("Wind shear: grad_E={:.4f} m/s/m  int_E={:.4f} m/s  (v_E = {:.4f}*h + {:.4f})",
+            rb_cfg.windShear.gradient_E_mps_m,
+            rb_cfg.windShear.intercept_E_mps,
+            rb_cfg.windShear.gradient_E_mps_m,
+            rb_cfg.windShear.intercept_E_mps);
 
         m_Simulator = constructSimulator(rb_cfg, x0, theta0);
     }

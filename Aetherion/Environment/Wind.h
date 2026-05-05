@@ -21,17 +21,24 @@ struct ConstantWind
     double down_mps { 0.0 }; ///< Downward  wind component [m/s] (usually zero).
 };
 
-/// @brief Altitude-varying wind profile specification (NED frame at h_ref_m).
+/// @brief Linear altitude wind-shear configuration (NED frame).
 ///
-/// Wind speed at altitude h scales as (h / h_ref_m)^shear_exp.
-/// Use with WindAwareDragPolicy<PowerLawWindShear>.
+/// Wind at geocentric altitude h [m]:
+///   v_N(h) = gradient_N_mps_m * h + intercept_N_mps
+///   v_E(h) = gradient_E_mps_m * h + intercept_E_mps
+///
+/// NASA TM-2015-218675 Scenario 8:
+///   v_E(h) = 0.003 * h_m - 6.096  m/s   (= (0.003*h_ft - 20) ft/s from west)
+///   gradient_E_mps_m = 0.003
+///   intercept_E_mps  = -6.096
+///
+/// Use with WindAwareDragPolicy<LinearWindShear>.
 struct WindShear
 {
-    double north_ref_mps{ 0.0 };   ///< North wind at h_ref_m [m/s].
-    double east_ref_mps { 0.0 };   ///< East  wind at h_ref_m [m/s].
-    double down_ref_mps { 0.0 };   ///< Down  wind at h_ref_m [m/s] (usually zero).
-    double h_ref_m      { 9144.0 };///< Reference altitude [m].
-    double shear_exp    { 1.3333 };///< Power-law exponent (4/3 ≈ 1.333 fits Scenario 8).
+    double gradient_N_mps_m { 0.0 }; ///< North wind altitude gradient [m/s per m].
+    double gradient_E_mps_m { 0.0 }; ///< East  wind altitude gradient [m/s per m].
+    double intercept_N_mps  { 0.0 }; ///< North wind at h = 0 m (sea level) [m/s].
+    double intercept_E_mps  { 0.0 }; ///< East  wind at h = 0 m (sea level) [m/s].
 };
 
 } // namespace Aetherion::Environment

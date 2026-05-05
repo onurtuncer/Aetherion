@@ -18,8 +18,8 @@
 
 namespace Aetherion::Examples::DroppedSphere2DWindShear {
 
-/// @brief Wind-aware drag with a power-law altitude shear profile.
-using ShearWindPolicy = FlightDynamics::WindAwareDragPolicy<FlightDynamics::PowerLawWindShear>;
+/// @brief Wind-aware drag with a linear altitude shear profile.
+using ShearWindPolicy = FlightDynamics::WindAwareDragPolicy<FlightDynamics::LinearWindShear>;
 
 /// @brief Six-DoF VF for NASA Atmos-08: J2 gravity + altitude-shear wind drag.
 using DroppedSphere2DWindShearVF = RigidBody::VectorField<

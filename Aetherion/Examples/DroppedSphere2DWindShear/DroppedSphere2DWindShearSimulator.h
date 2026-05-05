@@ -16,7 +16,6 @@
 #include <Aetherion/RigidBody/AerodynamicParameters.h>
 #include <Aetherion/Environment/Wind.h>
 #include <Aetherion/ODE/RKMK/Core/NewtonOptions.h>
-#include <Eigen/Dense>
 
 namespace Aetherion::Examples::DroppedSphere2DWindShear {
 
@@ -42,7 +41,8 @@ public:
                 makeAeroPolicy(aero, ws, lat0_rad, lon0_rad)),
             std::move(initialState), opt)
         , m_Theta0(theta0_rad)
-        , m_WindNED(ws.north_ref_mps, ws.east_ref_mps, ws.down_ref_mps)
+        , m_Grad_N(ws.gradient_N_mps_m), m_Grad_E(ws.gradient_E_mps_m)
+        , m_Int_N(ws.intercept_N_mps),   m_Int_E(ws.intercept_E_mps)
     {
     }
 
@@ -53,13 +53,13 @@ public:
             time(), state(), currentTheta(),
             vectorField().gravity, vectorField().aero);
 
-        // Correct TAS to wind-relative airspeed (same correction as Scenario 7).
-        // The reference altitude wind is stored in m_WindNED; we use it as an
-        // approximation since the sphere barely moves horizontally.
-        const Eigen::Vector3d v_air = snap.feVelocity_m_s - m_WindNED
-            * std::pow(std::max(snap.altitudeMsl_m, 0.0) /
-                       vectorField().aero.wind.h_ref_m,
-                       vectorField().aero.wind.shear_exp);
+        // Correct TAS to wind-relative airspeed.
+        // Linear shear: v_wind_E(h) = gradient_E * h + intercept_E
+        const double h = std::max(snap.altitudeMsl_m, 0.0);
+        const double vE_wind = m_Grad_E * h + m_Int_E;
+        const double vN_wind = m_Grad_N * h + m_Int_N;
+        const Eigen::Vector3d v_wind_ned(vN_wind, vE_wind, 0.0);
+        const Eigen::Vector3d v_air = snap.feVelocity_m_s - v_wind_ned;
         snap.trueAirspeed_m_s   = v_air.norm();
         snap.mach                = snap.trueAirspeed_m_s / snap.speedOfSound_m_s;
         snap.dynamicPressure_Pa  = 0.5 * snap.airDensity_kg_m3
@@ -78,19 +78,20 @@ protected:
     void validate() const override {}
 
 private:
-    double          m_Theta0;
-    Eigen::Vector3d m_WindNED;  ///< NED wind at reference altitude (for TAS correction)
+    double m_Theta0;
+    double m_Grad_N, m_Grad_E;  ///< NED wind altitude gradients [m/s per m]
+    double m_Int_N,  m_Int_E;   ///< NED wind intercepts at h=0 [m/s]
 
     static ShearWindPolicy makeAeroPolicy(
         const RigidBody::AerodynamicParameters& aero,
         const Environment::WindShear&           ws,
         double lat0_rad, double lon0_rad)
     {
-        auto plws = FlightDynamics::PowerLawWindShear::from_ned(
-            ws.north_ref_mps, ws.east_ref_mps, ws.down_ref_mps,
-            lat0_rad, lon0_rad,
-            ws.h_ref_m, ws.shear_exp);
-        return ShearWindPolicy{ aero.CD, aero.S, std::move(plws) };
+        auto lws = FlightDynamics::LinearWindShear::from_ned(
+            ws.gradient_N_mps_m, ws.gradient_E_mps_m,
+            ws.intercept_N_mps,  ws.intercept_E_mps,
+            lat0_rad, lon0_rad);
+        return ShearWindPolicy{ aero.CD, aero.S, std::move(lws) };
     }
 };
 

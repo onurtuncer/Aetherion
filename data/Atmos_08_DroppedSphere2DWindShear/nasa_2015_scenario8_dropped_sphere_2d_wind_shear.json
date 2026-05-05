@@ -43,10 +43,9 @@
     "S": 0.018241465452480003
   },
   "windShear": {
-    "north_ref_mps": 0.0,
-    "east_ref_mps":  21.3360,
-    "down_ref_mps":  0.0,
-    "h_ref_m":       9144.0,
-    "shear_exp":     1.3333
+    "gradient_N_mps_m": 0.0,
+    "gradient_E_mps_m": 0.003,
+    "intercept_N_mps":  0.0,
+    "intercept_E_mps":  -6.096
   }
 }
