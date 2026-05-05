@@ -87,6 +87,7 @@ mathjax3_config = {
             "norm":   [r"\left\lVert #1 \right\rVert", 1],
             "twist":  r"\boldsymbol{\mathcal{T}}",
             "wrench": r"\boldsymbol{\mathcal{W}}",
+            "coloneqq": r"\mathrel{:=}",
         }
     }
 }
