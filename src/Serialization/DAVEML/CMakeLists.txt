@@ -8,12 +8,14 @@ set(PUGIXML_DIR "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 target_sources(Aetherion PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/DAVEMLReader.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/LoadInertiaFromDAVEML.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/DAVEMLAeroModel.cpp
     ${PUGIXML_DIR}/pugixml.cpp         # compile pugixml into Aetherion
 )
 
 target_include_directories(Aetherion
     PUBLIC
-        ${CMAKE_SOURCE_DIR}/Aetherion   # already set, but safe to repeat
+        ${CMAKE_SOURCE_DIR}/Aetherion
     PRIVATE
-        ${PUGIXML_DIR}                  # pugixml.hpp visible to .cpp files
+        ${PUGIXML_DIR}
+        ${CMAKE_SOURCE_DIR}/vendor/CppAD/include   # for CppAD::Value / CondExp
 )
