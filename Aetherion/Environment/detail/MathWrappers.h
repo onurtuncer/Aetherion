@@ -42,4 +42,26 @@ namespace Aetherion::Environment::detail {
         return cos(x);
     }
 
+    template <class S>
+    inline S ArcTangent(const S& x) {
+        using std::atan;
+        return atan(x);
+    }
+
+    /// @brief Two-argument arctangent, AD-safe via ADL.
+    ///
+    /// For `CppAD::AD<double>` arguments, ADL finds `CppAD::atan2` because the
+    /// arguments live in the `CppAD` namespace.  For `double`, `std::atan2` is used.
+    template <class S>
+    inline S ArcTangent2(const S& y, const S& x) {
+        using std::atan2;
+        return atan2(y, x);
+    }
+
+    template <class S>
+    inline S ArcSine(const S& x) {
+        using std::asin;
+        return asin(x);
+    }
+
 } // namespace Aetherion::Environment::detail

@@ -83,3 +83,32 @@ target_link_libraries(test_wind_models
 target_include_directories(test_wind_models PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 catch_discover_tests(test_wind_models)
+
+# --------------------------------------------------------------------------
+# Trim solver tests (F-16 DAVE-ML models required)
+# --------------------------------------------------------------------------
+
+set(DAVEML_F16_AERO "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_aero.dml")
+set(DAVEML_F16_PROP "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_prop.dml")
+
+add_executable(test_trim_solver test_TrimSolver.cpp)
+
+target_compile_definitions(test_trim_solver PRIVATE
+    "DAVEML_F16_AERO_FILE=\"${DAVEML_F16_AERO}\""
+    "DAVEML_F16_PROP_FILE=\"${DAVEML_F16_PROP}\"")
+
+target_compile_options(test_trim_solver PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_include_directories(test_trim_solver PRIVATE
+    "${CMAKE_SOURCE_DIR}/vendor/CppAD/include"
+    "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+
+target_link_libraries(test_trim_solver
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain
+        CppAD::cppad
+        Eigen3::Eigen)
+
+catch_discover_tests(test_trim_solver)
