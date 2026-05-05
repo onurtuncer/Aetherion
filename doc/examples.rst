@@ -1390,17 +1390,21 @@ Dropped Sphere, 2D Wind Shear (NASA TM-2015-218675 Atmospheric Scenario 8)
 *Atmospheric and Space Flight Vehicle Equations of Motion*,
 Appendix B, Section B.1.8 — Atmospheric Simulation 08.
 
-Same sphere as Scenario 6 (CD = 0.1) dropped from 9 144 m, but now with a
-**power-law altitude wind shear**: the eastward wind grows from zero at sea
-level to 70 ft/s (21.336 m/s) at 30 000 ft (9 144 m) following
+Same sphere as Scenario 6 (CD = 0.1) dropped from 9 144 m into a
+**linearly varying altitude wind shear** specified in the NASA TM as:
+
+   *"V_wind = (0.003h − 20) ft/s from west; h is height MSL in ft."*
+
+Converting to SI:
 
 .. math::
 
-   v_E(h) = 21.336 \left(\frac{h}{9144}\right)^{4/3} \text{ m/s}.
+   v_E(h) = 0.003\,h_\text{m} - 6.096 \text{ m/s},
 
-The exponent :math:`n = 4/3 \approx 1.333` was fitted by least-squares to the
-NASA reference data (:math:`n_\text{fit} = 1.338`).  Even before the sphere
-starts falling, the non-zero wind at the initial altitude creates a TAS of
+where :math:`h_\text{m}` is the altitude above mean sea level in metres.
+The wind is 70 ft/s (21.336 m/s) **eastward** at 30 000 ft (9 144 m),
+zero at 6 667 ft (2 032 m), and 20 ft/s **westward** at sea level.
+Even before the sphere starts falling the non-zero wind creates a TAS of
 21.336 m/s and an eastward drag force.
 
 Physics Model
@@ -1410,12 +1414,12 @@ Physics Model
 
    using DroppedSphere2DWindShearVF = RigidBody::VectorField<
        FlightDynamics::J2GravityPolicy,
-       FlightDynamics::WindAwareDragPolicy<PowerLawWindShear>,
+       FlightDynamics::WindAwareDragPolicy<LinearWindShear>,
        FlightDynamics::ZeroPropulsionPolicy,
        FlightDynamics::ConstantMassPolicy
    >;
 
-The ``PowerLawWindShear`` model and the general ``WindAwareDragPolicy`` are
+The ``LinearWindShear`` model and the general ``WindAwareDragPolicy`` are
 described in detail in :ref:`aero_wind_policies`.
 
 Initial Conditions
@@ -1425,7 +1429,7 @@ Identical to :ref:`example_steady_wind` (Scenario 7) except for the wind model.
 Configuration read from
 :file:`data/Atmos_08_DroppedSphere2DWindShear/nasa_2015_scenario8_dropped_sphere_2d_wind_shear.json`.
 
-Key wind parameters:
+Key wind parameters (``windShear`` JSON section):
 
 .. list-table::
    :header-rows: 1
@@ -1434,12 +1438,18 @@ Key wind parameters:
    * - Parameter
      - Value
      - Notes
-   * - East wind at h = 9 144 m
-     - 21.336 m/s (70 ft/s)
-     - Reference wind speed
-   * - Shear exponent :math:`n`
-     - 4/3 ≈ 1.333
-     - Least-squares fit to Atmos_08_sim_01
+   * - East wind gradient
+     - 0.003 m/s per m
+     - = 0.003 ft/s per ft (exact from NASA TM)
+   * - East wind intercept (h = 0)
+     - −6.096 m/s
+     - = −20 ft/s (westward at sea level)
+   * - v_E at h = 9 144 m
+     - 0.003 × 9144 − 6.096 = **21.336 m/s**
+     - Matches initial TAS in reference ✓
+   * - Zero crossing
+     - h = 6.096 / 0.003 = **2 032 m** (6 667 ft)
+     - Wind reversal altitude
    * - North wind
      - 0.0 m/s
      - East-only shear
@@ -1485,48 +1495,48 @@ Validation Results
      - 9 022.390
      - +0.098
      - 52.905
-     - 52.902
-     - −0.003
+     - 52.907
+     - +0.002
    * - 10
      - 8 658.937
      - 8 659.133
      - +0.196
      - 98.488
-     - 98.471
-     - −0.017
+     - 98.479
+     - −0.009
    * - 15
      - 8 059.325
-     - 8 059.611
-     - +0.286
+     - 8 059.612
+     - +0.287
      - 144.023
-     - 144.006
-     - −0.017
+     - 144.011
+     - −0.011
    * - 20
      - 7 233.060
-     - 7 233.426
-     - +0.366
+     - 7 233.428
+     - +0.368
      - 187.569
-     - 187.560
-     - −0.009
+     - 187.559
+     - −0.010
    * - 25
      - 6 194.871
-     - 6 195.294
-     - +0.422
+     - 6 195.297
+     - +0.426
      - 227.792
-     - 227.796
-     - +0.004
+     - 227.786
+     - −0.006
    * - 30
      - **4 965.582**
-     - **4 966.030**
-     - **+0.447**
+     - **4 966.032**
+     - **+0.449**
      - **263.313**
-     - **263.328**
-     - **+0.015**
+     - **263.313**
+     - **0.000**
 
-Altitude error 0.447 m (0.009%) and TAS error < 0.006% at t = 30 s —
+Altitude error 0.449 m (0.009%) and TAS error essentially zero at t = 30 s —
 the same rotating-Earth systematic offset as all previous scenarios.
-The eastward drift (NED east velocity) matches to ~0.05 m/s throughout,
-a small residual from the empirical n = 4/3 wind-profile approximation.
+The wind formula is the exact NASA specification:
+:math:`v_E(h) = 0.003\,h_\text{m} - 6.096` m/s (linear, not a power law).
 
 Comparison Plots
 ^^^^^^^^^^^^^^^^

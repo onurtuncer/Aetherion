@@ -216,24 +216,28 @@ longitude.
 
 **Used in**: Scenario 7 (steady 20 ft/s eastward wind).
 
-PowerLawWindShear
-~~~~~~~~~~~~~~~~~
+LinearWindShear
+~~~~~~~~~~~~~~~
 
-Wind magnitude varies with geocentric altitude following a power law:
+Wind varies **linearly** with geocentric altitude in each NED component:
 
 .. math::
 
-   \mathbf{v}_\mathrm{wind,ECEF}(\mathbf{r},t)
-   = \mathbf{v}_\mathrm{ref,ECEF}
-     \left(\frac{h}{h_\mathrm{ref}}\right)^n,
+   v_N(h) = \alpha_N \, h + \beta_N, \quad
+   v_E(h) = \alpha_E \, h + \beta_E,
 
 where :math:`h = \|\mathbf{r}_\mathrm{ECI}\| - R_e` is the geocentric
-altitude, :math:`\mathbf{v}_\mathrm{ref,ECEF}` is the wind vector at the
-reference altitude :math:`h_\mathrm{ref}`, and :math:`n` is the shear
-exponent.
+altitude, :math:`\alpha` is the altitude gradient [m/s per m], and
+:math:`\beta` is the sea-level intercept [m/s].  The NED wind is converted
+to ECEF once at construction from the launch latitude/longitude.
 
-For NASA TM-2015-218675 Scenario 8 (70 ft/s at 30 000 ft), a least-squares
-fit to the reference data gives :math:`n \approx 4/3 \approx 1.333`.
+For NASA TM-2015-218675 Scenario 8 the formula is given explicitly:
+
+   *"Vwind = (0.003h − 20) ft/s from west; h is height MSL in ft."*
+
+In SI units: :math:`v_E(h) = 0.003\,h_\text{m} - 6.096` m/s
+(:math:`\alpha_E = 0.003`, :math:`\beta_E = -6.096`, :math:`\alpha_N = \beta_N = 0`).
+The wind is eastward above 2 032 m (6 667 ft), zero there, and westward below.
 
 **Used in**: Scenario 8 (2D wind shear).
 
@@ -314,14 +318,13 @@ The policy is instantiated as, for example:
 .. code-block:: cpp
 
    using ShearPolicy =
-       WindAwareDragPolicy<PowerLawWindShear>;
+       WindAwareDragPolicy<LinearWindShear>;
 
    ShearPolicy p{ CD, S_ref,
-                  PowerLawWindShear::from_ned(
-                      0.0, 21.336, 0.0,   // NED wind at h_ref [m/s]
-                      lat0, lon0,
-                      9144.0,             // h_ref [m]
-                      4.0/3.0) };         // shear exponent
+                  LinearWindShear::from_ned(
+                      0.0,    0.003,    // gradient  (N, E) [m/s per m]
+                      0.0,   -6.096,   // intercept (N, E) [m/s at h=0]
+                      lat0, lon0) };
 
 
 Snapshot Air-Data Corrections
@@ -386,10 +389,10 @@ Policy Composition Summary
      - ✗
      - Earth rotation + constant wind
      - 7
-   * - ``WindAwareDragPolicy<PowerLawWindShear>``
+   * - ``WindAwareDragPolicy<LinearWindShear>``
      - ✓
      - ✗
-     - Earth rotation + shear wind
+     - Earth rotation + linear altitude shear
      - 8
    * - ``WindAwareDragPolicy<GeodesicCallbackWind>``
      - ✓
