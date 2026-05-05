@@ -41,3 +41,24 @@ target_link_libraries(test_load_config_from_string
         Catch2::Catch2WithMain)
 
 catch_discover_tests(test_load_config_from_string)
+
+# DAVE-ML reader smoke tests — path to F-16 inertia file injected at configure time
+set(DAVEML_F16_INERTIA "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_inertia.dml")
+
+add_executable(test_daveml_reader test_DAVEMLReader.cpp)
+
+target_compile_definitions(test_daveml_reader PRIVATE
+    "DAVEML_TEST_FILE=\"${DAVEML_F16_INERTIA}\"")
+
+target_compile_options(test_daveml_reader PRIVATE
+    $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_include_directories(test_daveml_reader PRIVATE
+    "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+
+target_link_libraries(test_daveml_reader
+    PRIVATE
+        Aetherion
+        Catch2::Catch2WithMain)
+
+catch_discover_tests(test_daveml_reader)

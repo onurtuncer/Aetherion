@@ -33,3 +33,6 @@ target_sources(Aetherion PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/VelocityNEDJson.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/BodyRatesJson.cpp
 )
+
+# DAVE-ML reader (pugixml-based, minimal feature set)
+add_subdirectory(DAVEML)
