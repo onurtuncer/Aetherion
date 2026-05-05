@@ -40,6 +40,7 @@ Flight Dynamics with Spatial Vector Algebra
    rkmk
    unified_notation
    aero_wind_policies
+   daveml
    appendices
    api
    examples
