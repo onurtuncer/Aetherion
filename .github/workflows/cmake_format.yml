@@ -27,7 +27,7 @@ jobs:
           pip3 install --break-system-packages cmakelang
           RED='\033[0;31m'
           NC='\033[0m' # No Color
-          ./.run-cmake-format
+          bash .run-cmake-format
           output=$(git diff)
           if [ -n "$output" ]; then printf "${RED}CMake format error: run script './.run-cmake-format'${NC}\n"; fi
           if [ -n "$output" ]; then printf "${RED}${output}${NC}\n"; fi
