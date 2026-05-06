@@ -51,11 +51,11 @@ namespace Aetherion::FlightDynamics {
 
 /// @brief Fixed flight condition for the trim problem.
 struct TrimInputs {
-    double vt_fps    {};   ///< True airspeed [ft/s]
-    double alt_ft    {};   ///< Geometric altitude [ft]
-    double weight_lbf{};   ///< Aircraft weight at trim [lbf]
-    double beta_deg  {0.0};///< Sideslip angle [deg]  (0 for coordinated flight)
-    double phi_deg   {0.0};///< Bank angle [deg]       (0 for wings-level)
+    double vt_fps      {};   ///< True airspeed [ft/s]
+    double alt_ft      {};   ///< Geometric altitude [ft]
+    double weight_lbf  {};   ///< Aircraft weight at trim [lbf]
+    double beta_deg    {0.0};///< Sideslip angle [deg]  (0 for coordinated flight)
+    double phi_deg     {0.0};///< Bank angle [deg]       (0 for wings-level)
 };
 
 /// @brief Trim solution returned by TrimSolver::solve().
@@ -180,7 +180,13 @@ TrimSolver::residual_impl(const TrimInputs& in,
     pi.pwr_pct = pwr_pct;
     pi.alt_ft  = S(in.alt_ft);
     pi.mach    = S(mach);
-    const S FEX_lbf = m_prop.evaluate<S>(pi).fx_N / S(kLbf_N);
+    const auto prop     = m_prop.evaluate<S>(pi);
+    const S FEX_lbf     = prop.fx_N / S(kLbf_N);
+    // TEM from the DAVE-ML propulsion file (= 0 for the simplified S&L model).
+    // The geometry-driven engine moment arm (My = z_engine × Fx) lives in
+    // F16PropPolicy::z_engine_m and is not visible here; it is intentionally
+    // excluded because it is an aircraft property, not a flight condition.
+    const S MY_prop_ftlbf = prop.my_Nm / S(1.355817948329279);
 
     // ── Body-frame gravity ────────────────────────────────────────────────────
     const S alpha_rad = alpha_deg * S(kDegRad);
@@ -190,7 +196,7 @@ TrimSolver::residual_impl(const TrimInputs& in,
 
     return { FX_aero + FEX_lbf + grav_x,
              FZ_aero + grav_z,
-             MY_aero };
+             MY_aero + MY_prop_ftlbf };
 }
 
 // ── Inline double wrapper ─────────────────────────────────────────────────────

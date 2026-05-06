@@ -49,13 +49,14 @@ public:
         std::shared_ptr<const Serialization::DAVEMLPropModel>     prop_model,
         RigidBody::StateD                                         x0,
         double                                                    theta0,
+        double                                                    z_engine_m = 0.0,
         ODE::RKMK::Core::NewtonOptions                            opt = {})
         : ISimulator<F16VF, Simulation::Snapshot1>(
             F16VF(
                 ip,
                 FlightDynamics::J2GravityPolicy{},
                 FlightDynamics::F16AeroPolicy(aero_model, trim.el_deg, 0.0, 0.0),
-                FlightDynamics::F16PropPolicy(prop_model, trim.pwr_pct)),
+                FlightDynamics::F16PropPolicy(prop_model, trim.pwr_pct, z_engine_m)),
             std::move(x0), opt)
         , m_theta0(theta0)
     {}

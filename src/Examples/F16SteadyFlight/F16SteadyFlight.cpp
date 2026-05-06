@@ -52,7 +52,14 @@ namespace {
     constexpr double kTAS_fps     =  565.685;       // 335.15 KTAS
     constexpr double kG_mps2      =  9.80665;
     constexpr double kLbf_N       =  4.448221615260751;
+    constexpr double kFtLbf_Nm    =  1.355817948329279;
     constexpr double kDeg         =  std::numbers::pi / 180.0;
+
+    // Engine z-offset from CG [m, body z-down convention].
+    // Zero → simplified Stevens & Lewis model (TEM = 0 in the DAVE-ML file).
+    // Set to a non-zero value to match a simulation framework that includes
+    // the engine moment arm explicitly (e.g. the NASA GNC reference tool).
+    constexpr double kEngineZ_m   =  0.0;
 }
 
 namespace Aetherion::Examples::F16SteadyFlight {
@@ -119,11 +126,38 @@ void F16SteadyFlightApplication::prepareSimulation() const
     if (!trim.converged)
         throw std::runtime_error("Trim solver did not converge.");
 
-    AE_CORE_INFO("Trim converged in {} iterations:", FlightDynamics::TrimSolver::kMaxIter);
+    AE_CORE_INFO("Trim converged:");
     AE_CORE_INFO("  alpha = {:.4f} deg", trim.alpha_deg);
     AE_CORE_INFO("  el    = {:.4f} deg", trim.el_deg);
     AE_CORE_INFO("  pwr   = {:.4f} %%",  trim.pwr_pct);
     AE_CORE_INFO("  |r|   = {:.3e} lbf", trim.residual_norm);
+
+    // ── Propulsive wrench at trim — magnitude check ───────────────────────────
+    {
+        const double alt_m   = kAlt_ft * FlightDynamics::TrimSolver::kFt_m;
+        const double a_fps   = Environment::US1976Atmosphere(alt_m).a
+                               / FlightDynamics::TrimSolver::kFt_m;
+        const double mach    = kTAS_fps / a_fps;
+
+        Serialization::DAVEMLPropModel::Inputs<double> pi{};
+        pi.pwr_pct = trim.pwr_pct;
+        pi.alt_ft  = kAlt_ft;
+        pi.mach    = mach;
+        const auto po = prop_model->evaluate<double>(pi);
+
+        // My from DML (TEM) + geometry-driven moment arm My = z_engine × Fx
+        const double MY_arm_Nm   = kEngineZ_m * po.fx_N;
+        const double MY_total_Nm = po.my_Nm + MY_arm_Nm;
+
+        AE_CORE_INFO("Propulsive wrench at trim (z_engine = {:.4f} m):", kEngineZ_m);
+        AE_CORE_INFO("  Fx = {:.1f} N  ({:.1f} lbf)",
+                     po.fx_N, po.fx_N / kLbf_N);
+        AE_CORE_INFO("  Fy = {:.4f} N,  Fz = {:.4f} N", po.fy_N, po.fz_N);
+        AE_CORE_INFO("  My = {:.2f} N·m  ({:.2f} ft·lbf)  [TEM={:.2f} + arm={:.2f}]",
+                     MY_total_Nm, MY_total_Nm / kFtLbf_Nm,
+                     po.my_Nm, MY_arm_Nm);
+        AE_CORE_INFO("  Mx = {:.4f} N·m,  Mz = {:.4f} N·m", po.mx_Nm, po.mz_Nm);
+    }
 
     // ── 4. Build initial state ────────────────────────────────────────────────
     RigidBody::Config cfg{};
@@ -146,7 +180,7 @@ void F16SteadyFlightApplication::prepareSimulation() const
     AE_CORE_INFO("Initial ECI position = [{:.3f}, {:.3f}, {:.3f}] m",
                  x0.g.p.x(), x0.g.p.y(), x0.g.p.z());
 
-    m_Simulator = constructSimulator(ip, trim, aero_model, prop_model, x0, theta0);
+    m_Simulator = constructSimulator(ip, trim, aero_model, prop_model, x0, theta0, kEngineZ_m);
 }
 
 // ── writeInitialSnapshot ──────────────────────────────────────────────────────
@@ -244,10 +278,11 @@ F16SteadyFlightApplication::constructSimulator(
     std::shared_ptr<const Serialization::DAVEMLAeroModel> aero,
     std::shared_ptr<const Serialization::DAVEMLPropModel> prop,
     const RigidBody::StateD& x0,
-    double theta0)
+    double theta0,
+    double z_engine_m)
 {
-    AE_CORE_INFO("Constructing F16SteadyFlightSimulator...");
-    return std::make_unique<F16SteadyFlightSimulator>(ip, trim, aero, prop, x0, theta0);
+    AE_CORE_INFO("Constructing F16SteadyFlightSimulator (z_engine = {:.4f} m)...", z_engine_m);
+    return std::make_unique<F16SteadyFlightSimulator>(ip, trim, aero, prop, x0, theta0, z_engine_m);
 }
 
 } // namespace Aetherion::Examples::F16SteadyFlight
