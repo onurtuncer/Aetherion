@@ -132,10 +132,7 @@ void F16SteadyFlightApplication::prepareSimulation() const
     cfg.pose.alt_m        = kAlt_m;
     cfg.pose.azimuth_deg  = kHeading_deg;
     cfg.pose.zenith_deg   = 90.0 - trim.alpha_deg;  // nearly horizontal, slight nose-up
-    // MakeLaunchStateECI places body-z UP at roll=0; +180° flips it to z-DOWN
-    // (standard aviation convention).  The NASA initial bank φ = kRoll_deg is
-    // then added on top of that base orientation.
-    cfg.pose.roll_deg     = 180.0 + kRoll_deg;
+    cfg.pose.roll_deg     = kRoll_deg;  // standard: roll=0 → z-down; apply NASA φ directly
     cfg.velocityNED.north_mps = kVelocity_mps;
     cfg.velocityNED.east_mps  = kVelocity_mps;
     cfg.velocityNED.down_mps  = 0.0;

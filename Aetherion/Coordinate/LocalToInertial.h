@@ -163,7 +163,11 @@ namespace Aetherion::Coordinate {
     ///
     /// Converts a geodetic launch position and heading (azimuth / zenith / roll)
     /// into ECI-frame quantities: position vector, body-forward direction, and
-    /// attitude quaternion.  The body-frame convention is x forward, y right, z down.
+    /// attitude quaternion.
+    ///
+    /// Body-frame convention: x forward (nose), y right-wing, z DOWN.
+    /// At roll = 0° the body frame is right-handed with z pointing toward Earth —
+    /// the standard NED aerospace convention.  No 180° offset is needed in configs.
     ///
     /// @param lat_rad                  Geodetic latitude [rad].
     /// @param lon_rad                  Geodetic longitude [rad].
@@ -197,7 +201,11 @@ namespace Aetherion::Coordinate {
             DirectionNEDFromAzimuthZenith(azimuth_rad, zenith_rad);
         const Vec3<Scalar> forward_ned = Normalize(dir_ned);
 
-        const Vec3<Scalar> up_ref_ned{ Scalar(0), Scalar(0), Scalar(-1) };
+        // Reference is NED-down so that Cross(down, forward) yields the RIGHT-wing
+        // direction.  The resulting body frame is right-handed with x forward,
+        // y right-wing, z DOWN — standard aviation / aerospace NED convention.
+        // roll = 0  →  body-z points DOWN (no 180° offset needed in any config).
+        const Vec3<Scalar> down_ref_ned{ Scalar(0), Scalar(0), Scalar(1) };
 
         auto make_side_ned = [&](const Vec3<Scalar>& ref_ned) -> Vec3<Scalar> {
             const Vec3<Scalar> candidate = Cross(ref_ned, forward_ned);
@@ -208,8 +216,10 @@ namespace Aetherion::Coordinate {
             return Vec3<Scalar>{ Scalar(0), Scalar(0), Scalar(0) };
             };
 
-        Vec3<Scalar> side_ned = make_side_ned(up_ref_ned);
+        Vec3<Scalar> side_ned = make_side_ned(down_ref_ned);
         if (side_ned[0] == Scalar(0) && side_ned[1] == Scalar(0) && side_ned[2] == Scalar(0)) {
+            // Forward is nearly aligned with NED-down (near-vertical launch).
+            // Fall back to North as reference so the right-wing has a well-defined direction.
             const Vec3<Scalar> north_ref{ Scalar(1), Scalar(0), Scalar(0) };
             side_ned = Normalize(Cross(north_ref, forward_ned));
         }

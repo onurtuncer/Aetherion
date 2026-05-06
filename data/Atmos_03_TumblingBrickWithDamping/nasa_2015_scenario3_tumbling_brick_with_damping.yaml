@@ -15,7 +15,7 @@
 #   Cmq  = -1.0  (pitch damping: M = ¼ρ|V|S c̄² Cmq q)
 #   Cnr  = -1.0  (yaw damping:   N = ¼ρ|V|S b² Cnr r)
 #
-# Body orientation: roll_deg=180 → x-body North, y-body East, z-body Down.
+# Body orientation: roll_deg=0 → x-body North, y-body East, z-body Down (standard aviation).
 # ------------------------------------------------------------------------------
 
 pose:
@@ -24,7 +24,7 @@ pose:
   alt_m:   9144.0
   azimuth_deg:   0.0
   zenith_deg:   90.0
-  roll_deg:    180.0    # x→N, y→E, z→D  (Table 4 orientation)
+  roll_deg:      0.0    # x→N, y→E, z→D  (Table 4 orientation, standard aviation)
 
 velocityNED:
   vn_mps: 0.0

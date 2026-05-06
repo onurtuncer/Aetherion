@@ -4,7 +4,7 @@
     "lon_deg": 0.0,
     "azimuth_deg": 0.0,
     "zenith_deg": 90.0,
-    "roll_deg": 180.0,
+    "roll_deg": 0.0,
     "alt_m": 9144.0
   },
   "velocityNED": {

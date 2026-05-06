@@ -6,9 +6,9 @@
 # Reference: NASA TM-2015-218675, Section B.1.2 / Table 26, Table 4.
 #
 # Brick dimensions: 8 in × 4 in × 2.25 in  (x × y × z body axes)
-#   x-body (8 in, longest)  → North   (points along x-body, Ixx = smallest)
-#   y-body (4 in, medium)   → East    (roll_deg = 180 puts y-body East)
-#   z-body (2.25 in, short) → Down    (roll_deg = 180 puts z-body Down)
+#   x-body (8 in, longest)  → North   (azimuth 0 = North)
+#   y-body (4 in, medium)   → East    (roll_deg = 0, standard aviation z-down convention)
+#   z-body (2.25 in, short) → Down
 #
 # Mass and inertia from Table 4 (US Standard Face Brick, homogeneous):
 #   m   = 0.155404754 slug  = 0.155404754 × 14.593903 = 2.267962 kg
@@ -32,7 +32,7 @@ pose:
 
   azimuth_deg:   0.0   # deg  — x-body points North (azimuth 0 = North)
   zenith_deg:   90.0   # deg  — x-body is horizontal (zenith 90 = horizontal)
-  roll_deg:    180.0   # deg  — 180° roll puts y-body East, z-body Down (NASA Table 4 orientation)
+  roll_deg:      0.0   # deg  — 0° roll: x→N, y→E, z→D (standard aviation, NASA Table 4 orientation)
 
 velocityNED:
   vn_mps: 0.0        # m/s  — north component
