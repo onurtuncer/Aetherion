@@ -20,7 +20,7 @@
 //
 // CppAD note
 // ──────────
-// DAVEMLAeroModel::evaluate<S>() works with S = double and S = CppAD::AD<double>.
+// DAVEMLAeroModel::evaluate<S>() works with S = double and S = CppAD::AD\<double\>.
 // Breakpoint-segment selection uses the plain-double value of the input (via
 // CppAD::Value() in the AD path) so that indices are always integers, while
 // interpolation weights are computed with full S precision — giving correct
@@ -43,7 +43,7 @@ namespace Aetherion::Serialization {
 
 /// @brief Parsed and evaluatable DAVE-ML aerodynamic model.
 ///
-/// Instantiate once from the .dml file, then call evaluate<S>() as many
+/// Instantiate once from the .dml file, then call evaluate\<S\>() as many
 /// times as needed.  The templated evaluate() is the only runtime entry
 /// point; everything else is set up during construction.
 class DAVEMLAeroModel
@@ -91,8 +91,8 @@ public:
 
     /// @brief Evaluate the aerodynamic model at a given operating point.
     ///
-    /// Works with S = double or S = CppAD::AD<double>.
-    /// @param in  Operating-point inputs (see @c Inputs<S>).
+    /// Works with S = double or S = CppAD::AD\<double\>.
+    /// @param in  Operating-point inputs (see @c Inputs\<S\>).
     /// @return    Six non-dimensional force and moment coefficients.
     template<class S>
     Outputs<S> evaluate(const Inputs<S>& in) const;

@@ -261,7 +261,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
 //            void tape_if_needed_(const VecN& x) const {
 //                if (taped_) return;
 //
-//                using AD = CppAD::AD<double>;
+//                using AD = CppAD::AD\<double\>;
 //                using VecAD = Eigen::Matrix<AD, N, 1>;
 //
 //                CppAD::vector<AD> X(N);
@@ -479,7 +479,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
 //            void tape_if_needed_() const {
 //                if (taped_) return;
 //
-//                using AD = CppAD::AD<double>;
+//                using AD = CppAD::AD\<double\>;
 //
 //                CppAD::vector<AD> X((std::size_t)n_);
 //                for (int i = 0; i < n_; ++i) X[(std::size_t)i] = AD(0.0);

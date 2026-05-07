@@ -48,7 +48,7 @@ namespace Aetherion::Aerodynamics {
 ///
 /// Constructed as @f$ C_{b/w} = R_y(\alpha) \cdot R_z(\beta) @f$, consistent with the
 /// angle-of-attack and sideslip definitions in AerodynamicAngles.h.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param alpha_rad Angle of attack [rad].
 /// @param beta_rad Sideslip angle [rad].
 /// @return 3×3 DCM @f$ C_{b/w} @f$ such that @f$ v_\text{body} = C_{b/w}\, v_\text{wind} @f$.
@@ -74,7 +74,7 @@ inline Mat3<Scalar> WindToBodyDCM(const Scalar& alpha_rad, const Scalar& beta_ra
 /// Computes the dynamic pressure @f$ q = \tfrac{1}{2}\rho V^2 @f$, forms the wind-axis force
 /// vector @f$ F_w = [-q S\,C_D,\; q S\,C_Y,\; -q S\,C_L] @f$, then rotates it to body axes
 /// via WindToBodyDCM().
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param alpha_rad Angle of attack [rad].
 /// @param beta_rad Sideslip angle [rad].
 /// @param density_kg_m3 Air density [kg/m³].
@@ -111,7 +111,7 @@ inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY_AlphaBeta(
 ///
 /// Calls AnglesFromVelocityBody() to derive alpha, beta, and speed from @p v_body_m_s, then
 /// delegates to AerodynamicForceBodyFromCLCDCY_AlphaBeta().
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param v_body_m_s Air-relative velocity vector in body axes [m/s].
 /// @param density_kg_m3 Air density [kg/m³].
 /// @param S_ref_m2 Aerodynamic reference area [m²].
@@ -140,7 +140,7 @@ inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY(
 /// @brief Aerodynamic force in body axes computed directly from body-axis force coefficients.
 ///
 /// Computes @f$ F_b = q\,S\,[C_x,\,C_y,\,C_z]^\top @f$ where @f$ q = \tfrac{1}{2}\rho V^2 @f$.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param v_body_m_s Air-relative velocity vector in body axes [m/s]; used to compute airspeed.
 /// @param density_kg_m3 Air density [kg/m³].
 /// @param S_ref_m2 Aerodynamic reference area [m²].

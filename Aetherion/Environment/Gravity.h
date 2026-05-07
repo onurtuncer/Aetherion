@@ -18,7 +18,7 @@
 namespace Aetherion::Environment {
 
 /// @brief 3-element position/acceleration vector; compatible with CppAD scalar types.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 template <class Scalar>
 using Vec3 = std::array<Scalar, 3>;
 
@@ -26,7 +26,7 @@ using Vec3 = std::array<Scalar, 3>;
 ///
 /// Computes @f$ \mathbf{g} = -\frac{\mu}{r^3}\,\mathbf{r} @f$ where
 /// @f$ r = \|\mathbf{r}\| @f$ is the geocentric distance.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param r_W Position vector from Earth's centre expressed in ECI [m].
 /// @param mu Geocentric gravitational parameter [m³/s²]; defaults to the WGS-84 value.
 /// @return Gravitational acceleration vector in ECI [m/s²].
@@ -62,7 +62,7 @@ inline Vec3<Scalar> CentralGravity(
 ///   \end{bmatrix}
 /// @f]
 /// where @f$ \mathbf{g}_0 @f$ is the central-gravity term.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param r_W Position vector from Earth's centre expressed in ECI [m].
 /// @param mu Geocentric gravitational parameter [m³/s²]; defaults to the WGS-84 value.
 /// @param Re Earth equatorial radius [m]; defaults to the WGS-84 semi-major axis.

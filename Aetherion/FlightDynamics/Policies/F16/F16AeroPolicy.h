@@ -19,7 +19,7 @@
 // (trim or open-loop use).  A flight-control layer should update them between
 // integration steps for closed-loop simulations.
 //
-// Satisfies AeroPolicy for both S = double and S = CppAD::AD<double>.
+// Satisfies AeroPolicy for both S = double and S = CppAD::AD\<double\>.
 // ------------------------------------------------------------------------------
 
 #pragma once
@@ -46,7 +46,7 @@ namespace Aetherion::FlightDynamics {
 ///  1. Derives atmosphere-relative airspeed in the body frame (ECI velocity
 ///     minus the Earth surface velocity R^T(ω_E × r_ECI)).
 ///  2. Converts to angle of attack (α), sideslip (β), and TAS in ft/s.
-///  3. Calls DAVEMLAeroModel::evaluate<S> with the current body rates and
+///  3. Calls DAVEMLAeroModel::evaluate\<S\> with the current body rates and
 ///     fixed control-surface deflections.
 ///  4. Scales the dimensionless coefficients by qbar × Sref (and span/chord)
 ///     and converts lbf / ft·lbf → N / N·m.

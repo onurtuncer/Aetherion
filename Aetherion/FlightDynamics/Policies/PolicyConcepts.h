@@ -6,7 +6,7 @@
 // PolicyConcepts.h
 //
 // Concepts that define the compile-time interface for each physics policy.
-// Each concept is checked for both double and CppAD::AD<double> --
+// Each concept is checked for both double and CppAD::AD\<double\> --
 // a policy that is not AD-safe fails here, not inside CppAD tape evaluation.
 //
 #pragma once
@@ -51,7 +51,7 @@ namespace Aetherion::FlightDynamics {
     /// @brief Concept for a gravity wrench policy.
     ///
     /// A type @c P satisfies @c GravityPolicy if, for both @c S = @c double
-    /// and @c S = @c CppAD::AD<double>, it provides:
+    /// and @c S = @c CppAD::AD\<double\>, it provides:
     /// @code
     ///   Spatial::Wrench<S> operator()(const SE3<S>& g, S mass) const;
     /// @endcode
@@ -60,12 +60,12 @@ namespace Aetherion::FlightDynamics {
     template<class P>
     concept GravityPolicy =
         detail::GravityPolicyFor<P, double>&&
-        detail::GravityPolicyFor<P, CppAD::AD<double>>;
+        detail::GravityPolicyFor<P, CppAD::AD\<double\>>;
 
     /// @brief Concept for an aerodynamic wrench policy.
     ///
     /// A type @c P satisfies @c AeroPolicy if, for both @c S = @c double
-    /// and @c S = @c CppAD::AD<double>, it provides:
+    /// and @c S = @c CppAD::AD\<double\>, it provides:
     /// @code
     ///   Spatial::Wrench<S> operator()(const SE3<S>& g,
     ///                                  const Eigen::Matrix<S,6,1>& nu_B,
@@ -74,7 +74,7 @@ namespace Aetherion::FlightDynamics {
     template<class P>
     concept AeroPolicy =
         detail::AeroPolicyFor<P, double>&&
-        detail::AeroPolicyFor<P, CppAD::AD<double>>;
+        detail::AeroPolicyFor<P, CppAD::AD\<double\>>;
 
     /// @brief Concept for a propulsion wrench policy.
     ///
@@ -90,13 +90,13 @@ namespace Aetherion::FlightDynamics {
     /// @brief Concept for a mass-rate (propellant burn) policy.
     ///
     /// A type @c P satisfies @c MassPolicy if, for both @c S = @c double
-    /// and @c S = @c CppAD::AD<double>, it provides:
+    /// and @c S = @c CppAD::AD\<double\>, it provides:
     /// @code
     ///   S mdot(S t, S mass) const;   // [kg/s], typically ≤ 0
     /// @endcode
     template<class P>
     concept MassPolicy =
         detail::MassPolicyFor<P, double>&&
-        detail::MassPolicyFor<P, CppAD::AD<double>>;
+        detail::MassPolicyFor<P, CppAD::AD\<double\>>;
 
 } // namespace Aetherion::FlightDynamics

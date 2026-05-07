@@ -17,7 +17,7 @@
 // integrator never sees g_dot directly.
 //
 // The call operator is templated on Scalar S (not the class) so that
-// StageResidualIRKProductSE3 can call it with S = CppAD::AD<double> when
+// StageResidualIRKProductSE3 can call it with S = CppAD::AD\<double\> when
 // building the Newton Jacobian tape, and with S = double at runtime.
 // This matches the pattern used by RigidBodyVectorField::operator().
 //
@@ -47,14 +47,14 @@ namespace Aetherion::FlightDynamics {
 /// velocity.
 ///
 /// The call operator is templated on @c S (not the class) so that the same instance
-/// is callable for both @c double (runtime) and @c CppAD::AD<double> (Newton Jacobian
+/// is callable for both @c double (runtime) and @c CppAD::AD\<double\> (Newton Jacobian
 /// tape) without duplication.
     class KinematicsXiField
     {
     public:
         /// @brief Return the Lie-algebra element (identity pass-through).
         ///
-        /// @tparam S     Scalar type (@c double or @c CppAD::AD<double>).
+        /// @tparam S     Scalar type (@c double or @c CppAD::AD\<double\>).
         /// @param t      Current time [s] (unused — kinematics are time-invariant).
         /// @param g      Current SE(3) pose (unused — kinematics are state-independent).
         /// @param xi     Body-frame twist @f$[\omega_B(3);\,v_B(3)]@f$ [rad/s | m/s].

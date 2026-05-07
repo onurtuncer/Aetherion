@@ -30,7 +30,7 @@
 // below 80 km — more than adequate for atmospheric property lookup.
 //
 // AD compatibility: the template parameter S may be double or
-// CppAD::AD<double>.  All operations are elementary and tape-recordable.
+// CppAD::AD\<double\>.  All operations are elementary and tape-recordable.
 // ------------------------------------------------------------------------------
 
 #pragma once
@@ -46,7 +46,7 @@ namespace Aetherion::Environment {
 /// that arises from subtracting the equatorial radius from the geocentric
 /// distance at non-equatorial latitudes.
 ///
-/// @tparam S  Scalar type (@c double or @c CppAD::AD<double>).
+/// @tparam S  Scalar type (@c double or @c CppAD::AD\<double\>).
 /// @param  r_eci  ECI position vector [m].
 /// @return        Geometric altitude above the WGS-84 ellipsoid [m].
 ///                Negative values indicate a position below the surface

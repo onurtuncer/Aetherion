@@ -84,7 +84,7 @@ public:
 
     std::unordered_map<std::string, VarEntry> m_vars;
 
-    /// @brief Evaluate a simple MathML <apply> tree; returns the result.
+    /// @brief Evaluate a simple MathML \<apply\> tree; returns the result.
     double evalMathML(const std::string& xml) const;
 };
 

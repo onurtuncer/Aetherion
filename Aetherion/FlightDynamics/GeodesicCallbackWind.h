@@ -39,7 +39,7 @@ namespace Aetherion::FlightDynamics {
 
 /// @brief WindModel that calls a user callback with geodetic (lat, lon, alt, t).
 ///
-/// **AD compatibility**: when called with S = CppAD::AD<double>, the method
+/// **AD compatibility**: when called with S = CppAD::AD\<double\>, the method
 /// returns the ECEF wind cached from the most recent *double* evaluation
 /// (frozen-Jacobian approximation, standard for external data sources).
 struct GeodesicCallbackWind {

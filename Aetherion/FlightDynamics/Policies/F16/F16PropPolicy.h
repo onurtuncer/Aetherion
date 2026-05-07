@@ -20,7 +20,7 @@
 // between integration steps by a controller.
 //
 // Satisfies PropulsionPolicy (alias of AeroPolicy) for S = double and
-// S = CppAD::AD<double>.
+// S = CppAD::AD\<double\>.
 // ------------------------------------------------------------------------------
 
 #pragma once

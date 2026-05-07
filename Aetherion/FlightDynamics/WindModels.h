@@ -20,7 +20,7 @@
 //       S t_s) const;                          // simulation time [s]
 //
 // The method returns the ambient wind velocity in the ECI frame [m/s].
-// It must be callable for both S = double and S = CppAD::AD<double>.
+// It must be callable for both S = double and S = CppAD::AD\<double\>.
 //
 // BUILT-IN MODELS
 // ───────────────
@@ -63,7 +63,7 @@ namespace Aetherion::FlightDynamics {
 /// must also specialise this to enable use with WindAwareDragPolicy:
 ///
 ///   namespace Aetherion::FlightDynamics {
-///     template<> struct is_wind_model<MyWind> : std::true_type {};
+///     template\<\> struct is_wind_model\<MyWind\> : std::true_type {};
 ///   }
 template<class W> struct is_wind_model : std::false_type {};
 template<class W> inline constexpr bool is_wind_model_v = is_wind_model<W>::value;

@@ -19,7 +19,7 @@
 //
 // Notes:
 // - No `if` branches; "safety" uses smooth eps terms.
-// - Works for double, float, CppAD::AD<double>, etc.
+// - Works for double, float, CppAD::AD\<double\>, etc.
 //
 
 #pragma once
@@ -36,7 +36,7 @@ namespace Aetherion::Aerodynamics {
 /// All fields are populated by AnglesFromVelocityBody() and are provided as a
 /// convenience bundle so downstream computations (force, moment) can reuse them
 /// without re-deriving each quantity independently.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 template <class Scalar>
 struct AeroAngles {
     Scalar alpha_rad; ///< Angle of attack [rad]: atan2(w, u).
@@ -51,7 +51,7 @@ struct AeroAngles {
 ///
 /// Uses smooth (branch-free) approximations of atan2 and sqrt so the result is
 /// differentiable everywhere — required for CppAD tape recording.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param v_body_m_s Air-relative velocity vector expressed in body axes [m/s].
 /// @param eps Smoothing parameter for the speed regularisation; default 1e-12.
 /// @return AeroAngles struct containing alpha, beta, speed, and the raw u/v/w components.

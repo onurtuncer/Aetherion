@@ -20,7 +20,7 @@ namespace Aetherion::Spatial {
 /// @note The storage order is **moment-first** (dual to @c Twist angular-first),
 ///       consistent with the @f$ P = \mathbf{f}^\top \mathbf{v} @f$ inner product.
 ///
-/// @tparam Scalar Numeric type (e.g. @c double or @c CppAD::AD<double>).
+/// @tparam Scalar Numeric type (e.g. @c double or @c CppAD::AD\<double\>).
 	template<typename Scalar>
 	struct Wrench {
 		/// Packed 6-vector @f$[M; F]@f$: indices 0–2 moment [N·m], 3–5 force [N].

@@ -50,7 +50,7 @@ namespace Aetherion::Environment::detail {
 
     /// @brief Two-argument arctangent, AD-safe via ADL.
     ///
-    /// For `CppAD::AD<double>` arguments, ADL finds `CppAD::atan2` because the
+    /// For `CppAD::AD\<double\>` arguments, ADL finds `CppAD::atan2` because the
     /// arguments live in the `CppAD` namespace.  For `double`, `std::atan2` is used.
     template <class S>
     inline S ArcTangent2(const S& y, const S& x) {

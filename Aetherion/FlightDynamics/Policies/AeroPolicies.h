@@ -46,7 +46,7 @@ namespace Aetherion::FlightDynamics {
 /// @f$\rho(h)@f$ is the US 1976 atmospheric density at geocentric altitude
 /// @f$h \approx |\mathbf{r}_\mathrm{ECI}| - R_e@f$.
 ///
-/// Satisfies @c AeroPolicy (works for both @c double and @c CppAD::AD<double>).
+/// Satisfies @c AeroPolicy (works for both @c double and @c CppAD::AD\<double\>).
     struct DragOnlyAeroPolicy {
         double CD   { 0.0 }; ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].

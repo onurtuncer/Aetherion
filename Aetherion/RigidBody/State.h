@@ -32,7 +32,7 @@ namespace Aetherion::RigidBody {
 /// The Euclidean part @f$\mathbf{x} = [\nu_B;\, m] \in \mathbb{R}^7@f$ is
 /// stepped by the Euclidean ODE solver; @c g is stepped on the manifold.
 ///
-/// @tparam S Scalar type (@c double or @c CppAD::AD<double>).
+/// @tparam S Scalar type (@c double or @c CppAD::AD\<double\>).
     template<class S>
     struct State {
         using Scalar = S;
@@ -48,7 +48,7 @@ namespace Aetherion::RigidBody {
 
 #if __has_include(<cppad/cppad.hpp>)
 #include <cppad/cppad.hpp>
-    using StateAD = State<CppAD::AD<double>>;
+    using StateAD = State<CppAD::AD\<double\>>;
 #endif
 
 } // namespace Aetherion::RigidBody

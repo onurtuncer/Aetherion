@@ -20,7 +20,7 @@
 namespace Aetherion::Aerodynamics {
 
 /// @brief Speed of sound from static temperature using the ideal-gas relation: a = sqrt(gamma * R * T).
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param gamma Ratio of specific heats (dimensionless); ~1.4 for air.
 /// @param R Specific gas constant [J/(kg·K)]; ~287.05 for dry air.
 /// @param temperature_K Static temperature [K].
@@ -38,7 +38,7 @@ inline Scalar SpeedOfSoundFromTemperature(
 }
 
 /// @brief Speed of sound from static pressure and density: a = sqrt(gamma * p / rho).
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param gamma Ratio of specific heats (dimensionless); ~1.4 for air.
 /// @param pressure_Pa Static pressure [Pa].
 /// @param density_kg_m3 Air density [kg/m^3].
@@ -56,7 +56,7 @@ inline Scalar SpeedOfSoundFromPressureDensity(
 }
 
 /// @brief Mach number from airspeed and speed of sound: M = V / a.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param speed_m_s Airspeed magnitude [m/s].
 /// @param sound_speed_m_s Local speed of sound [m/s].
 /// @param eps Smoothing parameter to avoid division by near-zero sound speed; default 1e-12.
@@ -71,7 +71,7 @@ inline Scalar MachFromSpeedSoundSpeed(
 }
 
 /// @brief Mach number from a 3D velocity vector and speed of sound.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param v_m_s Velocity vector in any consistent frame [m/s].
 /// @param sound_speed_m_s Local speed of sound [m/s].
 /// @param eps Smoothing parameter for both speed norm and division; default 1e-12.

@@ -10,7 +10,7 @@
 // File: Aetherion/ODE/RKMK/Core/Concepts.h
 //
 // Minimal C++23 concepts for:
-//  - scalar types (double, CppAD::AD<double>, etc.)
+//  - scalar types (double, CppAD::AD\<double\>, etc.)
 //  - value-semantics types
 //  - Lie groups (value type with Identity/Exp/dexp_inv and composition)
 //  - dynamics fields xi(t,g,x) and f(t,g,x) for product manifolds G × R^m
@@ -128,7 +128,7 @@ namespace Aetherion::ODE::RKMK::Core {
     // These are the only signatures enforced here.
     //
     // NOTE: In your implementation, xi/f should be templated on Scalar so they work
-    // for both double and CppAD::AD<double>.
+    // for both double and CppAD::AD\<double\>.
     //
     template<class Xi, class G, class X>
     concept XiField =

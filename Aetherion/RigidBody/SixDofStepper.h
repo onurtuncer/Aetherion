@@ -60,7 +60,7 @@ namespace Aetherion::RigidBody {
 /// Internally uses a 3-stage Radau IIA RKMK integrator with implicit Newton solve.
 /// The Newton convergence options can be tuned via @c options().
 ///
-/// @tparam VectorField Must satisfy @c VectorFieldOnProductSE3<VF, 7, double>.
+/// @tparam VectorField Must satisfy @c VectorFieldOnProductSE3\<VF, 7, double\>.
 ///
 /// **Typical usage:**
 /// @code

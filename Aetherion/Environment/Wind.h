@@ -32,7 +32,7 @@ struct ConstantWind
 ///   gradient_E_mps_m = 0.003
 ///   intercept_E_mps  = -6.096
 ///
-/// Use with WindAwareDragPolicy<LinearWindShear>.
+/// Use with WindAwareDragPolicy\<LinearWindShear\>.
 struct WindShear
 {
     double gradient_N_mps_m { 0.0 }; ///< North wind altitude gradient [m/s per m].

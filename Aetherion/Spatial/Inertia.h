@@ -29,7 +29,7 @@ namespace Aetherion::Spatial {
 ///                                -m\,[c]_\times & m\,I_3 \end{bmatrix}
 /// @f]
 ///
-/// @tparam Scalar Numeric type (e.g. @c double or @c CppAD::AD<double>).
+/// @tparam Scalar Numeric type (e.g. @c double or @c CppAD::AD\<double\>).
     template<typename Scalar>
     struct Inertia
     {

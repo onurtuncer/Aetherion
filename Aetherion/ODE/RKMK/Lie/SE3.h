@@ -24,7 +24,7 @@ namespace Aetherion::ODE::RKMK::Lie {
 /// The tangent space (Lie algebra @f$ \mathfrak{se}(3) @f$) is represented as a 6-vector
 /// @f$ \xi = [\omega^\top,\; v^\top]^\top @f$ where @f$ \omega \in \mathbb{R}^3 @f$ is the
 /// angular velocity and @f$ v \in \mathbb{R}^3 @f$ is the translational velocity.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 template <class Scalar>
 struct SE3 {
     using Mat3    = Eigen::Matrix<Scalar, 3, 3>; ///< 3×3 rotation matrix type.

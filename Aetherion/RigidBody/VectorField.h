@@ -18,7 +18,7 @@
 //
 // where W_ext = sum of gravity + aero + propulsion wrenches in body frame.
 //
-// Templated on Scalar S -- works for both double and CppAD::AD<double>.
+// Templated on Scalar S -- works for both double and CppAD::AD\<double\>.
 //
 // Changes vs original:
 //   1. Both M and M_inv are stored (built once at construction).

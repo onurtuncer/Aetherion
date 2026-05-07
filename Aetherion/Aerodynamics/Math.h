@@ -14,7 +14,7 @@
 // Notes:
 // - Uses CppAD math functions explicitly (CppAD::sqrt/sin/cos/atan2) to avoid
 //   MSVC overload ambiguity that can happen when importing both std and CppAD.
-// - Works with double/float and CppAD::AD<double> (and similar scalar types).
+// - Works with double/float and CppAD::AD\<double\> (and similar scalar types).
 //
 
 #pragma once
@@ -25,12 +25,12 @@
 namespace Aetherion::Aerodynamics {
 
 /// @brief 3-element column vector backed by std::array; compatible with CppAD scalar types.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 template <class Scalar>
 using Vec3 = std::array<Scalar, 3>;
 
 /// @brief 3x3 matrix backed by a row-major std::array of arrays; compatible with CppAD scalar types.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 template <class Scalar>
 using Mat3 = std::array<std::array<Scalar, 3>, 3>;
 

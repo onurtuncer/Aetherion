@@ -49,7 +49,7 @@ namespace Aetherion::Aerodynamics {
 ///
 /// Computes @f$ [L, M, N] = q S [b\,C_l,\; \bar{c}\,C_m,\; b\,C_n] @f$ where
 /// @f$ q = \tfrac{1}{2}\rho V^2 @f$ and @f$ V = \|v_\text{body}\| @f$.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param v_body_m_s Air-relative velocity vector in body axes [m/s]; used to compute dynamic pressure.
 /// @param density_kg_m3 Air density [kg/m³].
 /// @param S_ref_m2 Aerodynamic reference area [m²].
@@ -86,7 +86,7 @@ inline Vec3<Scalar> AerodynamicMomentBodyFromClCmCn(
 ///
 /// Avoids recomputing the speed norm when it has already been derived (e.g. from AnglesFromVelocityBody()).
 /// Otherwise equivalent to AerodynamicMomentBodyFromClCmCn().
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param speed_m_s Pre-computed airspeed magnitude [m/s].
 /// @param density_kg_m3 Air density [kg/m³].
 /// @param S_ref_m2 Aerodynamic reference area [m²].
@@ -119,7 +119,7 @@ inline Vec3<Scalar> AerodynamicMomentBodyFromClCmCn_Speed(
 /// @brief Aerodynamic moment in body axes from a center-of-pressure offset and a body-frame force.
 ///
 /// Computes the moment arm cross product: @f$ M = r_\text{CP/CG} \times F_\text{body} @f$.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD<double>).
+/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
 /// @param r_cp_minus_cg_m Position of the center of pressure relative to the center of gravity, in body axes [m].
 /// @param F_body_N Aerodynamic force vector in body axes [N].
 /// @return Aerodynamic moment vector in body axes [N·m].
