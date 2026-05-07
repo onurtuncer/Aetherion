@@ -6,6 +6,7 @@ on:
     paths:
       - 'doc/**'
       - 'src/**'
+      - 'Aetherion/**'
       - 'get_project_name.py'
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
@@ -53,7 +54,7 @@ jobs:
 
       - name: Build docs (Sphinx HTML)
         run: |
-          sphinx-build -b html \
+          sphinx-build -T -b html \
             -Dbreathe_projects.Aetherion=$(pwd)/build/doc/doxygen/xml \
             doc/ build/doc/sphinx
 
