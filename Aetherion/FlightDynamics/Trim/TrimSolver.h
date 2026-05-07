@@ -8,29 +8,43 @@
 //
 // TrimSolver.h
 //
-// Newton-Raphson trim solver for straight-and-level fixed-wing flight.
+// Two-stage Newton-Raphson trim solver for straight-and-level fixed-wing flight.
 //
-// The trim problem:  find (α, δe, PWR) such that the body-axis force and
-// pitching-moment residuals are simultaneously zero at the given flight
-// condition (V, h, W).
+// Background — aerodynamic moment reference centre (MRC)
+// ───────────────────────────────────────────────────────
+// DAVE-ML aero models compute CM about the aerodynamic reference centre (AC),
+// typically the wing quarter-chord (25 % MAC).  The equations of motion are
+// written about the centre of gravity (CG).  Transferring moments from AC to
+// CG adds a correction term:
 //
-// All internal computations use English units (ft, slug, lbf, ft·lbf) to
-// match the F-16 DAVE-ML model directly.
+//   My_CG = CM × q_bar × S × c̄   +   x_cg_from_ac × FZ_aero
 //
-// Residuals (3 equations, 3 unknowns):
-//   r[0] = FX_aero + FEX_prop − W·sin(α)   [lbf]  (body-X force balance)
-//   r[1] = FZ_aero + W·cos(α)·cos(φ)       [lbf]  (body-Z force balance)
-//   r[2] = MY_aero                          [ft·lbf]  (pitch moment balance)
+// where x_cg_from_ac = x_CG − x_AC (positive = CG aft of AC).
 //
-// Unknowns:  x = [ α_deg,  δe_deg,  PWR_pct ]
+// For the F-16 standard loading (CG at 35 % MAC, AC at 25 % MAC):
+//   x_cg_from_ac = (0.35 − 0.25) × 11.32 ft = 1.132 ft  (0.345 m)
 //
-// The Jacobian is computed exactly using CppAD automatic differentiation.
-// This gives correct first-order derivatives everywhere except at breakpoint
-// boundaries of the DAVE-ML lookup tables (where the index selection is
-// treated as a constant via CppAD::Var2Par).
+// Without this correction, the trim solver zero-crosses CM at the wrong alpha
+// (~2.35° instead of the correct ~2.64°).  The NASA NESC reference data
+// confirms My_total ≈ 23 120 ft·lbf at trim — this is entirely from the
+// moment transfer, not from an engine offset (z_engine ≈ 0 for the F-16).
 //
-//TODO [Onur] use std::numbers for pi also I want all unit conversion constants in a single place, maybe a Units namespace or something. I have some in DAVEMLPropModel and some in TrimSolver, should be unified.
-//TODO [Onur] do not hard code physical limits in the solver, instead read them from the DAVE-ML file or define them as static constants in the class. This would make the solver more flexible and reusable for different aircraft models.
+// Trim algorithm (two-stage sequential)
+// ──────────────────────────────────────
+// Stage 1 — find (α, δe) from the longitudinal force and moment balance
+//   (no throttle dependence; the aero model only is taped):
+//     r_long[0] = CZ × q × S + W·cos(α)·cos(φ)                       = 0  [lbf]
+//     r_long[1] = CM × q × S × c̄ + x_cg_ac × CZ × q × S             = 0  [ft·lbf]
+//
+// Stage 2 — derive required thrust from the X-force balance, then invert
+//   the prop model to find the throttle setting:
+//     FEX_required = W·sin(α) − CX × q × S                            [lbf]
+//     thrustX_lbf(pwr, alt, Mach) = FEX_required   (bisection in pwr)
+//
+// Jacobian for Stage 1 is computed exactly via CppAD (2×2 tape).
+//
+//TODO [Onur] use std::numbers for pi; unify unit-conversion constants in a Units namespace.
+//TODO [Onur] do not hard-code physical limits; read them from the DAVE-ML file.
 // ------------------------------------------------------------------------------
 
 #pragma once
@@ -51,11 +65,11 @@ namespace Aetherion::FlightDynamics {
 
 /// @brief Fixed flight condition for the trim problem.
 struct TrimInputs {
-    double vt_fps      {};   ///< True airspeed [ft/s]
-    double alt_ft      {};   ///< Geometric altitude [ft]
-    double weight_lbf  {};   ///< Aircraft weight at trim [lbf]
-    double beta_deg    {0.0};///< Sideslip angle [deg]  (0 for coordinated flight)
-    double phi_deg     {0.0};///< Bank angle [deg]       (0 for wings-level)
+    double vt_fps    {};   ///< True airspeed [ft/s]
+    double alt_ft    {};   ///< Geometric altitude [ft]
+    double weight_lbf{};   ///< Aircraft weight at trim [lbf]
+    double beta_deg  {0.0};///< Sideslip angle [deg]  (0 for coordinated flight)
+    double phi_deg   {0.0};///< Bank angle [deg]       (0 for wings-level)
 };
 
 /// @brief Trim solution returned by TrimSolver::solve().
@@ -67,10 +81,7 @@ struct TrimPoint {
     bool   converged      {false};
 };
 
-/// @brief Newton-Raphson trim solver with CppAD Jacobian.
-///
-/// Instantiate once with references to the loaded aerodynamic and propulsion
-/// models, then call solve() for any flight condition.
+/// @brief Two-stage trim solver for straight-and-level fixed-wing flight.
 class TrimSolver
 {
 public:
@@ -78,187 +89,238 @@ public:
     static constexpr double kFt_m          = 0.3048;
     static constexpr double kSlugFt3_kg_m3 = 515.3788184;
     static constexpr double kLbf_N         = 4.448221615260751;
+    static constexpr double kFtLbf_Nm      = 1.355817948329279;
     static constexpr double kDegRad        = std::numbers::pi / 180.0;
 
     // ── Solver parameters ─────────────────────────────────────────────────────
-    static constexpr int    kMaxIter = 50;
-    static constexpr double kTol     = 1.0e-5;  ///< Convergence threshold [lbf]
+    static constexpr int    kMaxIter    = 50;
+    static constexpr double kTol        = 1.0e-5;  ///< Stage-1 convergence [lbf]
+    static constexpr double kTolThrust  = 1.0e-4;  ///< Stage-2 convergence [lbf]
 
     // ── Construction ──────────────────────────────────────────────────────────
 
+    /// @param aero           Parsed aerodynamic model.
+    /// @param prop           Parsed propulsion model.
+    /// @param xcg_from_ac_ft CG distance aft of the aerodynamic moment reference
+    ///                       centre [ft].  Zero ⇒ CM is already about the CG.
+    ///                       For the F-16 standard loading: 1.132 ft (35 %−25 % MAC).
     TrimSolver(const Serialization::DAVEMLAeroModel& aero,
-               const Serialization::DAVEMLPropModel& prop)
-        : m_aero(aero), m_prop(prop) {}
+               const Serialization::DAVEMLPropModel& prop,
+               double xcg_from_ac_ft = 0.0)
+        : m_aero(aero), m_prop(prop), m_xcg_ft(xcg_from_ac_ft) {}
 
     // ── Main interface ────────────────────────────────────────────────────────
 
-    /// @brief Find the trim state for straight-and-level flight.
-    ///
-    /// The Jacobian at each Newton iteration is computed exactly via CppAD
-    /// automatic differentiation through the DAVE-ML lookup tables.
-    ///
-    /// @param in      Fixed flight condition (see TrimInputs).
-    /// @param alpha0  Initial alpha guess [deg].  Default: 2.0.
-    /// @param el0     Initial elevator guess [deg].  Default: −1.0.
-    /// @param pwr0    Initial throttle guess [%].  Default: 15.0.
-    /// @return        Converged trim point (check @c converged flag).
+    /// @brief Find the two-stage trim for straight-and-level flight.
     TrimPoint solve(const TrimInputs& in,
-                    double alpha0 = 2.0,
-                    double el0    = -1.0,
-                    double pwr0   = 15.0) const;
+                    double alpha0 = 2.5,
+                    double el0    = -1.0) const;
 
-    /// @brief Evaluate the double-precision trim residual at an operating point.
+    /// @brief Evaluate the full 3-component residual for diagnosis.
     ///
-    /// Returns [r_Fx, r_Fz, r_My] in [lbf, lbf, ft·lbf].  Useful for
-    /// post-convergence diagnosis.
+    /// Returns [r_Fx, r_Fz, r_My_cg] in [lbf, lbf, ft·lbf].
     Eigen::Vector3d residual(const TrimInputs& in,
                              double alpha_deg,
                              double el_deg,
                              double pwr_pct) const;
 
 private:
-    // ── Templated residual — called for both double and CppAD::AD<double> ─────
-
-    /// @brief Compute the 3-component trim residual for scalar type S.
-    ///
-    /// Altitude, dynamic pressure, and Mach are evaluated at the fixed
-    /// (double) flight condition; only (alpha, el, pwr) are of type S.
-    /// This allows a CppAD tape to record derivatives w.r.t. the three
-    /// trim unknowns without taping through the atmosphere model.
+    // ── Stage-1 longitudinal residual (no throttle, taped for AD) ─────────────
     template<class S>
-    std::array<S, 3> residual_impl(const TrimInputs& in,
-                                   S alpha_deg,
-                                   S el_deg,
-                                   S pwr_pct) const;
+    std::array<S, 2> longi_residual(const TrimInputs& in,
+                                    S alpha_deg, S el_deg,
+                                    double qbar_psf) const;
+
+    // ── Stage-2: required thrust from force balance ───────────────────────────
+    double requiredThrust_lbf(const TrimInputs& in,
+                              double alpha_deg, double el_deg,
+                              double qbar_psf) const;
+
+    // ── Stage-2: invert prop model to find throttle ───────────────────────────
+    double solveThrottle(double FEX_required_lbf,
+                         double alt_ft, double mach) const;
 
     const Serialization::DAVEMLAeroModel& m_aero;
     const Serialization::DAVEMLPropModel& m_prop;
+    double                                m_xcg_ft;  ///< CG aft of AC [ft]
 };
 
-// ── Template implementation ───────────────────────────────────────────────────
+// ── Stage-1 longitudinal residual ─────────────────────────────────────────────
 
 template<class S>
-std::array<S, 3>
-TrimSolver::residual_impl(const TrimInputs& in,
-                          S alpha_deg, S el_deg, S pwr_pct) const
+std::array<S, 2>
+TrimSolver::longi_residual(const TrimInputs& in,
+                           S alpha_deg, S el_deg,
+                           double qbar_psf) const
 {
-    using std::sin;
     using std::cos;
-
-    // ── Atmosphere at the fixed trim altitude (double — not taped) ────────────
-    const double alt_m    = in.alt_ft * kFt_m;
-    const auto   atm      = Environment::US1976Atmosphere(alt_m);
-    const double rho_slug = atm.rho / kSlugFt3_kg_m3;
-    const double a_fps    = atm.a   / kFt_m;
-
-    const double qbar_psf = 0.5 * rho_slug * in.vt_fps * in.vt_fps;
-    const double mach     = in.vt_fps / a_fps;
 
     const double Sref = m_aero.sref_ft2;
     const double cbar = m_aero.cbar_ft;
 
-    // ── Aerodynamic coefficients — taped w.r.t. alpha and el ─────────────────
     Serialization::DAVEMLAeroModel::Inputs<S> ai{};
     ai.vt_fps    = S(in.vt_fps);
     ai.alpha_deg = alpha_deg;
     ai.beta_deg  = S(in.beta_deg);
-    ai.p_rps     = S(0.0);
-    ai.q_rps     = S(0.0);
-    ai.r_rps     = S(0.0);
-    ai.el_deg    = el_deg;
-    ai.ail_deg   = S(0.0);
-    ai.rdr_deg   = S(0.0);
+    ai.p_rps = ai.q_rps = ai.r_rps = S(0.0);
+    ai.el_deg  = el_deg;
+    ai.ail_deg = ai.rdr_deg = S(0.0);
     const auto c = m_aero.evaluate<S>(ai);
 
     const S qS      = S(qbar_psf * Sref);
-    const S FX_aero = c.cx * qS;
     const S FZ_aero = c.cz * qS;
-    const S MY_aero = c.cm * qS * S(cbar);
 
-    // ── Thrust — taped w.r.t. pwr ────────────────────────────────────────────
-    Serialization::DAVEMLPropModel::Inputs<S> pi{};
-    pi.pwr_pct = pwr_pct;
-    pi.alt_ft  = S(in.alt_ft);
-    pi.mach    = S(mach);
-    const auto prop     = m_prop.evaluate<S>(pi);
-    const S FEX_lbf     = prop.fx_N / S(kLbf_N);
-    // TEM from the DAVE-ML propulsion file (= 0 for the simplified S&L model).
-    // The geometry-driven engine moment arm (My = z_engine × Fx) lives in
-    // F16PropPolicy::z_engine_m and is not visible here; it is intentionally
-    // excluded because it is an aircraft property, not a flight condition.
-    const S MY_prop_ftlbf = prop.my_Nm / S(1.355817948329279);
-
-    // ── Body-frame gravity ────────────────────────────────────────────────────
+    // Body-Z force balance (no thrust in Z for aligned engine)
     const S alpha_rad = alpha_deg * S(kDegRad);
-    const S W         = S(in.weight_lbf);
-    const S grav_x    = -W * sin(alpha_rad);
-    const S grav_z    =  W * cos(alpha_rad) * S(std::cos(in.phi_deg * kDegRad));
+    const S phi_rad   = S(in.phi_deg * kDegRad);
+    const S rFZ = FZ_aero + S(in.weight_lbf) * cos(alpha_rad) * cos(phi_rad);
 
-    return { FX_aero + FEX_lbf + grav_x,
-             FZ_aero + grav_z,
-             MY_aero + MY_prop_ftlbf };
+    // Pitching moment about the CG:  My_CG = CM×qS×cbar + x_cg_ac × FZ_aero
+    const S rMY = c.cm * qS * S(cbar) + S(m_xcg_ft) * FZ_aero;
+
+    return { rFZ, rMY };
 }
 
-// ── Inline double wrapper ─────────────────────────────────────────────────────
+// ── Stage-2 helpers ───────────────────────────────────────────────────────────
+
+inline double
+TrimSolver::requiredThrust_lbf(const TrimInputs& in,
+                                double alpha_deg, double el_deg,
+                                double qbar_psf) const
+{
+    const double Sref = m_aero.sref_ft2;
+
+    Serialization::DAVEMLAeroModel::Inputs<double> ai{};
+    ai.vt_fps    = in.vt_fps;
+    ai.alpha_deg = alpha_deg;
+    ai.beta_deg  = in.beta_deg;
+    ai.p_rps = ai.q_rps = ai.r_rps = 0.0;
+    ai.el_deg = el_deg;
+    ai.ail_deg = ai.rdr_deg = 0.0;
+    const auto c = m_aero.evaluate<double>(ai);
+
+    const double FX_aero = c.cx * qbar_psf * Sref;
+    const double alpha_rad = alpha_deg * kDegRad;
+    return in.weight_lbf * std::sin(alpha_rad) - FX_aero;
+}
+
+inline double
+TrimSolver::solveThrottle(double FEX_req_lbf, double alt_ft, double mach) const
+{
+    // Bisection on pwr_pct ∈ [0, 100] — thrust is monotone in power.
+    double lo = 0.0, hi = 100.0;
+
+    const double thrust_lo = m_prop.thrustX_lbf(lo, alt_ft, mach);
+    const double thrust_hi = m_prop.thrustX_lbf(hi, alt_ft, mach);
+
+    if (FEX_req_lbf <= thrust_lo) return lo;
+    if (FEX_req_lbf >= thrust_hi) return hi;
+
+    for (int i = 0; i < 60; ++i) {
+        const double mid   = 0.5 * (lo + hi);
+        const double t_mid = m_prop.thrustX_lbf(mid, alt_ft, mach);
+        if (std::abs(t_mid - FEX_req_lbf) < kTolThrust) return mid;
+        (t_mid < FEX_req_lbf ? lo : hi) = mid;
+    }
+    return 0.5 * (lo + hi);
+}
+
+// ── Main solve ────────────────────────────────────────────────────────────────
+
+inline TrimPoint
+TrimSolver::solve(const TrimInputs& in, double alpha0, double el0) const
+{
+    using AD = CppAD::AD<double>;
+
+    // ── Atmosphere (double, not taped) ────────────────────────────────────────
+    const double alt_m    = in.alt_ft * kFt_m;
+    const auto   atm      = Environment::US1976Atmosphere(alt_m);
+    const double rho_slug = atm.rho / kSlugFt3_kg_m3;
+    const double a_fps    = atm.a   / kFt_m;
+    const double qbar_psf = 0.5 * rho_slug * in.vt_fps * in.vt_fps;
+    const double mach     = in.vt_fps / a_fps;
+
+    // ── Stage 1: 2D Newton for (alpha, el) ───────────────────────────────────
+    std::vector<double> x = { alpha0, el0 };
+    bool converged = false;
+
+    for (int iter = 0; iter < kMaxIter; ++iter) {
+        const auto   r_arr = longi_residual<double>(in, x[0], x[1], qbar_psf);
+        const Eigen::Vector2d r{ r_arr[0], r_arr[1] };
+
+        if (r.norm() < kTol) { converged = true; break; }
+
+        // CppAD 2×2 Jacobian
+        std::vector<AD> xa = { AD(x[0]), AD(x[1]) };
+        CppAD::Independent(xa);
+        const auto r_ad = longi_residual<AD>(in, xa[0], xa[1], qbar_psf);
+        CppAD::ADFun<double> f(xa, std::vector<AD>{ r_ad[0], r_ad[1] });
+        f.optimize();
+
+        const auto jvec = f.Jacobian(x);  // row-major 2×2
+        Eigen::Matrix2d J;
+        for (int i = 0; i < 2; ++i)
+            for (int j = 0; j < 2; ++j)
+                J(i, j) = jvec[static_cast<std::size_t>(i * 2 + j)];
+
+        const Eigen::Vector2d dx = J.fullPivLu().solve(-r);
+        x[0] = std::clamp(x[0] + dx(0), -10.0, 30.0);  // alpha
+        x[1] = std::clamp(x[1] + dx(1), -25.0, 25.0);  // el
+    }
+
+    const double alpha = x[0];
+    const double el    = x[1];
+
+    // ── Stage 2: required thrust → throttle ───────────────────────────────────
+    const double FEX_req = requiredThrust_lbf(in, alpha, el, qbar_psf);
+    const double pwr     = solveThrottle(FEX_req, in.alt_ft, mach);
+
+    // ── Final residual ────────────────────────────────────────────────────────
+    const auto   r_arr = longi_residual<double>(in, alpha, el, qbar_psf);
+    const double r_norm = Eigen::Vector2d(r_arr[0], r_arr[1]).norm();
+
+    return { alpha, el, pwr, r_norm, converged };
+}
+
+// ── Full 3-component residual for diagnosis ───────────────────────────────────
 
 inline Eigen::Vector3d
 TrimSolver::residual(const TrimInputs& in,
                      double alpha_deg, double el_deg, double pwr_pct) const
 {
-    const auto r = residual_impl<double>(in, alpha_deg, el_deg, pwr_pct);
-    return Eigen::Vector3d{ r[0], r[1], r[2] };
-}
+    const double alt_m    = in.alt_ft * kFt_m;
+    const auto   atm      = Environment::US1976Atmosphere(alt_m);
+    const double rho_slug = atm.rho / kSlugFt3_kg_m3;
+    const double a_fps    = atm.a   / kFt_m;
+    const double qbar_psf = 0.5 * rho_slug * in.vt_fps * in.vt_fps;
+    const double mach     = in.vt_fps / a_fps;
+    const double Sref     = m_aero.sref_ft2;
+    const double cbar     = m_aero.cbar_ft;
 
-// ── Newton-Raphson solve with CppAD Jacobian ──────────────────────────────────
+    Serialization::DAVEMLAeroModel::Inputs<double> ai{};
+    ai.vt_fps    = in.vt_fps;
+    ai.alpha_deg = alpha_deg;
+    ai.beta_deg  = in.beta_deg;
+    ai.p_rps = ai.q_rps = ai.r_rps = 0.0;
+    ai.el_deg = el_deg;
+    ai.ail_deg = ai.rdr_deg = 0.0;
+    const auto c = m_aero.evaluate<double>(ai);
 
-inline TrimPoint
-TrimSolver::solve(const TrimInputs& in,
-                  double alpha0, double el0, double pwr0) const
-{
-    using AD = CppAD::AD<double>;
+    const double qS      = qbar_psf * Sref;
+    const double FX_aero = c.cx * qS;
+    const double FZ_aero = c.cz * qS;
+    const double MY_cg   = c.cm * qS * cbar + m_xcg_ft * FZ_aero;
+    const double FEX_lbf = m_prop.thrustX_lbf(pwr_pct, in.alt_ft, mach);
 
-    std::vector<double> x = { alpha0, el0, pwr0 };
-    bool converged = false;
+    const double alpha_rad = alpha_deg * kDegRad;
+    const double phi_rad   = in.phi_deg * kDegRad;
+    const double W         = in.weight_lbf;
 
-    for (int iter = 0; iter < kMaxIter; ++iter) {
-        // ── Double residual for convergence check ────────────────────────────
-        const auto   r_arr  = residual_impl<double>(in, x[0], x[1], x[2]);
-        const Eigen::Vector3d r{ r_arr[0], r_arr[1], r_arr[2] };
-
-        if (r.norm() < kTol) {
-            converged = true;
-            break;
-        }
-
-        // ── Record CppAD tape for exact Jacobian ──────────────────────────────
-        std::vector<AD> xa(x.begin(), x.end());
-        CppAD::Independent(xa);
-
-        const auto r_ad = residual_impl<AD>(in, xa[0], xa[1], xa[2]);
-        const std::vector<AD> ya{ r_ad[0], r_ad[1], r_ad[2] };
-
-        CppAD::ADFun<double> f(xa, ya);
-        f.optimize();
-
-        // ── Jacobian evaluated at current x ───────────────────────────────────
-        const std::vector<double> jvec = f.Jacobian(x);  // row-major, 3×3
-
-        Eigen::Matrix3d J;
-        for (int i = 0; i < 3; ++i)
-            for (int j = 0; j < 3; ++j)
-                J(i, j) = jvec[static_cast<std::size_t>(i * 3 + j)];
-
-        // ── Newton step ───────────────────────────────────────────────────────
-        const Eigen::Vector3d dx = J.fullPivLu().solve(-r);
-
-        x[0] = std::clamp(x[0] + dx(0), -10.0,  30.0);  // alpha [deg]
-        x[1] = std::clamp(x[1] + dx(1), -25.0,  25.0);  // el    [deg]
-        x[2] = std::clamp(x[2] + dx(2),   0.0, 100.0);  // pwr   [%]
-    }
-
-    const auto r_f = residual_impl<double>(in, x[0], x[1], x[2]);
-    const double norm = Eigen::Vector3d(r_f[0], r_f[1], r_f[2]).norm();
-    return { x[0], x[1], x[2], norm, converged };
+    return Eigen::Vector3d{
+        FX_aero + FEX_lbf - W * std::sin(alpha_rad),
+        FZ_aero + W * std::cos(alpha_rad) * std::cos(phi_rad),
+        MY_cg
+    };
 }
 
 } // namespace Aetherion::FlightDynamics

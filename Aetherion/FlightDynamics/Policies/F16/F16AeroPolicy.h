@@ -64,16 +64,26 @@ public:
     double ail_deg { 0.0 };  ///< Aileron  deflection [deg]
     double rdr_deg { 0.0 };  ///< Rudder   deflection [deg]
 
+    /// Distance from the aerodynamic moment reference centre (AC) to the CG,
+    /// positive aft [m].  The DAVE-ML aero model computes CM about the AC;
+    /// this offset transfers that moment to the CG:
+    ///   My_CG = CM × qS × c̄ + xcg_from_ac × FZ_aero
+    /// For the F-16 standard loading: (35%−25%) × 11.32 ft × 0.3048 = 0.345 m.
+    double xcg_from_ac_m { 0.0 };
+
     // ── Construction ──────────────────────────────────────────────────────────
 
-    /// @param model  Shared, parsed DAVE-ML aero model.
-    /// @param el     Elevator deflection [deg].
-    /// @param ail    Aileron  deflection [deg].
-    /// @param rdr    Rudder   deflection [deg].
+    /// @param model        Shared, parsed DAVE-ML aero model.
+    /// @param el           Elevator deflection [deg].
+    /// @param ail          Aileron  deflection [deg].
+    /// @param rdr          Rudder   deflection [deg].
+    /// @param xcg_ac_m     CG aft of AC [m].  Must match TrimSolver xcg_from_ac_ft/0.3048.
     explicit F16AeroPolicy(std::shared_ptr<const Serialization::DAVEMLAeroModel> model,
-                           double el = 0.0, double ail = 0.0, double rdr = 0.0)
+                           double el = 0.0, double ail = 0.0, double rdr = 0.0,
+                           double xcg_ac_m = 0.0)
         : m_model(std::move(model))
         , el_deg(el), ail_deg(ail), rdr_deg(rdr)
+        , xcg_from_ac_m(xcg_ac_m)
     {}
 
     // ── AeroPolicy interface ──────────────────────────────────────────────────
@@ -140,11 +150,13 @@ public:
         // ── Build wrench: [Mx, My, Mz, Fx, Fy, Fz]  (N, N·m) ─────────────────
         Spatial::Wrench<S> wrench{};
         wrench.f(0) = c.cl * qS * S(bspan) * S(kFtLbf_Nm);  // roll  moment [N·m]
-        wrench.f(1) = c.cm * qS * S(cbar)  * S(kFtLbf_Nm);  // pitch moment [N·m]
         wrench.f(2) = c.cn * qS * S(bspan) * S(kFtLbf_Nm);  // yaw   moment [N·m]
         wrench.f(3) = c.cx * qS            * S(kLbf_N);      // body X force [N]
         wrench.f(4) = c.cy * qS            * S(kLbf_N);      // body Y force [N]
         wrench.f(5) = c.cz * qS            * S(kLbf_N);      // body Z force [N]
+        // Pitch moment about the CG:  My_CG = CM×qS×c̄  +  x_cg_ac × FZ
+        wrench.f(1) = c.cm * qS * S(cbar)  * S(kFtLbf_Nm)   // CM×qS×c̄  [N·m]
+                    + S(xcg_from_ac_m) * wrench.f(5);         // x_cg_ac × FZ [N·m]
         return wrench;
     }
 

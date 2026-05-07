@@ -42,6 +42,11 @@ public:
     /// @param x0          Initial state (ECI frame).
     /// @param theta0      Earth Rotation Angle at t = 0 [rad].
     /// @param opt         Newton solver options (tolerances, max iterations).
+    /// @param xcg_from_ac_m  CG distance aft of aerodynamic reference centre [m].
+    ///                       Used in F16AeroPolicy to transfer moments from AC to CG.
+    ///                       Must equal TrimSolver::xcg_from_ac_ft × kFt_m.
+    /// @param z_engine_m     Engine z-offset from CG [m, z-down]. Added to the
+    ///                       pitching moment in F16PropPolicy (usually 0 for F-16).
     explicit F16SteadyFlightSimulator(
         const RigidBody::InertialParameters&                      ip,
         const FlightDynamics::TrimPoint&                          trim,
@@ -49,13 +54,15 @@ public:
         std::shared_ptr<const Serialization::DAVEMLPropModel>     prop_model,
         RigidBody::StateD                                         x0,
         double                                                    theta0,
-        double                                                    z_engine_m = 0.0,
+        double                                                    xcg_from_ac_m = 0.0,
+        double                                                    z_engine_m    = 0.0,
         ODE::RKMK::Core::NewtonOptions                            opt = {})
         : ISimulator<F16VF, Simulation::Snapshot1>(
             F16VF(
                 ip,
                 FlightDynamics::J2GravityPolicy{},
-                FlightDynamics::F16AeroPolicy(aero_model, trim.el_deg, 0.0, 0.0),
+                FlightDynamics::F16AeroPolicy(aero_model, trim.el_deg, 0.0, 0.0,
+                                              xcg_from_ac_m),
                 FlightDynamics::F16PropPolicy(prop_model, trim.pwr_pct, z_engine_m)),
             std::move(x0), opt)
         , m_theta0(theta0)

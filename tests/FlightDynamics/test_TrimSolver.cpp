@@ -42,12 +42,14 @@ static const std::string kPropFile = DAVEML_F16_PROP_FILE;
 // ── Scenario-11 flight condition (English units) ──────────────────────────────
 static constexpr double kVt_fps     = 565.685;   // 335.15 KTAS → ft/s
 static constexpr double kAlt_ft     = 10013.0;
-// Weight derived from CZ force at trim:  W = −CZ_aero / cos(α)
-// Reference CZ_force = −20 423.7 lbf, α ≈ 2.643°
-static constexpr double kWeight_lbf = 20447.0;   // [lbf]
+// Weight from DML mass (637.1596 slug) × local gravity (32.18876 ft/s²)
+static constexpr double kWeight_lbf = 20509.4;  // [lbf]
+
+// ── AC→CG offset: (35%−25%) × 11.32 ft = 1.132 ft ───────────────────────────
+static constexpr double kXcg_ft     = 1.132;    // [ft]
 
 // ── Reference trim values from NASA Atmos_11 ─────────────────────────────────
-static constexpr double kRefAlpha_deg = 2.643;   // [deg] ± 0.1
+static constexpr double kRefAlpha_deg = 2.643;   // [deg]
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -63,7 +65,7 @@ TEST_CASE("TrimSolver: converges for Scenario-11 flight condition", "[trim][smok
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop);
+    TrimSolver      solver(aero, prop, kXcg_ft);
 
     TrimInputs in{};
     in.vt_fps     = kVt_fps;
@@ -85,7 +87,7 @@ TEST_CASE("TrimSolver: trim alpha matches NASA reference", "[trim][smoke]")
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop);
+    TrimSolver      solver(aero, prop, kXcg_ft);
 
     TrimInputs in{};
     in.vt_fps     = kVt_fps;
@@ -94,7 +96,7 @@ TEST_CASE("TrimSolver: trim alpha matches NASA reference", "[trim][smoke]")
 
     const TrimPoint tp = solver.solve(in);
 
-    CHECK_THAT(tp.alpha_deg, WithinAbs(kRefAlpha_deg, 0.3));
+    CHECK_THAT(tp.alpha_deg, WithinAbs(kRefAlpha_deg, 0.1));
 }
 
 TEST_CASE("TrimSolver: force balance at trim", "[trim][smoke]")
@@ -103,7 +105,7 @@ TEST_CASE("TrimSolver: force balance at trim", "[trim][smoke]")
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop);
+    TrimSolver      solver(aero, prop, kXcg_ft);
 
     TrimInputs in{};
     in.vt_fps     = kVt_fps;
@@ -125,7 +127,7 @@ TEST_CASE("TrimSolver: throttle and elevator in physical range", "[trim][smoke]"
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop);
+    TrimSolver      solver(aero, prop, kXcg_ft);
 
     TrimInputs in{};
     in.vt_fps     = kVt_fps;
