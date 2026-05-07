@@ -1,80 +1,74 @@
 # ------------------------------------------------------------------------------
-# Project: Aetherion
-# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+# Project: Aetherion Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
-# SPDX-License-Identifier: MIT
-# License-Filename: LICENSE
+# SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
 if(BUILD_DOCS)
-    return()
+  return()
 endif()
 
 # ------------------------------------------------------------------------------
-# CppAD
-#   Windows -> prebuilt vendor binaries (vendor/cppad/x64-{Debug,Release})
-#   Linux   -> FetchContent build from source
+# CppAD Windows -> prebuilt vendor binaries (vendor/cppad/x64-{Debug,Release}) Linux   -> FetchContent build from source
 # ------------------------------------------------------------------------------
 if(WIN32)
-    set(CPPAD_VENDOR_ROOT "${CMAKE_SOURCE_DIR}/vendor/cppad")
+  set(CPPAD_VENDOR_ROOT "${CMAKE_SOURCE_DIR}/vendor/cppad")
 
-    add_library(CppAD::cppad STATIC IMPORTED GLOBAL)
-    set_target_properties(CppAD::cppad PROPERTIES
-        IMPORTED_CONFIGURATIONS "Debug;Release"
-        IMPORTED_LOCATION_DEBUG
-            "${CPPAD_VENDOR_ROOT}/x64-Debug/lib/cppad_lib.lib"
-        IMPORTED_LOCATION_RELEASE
-            "${CPPAD_VENDOR_ROOT}/x64-Release/lib/cppad_lib.lib"
-        INTERFACE_INCLUDE_DIRECTORIES
-            "${CPPAD_VENDOR_ROOT}/x64-Release/include"
-    )
+  add_library(
+    CppAD::cppad
+    STATIC
+    IMPORTED
+    GLOBAL)
+  set_target_properties(
+    CppAD::cppad
+    PROPERTIES IMPORTED_CONFIGURATIONS "Debug;Release"
+               IMPORTED_LOCATION_DEBUG "${CPPAD_VENDOR_ROOT}/x64-Debug/lib/cppad_lib.lib"
+               IMPORTED_LOCATION_RELEASE "${CPPAD_VENDOR_ROOT}/x64-Release/lib/cppad_lib.lib"
+               INTERFACE_INCLUDE_DIRECTORIES "${CPPAD_VENDOR_ROOT}/x64-Release/include")
 else()
-    include(FetchContent)
-    FetchContent_Declare(
-        cppad
-        GIT_REPOSITORY https://github.com/coin-or/CppAD.git
-        GIT_TAG        20240000.7
-        GIT_SHALLOW    TRUE
-    )
-    # Download headers only — do NOT run CppAD's CMakeLists.txt.
-    # CppAD's build system creates a custom target named "test" which
-    # conflicts with CTest's reserved target when testing is enabled.
-    # All AD usage in this project is header-only; cppad_lib is not needed.
-    # CMP0169: suppress deprecation of FetchContent_Populate (still needed
-    # to skip CppAD's own CMakeLists, which conflicts with CTest's "test" target).
-    cmake_policy(SET CMP0169 OLD)
-    FetchContent_GetProperties(cppad)
-    if(NOT cppad_POPULATED)
-        FetchContent_Populate(cppad)
-    endif()
+  include(FetchContent)
+  FetchContent_Declare(
+    cppad
+    GIT_REPOSITORY https://github.com/coin-or/CppAD.git
+    GIT_TAG 20240000.7
+    GIT_SHALLOW TRUE)
+  # Download headers only — do NOT run CppAD's CMakeLists.txt. CppAD's build system creates a custom target named "test"
+  # which conflicts with CTest's reserved target when testing is enabled. All AD usage in this project is header-only;
+  # cppad_lib is not needed. CMP0169: suppress deprecation of FetchContent_Populate (still needed to skip CppAD's own
+  # CMakeLists, which conflicts with CTest's "test" target).
+  cmake_policy(SET CMP0169 OLD)
+  FetchContent_GetProperties(cppad)
+  if(NOT cppad_POPULATED)
+    FetchContent_Populate(cppad)
+  endif()
 
-    # CppAD's cmake generates cppad/configure.hpp from configure.hpp.in.
-    # Because we skip CppAD's CMakeLists (to avoid its conflicting "test"
-    # custom target), we must synthesise configure.hpp ourselves.
-    # Note: CppAD 20240000.x stores headers under include/cppad/ — the
-    # include root is ${cppad_SOURCE_DIR}/include, not ${cppad_SOURCE_DIR}.
-    set(_cppad_configure_hpp "${cppad_SOURCE_DIR}/include/cppad/configure.hpp")
-    if(NOT EXISTS "${_cppad_configure_hpp}")
-        message(STATUS "Generating CppAD configure.hpp for Linux/non-MSVC build")
-        # Use the CXX compiler identity — this project declares LANGUAGES CXX
-        # only, so CMAKE_C_COMPILER_ID is never populated.
-        if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
-            set(_cppad_gnu_flags  1)
-            set(_cppad_msvc_flags 0)
-            set(_cppad_has_gettimeofday 1)
-            set(_cppad_has_mkstemp 1)
-            set(_cppad_has_tmpnam_s 0)
-        else()
-            set(_cppad_gnu_flags  0)
-            set(_cppad_msvc_flags 1)
-            set(_cppad_has_gettimeofday 0)
-            set(_cppad_has_mkstemp 0)
-            set(_cppad_has_tmpnam_s 1)
-        endif()
-        file(CONFIGURE
-            OUTPUT "${_cppad_configure_hpp}"
-            CONTENT
-"# ifndef CPPAD_CONFIGURE_HPP
+  # CppAD's cmake generates cppad/configure.hpp from configure.hpp.in. Because we skip CppAD's CMakeLists (to avoid its
+  # conflicting "test" custom target), we must synthesise configure.hpp ourselves. Note: CppAD 20240000.x stores headers
+  # under include/cppad/ — the include root is ${cppad_SOURCE_DIR}/include, not ${cppad_SOURCE_DIR}.
+  set(_cppad_configure_hpp "${cppad_SOURCE_DIR}/include/cppad/configure.hpp")
+  if(NOT EXISTS "${_cppad_configure_hpp}")
+    message(STATUS "Generating CppAD configure.hpp for Linux/non-MSVC build")
+    # Use the CXX compiler identity — this project declares LANGUAGES CXX only, so CMAKE_C_COMPILER_ID is never
+    # populated.
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|AppleClang")
+      set(_cppad_gnu_flags 1)
+      set(_cppad_msvc_flags 0)
+      set(_cppad_has_gettimeofday 1)
+      set(_cppad_has_mkstemp 1)
+      set(_cppad_has_tmpnam_s 0)
+    else()
+      set(_cppad_gnu_flags 0)
+      set(_cppad_msvc_flags 1)
+      set(_cppad_has_gettimeofday 0)
+      set(_cppad_has_mkstemp 0)
+      set(_cppad_has_tmpnam_s 1)
+    endif()
+    file(
+      CONFIGURE
+      OUTPUT
+      "${_cppad_configure_hpp}"
+      CONTENT
+      "# ifndef CPPAD_CONFIGURE_HPP
 # define CPPAD_CONFIGURE_HPP
 // Auto-generated by Aetherion cmake/Dependencies.cmake
 // (replaces the file that CppAD's own cmake would generate)
@@ -129,24 +123,17 @@ else()
 # define CPPAD_CHECK_FOR_NAN 0
 # endif
 "
-            @ONLY
-        )
-    endif()
+      @ONLY)
+  endif()
 
-    # cppad_headers is STATIC (not INTERFACE) so it can carry a compiled stub
-    # for CppAD::local::temp_file().  That symbol lives in cppad_lib which we
-    # don't build (we skip CppAD's CMakeLists to avoid its "test" target
-    # conflicting with CTest).  put_check_for_nan() — defined unconditionally
-    # in check_for_nan.hpp — calls temp_file() in Debug builds (#ifndef NDEBUG
-    # guard in forward.hpp), so the linker needs the symbol even in header-only
-    # mode.  The stub returns an empty path (NaN debug dump is a no-op).
-    add_library(cppad_headers STATIC
-        "${CMAKE_SOURCE_DIR}/cmake/cppad_temp_file_stub.cpp"
-    )
-    target_include_directories(cppad_headers
-        INTERFACE ${cppad_SOURCE_DIR}/include
-    )
-    add_library(CppAD::cppad ALIAS cppad_headers)
+  # cppad_headers is STATIC (not INTERFACE) so it can carry a compiled stub for CppAD::local::temp_file().  That symbol
+  # lives in cppad_lib which we don't build (we skip CppAD's CMakeLists to avoid its "test" target conflicting with
+  # CTest).  put_check_for_nan() — defined unconditionally in check_for_nan.hpp — calls temp_file() in Debug builds
+  # (#ifndef NDEBUG guard in forward.hpp), so the linker needs the symbol even in header-only mode.  The stub returns an
+  # empty path (NaN debug dump is a no-op).
+  add_library(cppad_headers STATIC "${CMAKE_SOURCE_DIR}/cmake/cppad_temp_file_stub.cpp")
+  target_include_directories(cppad_headers INTERFACE ${cppad_SOURCE_DIR}/include)
+  add_library(CppAD::cppad ALIAS cppad_headers)
 endif()
 
 # ------------------------------------------------------------------------------
@@ -155,20 +142,14 @@ endif()
 set(EIGEN3_VENDOR_DIR "${CMAKE_SOURCE_DIR}/vendor/eigen")
 
 if(EXISTS "${EIGEN3_VENDOR_DIR}/Eigen/Dense")
-    message(STATUS "Using vendored Eigen headers in ${EIGEN3_VENDOR_DIR}")
+  message(STATUS "Using vendored Eigen headers in ${EIGEN3_VENDOR_DIR}")
 
-    add_library(eigen3_vendor INTERFACE)
-    target_include_directories(eigen3_vendor
-        INTERFACE
-            "${EIGEN3_VENDOR_DIR}"
-    )
+  add_library(eigen3_vendor INTERFACE)
+  target_include_directories(eigen3_vendor INTERFACE "${EIGEN3_VENDOR_DIR}")
 
-    add_library(Eigen3::Eigen ALIAS eigen3_vendor)
+  add_library(Eigen3::Eigen ALIAS eigen3_vendor)
 else()
-    message(FATAL_ERROR
-        "Eigen3 not found: vendored headers at "
-        "${EIGEN3_VENDOR_DIR}/Eigen/Dense"
-    )
+  message(FATAL_ERROR "Eigen3 not found: vendored headers at " "${EIGEN3_VENDOR_DIR}/Eigen/Dense")
 endif()
 
 # ------------------------------------------------------------------------------
@@ -176,12 +157,6 @@ endif()
 # ------------------------------------------------------------------------------
 add_library(nlohmann_json INTERFACE)
 
-target_include_directories(nlohmann_json
-    INTERFACE
-        ${CMAKE_CURRENT_SOURCE_DIR}/vendor
-)
+target_include_directories(nlohmann_json INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/vendor)
 
-target_compile_definitions(nlohmann_json
-    INTERFACE
-        NLOHMANN_JSON_HEADER_ONLY
-)
+target_compile_definitions(nlohmann_json INTERFACE NLOHMANN_JSON_HEADER_ONLY)

@@ -1,33 +1,31 @@
 # ------------------------------------------------------------------------------
-# Project: Aetherion
-# Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+# Project: Aetherion Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
 #
-# SPDX-License-Identifier: MIT
-# License-Filename: LICENSE
+# SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-add_executable(test_coordinate
-                    test_InitialStateCalculations.cpp
-                    test_QuaterniontoNED.cpp
-                    test_GeodeticToECEF.cpp
-                    test_NEDtoECEFtoECI.cpp
-                    test_ECEFtoECI.cpp
-                    test_Math.cpp
-                    test_inertial_to_local.cpp
-                    test_ECItoNED.cpp
-                    test_RandomRoundTripConversion.cpp)
+add_executable(
+  test_coordinate
+  test_InitialStateCalculations.cpp
+  test_QuaterniontoNED.cpp
+  test_GeodeticToECEF.cpp
+  test_NEDtoECEFtoECI.cpp
+  test_ECEFtoECI.cpp
+  test_Math.cpp
+  test_inertial_to_local.cpp
+  test_ECItoNED.cpp
+  test_RandomRoundTripConversion.cpp)
 
-target_link_libraries(test_coordinate
-    PRIVATE
-        Aetherion
-        Catch2::Catch2WithMain
-        CppAD::cppad  
-        Eigen3::Eigen
-)
+target_link_libraries(
+  test_coordinate
+  PRIVATE Aetherion
+          Catch2::Catch2WithMain
+          CppAD::cppad
+          Eigen3::Eigen)
 
 target_include_directories(test_coordinate PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_coordinate)
-                                               
-#add_test(NAME coordinate_tests COMMAND test_coordinate)
+
+# add_test(NAME coordinate_tests COMMAND test_coordinate)

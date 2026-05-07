@@ -1,13 +1,12 @@
 # ------------------------------------------------------------------------------
-# Project: Aetherion
-# Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+# Project: Aetherion Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
 #
-# SPDX-License-Identifier: MIT
-# License-Filename: LICENSE
+# SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-generateFMU(FeedThrough
-    FMI_VERSIONS fmi2
-    SOURCES
-        FeedThrough/FeedThrough.cpp
-)
+generatefmu(
+  FeedThrough
+  FMI_VERSIONS
+  fmi2
+  SOURCES
+  FeedThrough/FeedThrough.cpp)

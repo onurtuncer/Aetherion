@@ -1,20 +1,13 @@
 # ------------------------------------------------------------------------------
-# Project: Aetherion
-# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+# Project: Aetherion Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
-# SPDX-License-Identifier: MIT
-# License-Filename: LICENSE
+# SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
 include(FetchContent)
 
-FetchContent_Declare(
-    catch2
-    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-    GIT_TAG        v3.5.2
-)
+FetchContent_Declare(catch2 GIT_REPOSITORY https://github.com/catchorg/Catch2.git GIT_TAG v3.5.2)
 FetchContent_MakeAvailable(catch2)
-
 
 add_subdirectory("ThirdPartyIntegration")
 add_subdirectory("Environment")
@@ -26,5 +19,3 @@ add_subdirectory("Spatial")
 add_subdirectory("RigidBody")
 add_subdirectory("Serialization")
 add_subdirectory("Simulation")
-
-

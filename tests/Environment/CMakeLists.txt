@@ -1,44 +1,37 @@
 # ------------------------------------------------------------------------------
-# Project: Aetherion
-# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+# Project: Aetherion Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
-# SPDX-License-Identifier: MIT
-# License-Filename: LICENSE
+# SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-add_executable(test_atmosphere
-                    test_atmosphere.cpp )
+add_executable(test_atmosphere test_atmosphere.cpp)
 
-target_link_libraries(test_atmosphere
-    PRIVATE
-        Aetherion
-        Catch2::Catch2WithMain
-        CppAD::cppad  
-        Eigen3::Eigen
-)
+target_link_libraries(
+  test_atmosphere
+  PRIVATE Aetherion
+          Catch2::Catch2WithMain
+          CppAD::cppad
+          Eigen3::Eigen)
 
 target_include_directories(test_atmosphere PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_atmosphere)
-                                               
-#add_test(NAME atmosphere_tests COMMAND test_atmosphere)
 
-add_executable(test_gravity
-                    test_gravity.cpp
-                    "../RigidBody/test_GravitationalWrench.cpp")
+# add_test(NAME atmosphere_tests COMMAND test_atmosphere)
 
-target_link_libraries(test_gravity
-    PRIVATE
-        Aetherion
-        Catch2::Catch2WithMain
-        CppAD::cppad  
-        Eigen3::Eigen
-)
+add_executable(test_gravity test_gravity.cpp "../RigidBody/test_GravitationalWrench.cpp")
+
+target_link_libraries(
+  test_gravity
+  PRIVATE Aetherion
+          Catch2::Catch2WithMain
+          CppAD::cppad
+          Eigen3::Eigen)
 
 target_include_directories(test_gravity PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_gravity)
-                                               
-#add_test(NAME gravity_tests COMMAND test_gravity)
+
+# add_test(NAME gravity_tests COMMAND test_gravity)

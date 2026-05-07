@@ -1,50 +1,29 @@
 # ------------------------------------------------------------------------------
-# Project: Aetherion
-# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+# Project: Aetherion Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
-# SPDX-License-Identifier: MIT
-# License-Filename: LICENSE
+# SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-add_executable(test_eigen
-    test_eigen.cpp
-)
+add_executable(test_eigen test_eigen.cpp)
 
-target_link_libraries(test_eigen
-    PRIVATE
-        Catch2::Catch2WithMain
-        Eigen3::Eigen       
-)
+target_link_libraries(test_eigen PRIVATE Catch2::Catch2WithMain Eigen3::Eigen)
 
 target_include_directories(test_eigen PRIVATE "${CMAKE_SOURCE_DIR}/vendor/eigen")
 
 include(Catch)
 catch_discover_tests(test_eigen)
 
-#add_test(NAME eigen_basic_test COMMAND test_eigen)
+# add_test(NAME eigen_basic_test COMMAND test_eigen)
 
-add_executable(test_nlohmann
-    test_nlohmann_json.cpp
-)
+add_executable(test_nlohmann test_nlohmann_json.cpp)
 
-target_link_libraries(test_nlohmann
-    PRIVATE
-        Catch2::Catch2WithMain
-        nlohmann_json      
-)
+target_link_libraries(test_nlohmann PRIVATE Catch2::Catch2WithMain nlohmann_json)
 
 catch_discover_tests(test_nlohmann)
 
-add_executable(test_cppad
-    test_cppad.cpp
-)
+add_executable(test_cppad test_cppad.cpp)
 
-target_link_libraries(test_cppad
-    PRIVATE
-        Catch2::Catch2WithMain
-        CppAD::cppad  
-        Eigen3::Eigen
-)
+target_link_libraries(test_cppad PRIVATE Catch2::Catch2WithMain CppAD::cppad Eigen3::Eigen)
 
 target_include_directories(test_cppad PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 

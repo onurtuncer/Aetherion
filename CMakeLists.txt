@@ -1,20 +1,18 @@
 # ------------------------------------------------------------------------------
-# Project: Aetherion
-# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
+# Project: Aetherion Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
-# SPDX-License-Identifier: MIT
-# License-Filename: LICENSE
+# SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
 cmake_minimum_required(VERSION 3.26)
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" projectVersion)
 
-project(Aetherion
-    VERSION     ${projectVersion}
-    DESCRIPTION "Flight dynamics simulation library with FMI/FMU support"
-    LANGUAGES   CXX
-)
+project(
+  Aetherion
+  VERSION ${projectVersion}
+  DESCRIPTION "Flight dynamics simulation library with FMI/FMU support"
+  LANGUAGES CXX)
 
 # ------------------------------------------------------------------------------
 # CMake module path� -- must come before any include() that uses it
@@ -30,36 +28,34 @@ include(cmake/AetherionOptions.cmake)
 # Global compiler settings
 # ------------------------------------------------------------------------------
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-set(CMAKE_POSITION_INDEPENDENT_CODE  ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 if(AETHERION_WARNINGS_AS_ERRORS)
-    if(MSVC)
-        add_compile_options(/WX)
-    else()
-        add_compile_options(-Werror)
-    endif()
+  if(MSVC)
+    add_compile_options(/WX)
+  else()
+    add_compile_options(-Werror)
+  endif()
 endif()
 
 if(AETHERION_ENABLE_COVERAGE)
-    if(MSVC)
-        message(WARNING "[Aetherion] Coverage instrumentation is not supported with MSVC.")
-    else()
-        add_compile_options(--coverage)
-        add_link_options(--coverage)
-    endif()
+  if(MSVC)
+    message(WARNING "[Aetherion] Coverage instrumentation is not supported with MSVC.")
+  else()
+    add_compile_options(--coverage)
+    add_link_options(--coverage)
+  endif()
 endif()
 
 # ------------------------------------------------------------------------------
 # Docs-only build � configure only the doc target and exit early
 # ------------------------------------------------------------------------------
 if(BUILD_DOCS)
-    add_subdirectory(doc)
-    return()
+  add_subdirectory(doc)
+  return()
 endif()
 
-
 include("cmake/generate_fmu.cmake")
-
 
 # ------------------------------------------------------------------------------
 # Vendored dependencies
@@ -84,46 +80,35 @@ add_subdirectory(src)
 # Static analysis
 # ------------------------------------------------------------------------------
 if(ENABLE_STATIC_ANALYSIS)
-    include(cppcheck)
+  include(cppcheck)
 endif()
 
 # ------------------------------------------------------------------------------
 # Tests
 # ------------------------------------------------------------------------------
 if(AETHERION_BUILD_TESTS)
-    include(CTest)
-    enable_testing()
-    add_subdirectory(tests)
+  include(CTest)
+  enable_testing()
+  add_subdirectory(tests)
 endif()
 
 # ------------------------------------------------------------------------------
 # Examples
 # ------------------------------------------------------------------------------
 if(AETHERION_BUILD_EXAMPLES)
-    add_subdirectory(src/Examples)
+  add_subdirectory(src/Examples)
 endif()
 
 # ------------------------------------------------------------------------------
 # Install rules (optional, guarded)
 # ------------------------------------------------------------------------------
-#if(AETHERION_INSTALL)
-#    include(GNUInstallDirs)
+# if(AETHERION_INSTALL) include(GNUInstallDirs)
 #
-#    install(TARGETS Aetherion
-#        EXPORT  AetherionTargets
-#        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-#        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-#    )
+# install(TARGETS Aetherion EXPORT  AetherionTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} LIBRARY DESTINATION
+# ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
 #
-#    install(DIRECTORY src/
-#        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Aetherion
-#        FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
-#    )
+# install(DIRECTORY src/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Aetherion FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
+# )
 #
-#    install(EXPORT AetherionTargets
-#        FILE        AetherionTargets.cmake
-#        NAMESPACE   Aetherion::
-#        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion
-#    )
-#endif()
+# install(EXPORT AetherionTargets FILE        AetherionTargets.cmake NAMESPACE   Aetherion:: DESTINATION
+# ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion ) endif()
