@@ -10,7 +10,7 @@
 # Defines the Aetherion static (or shared) library target and delegates
 # source registration to each module subdirectory via target_sources().
 # FMU targets are defined in src/FMU/CMakeLists.txt and are independent
-# executables/shared libraries — they do not contribute to the Aetherion target.
+# executables/shared libraries -- they do not contribute to the Aetherion target.
 # ------------------------------------------------------------------------------
 
 # ------------------------------------------------------------------------------
@@ -52,7 +52,7 @@ target_link_libraries(Aetherion
 # ------------------------------------------------------------------------------
 # Module subdirectories
 # Each subdirectory calls target_sources(Aetherion PRIVATE ...) to register
-# its own .cpp files. No source globbing — every file is listed explicitly.
+# its own .cpp files. No source globbing -- every file is listed explicitly.
 # ------------------------------------------------------------------------------
 add_subdirectory(Coordinate)
 add_subdirectory(FlightDynamics)

@@ -10,12 +10,12 @@
 # Registers Coordinate module sources into the Aetherion library target.
 #
 # Modules:
-#   ECEFtoGeodetic   — ECEF to geodetic (lat/lon/alt) conversion
-#   InertialToLocal  — Inertial (ECI) to local (NED) frame transformation
+#   ECEFtoGeodetic   -- ECEF to geodetic (lat/lon/alt) conversion
+#   InertialToLocal  -- Inertial (ECI) to local (NED) frame transformation
 #
 # Note: ECEFtoGeodetic.cpp is listed but its corresponding call-site in the
 # root CMakeLists.txt was commented out (#ECEFToGeodetic.cpp). It is included
-# here unconditionally — remove or guard it with an option if the
+# here unconditionally -- remove or guard it with an option if the
 # implementation is still experimental.
 # ------------------------------------------------------------------------------
 
