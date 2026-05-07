@@ -14,7 +14,7 @@
 // Notes:
 // - Uses CppAD math functions explicitly (CppAD::sqrt/sin/cos/atan2) to avoid
 //   MSVC overload ambiguity that can happen when importing both std and CppAD.
-// - Works with double/float and CppAD::AD\<double\> (and similar scalar types).
+// - Works with double/float and CppAD::AD<double> (and similar scalar types).
 //
 
 #pragma once

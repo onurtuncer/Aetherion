@@ -20,7 +20,7 @@
 //
 // CppAD note
 // ──────────
-// DAVEMLAeroModel::evaluate<S>() works with S = double and S = CppAD::AD\<double\>.
+// DAVEMLAeroModel::evaluate<S>() works with S = double and S = CppAD::AD<double>.
 // Breakpoint-segment selection uses the plain-double value of the input (via
 // CppAD::Value() in the AD path) so that indices are always integers, while
 // interpolation weights are computed with full S precision — giving correct

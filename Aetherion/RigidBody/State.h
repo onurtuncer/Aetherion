@@ -48,7 +48,7 @@ namespace Aetherion::RigidBody {
 
 #if __has_include(<cppad/cppad.hpp>)
 #include <cppad/cppad.hpp>
-    using StateAD = State<CppAD::AD\<double\>>;
+    using StateAD = State<CppAD::AD<double>>;
 #endif
 
 } // namespace Aetherion::RigidBody

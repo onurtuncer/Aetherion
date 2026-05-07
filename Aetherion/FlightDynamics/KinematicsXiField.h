@@ -17,7 +17,7 @@
 // integrator never sees g_dot directly.
 //
 // The call operator is templated on Scalar S (not the class) so that
-// StageResidualIRKProductSE3 can call it with S = CppAD::AD\<double\> when
+// StageResidualIRKProductSE3 can call it with S = CppAD::AD<double> when
 // building the Newton Jacobian tape, and with S = double at runtime.
 // This matches the pattern used by RigidBodyVectorField::operator().
 //

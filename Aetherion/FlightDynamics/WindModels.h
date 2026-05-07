@@ -20,7 +20,7 @@
 //       S t_s) const;                          // simulation time [s]
 //
 // The method returns the ambient wind velocity in the ECI frame [m/s].
-// It must be callable for both S = double and S = CppAD::AD\<double\>.
+// It must be callable for both S = double and S = CppAD::AD<double>.
 //
 // BUILT-IN MODELS
 // ───────────────

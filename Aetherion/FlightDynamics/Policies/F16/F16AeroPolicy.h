@@ -19,7 +19,7 @@
 // (trim or open-loop use).  A flight-control layer should update them between
 // integration steps for closed-loop simulations.
 //
-// Satisfies AeroPolicy for both S = double and S = CppAD::AD\<double\>.
+// Satisfies AeroPolicy for both S = double and S = CppAD::AD<double>.
 // ------------------------------------------------------------------------------
 
 #pragma once

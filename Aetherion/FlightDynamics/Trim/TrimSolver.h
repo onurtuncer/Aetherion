@@ -230,7 +230,7 @@ TrimSolver::solveThrottle(double FEX_req_lbf, double alt_ft, double mach) const
 inline TrimPoint
 TrimSolver::solve(const TrimInputs& in, double alpha0, double el0) const
 {
-    using AD = CppAD::AD\<double\>;
+    using AD = CppAD::AD<double>;
 
     // ── Atmosphere (double, not taped) ────────────────────────────────────────
     const double alt_m    = in.alt_ft * kFt_m;

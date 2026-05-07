@@ -6,7 +6,7 @@
 // PolicyConcepts.h
 //
 // Concepts that define the compile-time interface for each physics policy.
-// Each concept is checked for both double and CppAD::AD\<double\> --
+// Each concept is checked for both double and CppAD::AD<double> --
 // a policy that is not AD-safe fails here, not inside CppAD tape evaluation.
 //
 #pragma once
@@ -60,7 +60,7 @@ namespace Aetherion::FlightDynamics {
     template<class P>
     concept GravityPolicy =
         detail::GravityPolicyFor<P, double>&&
-        detail::GravityPolicyFor<P, CppAD::AD\<double\>>;
+        detail::GravityPolicyFor<P, CppAD::AD<double>>;
 
     /// @brief Concept for an aerodynamic wrench policy.
     ///
@@ -74,7 +74,7 @@ namespace Aetherion::FlightDynamics {
     template<class P>
     concept AeroPolicy =
         detail::AeroPolicyFor<P, double>&&
-        detail::AeroPolicyFor<P, CppAD::AD\<double\>>;
+        detail::AeroPolicyFor<P, CppAD::AD<double>>;
 
     /// @brief Concept for a propulsion wrench policy.
     ///
@@ -97,6 +97,6 @@ namespace Aetherion::FlightDynamics {
     template<class P>
     concept MassPolicy =
         detail::MassPolicyFor<P, double>&&
-        detail::MassPolicyFor<P, CppAD::AD\<double\>>;
+        detail::MassPolicyFor<P, CppAD::AD<double>>;
 
 } // namespace Aetherion::FlightDynamics

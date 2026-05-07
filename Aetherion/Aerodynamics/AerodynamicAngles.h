@@ -19,7 +19,7 @@
 //
 // Notes:
 // - No `if` branches; "safety" uses smooth eps terms.
-// - Works for double, float, CppAD::AD\<double\>, etc.
+// - Works for double, float, CppAD::AD<double>, etc.
 //
 
 #pragma once

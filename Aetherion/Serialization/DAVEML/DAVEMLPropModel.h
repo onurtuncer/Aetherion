@@ -31,7 +31,7 @@
 //   1 ft·lbf = 1.355 817 948 N·m
 //
 // CppAD compatibility: evaluate<S>() works for S = double and
-// S = CppAD::AD\<double\> via DAVEMLAeroModel::evaluateRaw<S>.
+// S = CppAD::AD<double> via DAVEMLAeroModel::evaluateRaw<S>.
 // ------------------------------------------------------------------------------
 
 #pragma once

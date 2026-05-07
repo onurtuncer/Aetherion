@@ -25,7 +25,7 @@ namespace Aetherion::ODE::RKMK::Lie::Math {
 
 #if __has_include(<cppad/cppad.hpp>)
     template<>
-    struct is_ad<CppAD::AD\<double\>> : std::true_type {};
+    struct is_ad<CppAD::AD<double>> : std::true_type {};
 #endif
 
     template<class S>

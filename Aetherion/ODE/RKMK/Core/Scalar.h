@@ -22,7 +22,7 @@ namespace Aetherion::ODE::RKMK::Core {
     struct is_cppad_ad : std::false_type {};
 
     template<>
-    struct is_cppad_ad<CppAD::AD\<double\>> : std::true_type {};
+    struct is_cppad_ad<CppAD::AD<double>> : std::true_type {};
 
     template<class T>
     inline constexpr bool is_cppad_ad_v = is_cppad_ad<std::decay_t<T>>::value;

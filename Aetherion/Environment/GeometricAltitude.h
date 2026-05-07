@@ -30,7 +30,7 @@
 // below 80 km — more than adequate for atmospheric property lookup.
 //
 // AD compatibility: the template parameter S may be double or
-// CppAD::AD\<double\>.  All operations are elementary and tape-recordable.
+// CppAD::AD<double>.  All operations are elementary and tape-recordable.
 // ------------------------------------------------------------------------------
 
 #pragma once
