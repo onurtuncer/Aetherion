@@ -1915,3 +1915,544 @@ sequence as Scenario 1:
    attitude quaternion from azimuth / zenith / roll.
 4. **Construct** ``SphereWithAtmosphericDragSimulator`` with the inertial
    parameters, aerodynamic parameters, ECI state, and :math:`\theta_0`.
+
+.. _example_f16_steady_flight:
+
+F-16 Steady Straight-and-Level Flight (NASA TM-2015-218675 Atmospheric Scenario 11)
+------------------------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix C, Section C.1.11 — Subsonic F-16 Trimmed Flight across Earth.
+
+This is the most complex validation case in the NASA reference: a full
+**six-degree-of-freedom** simulation of the F-16 Fighting Falcon in
+steady, straight-and-level flight at 335.15 KTAS, 10 013 ft MSL, heading
+45° over Kitty Hawk, NC.  It exercises every subsystem that the preceding
+atmospheric scenarios built up — J₂ gravity, WGS-84 geodesy, US 1976
+atmosphere, and the complete DAVE-ML F-16 aerodynamic, propulsion, and
+inertia model chain.
+
+Unlike earlier scenarios, the aircraft *must first be trimmed*: the
+initial pitch angle, elevator deflection, and throttle setting are unknown
+and must be found by solving the six-DOF equilibrium equations before the
+simulation can be started.  The trim algorithm is a central contribution
+of this example.
+
+Scenario Parameters
+^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 38 30 32
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Location
+     - 36.019 17° N, 75.674 44° W
+     - Kitty Hawk (KFFA), NC
+   * - Altitude
+     - 10 013 ft (3 051.96 m)
+     - Geometric altitude MSL
+   * - Heading
+     - 45° (NE)
+     - True course
+   * - True airspeed
+     - 335.15 KTAS = 565.685 ft/s = 172.37 m/s
+     - Subsonic (:math:`\text{Mach}\approx 0.525`)
+   * - Earth-relative velocity (NED)
+     - [400, 400, 0] ft/s = [121.92, 121.92, 0] m/s
+     - Wings-level, level flight
+   * - Body angular rates
+     - [0, 0, 0] rad/s
+     - At trim (no rotation)
+   * - Duration
+     - 180 s
+     - Full scenario
+
+DAVE-ML Model Chain
+^^^^^^^^^^^^^^^^^^^
+
+All aerodynamic, propulsion, and inertia data are loaded from the
+AIAA S-119 DAVE-ML files distributed with the F-16 reference model
+(``data/F16_S119_source/``):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 28 22 50
+
+   * - File
+     - Reader class
+     - Contents
+   * - ``F16_inertia.dml``
+     - :cpp:class:`DAVEMLReader` + ``LoadInertiaFromDAVEML``
+     - Mass (slug), :math:`I_{xx}`, :math:`I_{yy}`, :math:`I_{zz}`,
+       :math:`I_{xz}`, CG offsets
+   * - ``F16_aero.dml``
+     - :cpp:class:`DAVEMLAeroModel`
+     - Six non-dimensional aero coefficients
+       (:math:`C_X, C_Y, C_Z, C_l, C_m, C_n`) as functions of
+       TAS, :math:`\alpha`, :math:`\beta`, body rates, and control
+       surfaces; 1-D and 2-D gridded look-up tables with MathML
+       arithmetic and :math:`\langle\text{piecewise}\rangle` branching
+   * - ``F16_prop.dml``
+     - :cpp:class:`DAVEMLPropModel`
+     - Thrust :math:`F_{EX}` [lbf] as a function of power level [%],
+       altitude [ft], and Mach number via a 3-D gridded table.
+       Moment outputs (:math:`T_{EL}`, :math:`T_{EM}`, :math:`T_{EN}`)
+       are zero in this model (simplified Stevens & Lewis convention)
+
+Inertial Parameters
+~~~~~~~~~~~~~~~~~~~
+
+Loaded from ``F16_inertia.dml`` at the standard 35 % MAC centre-of-gravity
+position (:math:`\Delta x_{CG} = 0`):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 35 35
+
+   * - Parameter
+     - DAVE-ML value
+     - SI value
+   * - Mass :math:`m`
+     - 637.160 slug
+     - 9 298.6 kg
+   * - :math:`I_{xx}` (roll)
+     - 9 496 slug·ft²
+     - 12 875 kg·m²
+   * - :math:`I_{yy}` (pitch)
+     - 55 814 slug·ft²
+     - 75 674 kg·m²
+   * - :math:`I_{zz}` (yaw)
+     - 63 100 slug·ft²
+     - 85 552 kg·m²
+   * - :math:`I_{xz}` (cross)
+     - 982 slug·ft²
+     - 1 331 kg·m²
+
+Aerodynamic Reference Geometry
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30 30
+
+   * - Quantity
+     - English
+     - SI
+   * - Wing area :math:`S_{\mathrm{ref}}`
+     - 300 ft²
+     - 27.87 m²
+   * - Mean aero chord :math:`\bar{c}`
+     - 11.32 ft
+     - 3.451 m
+   * - Wing span :math:`b`
+     - 30 ft
+     - 9.144 m
+
+Moment Reference Centre Correction
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. important::
+
+   The DAVE-ML aerodynamic model computes the pitching-moment coefficient
+   :math:`C_m` **about the aerodynamic centre (AC) at 25 % MAC**.
+   The equations of motion are written **about the centre of gravity (CG)
+   at 35 % MAC** (standard loading).  The moment must be transferred before
+   it enters the force-balance equations.
+
+The transfer formula is:
+
+.. math::
+
+   M_{y,\text{CG}} = C_m \, q \, S \, \bar{c}
+                   + \underbrace{x_{\text{CG/AC}}}_{1.132\ \text{ft}} \cdot F_{Z,\text{aero}}
+
+where :math:`x_{\text{CG/AC}} = (35\% - 25\%) \times \bar{c} = 0.10 \times 11.32\ \text{ft} = 1.132\ \text{ft}`
+(0.345 m) is the aft distance from the AC to the CG.  At the NASA trim
+condition:
+
+.. math::
+
+   x_{\text{CG/AC}} \cdot F_{Z,\text{aero}}
+   = 1.132\ \text{ft} \times (-20\,424\ \text{lbf})
+   = +23\,120\ \text{ft·lbf}
+
+This term is the **entire** source of the :math:`M_{y,\text{CG}} = 23\,120` ft·lbf
+reported in the NASA reference CSV at :math:`t = 0` — not an engine moment arm,
+not a reference-point error.  Without this correction, the trim converges to
+the wrong angle of attack (:math:`\alpha \approx 2.35°` instead of the correct
+:math:`\alpha \approx 2.64°`).
+
+The correction is applied in two places:
+
+1. :cpp:class:`F16AeroPolicy` — adds :math:`x_{\text{CG/AC}} \times F_Z` to
+   ``wrench.f(1)`` (body-Y moment) during simulation.
+2. :cpp:class:`TrimSolver` — adds the same term to the pitch-moment residual
+   :math:`r[1]` during stage-1 Newton iteration.
+
+Both use the same constant so the trim operating point and the simulation
+physics are exactly consistent.
+
+Trim Algorithm
+^^^^^^^^^^^^^^
+
+For straight-and-level flight (no sideslip, no bank, no angular rates), the
+six-DOF equilibrium collapses to three independent equations:
+
+.. math::
+
+   \underbrace{C_Z(\alpha, \delta_e) \cdot q \cdot S \;+\; W \cos\alpha}_{\text{Fz balance}} = 0
+   \qquad (1)
+
+.. math::
+
+   \underbrace{C_m(\alpha, \delta_e) \cdot q \cdot S \cdot \bar{c}
+             + x_{\text{CG/AC}} \cdot C_Z(\alpha, \delta_e) \cdot q \cdot S}_{\text{My\_CG balance}} = 0
+   \qquad (2)
+
+.. math::
+
+   \underbrace{C_X(\alpha, \delta_e) \cdot q \cdot S + F_{EX} - W \sin\alpha}_{\text{Fx balance}} = 0
+   \qquad (3)
+
+with three unknowns: angle of attack :math:`\alpha`, elevator deflection
+:math:`\delta_e`, and throttle :math:`\mathrm{pwr}` (which determines
+:math:`F_{EX}`).
+
+The solver exploits the physical structure by **decoupling** (3) from (1)–(2):
+
+**Stage 1 — 2-D Newton-Raphson for** :math:`(\alpha,\, \delta_e)`
+
+Equations (1) and (2) depend only on the aerodynamic model; throttle does
+not appear.  A 2×2 Newton iteration is run with an **exact CppAD Jacobian**
+recorded through the DAVE-ML lookup tables:
+
+.. code-block:: text
+
+   x = [α_deg,  δe_deg]
+
+   r[0] = CZ(α, δe) × q × S  +  W cos α   [lbf]
+   r[1] = Cm(α, δe) × q × S × c̄  +  x_cg_ac × CZ(α, δe) × q × S   [ft·lbf]
+
+   iterate:  J × Δx = −r    (J exact via CppAD forward-mode)
+             x ← x + Δx
+
+Convergence criterion: :math:`\|r\| < 10^{-5}` lbf.  Typical convergence
+in 5–8 iterations.
+
+**Stage 2 — 1-D prop-model inversion for** :math:`\mathrm{pwr}`
+
+Once :math:`\alpha` and :math:`\delta_e` are known, equation (3) gives the
+**required thrust** directly:
+
+.. math::
+
+   F_{EX,\text{req}} = W \sin\alpha - C_X(\alpha, \delta_e) \cdot q \cdot S
+
+The prop model :math:`F_{EX}(\mathrm{pwr},\, h,\, \text{Mach})` is then
+inverted by **bisection** over :math:`\mathrm{pwr} \in [0\%,\, 100\%]`:
+
+.. code-block:: text
+
+   lo = 0 %,   hi = 100 %
+   loop until |F_EX(mid) − F_EX_req| < 10⁻⁴ lbf:
+       mid = (lo + hi) / 2
+       if F_EX(mid) < F_EX_req:  lo = mid
+       else:                      hi = mid
+
+The bisection is valid because :math:`F_{EX}` is monotonically increasing
+in power level at constant altitude and Mach.
+
+Trim Result (Scenario 11)
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Running the solver at the Scenario-11 flight condition:
+
+.. code-block:: text
+
+   W     = 20 509 lbf   (637.16 slug × 32.189 ft/s² local gravity)
+   V     = 565.685 ft/s  (335.15 KTAS)
+   h     = 10 013 ft
+   Mach  = 0.525
+   q_bar = 281 psf
+   x_cg_ac = 1.132 ft
+
+   Stage 1 (2D Newton, 6 iterations):
+     α     = 2.656°       (NASA reference: 2.643°,  Δ = 0.013°)
+     δe    = −3.24°
+
+   Stage 2 (bisection, 60 iterations):
+     F_EX_req = 2 368 lbf
+     pwr   = 13.90 %
+
+   Final residual: ‖r‖ = 5.3 × 10⁻⁷ lbf   (< 10⁻⁵ convergence threshold)
+
+The angle-of-attack error relative to the NASA reference is **0.013°**, well
+within the expected numerical precision of the DAVE-ML table representation.
+
+Physics Model
+^^^^^^^^^^^^^
+
+The simulation assembles the following policy combination, defined in
+:file:`Aetherion/Examples/F16SteadyFlight/F16Types.h`:
+
+.. code-block:: cpp
+
+   using F16VF = RigidBody::VectorField<
+       FlightDynamics::J2GravityPolicy,   // WGS-84 J₂ oblateness gravity
+       FlightDynamics::F16AeroPolicy,     // DAVE-ML six-coeff aero model
+       FlightDynamics::F16PropPolicy,     // DAVE-ML thrust table
+       FlightDynamics::ConstantMassPolicy // fixed fuel state
+   >;
+
+   using F16Stepper = RigidBody::SixDoFStepper<F16VF>;
+
+F16AeroPolicy
+~~~~~~~~~~~~~
+
+:cpp:class:`F16AeroPolicy` wraps :cpp:class:`DAVEMLAeroModel` and is the
+aerodynamic counterpart of the simpler :cpp:struct:`DragOnlyAeroPolicy` used
+in spherical drop tests.  At each integration stage it:
+
+1. Computes the **atmosphere-relative velocity** in the body frame,
+   accounting for Earth's rotation:
+
+   .. math::
+
+      \mathbf{v}_{\text{rel}} = \mathbf{v}_B
+                               - R^T \!\cdot\! (\boldsymbol{\omega}_E \times \mathbf{r}_{\text{ECI}})
+
+2. Derives the **aerodynamic angles and true airspeed**:
+
+   .. math::
+
+      \alpha = \arctan\!\left(\frac{w}{u}\right), \quad
+      \beta  = \arcsin\!\left(\frac{v}{V_T}\right), \quad
+      V_T    = \|\mathbf{v}_{\text{rel}}\|
+
+3. Computes the **geometric altitude** using the first-order WGS-84
+   flattening correction (avoids the 4 km systematic error of the naive
+   :math:`|\mathbf{r}| - a_{\text{eq}}` formula at mid-latitudes):
+
+   .. math::
+
+      h \approx |\mathbf{r}| - a \left(1 - f \sin^2\lambda_c\right)
+
+   where :math:`\lambda_c = \arcsin(r_z / |\mathbf{r}|)` is the geocentric
+   latitude.
+
+4. Evaluates :cpp:class:`DAVEMLAeroModel` with
+   :math:`\{V_T, \alpha, \beta, p, q, r, \delta_e, \delta_a, \delta_r\}` →
+   :math:`\{C_X, C_Y, C_Z, C_l, C_m, C_n\}`.
+
+5. Converts to **dimensional forces and moments in SI**, applying the
+   AC-to-CG moment transfer described above:
+
+   .. math::
+
+      F_X &= C_X \, q \, S \cdot k_{\text{lbf→N}}  \\
+      F_Z &= C_Z \, q \, S \cdot k_{\text{lbf→N}}  \\
+      M_{y,\text{CG}} &= \left(C_m \, q \, S \, \bar{c}
+                               + x_{\text{CG/AC}} \cdot C_Z \, q \, S\right) \cdot k_{\text{ft·lbf→N·m}}  \\
+      M_{x} &= C_l \, q \, S \, b \cdot k_{\text{ft·lbf→N·m}}  \\
+      M_{z} &= C_n \, q \, S \, b \cdot k_{\text{ft·lbf→N·m}}
+
+F16PropPolicy
+~~~~~~~~~~~~~
+
+:cpp:class:`F16PropPolicy` wraps :cpp:class:`DAVEMLPropModel`.  At each
+stage it:
+
+1. Computes atmosphere-relative TAS using the same Earth-rotation correction
+   as :cpp:class:`F16AeroPolicy`.
+2. Derives altitude (flattening-corrected) and Mach number from the US 1976
+   atmosphere.
+3. Evaluates the DAVE-ML propulsion model:
+   :math:`F_{EX}(\mathrm{pwr},\, h,\, \text{Mach})` → thrust in N.
+4. Adds the optional engine z-offset pitching moment
+   :math:`M_{y,\text{eng}} = z_{\text{engine}} \times F_{EX}`.
+   For this aircraft and model: **z_engine = 0** (thrust line passes
+   through the CG; confirmed from the simupy-flight / NESC source).
+
+.. code-block:: cpp
+
+   // At trim:
+   //   pwr   = 13.90 %,   alt = 10 013 ft,   Mach = 0.525
+   //   F_EX  = 9 032 N  (2 030 lbf)
+   //   F_Y   = F_Z = 0  (aligned engine, symmetric)
+   //   M_x   = M_y = M_z = 0  (TEM = 0 in DML, z_engine = 0)
+
+CppAD Compatibility
+~~~~~~~~~~~~~~~~~~~
+
+All three model classes — :cpp:class:`DAVEMLAeroModel`,
+:cpp:class:`DAVEMLPropModel`, and the two policy wrappers — are templated
+on the scalar type ``S`` and support ``S = CppAD::AD<double>``.
+
+The implicit Radau IIA RKMK integrator records a CppAD tape through the
+complete VectorField (gravity + aero + prop) at each Newton stage.  The two
+critical compatibility fixes required for the DAVE-ML lookup tables are:
+
+* **Index selection** — the breakpoint segment index is a step function
+  of the input and cannot be differentiated.  It is evaluated using the
+  current tape value via ``CppAD::Value(CppAD::Var2Par(input))``, which
+  extracts the numeric value without recording it as a variable.
+* **Interpolation weight** — the weight :math:`w = (x - b_i)/(b_{i+1} - b_i)`
+  *must* be computed from the original AD variable ``input`` (not from the
+  frozen double) so that ``d(weight)/d(input) = 1/\text{span}`` is correctly
+  propagated through the tape.
+
+Architecture
+^^^^^^^^^^^^
+
+.. code-block:: text
+
+   Simulation::Application                      (base — Template Method)
+       └── F16SteadyFlightApplication
+               prepareSimulation()
+                   load inertia from F16_inertia.dml
+                   load aero model from F16_aero.dml
+                   load prop model from F16_prop.dml
+                   run TrimSolver (Stage 1: alpha,el  Stage 2: throttle)
+                   log propulsive wrench at trim
+                   build ECI initial state
+                   construct F16SteadyFlightSimulator
+
+   Simulation::ISimulator<F16VF, Snapshot1>
+       └── F16SteadyFlightSimulator
+               step()                Radau IIA RKMK (order 5, 3-stage)
+               snapshot()            state → Snapshot1 (ECI → geodetic, US1976)
+               snapshot2()           Snapshot1 → Snapshot2 (31-col NASA format)
+               currentTheta()        θ(t) = θ₀ + ωE · t
+
+   FlightDynamics::TrimSolver
+       solveStage1()   2D CppAD Newton   (α, δe) from Fz=0, My_CG=0
+       solveStage2()   1D bisection      pwr from F_EX(pwr, h, Ma) = F_EX_req
+
+The three DAVE-ML model objects are heap-allocated once and shared via
+``std::shared_ptr<const T>`` between the trim solver and the two policies;
+no redundant file I/O or table construction occurs.
+
+Configuration
+^^^^^^^^^^^^^
+
+Unlike earlier scenarios, **no JSON config file is read at runtime**.  All
+aircraft parameters come from the DAVE-ML files; flight-condition constants
+and the CG offset are compile-time definitions in
+:file:`src/Examples/F16SteadyFlight/F16SteadyFlight.cpp`:
+
+.. code-block:: cpp
+
+   constexpr double kLat_deg      =  36.01917;   // Kitty Hawk, NC
+   constexpr double kLon_deg      = -75.67444;
+   constexpr double kAlt_ft       =  10013.0;
+   constexpr double kHeading_deg  =  45.0;        // NE course
+   constexpr double kRoll_deg     =  -0.172;       // initial bank (NASA ref)
+   constexpr double kTAS_fps      =  565.685;      // 335.15 KTAS
+
+   // CG distance aft of the aerodynamic reference centre (AC).
+   // (35% − 25%) / 100 × 11.32 ft × 0.3048 m/ft = 0.345 m
+   constexpr double kXcgFromAC_m  =  (35.0 - 25.0) / 100.0 * 11.32 * 0.3048;
+
+   constexpr double kEngineZ_m    =  0.0;          // confirmed: thrust line ≈ CG
+
+Running
+^^^^^^^
+
+Build the target and run the 180-second simulation:
+
+.. code-block:: bash
+
+   cmake --build out/build/windows-debug --target F16SteadyFlight
+   ./F16SteadyFlight \
+       --timeStep 0.01 --startTime 0 --endTime 180 \
+       --writeInterval 10 \
+       --outputFileName f16_s11.csv
+
+Expected startup log:
+
+.. code-block:: text
+
+   Loading inertia from '.../F16_inertia.dml'
+     mass = 9298.6439 kg  (637.1596 slug)
+     Ixx=12874.8  Iyy=75673.6  Izz=85552.1  Ixz=1331.4  [kg·m²]
+   Loading aero model from '.../F16_aero.dml'
+   Loading prop model from '.../F16_prop.dml'
+   Running trim solver  (W = 20509.4 lbf, V = 565.68 ft/s, h = 10013 ft) ...
+   Trim converged:
+     alpha = 2.6561 deg      ← within 0.013° of NASA reference (2.643°)
+     el    = -3.2422 deg
+     pwr   = 13.9046 %
+     |r|   = 5.3e-07 lbf
+   Propulsive wrench at trim (z_engine = 0.0000 m):
+     Fx = 9032 N  (2030 lbf)
+     Fy = 0.0000 N,  Fz = 0.0000 N
+     My = 0.00 N·m  (TEM=0 in DML, arm=0)
+
+Output CSV format
+^^^^^^^^^^^^^^^^^
+
+The output follows the **Snapshot2** (31-column) format, which matches the
+column layout of the NASA NESC reference CSV files:
+
+.. code-block:: text
+
+   time, gePosition_m_X, gePosition_m_Y, gePosition_m_Z,
+   feVelocity_m_s_X, feVelocity_m_s_Y, feVelocity_m_s_Z,
+   altitudeMsl_m, longitude_rad, latitude_rad,
+   localGravity_m_s2,
+   eulerAngle_rad_Yaw, eulerAngle_rad_Pitch, eulerAngle_rad_Roll,
+   bodyAngularRateWrtEi_rad_s_Roll, bodyAngularRateWrtEi_rad_s_Pitch, bodyAngularRateWrtEi_rad_s_Yaw,
+   altitudeRateWrtMsl_m_s,
+   speedOfSound_m_s, airDensity_kg_m3, ambientPressure_Pa, ambientTemperature_K,
+   aero_bodyForce_N_X, aero_bodyForce_N_Y, aero_bodyForce_N_Z,
+   aero_bodyMoment_Nm_L, aero_bodyMoment_Nm_M, aero_bodyMoment_Nm_N,
+   mach, dynamicPressure_Pa, trueAirspeed_m_s
+
+NASA reference CSVs (``Atmos_11_sim_02.csv``, ``Atmos_11_sim_04.csv``,
+``Atmos_11_sim_05.csv``) are copied to the build directory post-build so
+that ``compare_sim_validation.py`` can locate them automatically.
+
+Initial Condition Verification
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+At :math:`t = 0`, Aetherion's initial snapshot should match the NASA
+reference to within floating-point precision:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 36 32 32
+
+   * - Quantity
+     - Aetherion (:math:`t = 0`)
+     - NASA reference
+   * - Pitch :math:`\theta`
+     - 2.656°
+     - 2.643°
+   * - Yaw :math:`\psi`
+     - 45.000°
+     - 45.000°
+   * - Roll :math:`\phi`
+     - −0.172°
+     - −0.172°
+   * - TAS
+     - 172.42 m/s
+     - 172.37 m/s (335.16 kt)
+   * - Mach
+     - 0.5251
+     - 0.5251
+   * - Altitude
+     - 3 051.96 m
+     - 3 051.97 m (10 013 ft)
+   * - :math:`M_{y,\text{CG}}` (aero)
+     - 23 100 N·m
+     - 23 120 N·m (23 120 ft·lbf)
+   * - :math:`F_Z` (aero, lift)
+     - −90 850 N
+     - −90 821 N (−20 424 lbf)
+   * - Body rates :math:`p, q, r`
+     - ≈ 0 (Earth-rate residual)
+     - 0.000°/s
