@@ -1,5 +1,5 @@
 # ------------------------------------------------------------------------------
-# Copyright (c) 2025, Onur Tuncer, PhD, Istanbul Technical University
+# Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 #
 # SPDX-License-Identifier: MIT
 # License-Filename: LICENSE
@@ -25,9 +25,15 @@ print(f"Project name from top level: {project_name}")
 
 # -- Project information -----------------------------------------------------
 
+version_txt = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'version.txt'))
+with open(version_txt, 'r', encoding='utf-8') as _f:
+    _project_version = _f.read().strip()
+
 project = project_name
 author = 'Onur Tuncer, PhD'
-copyright = '2025, Onur Tuncer, PhD'
+copyright = '2025-2026, Onur Tuncer, PhD'
+version = _project_version
+release = _project_version
 
 # -- General configuration ---------------------------------------------------
 

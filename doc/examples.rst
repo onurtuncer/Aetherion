@@ -898,30 +898,79 @@ Comparison Plots
    :align: center
    :width: 85%
 
-.. _example_eastward_cannonball:
+.. _example_sphere_with_drag:
 
-Eastward Cannonball (NASA TM-2015-218675 Atmospheric Scenario 9)
------------------------------------------------------------------
+Sphere with Atmospheric Drag (NASA TM-2015-218675 Atmospheric Scenario 6)
+--------------------------------------------------------------------------
 
 **Reference:** `NASA TM-2015-218675`_,
 *Atmospheric and Space Flight Vehicle Equations of Motion*,
-Appendix B, Section B.1.9 — Atmospheric Simulation 09.
+Appendix B, Section B.1.6 — Atmospheric Simulation 06.
 
-The same sphere as Scenario 6 (CD = 0.1) is fired from sea level (altitude = 0 m)
-at 45° into the east-upward quadrant: initial NED velocity
-:math:`[0,\;+304.8,\;-304.8]\ \text{m/s}` (1 000 ft/s each component).
-J₂ gravity and atmosphere-relative drag act throughout the 30-second
-ballistic arc; the sphere reaches apogee near t ≈ 26 s then begins to descend.
+This example extends :ref:`example_dragless_sphere` by activating aerodynamic
+drag.  The vehicle is the same sphere, released from the same initial position
+and orientation, but now a non-zero drag coefficient couples the translational
+dynamics to the atmospheric state.  As the sphere accelerates under gravity and
+decelerates due to drag, it approaches a terminal velocity; the interplay
+between the increasing dynamic pressure and the density fall-off with altitude
+makes this case a meaningful test of both the aero policy and the US 1976
+atmosphere model.
 
 Physics Model
 ^^^^^^^^^^^^^
 
-Identical to :ref:`example_sphere_with_drag` — reuses
-``SphereWithAtmosphericDragSimulator`` directly with Scenario 9 initial
-conditions.  No new VF or Simulator type is introduced.
+The simulation uses the following policy combination, defined in
+:file:`Aetherion/Examples/SphereWithAtmosphericDrag/SphereWithAtmosphereicDragTypes.h`:
+
+.. code-block:: cpp
+
+   using SphereWithAtmosphericDragVF = RigidBody::VectorField<
+       FlightDynamics::J2GravityPolicy,        // J2 gravity (WGS-84 second harmonic)
+       FlightDynamics::DragOnlyAeroPolicy,     // CD = 0.1, no lift or side force
+       FlightDynamics::ZeroPropulsionPolicy,   // no thrust
+       FlightDynamics::ConstantMassPolicy      // mass does not change
+   >;
+
+   using SphereWithAtmosphericDragStepper =
+       RigidBody::SixDoFStepper<SphereWithAtmosphericDragVF>;
+
+The only change relative to Scenario 1 is the replacement of
+``ZeroAeroPolicy`` with ``DragOnlyAeroPolicy``.
+
+Aerodynamic drag model
+""""""""""""""""""""""
+
+``DragOnlyAeroPolicy`` evaluates the drag force in the body frame at every
+function evaluation of the integrator:
+
+.. math::
+
+   \mathbf{F}_{\mathrm{drag}} =
+       -\tfrac{1}{2}\,\rho(h)\,C_D\,S_{\mathrm{ref}}\,\lVert\mathbf{v}_B\rVert\,\mathbf{v}_B
+
+where :math:`\mathbf{v}_B` is the body-frame linear velocity (the lower three
+components of the body twist :math:`\nu_B`), :math:`\rho(h)` is the US Standard
+Atmosphere 1976 density at the current geocentric altitude, :math:`C_D` is the
+constant drag coefficient, and :math:`S_{\mathrm{ref}}` is the reference
+(frontal) area.  No lift, side, or moment contributions are generated.
+
+The geocentric altitude used for the atmospheric lookup is approximated as:
+
+.. math::
+
+   h \approx \lVert \mathbf{r}_{\mathrm{ECI}} \rVert - R_e
+
+where :math:`R_e = 6\,378\,137.0\ \text{m}` is the WGS-84 semi-major axis.
+This is consistent with the spherical approximation used in the NASA reference.
+
+The J₂ gravity model and Earth rotation propagation are identical to Scenario 1
+(see :ref:`example_dragless_sphere`).
 
 Initial Conditions
 ^^^^^^^^^^^^^^^^^^
+
+The vehicle configuration is read from
+:file:`data/Atmos_06_SphereWithDrag/nasa_2015_scenario6_sphere_with_drag.json`.
 
 .. list-table::
    :header-rows: 1
@@ -930,181 +979,90 @@ Initial Conditions
    * - Parameter
      - Value
      - Notes
+   * - Geodetic latitude
+     - 0.0°
+     - Equatorial drop
+   * - Geodetic longitude
+     - 0.0°
+     - Prime meridian
    * - Altitude (MSL)
-     - 0.0 m (sea level)
-     - Fired from ground level
+     - 9 144.0 m (30 000 ft)
+     - Identical to Scenario 1
    * - NED velocity (N, E, D)
-     - [0, +304.8, −304.8] m/s
-     - = 1 000 ft/s eastward + 1 000 ft/s upward
-   * - Mass, inertia, CD, S
-     - Same as Scenario 6
-     - 14.594 kg, CD = 0.1, S = 0.018241 m²
+     - [0, 0, 0] m/s
+     - Released from rest relative to Earth
+   * - Body roll rate :math:`\omega_x`
+     - −7.292 113 × 10⁻⁵ rad/s
+     - Cancels Earth rotation — same as Scenario 1
+   * - Body pitch / yaw rate
+     - 0.0 rad/s
+     - —
+   * - Mass
+     - 14.5939029372 kg
+     - Identical to Scenario 1
+   * - Inertia :math:`I_{xx} = I_{yy} = I_{zz}`
+     - 4.880944614 kg·m²
+     - Uniform sphere
+   * - Drag coefficient :math:`C_D`
+     - 0.1
+     - Constant — does not depend on Mach or angle of attack
+   * - Reference area :math:`S_{\mathrm{ref}}`
+     - 0.018241 m²
+     - Frontal area of the sphere
+
+The atmospheric state at :math:`h_0 = 9\,144\ \text{m}` (US Standard
+Atmosphere 1976) is the same as in Scenario 1.
 
 Building and Running
 ^^^^^^^^^^^^^^^^^^^^
 
+CMake automatically copies the vehicle config and validation script into the
+build directory next to the executable:
+
 .. code-block:: bash
 
-   cmake --build build --target EastwardCannonball
+   cmake --build build --target SphereWithAtmosphericDrag
 
-   ./build/EastwardCannonball \
-       --inputFileName  nasa_2015_scenario9_eastward_cannonball.json \
-       --outputFileName atmos_09_output.csv                          \
-       --startTime      0.0                                          \
-       --endTime        30.0                                         \
-       --timeStep       0.002                                        \
+   ./build/SphereWithAtmosphericDrag \
+       --inputFileName  nasa_2015_scenario6_sphere_with_drag.json \
+       --outputFileName atmos_06_output.csv                        \
+       --startTime      0.0                                         \
+       --endTime        30.0                                        \
+       --timeStep       0.002                                       \
        --writeInterval  50
 
-Validation Results
-^^^^^^^^^^^^^^^^^^
+All flags and their defaults are documented in
+:cpp:class:`Aetherion::Simulation::ArgumentParser`.
 
-.. list-table::
-   :header-rows: 1
-   :widths: 10 18 18 14 18 18
-
-   * - :math:`t` [s]
-     - Alt\ :sub:`ref` [m]
-     - Alt\ :sub:`sim` [m]
-     - :math:`\Delta` alt [m]
-     - TAS\ :sub:`ref` [m/s]
-     - TAS\ :sub:`sim` [m/s]
-   * - 0
-     - 0.000
-     - 0.000
-     - 0.000
-     - 431.052
-     - 431.052
-   * - 5
-     - 1 301.340
-     - 1 301.377
-     - +0.037
-     - 344.434
-     - 344.337
-   * - 10
-     - 2 226.770
-     - 2 227.004
-     - +0.235
-     - 283.972
-     - 283.907
-   * - 15
-     - 2 840.160
-     - 2 840.661
-     - +0.501
-     - 240.739
-     - 240.691
-   * - 20
-     - 3 176.450
-     - 3 177.243
-     - +0.793
-     - 211.852
-     - 211.802
-   * - 25
-     - 3 256.730
-     - 3 257.816
-     - +1.086
-     - 196.608
-     - 196.559
-   * - 30
-     - **3 095.800**
-     - **3 097.169**
-     - **+1.369**
-     - **194.179**
-     - **194.132**
-
-Altitude error 1.37 m (0.044%) and speed error 0.047 m/s at t = 30 s —
-same rotating-Earth systematic offset as all other scenarios.
-
-Comparison Plots
-^^^^^^^^^^^^^^^^
-
-.. figure:: _static/atmos09/overview_dashboard.png
-   :alt: Overview comparison dashboard — all columns
-   :align: center
-   :width: 100%
-
-   Aetherion vs. `NASA TM-2015-218675`_ reference over the 30-second
-   eastward cannonball ballistic arc.
-
-.. figure:: _static/atmos09/altitudeMsl_m.png
-   :alt: Altitude MSL comparison
-   :align: center
-   :width: 85%
-
-.. figure:: _static/atmos09/trueAirspeed_m_s.png
-   :alt: True airspeed comparison
-   :align: center
-   :width: 85%
-
-.. figure:: _static/atmos09/feVelocity_m_s_Z.png
-   :alt: Downward velocity comparison
-   :align: center
-   :width: 85%
-
-.. figure:: _static/atmos09/dynamicPressure_Pa.png
-   :alt: Dynamic pressure comparison
-   :align: center
-   :width: 85%
-
-.. _example_northward_cannonball:
-
-Northward Cannonball (NASA TM-2015-218675 Atmospheric Scenario 10)
--------------------------------------------------------------------
-
-**Reference:** `NASA TM-2015-218675`_,
-*Atmospheric and Space Flight Vehicle Equations of Motion*,
-Appendix B, Section B.1.10 — Atmospheric Simulation 10.
-
-Identical setup to Scenario 9 but the horizontal component is directed
-**northward**: initial NED velocity :math:`[+304.8,\;0,\;-304.8]\ \text{m/s}`.
-Coriolis coupling causes a small westward drift (longitude ≈ −0.00012°)
-that is absent in Scenario 9.
-
-Physics Model
+Output Format
 ^^^^^^^^^^^^^
 
-Identical to Scenarios 6 and 9 — reuses ``SphereWithAtmosphericDragSimulator``.
+The output CSV has the same 38-column ``Snapshot1`` schema as Scenario 1
+(see :ref:`example_dragless_sphere`).  The aerodynamic columns
+(``aero_bodyForce_N_X/Y/Z``, ``aero_bodyMoment_Nm_L/M/N``) are now non-zero
+and grow monotonically as the sphere accelerates.
 
-Initial Conditions
-^^^^^^^^^^^^^^^^^^
+Validation Data
+^^^^^^^^^^^^^^^
 
-.. list-table::
-   :header-rows: 1
-   :widths: 35 30 35
-
-   * - Parameter
-     - Value
-     - Notes
-   * - Altitude (MSL)
-     - 0.0 m (sea level)
-     - Fired from ground level
-   * - NED velocity (N, E, D)
-     - [+304.8, 0, −304.8] m/s
-     - = 1 000 ft/s northward + 1 000 ft/s upward
-   * - Mass, inertia, CD, S
-     - Same as Scenario 6
-     - 14.594 kg, CD = 0.1, S = 0.018241 m²
-
-Building and Running
-^^^^^^^^^^^^^^^^^^^^
-
-.. code-block:: bash
-
-   cmake --build build --target NorthwardCannonball
-
-   ./build/NorthwardCannonball \
-       --inputFileName  nasa_2015_scenario10_northward_cannonball.json \
-       --outputFileName atmos_10_output.csv                            \
-       --startTime      0.0                                            \
-       --endTime        30.0                                           \
-       --timeStep       0.002                                          \
-       --writeInterval  50
+The NASA reference provides six sub-simulations for Scenario 6
+(``Atmos_06_sim_01`` through ``Atmos_06_sim_06``), stored in
+:file:`data/Atmos_06_SphereWithDrag/`.  Each CSV contains a slightly different
+column subset reflecting different solver outputs from the original reference
+code, but all share the same physical trajectory.  The SI-unit variants
+(``*_si_units.csv``) are used for direct numerical comparison.
 
 Validation Results
 ^^^^^^^^^^^^^^^^^^
 
+The table below compares Aetherion output against the ``Atmos_06_sim_01_si_units``
+reference at selected time steps.  The simulation was run with
+:math:`\Delta t = 0.002\ \text{s}` and ``--writeInterval 50`` (output every 0.1 s,
+matching the NASA CSV cadence).
+
 .. list-table::
    :header-rows: 1
-   :widths: 10 18 18 14 18 18
+   :widths: 10 18 18 18 18 18
 
    * - :math:`t` [s]
      - Alt\ :sub:`ref` [m]
@@ -1113,80 +1071,168 @@ Validation Results
      - TAS\ :sub:`ref` [m/s]
      - TAS\ :sub:`sim` [m/s]
    * - 0
+     - 9 144.000
+     - 9 144.000
      - 0.000
-     - 0.000
-     - 0.000
-     - 431.052
-     - 431.052
+     - 0.0000
+     - 0.0000
    * - 5
-     - 1 300.840
-     - 1 300.897
-     - +0.062
-     - 344.446
-     - 344.457
+     - 9 022.240
+     - 9 022.338
+     - +0.098
+     - 48.6469
+     - 48.6274
    * - 10
-     - 2 224.880
-     - 2 225.131
-     - +0.244
-     - 284.021
-     - 284.053
+     - 8 658.691
+     - 8 658.886
+     - +0.195
+     - 96.5949
+     - 96.5758
    * - 15
-     - 2 836.160
-     - 2 836.625
-     - +0.473
-     - 240.857
-     - 240.901
+     - 8 058.748
+     - 8 059.033
+     - +0.285
+     - 143.0641
+     - 143.0471
    * - 20
-     - 3 169.650
-     - 3 170.373
-     - +0.718
-     - 212.073
-     - 212.111
+     - 7 232.051
+     - 7 232.415
+     - +0.364
+     - 187.1251
+     - 187.1119
    * - 25
-     - 3 246.550
-     - 3 247.512
-     - +0.961
-     - 196.955
-     - 196.988
+     - 6 193.370
+     - 6 193.790
+     - +0.419
+     - 227.6531
+     - 227.6457
    * - 30
-     - **3 081.730**
-     - **3 082.927**
-     - **+1.198**
-     - **194.646**
-     - **194.671**
+     - **4 963.583**
+     - **4 964.024**
+     - **+0.441**
+     - **263.3383**
+     - **263.3380**
 
-Altitude error 1.20 m (0.039%) and speed error 0.025 m/s at t = 30 s.
+The residual is a smooth, slowly growing systematic offset (~0.44 m at t = 30 s,
+0.009% of altitude) attributable to the difference between Aetherion's
+full rotating-Earth dynamics and the NASA reference's non-rotating-atmosphere
+model.  The true-airspeed error at t = 30 s is 0.0003 m/s (< 0.001%).
 
 Comparison Plots
 ^^^^^^^^^^^^^^^^
 
-.. figure:: _static/atmos10/overview_dashboard.png
-   :alt: Overview comparison dashboard — all columns
+The figures below are generated by the bundled
+:file:`compare_sim_validation.py` script against ``Atmos_06_sim_01_si_units.csv``.
+
+**Overview dashboard** — all 30 output columns in a single figure:
+
+.. figure:: _static/atmos06/overview_dashboard.png
+   :alt: Overview comparison dashboard (all columns)
    :align: center
    :width: 100%
 
-   Aetherion vs. `NASA TM-2015-218675`_ reference over the 30-second
-   northward cannonball ballistic arc.
+   Side-by-side comparison of Aetherion vs. `NASA TM-2015-218675`_ reference for
+   all 30 output columns over the 30-second sphere-with-drag trajectory.
 
-.. figure:: _static/atmos10/altitudeMsl_m.png
+**Altitude** — :math:`h(t)` vs. NASA reference (max absolute error < 0.45 m):
+
+.. figure:: _static/atmos06/altitudeMsl_m.png
    :alt: Altitude MSL comparison
    :align: center
    :width: 85%
 
-.. figure:: _static/atmos10/trueAirspeed_m_s.png
+**True airspeed** — atmosphere-relative speed (max error < 0.02 m/s):
+
+.. figure:: _static/atmos06/trueAirspeed_m_s.png
    :alt: True airspeed comparison
    :align: center
    :width: 85%
 
-.. figure:: _static/atmos10/feVelocity_m_s_X.png
-   :alt: Northward velocity comparison
+**Earth-relative downward velocity** :math:`v_z` (NED):
+
+.. figure:: _static/atmos06/feVelocity_m_s_Z.png
+   :alt: Earth-frame velocity Z comparison
    :align: center
    :width: 85%
 
-.. figure:: _static/atmos10/dynamicPressure_Pa.png
+**Altitude rate**:
+
+.. figure:: _static/atmos06/altitudeRateWrtMsl_m_s.png
+   :alt: Altitude rate comparison
+   :align: center
+   :width: 85%
+
+**Mach number** and **dynamic pressure**:
+
+.. figure:: _static/atmos06/mach.png
+   :alt: Mach number comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos06/dynamicPressure_Pa.png
    :alt: Dynamic pressure comparison
    :align: center
    :width: 85%
+
+**Aerodynamic drag force** (body Z — primary drag axis):
+
+.. figure:: _static/atmos06/aero_bodyForce_N_Z.png
+   :alt: Aerodynamic body force Z comparison
+   :align: center
+   :width: 85%
+
+**Local gravitational acceleration** (J₂ model):
+
+.. figure:: _static/atmos06/localGravity_m_s2.png
+   :alt: Local gravity comparison
+   :align: center
+   :width: 85%
+
+**Atmospheric state** (US Standard Atmosphere 1976):
+
+.. figure:: _static/atmos06/ambientTemperature_K.png
+   :alt: Ambient temperature comparison
+   :align: center
+   :width: 85%
+
+.. figure:: _static/atmos06/airDensity_kg_m3.png
+   :alt: Air density comparison
+   :align: center
+   :width: 85%
+
+Architecture
+^^^^^^^^^^^^
+
+``SphereWithAtmosphericDragApplication`` follows the same
+:cpp:class:`Aetherion::Simulation::Application` **Template Method** pattern as
+the DraglessSphere example:
+
+.. code-block:: text
+
+   Simulation::Application              (base — defines run() loop)
+       └── SphereWithAtmosphericDragApplication
+               prepareSimulation()         load JSON → build ECI state → construct simulator
+               writeInitialSnapshot()      write t=0 row
+               stepAndRecord()             advance by Δt, write CSV row
+               logFinalSummary()           print geodetic position, speed, Mach at t_end
+
+   Simulation::ISimulator<SphereWithAtmosphericDragVF, Snapshot1>
+       └── SphereWithAtmosphericDragSimulator
+               step()                      advance via SixDoFStepper (Radau IIA RKMK)
+               snapshot()                  convert state → Snapshot1 (ECI→Geodetic, US1976 atm)
+               currentTheta()              θ(t) = θ₀ + ωE · t  (linear ERA propagation)
+
+Initialisation inside ``prepareSimulation()`` follows the same four-step
+sequence as Scenario 1:
+
+1. **Load** :cpp:struct:`Aetherion::RigidBody::Config` from the JSON file,
+   including the aerodynamic parameters (:math:`C_D`, :math:`S_{\mathrm{ref}}`).
+2. **Compute** the initial Earth Rotation Angle :math:`\theta_0 = \omega_E t_0`.
+3. **Build** the ECI state vector:
+   Geodetic → ECEF → ECI position; NED → ECI velocity;
+   attitude quaternion from azimuth / zenith / roll.
+4. **Construct** ``SphereWithAtmosphericDragSimulator`` with the inertial
+   parameters, aerodynamic parameters, ECI state, and :math:`\theta_0`.
 
 .. _example_steady_wind:
 
@@ -1580,79 +1626,30 @@ Comparison Plots
    :align: center
    :width: 85%
 
-.. _example_sphere_with_drag:
+.. _example_eastward_cannonball:
 
-Sphere with Atmospheric Drag (NASA TM-2015-218675 Atmospheric Scenario 6)
---------------------------------------------------------------------------
+Eastward Cannonball (NASA TM-2015-218675 Atmospheric Scenario 9)
+-----------------------------------------------------------------
 
 **Reference:** `NASA TM-2015-218675`_,
 *Atmospheric and Space Flight Vehicle Equations of Motion*,
-Appendix B, Section B.1.6 — Atmospheric Simulation 06.
+Appendix B, Section B.1.9 — Atmospheric Simulation 09.
 
-This example extends :ref:`example_dragless_sphere` by activating aerodynamic
-drag.  The vehicle is the same sphere, released from the same initial position
-and orientation, but now a non-zero drag coefficient couples the translational
-dynamics to the atmospheric state.  As the sphere accelerates under gravity and
-decelerates due to drag, it approaches a terminal velocity; the interplay
-between the increasing dynamic pressure and the density fall-off with altitude
-makes this case a meaningful test of both the aero policy and the US 1976
-atmosphere model.
+The same sphere as Scenario 6 (CD = 0.1) is fired from sea level (altitude = 0 m)
+at 45° into the east-upward quadrant: initial NED velocity
+:math:`[0,\;+304.8,\;-304.8]\ \text{m/s}` (1 000 ft/s each component).
+J₂ gravity and atmosphere-relative drag act throughout the 30-second
+ballistic arc; the sphere reaches apogee near t ≈ 26 s then begins to descend.
 
 Physics Model
 ^^^^^^^^^^^^^
 
-The simulation uses the following policy combination, defined in
-:file:`Aetherion/Examples/SphereWithAtmosphericDrag/SphereWithAtmosphereicDragTypes.h`:
-
-.. code-block:: cpp
-
-   using SphereWithAtmosphericDragVF = RigidBody::VectorField<
-       FlightDynamics::J2GravityPolicy,        // J2 gravity (WGS-84 second harmonic)
-       FlightDynamics::DragOnlyAeroPolicy,     // CD = 0.1, no lift or side force
-       FlightDynamics::ZeroPropulsionPolicy,   // no thrust
-       FlightDynamics::ConstantMassPolicy      // mass does not change
-   >;
-
-   using SphereWithAtmosphericDragStepper =
-       RigidBody::SixDoFStepper<SphereWithAtmosphericDragVF>;
-
-The only change relative to Scenario 1 is the replacement of
-``ZeroAeroPolicy`` with ``DragOnlyAeroPolicy``.
-
-Aerodynamic drag model
-""""""""""""""""""""""
-
-``DragOnlyAeroPolicy`` evaluates the drag force in the body frame at every
-function evaluation of the integrator:
-
-.. math::
-
-   \mathbf{F}_{\mathrm{drag}} =
-       -\tfrac{1}{2}\,\rho(h)\,C_D\,S_{\mathrm{ref}}\,\lVert\mathbf{v}_B\rVert\,\mathbf{v}_B
-
-where :math:`\mathbf{v}_B` is the body-frame linear velocity (the lower three
-components of the body twist :math:`\nu_B`), :math:`\rho(h)` is the US Standard
-Atmosphere 1976 density at the current geocentric altitude, :math:`C_D` is the
-constant drag coefficient, and :math:`S_{\mathrm{ref}}` is the reference
-(frontal) area.  No lift, side, or moment contributions are generated.
-
-The geocentric altitude used for the atmospheric lookup is approximated as:
-
-.. math::
-
-   h \approx \lVert \mathbf{r}_{\mathrm{ECI}} \rVert - R_e
-
-where :math:`R_e = 6\,378\,137.0\ \text{m}` is the WGS-84 semi-major axis.
-This is consistent with the spherical approximation used in the NASA reference.
-
-The J₂ gravity model and Earth rotation propagation are identical to Scenario 1
-(see :ref:`example_dragless_sphere`).
+Identical to :ref:`example_sphere_with_drag` — reuses
+``SphereWithAtmosphericDragSimulator`` directly with Scenario 9 initial
+conditions.  No new VF or Simulator type is introduced.
 
 Initial Conditions
 ^^^^^^^^^^^^^^^^^^
-
-The vehicle configuration is read from
-:file:`data/Atmos_06_SphereWithDrag/nasa_2015_scenario6_sphere_with_drag.json`.
 
 .. list-table::
    :header-rows: 1
@@ -1661,90 +1658,37 @@ The vehicle configuration is read from
    * - Parameter
      - Value
      - Notes
-   * - Geodetic latitude
-     - 0.0°
-     - Equatorial drop
-   * - Geodetic longitude
-     - 0.0°
-     - Prime meridian
    * - Altitude (MSL)
-     - 9 144.0 m (30 000 ft)
-     - Identical to Scenario 1
+     - 0.0 m (sea level)
+     - Fired from ground level
    * - NED velocity (N, E, D)
-     - [0, 0, 0] m/s
-     - Released from rest relative to Earth
-   * - Body roll rate :math:`\omega_x`
-     - −7.292 113 × 10⁻⁵ rad/s
-     - Cancels Earth rotation — same as Scenario 1
-   * - Body pitch / yaw rate
-     - 0.0 rad/s
-     - —
-   * - Mass
-     - 14.5939029372 kg
-     - Identical to Scenario 1
-   * - Inertia :math:`I_{xx} = I_{yy} = I_{zz}`
-     - 4.880944614 kg·m²
-     - Uniform sphere
-   * - Drag coefficient :math:`C_D`
-     - 0.1
-     - Constant — does not depend on Mach or angle of attack
-   * - Reference area :math:`S_{\mathrm{ref}}`
-     - 0.018241 m²
-     - Frontal area of the sphere
-
-The atmospheric state at :math:`h_0 = 9\,144\ \text{m}` (US Standard
-Atmosphere 1976) is the same as in Scenario 1.
+     - [0, +304.8, −304.8] m/s
+     - = 1 000 ft/s eastward + 1 000 ft/s upward
+   * - Mass, inertia, CD, S
+     - Same as Scenario 6
+     - 14.594 kg, CD = 0.1, S = 0.018241 m²
 
 Building and Running
 ^^^^^^^^^^^^^^^^^^^^
 
-CMake automatically copies the vehicle config and validation script into the
-build directory next to the executable:
-
 .. code-block:: bash
 
-   cmake --build build --target SphereWithAtmosphericDrag
+   cmake --build build --target EastwardCannonball
 
-   ./build/SphereWithAtmosphericDrag \
-       --inputFileName  nasa_2015_scenario6_sphere_with_drag.json \
-       --outputFileName atmos_06_output.csv                        \
-       --startTime      0.0                                         \
-       --endTime        30.0                                        \
-       --timeStep       0.002                                       \
+   ./build/EastwardCannonball \
+       --inputFileName  nasa_2015_scenario9_eastward_cannonball.json \
+       --outputFileName atmos_09_output.csv                          \
+       --startTime      0.0                                          \
+       --endTime        30.0                                         \
+       --timeStep       0.002                                        \
        --writeInterval  50
-
-All flags and their defaults are documented in
-:cpp:class:`Aetherion::Simulation::ArgumentParser`.
-
-Output Format
-^^^^^^^^^^^^^
-
-The output CSV has the same 38-column ``Snapshot1`` schema as Scenario 1
-(see :ref:`example_dragless_sphere`).  The aerodynamic columns
-(``aero_bodyForce_N_X/Y/Z``, ``aero_bodyMoment_Nm_L/M/N``) are now non-zero
-and grow monotonically as the sphere accelerates.
-
-Validation Data
-^^^^^^^^^^^^^^^
-
-The NASA reference provides six sub-simulations for Scenario 6
-(``Atmos_06_sim_01`` through ``Atmos_06_sim_06``), stored in
-:file:`data/Atmos_06_SphereWithDrag/`.  Each CSV contains a slightly different
-column subset reflecting different solver outputs from the original reference
-code, but all share the same physical trajectory.  The SI-unit variants
-(``*_si_units.csv``) are used for direct numerical comparison.
 
 Validation Results
 ^^^^^^^^^^^^^^^^^^
 
-The table below compares Aetherion output against the ``Atmos_06_sim_01_si_units``
-reference at selected time steps.  The simulation was run with
-:math:`\Delta t = 0.002\ \text{s}` and ``--writeInterval 50`` (output every 0.1 s,
-matching the NASA CSV cadence).
-
 .. list-table::
    :header-rows: 1
-   :widths: 10 18 18 18 18 18
+   :widths: 10 18 18 14 18 18
 
    * - :math:`t` [s]
      - Alt\ :sub:`ref` [m]
@@ -1753,168 +1697,224 @@ matching the NASA CSV cadence).
      - TAS\ :sub:`ref` [m/s]
      - TAS\ :sub:`sim` [m/s]
    * - 0
-     - 9 144.000
-     - 9 144.000
      - 0.000
-     - 0.0000
-     - 0.0000
+     - 0.000
+     - 0.000
+     - 431.052
+     - 431.052
    * - 5
-     - 9 022.240
-     - 9 022.338
-     - +0.098
-     - 48.6469
-     - 48.6274
+     - 1 301.340
+     - 1 301.377
+     - +0.037
+     - 344.434
+     - 344.337
    * - 10
-     - 8 658.691
-     - 8 658.886
-     - +0.195
-     - 96.5949
-     - 96.5758
+     - 2 226.770
+     - 2 227.004
+     - +0.235
+     - 283.972
+     - 283.907
    * - 15
-     - 8 058.748
-     - 8 059.033
-     - +0.285
-     - 143.0641
-     - 143.0471
+     - 2 840.160
+     - 2 840.661
+     - +0.501
+     - 240.739
+     - 240.691
    * - 20
-     - 7 232.051
-     - 7 232.415
-     - +0.364
-     - 187.1251
-     - 187.1119
+     - 3 176.450
+     - 3 177.243
+     - +0.793
+     - 211.852
+     - 211.802
    * - 25
-     - 6 193.370
-     - 6 193.790
-     - +0.419
-     - 227.6531
-     - 227.6457
+     - 3 256.730
+     - 3 257.816
+     - +1.086
+     - 196.608
+     - 196.559
    * - 30
-     - **4 963.583**
-     - **4 964.024**
-     - **+0.441**
-     - **263.3383**
-     - **263.3380**
+     - **3 095.800**
+     - **3 097.169**
+     - **+1.369**
+     - **194.179**
+     - **194.132**
 
-The residual is a smooth, slowly growing systematic offset (~0.44 m at t = 30 s,
-0.009% of altitude) attributable to the difference between Aetherion's
-full rotating-Earth dynamics and the NASA reference's non-rotating-atmosphere
-model.  The true-airspeed error at t = 30 s is 0.0003 m/s (< 0.001%).
+Altitude error 1.37 m (0.044%) and speed error 0.047 m/s at t = 30 s —
+same rotating-Earth systematic offset as all other scenarios.
 
 Comparison Plots
 ^^^^^^^^^^^^^^^^
 
-The figures below are generated by the bundled
-:file:`compare_sim_validation.py` script against ``Atmos_06_sim_01_si_units.csv``.
-
-**Overview dashboard** — all 30 output columns in a single figure:
-
-.. figure:: _static/atmos06/overview_dashboard.png
-   :alt: Overview comparison dashboard (all columns)
+.. figure:: _static/atmos09/overview_dashboard.png
+   :alt: Overview comparison dashboard — all columns
    :align: center
    :width: 100%
 
-   Side-by-side comparison of Aetherion vs. `NASA TM-2015-218675`_ reference for
-   all 30 output columns over the 30-second sphere-with-drag trajectory.
+   Aetherion vs. `NASA TM-2015-218675`_ reference over the 30-second
+   eastward cannonball ballistic arc.
 
-**Altitude** — :math:`h(t)` vs. NASA reference (max absolute error < 0.45 m):
-
-.. figure:: _static/atmos06/altitudeMsl_m.png
+.. figure:: _static/atmos09/altitudeMsl_m.png
    :alt: Altitude MSL comparison
    :align: center
    :width: 85%
 
-**True airspeed** — atmosphere-relative speed (max error < 0.02 m/s):
-
-.. figure:: _static/atmos06/trueAirspeed_m_s.png
+.. figure:: _static/atmos09/trueAirspeed_m_s.png
    :alt: True airspeed comparison
    :align: center
    :width: 85%
 
-**Earth-relative downward velocity** :math:`v_z` (NED):
-
-.. figure:: _static/atmos06/feVelocity_m_s_Z.png
-   :alt: Earth-frame velocity Z comparison
+.. figure:: _static/atmos09/feVelocity_m_s_Z.png
+   :alt: Downward velocity comparison
    :align: center
    :width: 85%
 
-**Altitude rate**:
-
-.. figure:: _static/atmos06/altitudeRateWrtMsl_m_s.png
-   :alt: Altitude rate comparison
-   :align: center
-   :width: 85%
-
-**Mach number** and **dynamic pressure**:
-
-.. figure:: _static/atmos06/mach.png
-   :alt: Mach number comparison
-   :align: center
-   :width: 85%
-
-.. figure:: _static/atmos06/dynamicPressure_Pa.png
+.. figure:: _static/atmos09/dynamicPressure_Pa.png
    :alt: Dynamic pressure comparison
    :align: center
    :width: 85%
 
-**Aerodynamic drag force** (body Z — primary drag axis):
+.. _example_northward_cannonball:
 
-.. figure:: _static/atmos06/aero_bodyForce_N_Z.png
-   :alt: Aerodynamic body force Z comparison
+Northward Cannonball (NASA TM-2015-218675 Atmospheric Scenario 10)
+-------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.10 — Atmospheric Simulation 10.
+
+Identical setup to Scenario 9 but the horizontal component is directed
+**northward**: initial NED velocity :math:`[+304.8,\;0,\;-304.8]\ \text{m/s}`.
+Coriolis coupling causes a small westward drift (longitude ≈ −0.00012°)
+that is absent in Scenario 9.
+
+Physics Model
+^^^^^^^^^^^^^
+
+Identical to Scenarios 6 and 9 — reuses ``SphereWithAtmosphericDragSimulator``.
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Altitude (MSL)
+     - 0.0 m (sea level)
+     - Fired from ground level
+   * - NED velocity (N, E, D)
+     - [+304.8, 0, −304.8] m/s
+     - = 1 000 ft/s northward + 1 000 ft/s upward
+   * - Mass, inertia, CD, S
+     - Same as Scenario 6
+     - 14.594 kg, CD = 0.1, S = 0.018241 m²
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   cmake --build build --target NorthwardCannonball
+
+   ./build/NorthwardCannonball \
+       --inputFileName  nasa_2015_scenario10_northward_cannonball.json \
+       --outputFileName atmos_10_output.csv                            \
+       --startTime      0.0                                            \
+       --endTime        30.0                                           \
+       --timeStep       0.002                                          \
+       --writeInterval  50
+
+Validation Results
+^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 18 18 14 18 18
+
+   * - :math:`t` [s]
+     - Alt\ :sub:`ref` [m]
+     - Alt\ :sub:`sim` [m]
+     - :math:`\Delta` alt [m]
+     - TAS\ :sub:`ref` [m/s]
+     - TAS\ :sub:`sim` [m/s]
+   * - 0
+     - 0.000
+     - 0.000
+     - 0.000
+     - 431.052
+     - 431.052
+   * - 5
+     - 1 300.840
+     - 1 300.897
+     - +0.062
+     - 344.446
+     - 344.457
+   * - 10
+     - 2 224.880
+     - 2 225.131
+     - +0.244
+     - 284.021
+     - 284.053
+   * - 15
+     - 2 836.160
+     - 2 836.625
+     - +0.473
+     - 240.857
+     - 240.901
+   * - 20
+     - 3 169.650
+     - 3 170.373
+     - +0.718
+     - 212.073
+     - 212.111
+   * - 25
+     - 3 246.550
+     - 3 247.512
+     - +0.961
+     - 196.955
+     - 196.988
+   * - 30
+     - **3 081.730**
+     - **3 082.927**
+     - **+1.198**
+     - **194.646**
+     - **194.671**
+
+Altitude error 1.20 m (0.039%) and speed error 0.025 m/s at t = 30 s.
+
+Comparison Plots
+^^^^^^^^^^^^^^^^
+
+.. figure:: _static/atmos10/overview_dashboard.png
+   :alt: Overview comparison dashboard — all columns
+   :align: center
+   :width: 100%
+
+   Aetherion vs. `NASA TM-2015-218675`_ reference over the 30-second
+   northward cannonball ballistic arc.
+
+.. figure:: _static/atmos10/altitudeMsl_m.png
+   :alt: Altitude MSL comparison
    :align: center
    :width: 85%
 
-**Local gravitational acceleration** (J₂ model):
-
-.. figure:: _static/atmos06/localGravity_m_s2.png
-   :alt: Local gravity comparison
+.. figure:: _static/atmos10/trueAirspeed_m_s.png
+   :alt: True airspeed comparison
    :align: center
    :width: 85%
 
-**Atmospheric state** (US Standard Atmosphere 1976):
-
-.. figure:: _static/atmos06/ambientTemperature_K.png
-   :alt: Ambient temperature comparison
+.. figure:: _static/atmos10/feVelocity_m_s_X.png
+   :alt: Northward velocity comparison
    :align: center
    :width: 85%
 
-.. figure:: _static/atmos06/airDensity_kg_m3.png
-   :alt: Air density comparison
+.. figure:: _static/atmos10/dynamicPressure_Pa.png
+   :alt: Dynamic pressure comparison
    :align: center
    :width: 85%
-
-Architecture
-^^^^^^^^^^^^
-
-``SphereWithAtmosphericDragApplication`` follows the same
-:cpp:class:`Aetherion::Simulation::Application` **Template Method** pattern as
-the DraglessSphere example:
-
-.. code-block:: text
-
-   Simulation::Application              (base — defines run() loop)
-       └── SphereWithAtmosphericDragApplication
-               prepareSimulation()         load JSON → build ECI state → construct simulator
-               writeInitialSnapshot()      write t=0 row
-               stepAndRecord()             advance by Δt, write CSV row
-               logFinalSummary()           print geodetic position, speed, Mach at t_end
-
-   Simulation::ISimulator<SphereWithAtmosphericDragVF, Snapshot1>
-       └── SphereWithAtmosphericDragSimulator
-               step()                      advance via SixDoFStepper (Radau IIA RKMK)
-               snapshot()                  convert state → Snapshot1 (ECI→Geodetic, US1976 atm)
-               currentTheta()              θ(t) = θ₀ + ωE · t  (linear ERA propagation)
-
-Initialisation inside ``prepareSimulation()`` follows the same four-step
-sequence as Scenario 1:
-
-1. **Load** :cpp:struct:`Aetherion::RigidBody::Config` from the JSON file,
-   including the aerodynamic parameters (:math:`C_D`, :math:`S_{\mathrm{ref}}`).
-2. **Compute** the initial Earth Rotation Angle :math:`\theta_0 = \omega_E t_0`.
-3. **Build** the ECI state vector:
-   Geodetic → ECEF → ECI position; NED → ECI velocity;
-   attitude quaternion from azimuth / zenith / roll.
-4. **Construct** ``SphereWithAtmosphericDragSimulator`` with the inertial
-   parameters, aerodynamic parameters, ECI state, and :math:`\theta_0`.
 
 .. _example_f16_steady_flight:
 
