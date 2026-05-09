@@ -47,20 +47,12 @@ public:
     static constexpr double kFt_m = 0.3048;
 
     double pwr_pct    { 0.0 };  ///< Throttle [0–100 %]
-    /// Engine z-offset from CG [m, body z-down convention].
-    /// Produces the geometry-driven pitching moment My = z_engine × Fx_thrust.
-    /// Must match the value used in TrimInputs::z_engine_m so that the trim
-    /// solution is consistent with the simulation wrench.
-    /// Zero (default) matches the simplified Stevens & Lewis model (TEM = 0
-    /// in the DAVE-ML propulsion file).
-    double z_engine_m { 0.0 };
 
     // ── Construction ──────────────────────────────────────────────────────────
 
     explicit F16PropPolicy(std::shared_ptr<const Serialization::DAVEMLPropModel> model,
-                           double throttle   = 0.0,
-                           double z_engine   = 0.0)
-        : m_model(std::move(model)), pwr_pct(throttle), z_engine_m(z_engine) {}
+                           double throttle   = 0.0)
+        : m_model(std::move(model)), pwr_pct(throttle) {}
 
     // ── PropulsionPolicy interface ────────────────────────────────────────────
 
@@ -93,14 +85,11 @@ public:
         const auto out = m_model->evaluate<S>(in);
 
         // ── Build wrench [Mx, My, Mz, Fx, Fy, Fz] (N, N·m) ──────────────────
-        // The DAVE-ML propulsion file has TEM = 0 (simplified Stevens & Lewis
-        // model).  The geometry-driven pitching moment My = z_engine × Fx
-        // is added here so the wrench is physically complete.
-        // Must match TrimInputs::z_engine_m used when finding this trim point.
+        // TEM = 0 in the DAVE-ML propulsion file (simplified Stevens & Lewis model).
         Spatial::Wrench<S> wrench{};
         wrench.f.setZero();
-        wrench.f(0) = out.mx_Nm;                          // rolling  moment [N·m]
-        wrench.f(1) = out.my_Nm + S(z_engine_m) * out.fx_N; // pitching moment [N·m]
+        wrench.f(0) = out.mx_Nm;   // rolling  moment [N·m]
+        wrench.f(1) = out.my_Nm;   // pitching moment [N·m]
         wrench.f(2) = out.mz_Nm;                          // yawing   moment [N·m]
         wrench.f(3) = out.fx_N;                           // body X thrust   [N]
         wrench.f(4) = out.fy_N;                           // body Y thrust   [N]

@@ -55,10 +55,6 @@ namespace {
     constexpr double kFtLbf_Nm    =  1.355817948329279;
     constexpr double kDeg         =  std::numbers::pi / 180.0;
 
-    // Engine z-offset from CG [m, body z-down convention].
-    // Zero → simplified Stevens & Lewis model (TEM = 0 in the DAVE-ML file).
-    constexpr double kEngineZ_m   =  0.0;
-
     // CG distance aft of the aerodynamic moment reference centre (AC) [m].
     // The DAVE-ML F-16 aero model computes CM about the AC (25 % MAC).
     // Equations of motion require moments about the CG (35 % MAC standard).
@@ -153,17 +149,12 @@ void F16SteadyFlightApplication::prepareSimulation() const
         pi.mach    = mach;
         const auto po = prop_model->evaluate<double>(pi);
 
-        // My from DML (TEM) + geometry-driven moment arm My = z_engine × Fx
-        const double MY_arm_Nm   = kEngineZ_m * po.fx_N;
-        const double MY_total_Nm = po.my_Nm + MY_arm_Nm;
-
-        AE_CORE_INFO("Propulsive wrench at trim (z_engine = {:.4f} m):", kEngineZ_m);
+        AE_CORE_INFO("Propulsive wrench at trim:");
         AE_CORE_INFO("  Fx = {:.1f} N  ({:.1f} lbf)",
                      po.fx_N, po.fx_N / kLbf_N);
         AE_CORE_INFO("  Fy = {:.4f} N,  Fz = {:.4f} N", po.fy_N, po.fz_N);
-        AE_CORE_INFO("  My = {:.2f} N·m  ({:.2f} ft·lbf)  [TEM={:.2f} + arm={:.2f}]",
-                     MY_total_Nm, MY_total_Nm / kFtLbf_Nm,
-                     po.my_Nm, MY_arm_Nm);
+        AE_CORE_INFO("  My = {:.2f} N·m  ({:.2f} ft·lbf)",
+                     po.my_Nm, po.my_Nm / kFtLbf_Nm);
         AE_CORE_INFO("  Mx = {:.4f} N·m,  Mz = {:.4f} N·m", po.mx_Nm, po.mz_Nm);
     }
 
@@ -189,7 +180,7 @@ void F16SteadyFlightApplication::prepareSimulation() const
                  x0.g.p.x(), x0.g.p.y(), x0.g.p.z());
 
     m_Simulator = constructSimulator(ip, trim, aero_model, prop_model, x0, theta0,
-                                     kXcgFromAC_m, kEngineZ_m);
+                                     kXcgFromAC_m);
 }
 
 // ── writeInitialSnapshot ──────────────────────────────────────────────────────
@@ -288,14 +279,12 @@ F16SteadyFlightApplication::constructSimulator(
     std::shared_ptr<const Serialization::DAVEMLPropModel> prop,
     const RigidBody::StateD& x0,
     double theta0,
-    double xcg_from_ac_m,
-    double z_engine_m)
+    double xcg_from_ac_m)
 {
     AE_CORE_INFO("Constructing F16SteadyFlightSimulator...");
     AE_CORE_INFO("  xcg_from_ac = {:.4f} m  ({:.4f} ft)", xcg_from_ac_m, xcg_from_ac_m / 0.3048);
-    AE_CORE_INFO("  z_engine    = {:.4f} m", z_engine_m);
     return std::make_unique<F16SteadyFlightSimulator>(ip, trim, aero, prop, x0, theta0,
-                                                      xcg_from_ac_m, z_engine_m);
+                                                      xcg_from_ac_m);
 }
 
 } // namespace Aetherion::Examples::F16SteadyFlight

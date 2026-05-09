@@ -27,7 +27,7 @@
 // Without this correction, the trim solver zero-crosses CM at the wrong alpha
 // (~2.35° instead of the correct ~2.64°).  The NASA NESC reference data
 // confirms My_total ≈ 23 120 ft·lbf at trim — this is entirely from the
-// moment transfer, not from an engine offset (z_engine ≈ 0 for the F-16).
+// moment transfer (thrust line passes through the CG for the F-16).
 //
 // Trim algorithm (two-stage sequential)
 // ──────────────────────────────────────

@@ -2272,10 +2272,8 @@ stage it:
    atmosphere.
 3. Evaluates the DAVE-ML propulsion model:
    :math:`F_{EX}(\mathrm{pwr},\, h,\, \text{Mach})` → thrust in N.
-4. Adds the optional engine z-offset pitching moment
-   :math:`M_{y,\text{eng}} = z_{\text{engine}} \times F_{EX}`.
-   For this aircraft and model: **z_engine = 0** (thrust line passes
-   through the CG; confirmed from the simupy-flight / NESC source).
+4. Evaluates propulsion moments directly from the DAVE-ML model (TEM = 0;
+   thrust line passes through the CG for the F-16).
 
 .. code-block:: cpp
 
@@ -2283,7 +2281,7 @@ stage it:
    //   pwr   = 13.90 %,   alt = 10 013 ft,   Mach = 0.525
    //   F_EX  = 9 032 N  (2 030 lbf)
    //   F_Y   = F_Z = 0  (aligned engine, symmetric)
-   //   M_x   = M_y = M_z = 0  (TEM = 0 in DML, z_engine = 0)
+   //   M_x   = M_y = M_z = 0  (TEM = 0 in DML)
 
 CppAD Compatibility
 ~~~~~~~~~~~~~~~~~~~
@@ -2387,10 +2385,10 @@ Expected startup log:
      el    = -3.2422 deg
      pwr   = 13.9046 %
      |r|   = 5.3e-07 lbf
-   Propulsive wrench at trim (z_engine = 0.0000 m):
+   Propulsive wrench at trim:
      Fx = 9032 N  (2030 lbf)
      Fy = 0.0000 N,  Fz = 0.0000 N
-     My = 0.00 N·m  (TEM=0 in DML, arm=0)
+     My = 0.00 N·m  (0.00 ft·lbf)
 
 Output CSV format
 ^^^^^^^^^^^^^^^^^

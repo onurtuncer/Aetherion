@@ -76,8 +76,7 @@ private:
                            std::shared_ptr<const Serialization::DAVEMLPropModel> prop,
                            const RigidBody::StateD& x0,
                            double theta0,
-                           double xcg_from_ac_m = 0.0,
-                           double z_engine_m    = 0.0);
+                           double xcg_from_ac_m = 0.0);
 
     mutable std::unique_ptr<F16SteadyFlightSimulator> m_Simulator;
 };
