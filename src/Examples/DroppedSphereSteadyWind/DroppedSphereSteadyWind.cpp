@@ -128,7 +128,8 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
         const Eigen::Quaterniond q(
             x0[Layout::IDX_Q], x0[Layout::IDX_Q+1],
             x0[Layout::IDX_Q+2], x0[Layout::IDX_Q+3]);
-        state.g.R = q.normalized().toRotationMatrix();
+        state.g.q = q.normalized();
+        state.g.R = state.g.q.toRotationMatrix();
 
         state.nu_B <<
             x0[Layout::IDX_W], x0[Layout::IDX_W+1], x0[Layout::IDX_W+2],
