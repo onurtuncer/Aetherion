@@ -7,16 +7,28 @@ against the NASA TM-2015-218675 Atmos_11_sim_02 reference trajectory.
 
 Usage
 -----
+Source-tree (repo root as working directory):
     python scripts/plot_f16_s11_nasa02.py
 
-Outputs (to doc/figures/f16_s11/):
-    fig_flight_envelope.png   altitude · TAS · Mach
-    fig_attitude.png          pitch · roll · yaw
-    fig_body_rates.png        roll · pitch · yaw rate
-    fig_position.png          latitude · longitude · altitude
-    fig_aero_forces.png       aero Fx · Fy · Fz
-    fig_aero_moments.png      aero L · M · N
-    fig_atmosphere.png        speed-of-sound · density · pressure · temperature
+Build directory (after CMake copies this script next to the executable):
+    python plot_f16_s11_nasa02.py [sim_csv]
+
+    sim_csv  optional path to the simulation output CSV (default: f16_s11_200s.csv
+             in the same directory as this script).
+
+The script auto-detects its location:
+  - If Atmos_11_sim_02.csv is a sibling (build-dir layout), all paths resolve
+    relative to the script's own directory.
+  - Otherwise it falls back to the source-tree layout (scripts/ -> repo root).
+
+Outputs (figures/ sub-directory next to this script):
+    fig_flight_envelope.png   altitude, TAS, Mach
+    fig_attitude.png          pitch, roll, yaw
+    fig_body_rates.png        roll, pitch, yaw rate
+    fig_position.png          latitude, longitude, altitude
+    fig_aero_forces.png       aero Fx, Fy, Fz
+    fig_aero_moments.png      aero L, M, N
+    fig_atmosphere.png        speed-of-sound, density, pressure, temperature
     fig_ned_velocity.png      NED velocity components
     fig_overview.png          24-channel overview dashboard
     error_summary.csv         per-channel absolute-error statistics
@@ -38,10 +50,28 @@ import pandas as pd
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
-REPO = Path(__file__).resolve().parent.parent
-SIM_CSV  = REPO / "f16_s11_200s.csv"
-NASA_CSV = REPO / "data" / "Atmos_11_TrimCheckSubsonicF16" / "Atmos_11_sim_02.csv"
-OUT_DIR  = REPO / "doc" / "figures" / "f16_s11"
+_HERE = Path(__file__).resolve().parent
+
+# Build-dir layout: NASA CSV is a sibling of this script (copied by CMake).
+# Source-tree layout: this script lives in scripts/, repo root is one level up.
+_BUILD_NASA = _HERE / "Atmos_11_sim_02.csv"
+_IN_BUILD_DIR = _BUILD_NASA.exists()
+
+if _IN_BUILD_DIR:
+    # Running from the CMake build directory
+    _SIM_DEFAULT = _HERE / "f16_s11_200s.csv"
+    NASA_CSV = _BUILD_NASA
+    OUT_DIR  = _HERE / "figures" / "f16_s11"
+else:
+    # Running from the source tree (scripts/ directory)
+    _REPO    = _HERE.parent
+    _SIM_DEFAULT = _REPO / "f16_s11_200s.csv"
+    NASA_CSV = _REPO / "data" / "Atmos_11_TrimCheckSubsonicF16" / "Atmos_11_sim_02.csv"
+    OUT_DIR  = _REPO / "doc" / "figures" / "f16_s11"
+
+# Optional positional argument overrides the sim CSV path.
+SIM_CSV = Path(sys.argv[1]) if len(sys.argv) > 1 else _SIM_DEFAULT
+
 OUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # ── Unit-conversion constants ─────────────────────────────────────────────────

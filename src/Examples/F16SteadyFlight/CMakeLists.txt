@@ -28,3 +28,14 @@ foreach(_csv Atmos_11_sim_02.csv Atmos_11_sim_04.csv Atmos_11_sim_05.csv)
     COMMAND ${CMAKE_COMMAND} -E copy_if_different "${F16_REF_DIR}/${_csv}" "$<TARGET_FILE_DIR:F16SteadyFlight>/${_csv}"
     COMMENT "Copying NASA Atmos-11 reference ${_csv}")
 endforeach()
+
+# Copy the Case-11 plotting script next to the executable so users can run
+#   python plot_f16_s11_nasa02.py
+# from the build directory after a simulation run.
+add_custom_command(
+  TARGET F16SteadyFlight
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+    "${CMAKE_SOURCE_DIR}/scripts/plot_f16_s11_nasa02.py"
+    "$<TARGET_FILE_DIR:F16SteadyFlight>/plot_f16_s11_nasa02.py"
+  COMMENT "Copying Case-11 plot script plot_f16_s11_nasa02.py")
