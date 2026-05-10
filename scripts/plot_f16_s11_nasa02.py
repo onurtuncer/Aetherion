@@ -141,7 +141,11 @@ def load_nasa_si(path: Path) -> pd.DataFrame:
 
 
 def align(sim: pd.DataFrame, ref: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Inner-join on time column."""
+    """Align on time: round both to 4 decimal places then inner-join."""
+    sim = sim.copy()
+    ref = ref.copy()
+    sim["time"] = sim["time"].astype(float).round(4)
+    ref["time"] = ref["time"].astype(float).round(4)
     merged = pd.merge(sim, ref, on="time", suffixes=("_s", "_r"))
     shared = [c for c in sim.columns if c != "time" and c in ref.columns]
     s = merged[["time"] + [f"{c}_s" for c in shared]].rename(
@@ -341,8 +345,8 @@ def main() -> None:
     sim_df, ref_df = align(sim_raw, ref_si)
     t = sim_df["time"].values.astype(float)
 
-    print(f"Aligned time steps: {len(t)}  ({t[0]:.1f} … {t[-1]:.1f} s)")
-    print(f"Output → {OUT_DIR}\n")
+    print(f"Aligned time steps: {len(t)}  ({t[0]:.1f} - {t[-1]:.1f} s)")
+    print(f"Output -> {OUT_DIR}\n")
 
     # ── 1. Flight envelope ────────────────────────────────────────────────────
     out = multi_panel_figure(t, [
