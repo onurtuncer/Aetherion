@@ -34,6 +34,7 @@
 
 #pragma once
 
+#include <limits>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -125,6 +126,10 @@ public:
         bool        isInput{ false };
         bool        isConst{ false };
         double      constVal{ 0.0 };
+        /// Output clamp from variableDef minValue / maxValue attributes.
+        bool   hasMinMax{ false };
+        double minVal{  -std::numeric_limits<double>::infinity() };
+        double maxVal{   std::numeric_limits<double>::infinity() };
     };
 
     std::unordered_map<std::string, BpVec>     m_bps;     ///< bpID → breakpoints

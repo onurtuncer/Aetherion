@@ -134,6 +134,15 @@ namespace Aetherion::Simulation {
             return m_Stepper.vectorField();
         }
 
+    protected:
+        // Non-const access for closed-loop simulators that must update policy
+        // members (el_deg, pwr_pct, …) between integration steps.
+        [[nodiscard]] VectorField& mutableVectorField() noexcept
+        {
+            return m_Stepper.vectorField();
+        }
+
+    public:
         // -----------------------------------------------------------------------
         // snapshot() -- pure virtual
         //

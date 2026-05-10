@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <queue>
 #include <set>
 #include <sstream>
@@ -112,6 +113,35 @@ static S evalNode(const pugi::xml_node& node,
         if (opName == "abs" && operandNodes.size() == 1) {
             using std::abs;
             return abs(evalNode<S>(operandNodes[0], vars));
+        }
+        // ── Trigonometric / sqrt ────────────────────────────────────────────
+        if (opName == "cos" && operandNodes.size() == 1) {
+            using std::cos;
+            return cos(evalNode<S>(operandNodes[0], vars));
+        }
+        if (opName == "sin" && operandNodes.size() == 1) {
+            using std::sin;
+            return sin(evalNode<S>(operandNodes[0], vars));
+        }
+        if (opName == "tan" && operandNodes.size() == 1) {
+            using std::tan;
+            return tan(evalNode<S>(operandNodes[0], vars));
+        }
+        if (opName == "sqrt" && operandNodes.size() == 1) {
+            using std::sqrt;
+            return sqrt(evalNode<S>(operandNodes[0], vars));
+        }
+        // ── csymbol — DAVE-ML named functions (e.g. atan2) ─────────────────
+        // Syntax: <apply><csymbol ...>atan2</csymbol><ci>y</ci><ci>x</ci></apply>
+        if (opName == "csymbol") {
+            const std::string fnName = trimWS(op.child_value());
+            if (fnName == "atan2" && operandNodes.size() == 2) {
+                using std::atan2;
+                return atan2(evalNode<S>(operandNodes[0], vars),
+                             evalNode<S>(operandNodes[1], vars));
+            }
+            throw std::runtime_error(
+                "DAVEMLAeroModel MathML: unsupported csymbol '" + fnName + "'");
         }
         // ── Comparisons (return S(1) for true, S(0) for false) ─────────────
         // Used as piecewise conditions; AD path uses CondExp.
@@ -271,6 +301,9 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         std::string mathmlXml;   // non-empty if calculated
         std::string tableOutputID;  // if this var is a function output
         std::set<std::string> deps;
+        bool   hasMinMax{ false };
+        double minVal{ -std::numeric_limits<double>::infinity() };
+        double maxVal{  std::numeric_limits<double>::infinity() };
     };
     std::unordered_map<std::string, VarInfo> info;
 
@@ -290,6 +323,14 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
 
         auto iv = node.attribute("initialValue");
         if (iv) { vi.isConst = true; vi.constVal = iv.as_double(); }
+
+        auto minA = node.attribute("minValue");
+        auto maxA = node.attribute("maxValue");
+        if (minA || maxA) {
+            vi.hasMinMax = true;
+            if (minA) vi.minVal = minA.as_double();
+            if (maxA) vi.maxVal = maxA.as_double();
+        }
 
         // Reference geometry constants
         if (varID == "sref") sref_ft2 = vi.constVal;
@@ -403,12 +444,15 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         if (it == info.end()) continue;
         const auto& vi = it->second;
         EvalStep step;
-        step.varID = id;
-        step.isInput = vi.isInput;
-        step.isConst = vi.isConst;
-        step.constVal = vi.constVal;
-        step.isTable  = m_tables.count(id) > 0;
-        step.mathmlXml = vi.mathmlXml;
+        step.varID      = id;
+        step.isInput    = vi.isInput;
+        step.isConst    = vi.isConst;
+        step.constVal   = vi.constVal;
+        step.isTable    = m_tables.count(id) > 0;
+        step.mathmlXml  = vi.mathmlXml;
+        step.hasMinMax  = vi.hasMinMax;
+        step.minVal     = vi.minVal;
+        step.maxVal     = vi.maxVal;
         m_steps.push_back(step);
     }
 }
@@ -445,6 +489,16 @@ DAVEMLAeroModel::evaluate(const Inputs<S>& in) const
         else if (!step.mathmlXml.empty())    vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
         else if (step.isConst)               vars[id] = S(step.constVal);
         if (!vars.count(id))                 vars[id] = S(0.0);
+
+        if (step.hasMinMax) {
+            if constexpr (std::is_same_v<S, double>) {
+                vars[id] = std::clamp(vars[id], step.minVal, step.maxVal);
+            } else {
+                auto& v = vars[id];
+                v = CppAD::CondExpLt(v, S(step.minVal), S(step.minVal), v);
+                v = CppAD::CondExpGt(v, S(step.maxVal), S(step.maxVal), v);
+            }
+        }
     }
 
     Outputs<S> out;
@@ -513,6 +567,18 @@ DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, S> vars) const
         else if (!step.mathmlXml.empty())    vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
         else if (step.isConst)               vars[id] = S(step.constVal);
         if (!vars.count(id))                 vars[id] = S(0.0);
+
+        // Apply variableDef minValue / maxValue clamping
+        if (step.hasMinMax) {
+            if constexpr (std::is_same_v<S, double>) {
+                vars[id] = std::clamp(vars[id], step.minVal, step.maxVal);
+            } else {
+                // AD-safe conditional clamping
+                auto& v = vars[id];
+                v = CppAD::CondExpLt(v, S(step.minVal), S(step.minVal), v);
+                v = CppAD::CondExpGt(v, S(step.maxVal), S(step.maxVal), v);
+            }
+        }
     }
     return vars;
 }

@@ -10,6 +10,7 @@ target_sources(
   PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/DAVEMLReader.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/LoadInertiaFromDAVEML.cpp
           ${CMAKE_CURRENT_SOURCE_DIR}/DAVEMLAeroModel.cpp
+          ${CMAKE_CURRENT_SOURCE_DIR}/DAVEMLControlModel.cpp
           ${PUGIXML_DIR}/pugixml.cpp # compile pugixml into Aetherion
 )
 
