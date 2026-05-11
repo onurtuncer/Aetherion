@@ -45,6 +45,18 @@ namespace Aetherion::Examples::F16AltitudeChange {
 
 using F16VF = F16SteadyFlight::F16VF;
 
+/// @brief Autopilot commands for the F16AltitudeChangeSimulator (fixed for the whole run).
+///
+/// Defined at namespace scope so that its in-class default member initializers
+/// are complete before any enclosing class uses it as a default argument — a
+/// requirement that GCC enforces but MSVC relaxes.
+struct F16AltitudeChangeCmds {
+    double altCmd_ft      { 10113.0 };              ///< Commanded altitude [ft]
+    double keasCmd_kt     { 287.8088596053291 };     ///< Commanded KEAS [kt]
+    double baseChiCmd_deg {  45.0  };               ///< Commanded course [deg, +CW from N]
+    double latOffset_ft   {   0.0  };               ///< Lateral offset from course [ft]
+};
+
 class F16AltitudeChangeSimulator
     : public Simulation::ISimulator<F16VF, Simulation::Snapshot1>
 {
@@ -56,22 +68,8 @@ public:
     // kt → m/s
     static constexpr double kKt_mps           = 0.5144444;
 
-    /// @param ip            Inertial parameters.
-    /// @param trim          Trim solution from Case-11 TrimSolver.
-    /// @param aero_model    Parsed F16_aero.dml.
-    /// @param prop_model    Parsed F16_prop.dml.
-    /// @param ctrl_model    Parsed F16_control.dml (or F16_gnc.dml).
-    /// @param x0            Initial ECI state (same as Case 11).
-    /// @param theta0        Earth Rotation Angle at t = 0 [rad].
-    /// @param xcg_from_ac_m CG aft of AC [m].
-    /// @param opt           Newton solver options.
-    /// @brief Autopilot commands (fixed for the whole run).
-    struct AutopilotCmds {
-        double altCmd_ft      { 10113.0 };  ///< Commanded altitude [ft]
-        double keasCmd_kt     { 287.8088596053291 }; ///< Commanded KEAS [kt]
-        double baseChiCmd_deg {  45.0  };   ///< Commanded course  [deg, +CW from N]
-        double latOffset_ft   {   0.0  };   ///< Lateral offset from course [ft]
-    };
+    /// Convenience alias so callers can write F16AltitudeChangeSimulator::AutopilotCmds.
+    using AutopilotCmds = F16AltitudeChangeCmds;
 
     explicit F16AltitudeChangeSimulator(
         const RigidBody::InertialParameters&                      ip,
@@ -81,7 +79,7 @@ public:
         std::shared_ptr<const Serialization::DAVEMLControlModel>  ctrl_model,
         RigidBody::StateD                                         x0,
         double                                                    theta0,
-        AutopilotCmds                                             cmds = AutopilotCmds{},
+        AutopilotCmds                                             cmds = {},
         double                                                    xcg_from_ac_m = 0.0,
         ODE::RKMK::Core::NewtonOptions                            opt = {})
         : ISimulator<F16VF, Simulation::Snapshot1>(
