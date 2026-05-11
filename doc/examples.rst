@@ -2499,6 +2499,71 @@ reference to within floating-point precision:
      - ≈ 0 (Earth-rate residual)
      - 0.000°/s
 
+**Validation figures**
+
+.. figure:: _static/f16_s11/fig_overview.png
+   :width: 100%
+   :alt: Case 11 simulation overview
+
+   Scenario 11 simulation overview.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
+.. figure:: _static/f16_s11/fig_flight_envelope.png
+   :width: 100%
+   :alt: Case 11 flight envelope (altitude, TAS, Mach)
+
+   Scenario 11 flight envelope — altitude, TAS, Mach.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
+.. figure:: _static/f16_s11/fig_attitude.png
+   :width: 100%
+   :alt: Case 11 Euler attitude angles
+
+   Scenario 11 Euler attitude angles — pitch, roll, yaw.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
+.. figure:: _static/f16_s11/fig_body_rates.png
+   :width: 100%
+   :alt: Case 11 body angular rates
+
+   Scenario 11 body angular rates — roll, pitch, yaw rates.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
+.. figure:: _static/f16_s11/fig_position.png
+   :width: 100%
+   :alt: Case 11 geodetic position
+
+   Scenario 11 geodetic position — altitude, latitude, longitude.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
+.. figure:: _static/f16_s11/fig_ned_velocity.png
+   :width: 100%
+   :alt: Case 11 NED velocity components
+
+   Scenario 11 NED velocity components — North, East, Down.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
+.. figure:: _static/f16_s11/fig_aero_forces.png
+   :width: 100%
+   :alt: Case 11 aerodynamic body forces
+
+   Scenario 11 aerodynamic body forces — X, Y, Z.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
+.. figure:: _static/f16_s11/fig_aero_moments.png
+   :width: 100%
+   :alt: Case 11 aerodynamic body moments
+
+   Scenario 11 aerodynamic body moments — L, M, N.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
+.. figure:: _static/f16_s11/fig_atmosphere.png
+   :width: 100%
+   :alt: Case 11 atmosphere
+
+   Scenario 11 atmosphere — temperature, density, pressure.
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+
 .. _f16-scenario-13p1:
 
 F-16 Subsonic Altitude Change (NASA TM-2015-218675 Atmospheric Scenario 13.1)
@@ -2652,15 +2717,65 @@ the full SE(3)/J₂ Aetherion model and the NASA reference.  The final state
 
 **Validation figures**
 
-.. figure:: figures/f16_s13p1/fig_flight_envelope.png
+.. figure:: _static/f16_s13p1/fig_overview.png
+   :width: 100%
+   :alt: Case 13.1 simulation overview
+
+   Scenario 13.1 simulation overview.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_flight_envelope.png
    :width: 100%
    :alt: Case 13.1 flight envelope (altitude, TAS, Mach)
 
    Scenario 13.1 flight envelope — altitude, TAS, Mach.
    Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
 
-.. figure:: figures/f16_s13p1/fig_attitude.png
+.. figure:: _static/f16_s13p1/fig_attitude.png
    :width: 100%
    :alt: Case 13.1 Euler attitude angles
 
    Scenario 13.1 Euler attitude angles — pitch, roll, yaw.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_body_rates.png
+   :width: 100%
+   :alt: Case 13.1 body angular rates
+
+   Scenario 13.1 body angular rates — roll, pitch, yaw rates.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_position.png
+   :width: 100%
+   :alt: Case 13.1 geodetic position
+
+   Scenario 13.1 geodetic position — altitude, latitude, longitude.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_ned_velocity.png
+   :width: 100%
+   :alt: Case 13.1 NED velocity components
+
+   Scenario 13.1 NED velocity components — North, East, Down.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_aero_forces.png
+   :width: 100%
+   :alt: Case 13.1 aerodynamic body forces
+
+   Scenario 13.1 aerodynamic body forces — X, Y, Z.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_aero_moments.png
+   :width: 100%
+   :alt: Case 13.1 aerodynamic body moments
+
+   Scenario 13.1 aerodynamic body moments — L, M, N.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_atmosphere.png
+   :width: 100%
+   :alt: Case 13.1 atmosphere
+
+   Scenario 13.1 atmosphere — temperature, density, pressure.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
