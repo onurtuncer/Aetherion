@@ -1,6 +1,12 @@
 # src/Examples/F16AltitudeChange/CMakeLists.txt
 # NASA TM-2015-218675 Atmospheric Scenario 13.1 — F-16 Subsonic Altitude Change
 # Closed-loop with LQR SAS + autopilot (F16_control.dml).
+#
+# NOTE: the closed-loop LQR is stiff — use timeStep <= 0.02 s for accurate results.
+# dt = 0.1 s produces numerical instability (roll divergence, 12 ft altitude error).
+# dt = 0.02 s fully converges: 100.6 ft altitude change vs 100 ft command, roll < 0.11 deg.
+# Recommended run command:
+#   F16AltitudeChange --endTime 20 --timeStep 0.02 --outputFileName f16_s13p1.csv
 
 set(F16_DATA_DIR "${CMAKE_SOURCE_DIR}/data/F16_S119_source")
 
