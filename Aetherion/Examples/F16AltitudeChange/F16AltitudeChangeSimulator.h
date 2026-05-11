@@ -81,7 +81,7 @@ public:
         std::shared_ptr<const Serialization::DAVEMLControlModel>  ctrl_model,
         RigidBody::StateD                                         x0,
         double                                                    theta0,
-        AutopilotCmds                                             cmds = {},
+        AutopilotCmds                                             cmds = AutopilotCmds{},
         double                                                    xcg_from_ac_m = 0.0,
         ODE::RKMK::Core::NewtonOptions                            opt = {})
         : ISimulator<F16VF, Simulation::Snapshot1>(
