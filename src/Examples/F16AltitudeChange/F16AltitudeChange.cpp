@@ -25,6 +25,7 @@
 #include <Aetherion/RigidBody/Config.h>
 #include <Aetherion/RigidBody/GeodeticPoseNED.h>
 #include <Aetherion/RigidBody/StateLayout.h>
+#include <Aetherion/Environment/Atmosphere.h>
 
 #include <numbers>
 #include <cmath>
@@ -62,13 +63,12 @@ namespace {
     // CG offset: (35%-25%)/100 * 11.32 ft * 0.3048 m/ft
     constexpr double kXcgFromAC_m =  (35.0 - 25.0) / 100.0 * 11.32 * 0.3048;
 
-    // Autopilot commands for Scenario 13.1:
-    // Hold current altitude (10013 ft) — the altitude CHANGE arises from the
-    // autopilot correcting the initial -0.172° roll trim offset, not from an
-    // altitude step command.
-    constexpr double kAltCmd_ft     = 10013.0;    // hold initial altitude
-    constexpr double kKeasCmd_kt    = 287.8088596053291; // hold trim KEAS
-    constexpr double kBaseChiCmd_deg =  45.0;     // hold NE heading
+    // Autopilot commands for Scenario 13.1.
+    // keasCmd is computed at runtime from our US1976 atmosphere at the trim
+    // altitude so that deltaVequiv ≈ 0 at t=0 (avoids spurious throttle
+    // correction from the mismatch between our rho and the DML constant).
+    constexpr double kAltCmd_ft      = 10113.0;  // +100 ft altitude step
+    constexpr double kBaseChiCmd_deg =  45.0;    // hold NE heading
 }
 
 namespace Aetherion::Examples::F16AltitudeChange {
@@ -165,16 +165,26 @@ void F16AltitudeChangeApplication::prepareSimulation() const
     const RigidBody::StateD x0 = buildInitialState(cfg, theta0);
 
     // ── 5. Autopilot commands ─────────────────────────────────────────────────
+    // Compute KEAS from our US1976 atmosphere so deltaVequiv ≈ 0 at t=0.
+    // Using the same formula as F16AltitudeChangeSimulator::extractFeedback():
+    //   KEAS [kt] = TAS [kt] × sqrt(rho / rho_SL)
+    // TAS from the initial NED velocity magnitude: sqrt(vN² + vE²).
+    const auto atm_trim = Environment::US1976Atmosphere(kAlt_m);
+    constexpr double kRhoSL_kg_m3 = 1.225;
+    constexpr double kKt_mps      = 0.5144444;
+    const double tas_mps = kVelocity_mps * std::sqrt(2.0);  // |[vN, vE, 0]|
+    const double keas_kt = (tas_mps / kKt_mps) * std::sqrt(atm_trim.rho / kRhoSL_kg_m3);
+
     F16AltitudeChangeSimulator::AutopilotCmds cmds;
     cmds.altCmd_ft      = kAltCmd_ft;
-    cmds.keasCmd_kt     = kKeasCmd_kt;
+    cmds.keasCmd_kt     = keas_kt;
     cmds.baseChiCmd_deg = kBaseChiCmd_deg;
     cmds.latOffset_ft   = 0.0;
 
     AE_CORE_INFO("Autopilot commands:");
-    AE_CORE_INFO("  altCmd   = {:.0f} ft  (delta = +{:.0f} ft)",
-                 cmds.altCmd_ft, cmds.altCmd_ft - kAlt_ft);
-    AE_CORE_INFO("  keasCmd  = {:.2f} kt", cmds.keasCmd_kt);
+    AE_CORE_INFO("  altCmd   = {:.0f} ft", cmds.altCmd_ft);
+    AE_CORE_INFO("  keasCmd  = {:.4f} kt  (computed from US1976 atm at {:.0f} ft)",
+                 keas_kt, kAlt_ft);
     AE_CORE_INFO("  chiCmd   = {:.1f} deg", cmds.baseChiCmd_deg);
 
     m_Simulator = constructSimulator(ip, trim, aero_model, prop_model, ctrl_model,

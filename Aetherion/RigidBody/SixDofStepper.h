@@ -148,7 +148,16 @@ namespace Aetherion::RigidBody {
         [[nodiscard]]
         StepResult step(double t0, const StateD& s, double h) const
         {
-            return integrator_.step(t0, s.g, pack(s), h, opt_);
+            // The Integrator stores f_field_ as a value-copy of vf_ taken at
+            // construction time.  If vf_ was mutated since then (closed-loop
+            // simulators call mutableVectorField() between steps to update
+            // el_deg / pwr_pct), the stored copy is stale.
+            // Building a fresh Integrator from the current vf_ ensures every
+            // step evaluates the up-to-date policies.  For open-loop
+            // simulations vf_ is never mutated, so this is a no-op copy with
+            // negligible overhead relative to the Newton solve.
+            Integrator current(KinematicsField{}, vf_);
+            return current.step(t0, s.g, pack(s), h, opt_);
         }
 
         // ------------------------------------------------------------------
