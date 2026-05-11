@@ -2414,6 +2414,50 @@ NASA reference CSVs (``Atmos_11_sim_02.csv``, ``Atmos_11_sim_04.csv``,
 ``Atmos_11_sim_05.csv``) are copied to the build directory post-build so
 that ``compare_sim_validation.py`` can locate them automatically.
 
+Step-size convergence
+^^^^^^^^^^^^^^^^^^^^^
+
+Case 11 is an **open-loop** trim simulation.  A convergence study over
+dt ∈ {0.1, 0.05, 0.02, 0.01} s (200 s run) confirms full numerical
+convergence already at dt = 0.1 s:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 15 12 12 12
+
+   * - dt [s]
+     - alt @ 200 s [ft]
+     - Δ vs NASA [ft]
+     - pitch [°]
+     - roll [°]
+   * - 0.1
+     - 10 108.95
+     - +45.2
+     - 2.673
+     - −0.222
+   * - 0.05
+     - 10 108.95
+     - +45.2
+     - 2.673
+     - −0.222
+   * - 0.02
+     - 10 108.95
+     - +45.2
+     - 2.673
+     - −0.222
+   * - 0.01
+     - 10 108.95
+     - +45.2
+     - 2.673
+     - −0.222
+
+The **+45 ft residual** vs the NASA reference at t = 200 s is therefore
+a **physical** difference between Aetherion's full SE(3)/J₂/Earth-rotation
+model and the NASA reference, not a numerical artefact.  The NASA
+Atmos_11_sim_02 reference uses the same round-rotating-Earth model; the
+small secular drift arises from slightly different atmosphere and gravity
+parameterisations.
+
 Initial Condition Verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -2454,3 +2498,169 @@ reference to within floating-point precision:
    * - Body rates :math:`p, q, r`
      - ≈ 0 (Earth-rate residual)
      - 0.000°/s
+
+.. _f16-scenario-13p1:
+
+F-16 Subsonic Altitude Change (NASA TM-2015-218675 Atmospheric Scenario 13.1)
+------------------------------------------------------------------------------
+
+**Scenario overview**
+
+Starting from the same Kitty Hawk trim as Scenario 11, the F-16 executes
+a closed-loop **+100 ft altitude change** driven by the NASA LQR stability-
+augmentation system (SAS) and altitude-hold autopilot defined in
+``F16_control.dml``.
+
+The control architecture is:
+
+* **Inner loop** — Linear Quadratic Regulator (LQR) with 4-state longitudinal
+  (V, α, q, θ) and 4-state lateral-directional (φ, β, p, r) gain matrices.
+* **Outer loop** — altitude-error-to-pitch-command compensator
+  (K\ :sub:`alt` = −0.05 °/ft), airspeed hold via throttle, and heading
+  hold via bank angle command.
+
+All LQR gains and trim values are read at runtime from
+``data/F16_S119_source/F16_control.dml``; no gains are hardcoded.
+
+**Initial and command conditions**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30
+
+   * - Parameter
+     - Value
+   * - Location
+     - 36.019° N, 75.674° W (Kitty Hawk, NC)
+   * - Altitude (initial)
+     - 10 013 ft (3 051.96 m)
+   * - Altitude command (altCmd)
+     - 10 113 ft (+100 ft step)
+   * - Heading
+     - 45° NE
+   * - TAS (trim)
+     - 335.15 KTAS (172.4 m/s)
+   * - Mach (trim)
+     - 0.525
+   * - KEAS command
+     - computed from US1976 atmosphere at trim altitude
+   * - Simulation duration
+     - 20 s
+
+**Numerical step-size requirement**
+
+The closed-loop LQR plant is **stiff** — the high gains create fast
+eigenvalues that exceed the Radau IIA stability boundary at dt = 0.1 s.
+A convergence study confirms:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 18 15 12 12
+
+   * - dt [s]
+     - alt @ 20 s [ft]
+     - Δ vs command [ft]
+     - pitch [°]
+     - roll [°]
+   * - 0.10
+     - 10 100.8
+     - −12.2 ❌
+     - 2.48
+     - +2.09
+   * - 0.05
+     - 10 110.2
+     - −2.8
+     - 2.75
+     - −0.79
+   * - **0.02**
+     - **10 113.6**
+     - **+0.6** ✓
+     - **2.63**
+     - **−0.10**
+   * - 0.01
+     - 10 113.6
+     - +0.6 ✓
+     - 2.63
+     - −0.10
+
+Use ``--timeStep 0.02`` (or smaller) for accurate closed-loop results.
+
+**Recommended run command**
+
+.. code-block:: bash
+
+   F16AltitudeChange --endTime 20 --timeStep 0.02 \
+                     --outputFileName f16_s13p1.csv
+
+The reference CSVs ``Atmos_13p1_sim_02/04/05.csv`` and the plot script
+``plot_f16_s13p1_nasa02.py`` are copied to the build directory post-build.
+
+**Trim result (Scenario 13.1)**
+
+Identical to Scenario 11 (same initial conditions):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 25 25
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - α (trim)
+     - 2.656°
+     - 2.643°
+   * - δ\ :sub:`e` (trim)
+     - −3.242°
+     - −3.24°
+   * - Throttle (trim)
+     - 13.90 %
+     - 13.90 %
+
+**Validation results at t = 20 s (dt = 0.02 s)**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 22 22
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - Altitude
+     - 10 113.6 ft (3 082.6 m)
+     - 10 112.7 ft (3 082.4 m)
+   * - Δ altitude (change from t=0)
+     - +100.6 ft
+     - +99.7 ft
+   * - TAS
+     - 172.69 m/s
+     - 172.46 m/s
+   * - Mach
+     - 0.5261
+     - 0.5251
+   * - Pitch θ
+     - 2.626°
+     - 2.656°
+   * - Roll φ
+     - −0.10°
+     - −0.24°
+
+Peak errors during the transient (t ≈ 0–15 s): altitude ±32 m, pitch
+±5.5°, roll ±0.18°.  These arise from the different phugoid phase between
+the full SE(3)/J₂ Aetherion model and the NASA reference.  The final state
+(t = 20 s) agrees to within **0.9 ft altitude**, **0.03° pitch**, and
+**0.14° roll**.
+
+**Validation figures**
+
+.. figure:: figures/f16_s13p1/fig_flight_envelope.png
+   :width: 100%
+   :alt: Case 13.1 flight envelope (altitude, TAS, Mach)
+
+   Scenario 13.1 flight envelope — altitude, TAS, Mach.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: figures/f16_s13p1/fig_attitude.png
+   :width: 100%
+   :alt: Case 13.1 Euler attitude angles
+
+   Scenario 13.1 Euler attitude angles — pitch, roll, yaw.
