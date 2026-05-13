@@ -1,0 +1,170 @@
+% F-16 LQR longitudinal channel signal-flow diagram
+% NASA TM-2015-218675  F16_control.dml
+\documentclass[tikz, border=4pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc}
+\usepackage{amsmath}
+
+\begin{document}
+\begin{tikzpicture}[
+  >=Stealth,
+  every node/.style = {font=\small},
+  %-- block styles -----------------------------------------------------------
+  gain/.style  = {draw, rectangle, rounded corners=2pt, minimum width=1.9cm,
+                  minimum height=0.52cm, align=center, fill=blue!8,
+                  font=\footnotesize},
+  clamp/.style = {draw, rectangle, minimum width=1.5cm, minimum height=0.52cm,
+                  align=center, fill=yellow!15, font=\footnotesize},
+  scale/.style = {draw, rectangle, rounded corners=2pt, minimum width=1.6cm,
+                  minimum height=0.52cm, align=center, fill=green!10,
+                  font=\footnotesize},
+  sum/.style   = {draw, circle, inner sep=0pt, minimum size=0.52cm,
+                  fill=white, font=\footnotesize},
+  coord/.style = {coordinate},
+  ilab/.style  = {font=\footnotesize},
+  arrow/.style = {->, semithick},
+  %-- row spacing
+  rowsep/.store in = \rowsep, rowsep=1.3cm,
+]
+
+\def\rowsep{1.40}
+
+% ── Column x-positions ────────────────────────────────────────────────────────
+%  col0: input labels    col1: sum junctions    col2: gain blocks
+%  col3: sum (LQR)       col4: neg + trim        col5: clamp    col6: scale→output
+
+\def\cx{0}    % input label right edge
+\def\cI{1.3}  % summing junction
+\def\cG{3.5}  % gain block centre
+\def\cS{5.6}  % LQR summation
+\def\cN{7.0}  % negate + trim sum
+\def\cC{8.6}  % clamp
+\def\cO{10.4} % output scale
+
+% ── Row y-positions (top to bottom) ──────────────────────────────────────────
+\def\yDV{0}
+\def\yDA{-\rowsep}
+\def\yQ{ -2*\rowsep}
+\def\yDT{-3*\rowsep}
+
+% ── Dividing line between stick (upper) and throttle (lower) ─────────────────
+\def\yDivLong{-1.5*\rowsep} % mid-point between alpha and q rows
+
+% ============ State error summing junctions ==================================
+
+% ΔV = V_eq − V_cmd
+\node[sum] (sumV) at (\cI,\yDV) {$\Sigma$};
+\node[ilab, left=0.55cm of sumV] (Veq)  {$V_{\mathrm{eq}}$};
+\node[ilab, below=0.20cm of sumV, font=\scriptsize] {$-$};
+\node[coord, below=0.55cm of sumV] (Vcmd_in) {};
+\node[ilab, left=0.55cm of Vcmd_in] (Vcmd) {$V_{\mathrm{cmd}}$};
+\draw[arrow] (Veq)  -- node[above, font=\scriptsize]{$+$} (sumV);
+\draw[arrow] (Vcmd.east) -- (Vcmd_in) -- (sumV);
+
+% Δα = α − α₀
+\node[sum] (sumA) at (\cI,\yDA) {$\Sigma$};
+\node[ilab, left=0.55cm of sumA]  (alpha)  {$\alpha$};
+\node[ilab, below=0.20cm of sumA, font=\scriptsize] {$-$};
+\node[coord, below=0.55cm of sumA] (a0_in) {};
+\node[ilab, left=0.55cm of a0_in] (a0) {$\alpha_0$};
+\draw[arrow] (alpha) -- node[above, font=\scriptsize]{$+$} (sumA);
+\draw[arrow] (a0.east)  -- (a0_in) -- (sumA);
+
+% q (pitch rate — no sum junction)
+\node[coord] (qnode) at (\cI,\yQ) {};
+\node[ilab, left=0.55cm of qnode] (qin) {$q$\,[rad/s]};
+\draw[arrow] (qin) -- (qnode);
+
+% Δθ = θ − θ_cmd
+\node[sum] (sumT) at (\cI,\yDT) {$\Sigma$};
+\node[ilab, left=0.55cm of sumT]  (theta)  {$\theta$};
+\node[ilab, below=0.20cm of sumT, font=\scriptsize] {$-$};
+\node[coord, below=0.55cm of sumT] (tc_in) {};
+\node[ilab, left=0.55cm of tc_in] (tc) {$\theta_{\mathrm{cmd}}$};
+\draw[arrow] (theta) -- node[above, font=\scriptsize]{$+$} (sumT);
+\draw[arrow] (tc.east) -- (tc_in) -- (sumT);
+
+% ============ Gain blocks (stick row) =========================================
+
+\node[gain] (K11) at (\cG,\yDV)  {$K_{11}{=}{-}0.063$};
+\node[gain] (K12) at (\cG,\yDA)  {$K_{12}{=}{+}0.113$};
+\node[gain] (K13) at (\cG,\yQ)   {$K_{13}{=}{+}10.113$};
+\node[gain] (K14) at (\cG,\yDT)  {$K_{14}{=}{+}3.155$};
+
+\draw[arrow] (sumV) -- node[above,font=\scriptsize]{$\Delta V$} (K11);
+\draw[arrow] (sumA) -- node[above,font=\scriptsize]{$\Delta\alpha$} (K12);
+\draw[arrow] (qnode)-- node[above,font=\scriptsize]{$q$} (K13);
+\draw[arrow] (sumT) -- node[above,font=\scriptsize]{$\Delta\theta$} (K14);
+
+% ============ LQR summation (stick) ==========================================
+
+\node[sum] (SumStk) at (\cS, {(\yDV+\yDT)/2}) {$\Sigma$};
+\draw[arrow] (K11.east) -| (SumStk);
+\draw[arrow] (K12.east) -| (SumStk);
+\draw[arrow] (K13.east) -| (SumStk);
+\draw[arrow] (K14.east) -| (SumStk);
+
+% ============ Negate and add trim ============================================
+
+\node[sum] (TrimStk) at (\cN, {(\yDV+\yDT)/2}) {$\Sigma$};
+\node[ilab, above=0.40cm of TrimStk] (lsktrim) {$\ell_{\mathrm{trim}}$};
+\draw[arrow] (SumStk) -- node[above,font=\scriptsize]{$\times(-1)$} (TrimStk);
+\draw[arrow] (lsktrim) -- node[right,font=\scriptsize]{$+$} (TrimStk);
+
+% ============ Clamp and surface scaling (stick → elevator) ===================
+
+\node[clamp] (ClpStk) at (\cC, {(\yDV+\yDT)/2}) {$\mathrm{sat}(\cdot,\pm1)$};
+\node[scale] (ScaEl)  at (\cO, {(\yDV+\yDT)/2}) {$\delta_e = -25\,\ell$};
+\draw[arrow] (TrimStk) -- (ClpStk);
+\draw[arrow] (ClpStk)  -- node[above,font=\scriptsize]{$\ell_{\mathrm{tot}}$} (ScaEl);
+
+\node[ilab, right=0.45cm of ScaEl] (ElOut) {$\delta_e$\,[deg]};
+\draw[arrow] (ScaEl) -- (ElOut);
+
+% ============ Throttle channel (dashed — same states, different gains) ========
+
+\def\yThr{-4.8}
+
+\node[gain, fill=orange!10] (K21) at (\cG,\yThr) {$K_{21}{=}{+}0.997$};
+\node[gain, fill=orange!10] (K22) at (\cG,{\yThr-0.8}) {$K_{22}{=}{-}0.025$};
+\node[gain, fill=orange!10] (K23) at (\cG,{\yThr-1.6}) {$K_{23}{=}{+}1.213$};
+\node[gain, fill=orange!10] (K24) at (\cG,{\yThr-2.4}) {$K_{24}{=}{+}0.209$};
+
+% Dashed re-use lines from the state errors
+\coordinate (dVfork)  at (\cI+0.8, \yDV);
+\coordinate (dAfork)  at (\cI+0.8, \yDA);
+\coordinate (qfork)   at (\cI+0.8, \yQ);
+\coordinate (dTfork)  at (\cI+0.8, \yDT);
+
+\draw[arrow, dashed] (dVfork)  |- (K21);
+\draw[arrow, dashed] (dAfork)  |- (K22);
+\draw[arrow, dashed] (qfork)   |- (K23);
+\draw[arrow, dashed] (dTfork)  |- (K24);
+
+\node[sum] (SumThr) at (\cS, {\yThr-1.2}) {$\Sigma$};
+\draw[arrow] (K21.east) -| (SumThr);
+\draw[arrow] (K22.east) -| (SumThr);
+\draw[arrow] (K23.east) -| (SumThr);
+\draw[arrow] (K24.east) -| (SumThr);
+
+\node[sum] (TrimThr) at (\cN, {\yThr-1.2}) {$\Sigma$};
+\node[ilab, above=0.40cm of TrimThr] (thrtrim) {$t_{\mathrm{trim}}$};
+\draw[arrow] (SumThr) -- node[above,font=\scriptsize]{$\times(-1)$} (TrimThr);
+\draw[arrow] (thrtrim) -- node[right,font=\scriptsize]{$+$} (TrimThr);
+
+\node[clamp] (ClpThr) at (\cC, {\yThr-1.2}) {$\mathrm{sat}(\cdot,[0,1])$};
+\node[scale] (ScaN)   at (\cO, {\yThr-1.2}) {$N = 100\,t$};
+\draw[arrow] (TrimThr) -- (ClpThr);
+\draw[arrow] (ClpThr)  -- node[above,font=\scriptsize]{$t_{\mathrm{tot}}$} (ScaN);
+
+\node[ilab, right=0.45cm of ScaN] (PwrOut) {$N$\,[\%]};
+\draw[arrow] (ScaN) -- (PwrOut);
+
+% ── Section label ─────────────────────────────────────────────────────────────
+\node[font=\footnotesize\itshape, gray] at ({\cG+0.1}, 0.65)
+      {Stick gains};
+\node[font=\footnotesize\itshape, gray] at ({\cG+0.1}, {\yThr+0.65})
+      {Throttle gains};
+
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,143 @@
+% F-16 LQR lateral-directional channel signal-flow diagram
+% NASA TM-2015-218675  F16_control.dml
+\documentclass[tikz, border=4pt]{standalone}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning, shapes.geometric, calc}
+\usepackage{amsmath}
+
+\begin{document}
+\begin{tikzpicture}[
+  >=Stealth,
+  every node/.style = {font=\small},
+  gain/.style  = {draw, rectangle, rounded corners=2pt, minimum width=2.0cm,
+                  minimum height=0.52cm, align=center, fill=blue!8,
+                  font=\footnotesize},
+  clamp/.style = {draw, rectangle, minimum width=1.6cm, minimum height=0.52cm,
+                  align=center, fill=yellow!15, font=\footnotesize},
+  scale/.style = {draw, rectangle, rounded corners=2pt, minimum width=1.7cm,
+                  minimum height=0.52cm, align=center, fill=green!10,
+                  font=\footnotesize},
+  sum/.style   = {draw, circle, inner sep=0pt, minimum size=0.52cm,
+                  fill=white, font=\footnotesize},
+  coord/.style = {coordinate},
+  ilab/.style  = {font=\footnotesize},
+  arrow/.style = {->, semithick},
+]
+
+\def\rowsep{1.40}
+\def\cx{0}
+\def\cI{1.3}
+\def\cG{3.6}
+\def\cS{5.7}
+\def\cN{7.1}
+\def\cC{8.7}
+\def\cO{10.6}
+
+\def\yDP{0}
+\def\yBT{-\rowsep}
+\def\yP{ -2*\rowsep}
+\def\yR{ -3*\rowsep}
+
+% ============ State error summing junctions ==================================
+
+% Δφ = φ − φ_cmd
+\node[sum] (sumPh) at (\cI,\yDP) {$\Sigma$};
+\node[ilab, left=0.55cm of sumPh] (phi)    {$\phi$};
+\node[ilab, below=0.20cm of sumPh, font=\scriptsize] {$-$};
+\node[coord, below=0.55cm of sumPh] (pcc) {};
+\node[ilab, left=0.55cm of pcc]    (phcmd) {$\phi_{\mathrm{cmd}}$};
+\draw[arrow] (phi)   -- node[above,font=\scriptsize]{$+$} (sumPh);
+\draw[arrow] (phcmd.east) -- (pcc) -- (sumPh);
+
+% β (no sum junction)
+\node[coord] (betanode) at (\cI,\yBT) {};
+\node[ilab, left=0.55cm of betanode] (betain) {$\beta$\,[deg]};
+\draw[arrow] (betain) -- (betanode);
+
+% p (roll rate — no sum junction)
+\node[coord] (pnode) at (\cI,\yP) {};
+\node[ilab, left=0.55cm of pnode]  (pin)  {$p$\,[rad/s]};
+\draw[arrow] (pin) -- (pnode);
+
+% r (yaw rate — no sum junction)
+\node[coord] (rnode) at (\cI,\yR) {};
+\node[ilab, left=0.55cm of rnode]  (rin)  {$r$\,[rad/s]};
+\draw[arrow] (rin) -- (rnode);
+
+% ============ Gain blocks (aileron row) ======================================
+
+\node[gain] (K11) at (\cG,\yDP) {$K_{11}{=}{+}3.078$};
+\node[gain] (K12) at (\cG,\yBT) {$K_{12}{=}{+}0.032$};
+\node[gain] (K13) at (\cG,\yP)  {$K_{13}{=}{+}4.558$};
+\node[gain] (K14) at (\cG,\yR)  {$K_{14}{=}{+}0.589$};
+
+\draw[arrow] (sumPh)   -- node[above,font=\scriptsize]{$\Delta\phi$} (K11);
+\draw[arrow] (betanode)-- node[above,font=\scriptsize]{$\beta$}       (K12);
+\draw[arrow] (pnode)   -- node[above,font=\scriptsize]{$p$}           (K13);
+\draw[arrow] (rnode)   -- node[above,font=\scriptsize]{$r$}           (K14);
+
+% ============ LQR summation and negate (aileron) =============================
+
+\node[sum] (SumAil) at (\cS, {(\yDP+\yR)/2}) {$\Sigma$};
+\draw[arrow] (K11.east) -| (SumAil);
+\draw[arrow] (K12.east) -| (SumAil);
+\draw[arrow] (K13.east) -| (SumAil);
+\draw[arrow] (K14.east) -| (SumAil);
+
+\node[clamp] (ClpAil) at (\cC, {(\yDP+\yR)/2}) {$\mathrm{sat}(\cdot,\pm1)$};
+\node[scale] (ScaAil) at (\cO, {(\yDP+\yR)/2}) {$\delta_a=-21.5\,a$};
+\draw[arrow] (SumAil) -- node[above,font=\scriptsize]{$\times(-1)$} (ClpAil);
+\draw[arrow] (ClpAil) -- node[above,font=\scriptsize]{$a_{\mathrm{tot}}$} (ScaAil);
+
+\node[ilab, right=0.45cm of ScaAil] (AilOut) {$\delta_a$\,[deg]};
+\draw[arrow] (ScaAil) -- (AilOut);
+
+% ============ Gain blocks (rudder row) =======================================
+
+\def\yRdrTop{-4.8}
+
+\node[gain, fill=orange!10] (K21) at (\cG,\yRdrTop)           {$K_{21}{=}{-}0.706$};
+\node[gain, fill=orange!10] (K22) at (\cG,{\yRdrTop-0.8})     {$K_{22}{=}{-}0.256$};
+\node[gain, fill=orange!10] (K23) at (\cG,{\yRdrTop-1.6})     {$K_{23}{=}{-}1.074$};
+\node[gain, fill=orange!10] (K24) at (\cG,{\yRdrTop-2.4})     {$K_{24}{=}{+}0.822$};
+
+% Dashed re-use lines from the state errors
+\draw[arrow, dashed] (\cI+0.75,\yDP) |- (K21);
+\draw[arrow, dashed] (betanode-|\cI+0.75,\yBT) |- (K22);
+\draw[arrow, dashed] (\cI+0.75,\yP)  |- (K23);
+\draw[arrow, dashed] (\cI+0.75,\yR)  |- (K24);
+
+\node[sum] (SumRdr) at (\cS, {\yRdrTop-1.2}) {$\Sigma$};
+\draw[arrow] (K21.east) -| (SumRdr);
+\draw[arrow] (K22.east) -| (SumRdr);
+\draw[arrow] (K23.east) -| (SumRdr);
+\draw[arrow] (K24.east) -| (SumRdr);
+
+\node[clamp] (ClpRdr) at (\cC, {\yRdrTop-1.2}) {$\mathrm{sat}(\cdot,\pm1)$};
+\draw[arrow] (SumRdr) -- node[above,font=\scriptsize]{$\times(-1)$} (ClpRdr);
+
+% Rudder = -30 × p_tot + 0.008 × δ_a  (aileron-to-rudder coupling)
+\node[sum] (SumCross) at (\cO, {\yRdrTop-1.2}) {$\Sigma$};
+\node[scale, above=0.5cm of SumCross] (ScaRdr) {$-30\,p_{\mathrm{tot}}$};
+\node[ilab, font=\scriptsize, left=0.4cm of SumCross, yshift=-0.3cm]
+      (cross) {$+\,0.008\,\delta_a$};
+
+\draw[arrow] (ClpRdr) -- node[above,font=\scriptsize]{$p_{\mathrm{tot}}$} (ScaRdr);
+\draw[arrow] (ScaRdr) -- (SumCross);
+% Arrow from δ_a coupling
+\draw[arrow, dashed] (ScaAil.south) -- ++(0,-0.25) -| (SumCross)
+                     node[near start, right, font=\scriptsize]{};
+
+\node[ilab, right=0.45cm of SumCross] (RdrOut) {$\delta_r$\,[deg]};
+\draw[arrow] (SumCross) -- (RdrOut);
+
+% ── Section labels ────────────────────────────────────────────────────────────
+\node[font=\footnotesize\itshape, gray] at ({\cG+0.1}, 0.65)
+      {Aileron gains};
+\node[font=\footnotesize\itshape, gray] at ({\cG+0.1}, {\yRdrTop+0.65})
+      {Rudder gains};
+\node[font=\scriptsize, gray] at (\cO+1.3, {(\yDP+\yR)/2-0.5})
+      {\textit{cross-coupling}};
+
+\end{tikzpicture}
+\end{document}

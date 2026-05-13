@@ -44,8 +44,29 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y -qq doxygen graphviz
+          sudo apt-get install -y -qq doxygen graphviz \
+            texlive-latex-extra texlive-pictures texlive-fonts-recommended \
+            poppler-utils
           echo "Doxygen version: $(doxygen --version)"
+          echo "pdflatex version: $(pdflatex --version | head -1)"
+
+      - name: Build TikZ figures to PNG
+        run: |
+          REPO="$(pwd)"
+          TIKZ_SRC="${REPO}/doc/tikz"
+          TIKZ_BUILD="${REPO}/build/tikz"
+          STATIC_OUT="${REPO}/doc/_static"
+          mkdir -p "${TIKZ_BUILD}"
+          for tex in "${TIKZ_SRC}"/*.tex; do
+            fig=$(basename "${tex}" .tex)
+            echo "Compiling ${fig}.tex ..."
+            pdflatex -interaction=nonstopmode -halt-on-error \
+                     -output-directory "${TIKZ_BUILD}" "${tex}"
+            echo "Converting ${fig}.pdf to PNG ..."
+            pdftoppm -r 200 -png -singlefile \
+                     "${TIKZ_BUILD}/${fig}.pdf" "${STATIC_OUT}/${fig}"
+            echo "  -> ${STATIC_OUT}/${fig}.png"
+          done
 
       - name: Generate Doxyfile and build XML
         run: |

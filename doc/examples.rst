@@ -2637,90 +2637,56 @@ Use ``--timeStep 0.02`` (or smaller) for accurate closed-loop results.
 The reference CSVs ``Atmos_13p1_sim_02/04/05.csv`` and the plot script
 ``plot_f16_s13p1_nasa02.py`` are copied to the build directory post-build.
 
-**Controller block diagram**
+**Controller architecture**
 
 The GNC model (``F16_control.dml``) implements a two-loop architecture.
-All gains are loaded at runtime from the DML file; none are hard-coded.
+All gains and trim values are read at runtime from the DML file.
 
-.. code-block:: none
+.. figure:: _static/f16_gnc_overview.png
+   :width: 95%
+   :alt: F-16 GNC two-loop block diagram
 
-                          ╔══════════════════════════════════════════════════════╗
-                          ║         F-16 GNC  (F16_control.dml)                 ║
-                          ╠══════════════════════════════════════════════════════╣
-                          ║  AUTOPILOT OUTER LOOP  (active when apOn = 1)        ║
-                          ║  ─────────────────────────────────────────────────  ║
-    altCmd_ft     ───────►║  altErr   = altMsl − altCmd                          ║
-    keasCmd_kt    ───────►║  thetaCmd = trimTheta + clamp(altErr×−0.05, ±5°)    ║
-    baseChiCmd_deg───────►║  chiErr   = wrap180(beta+psi − baseChiCmd)           ║
-    latOffset_ft  ───────►║  phiCmd   = clamp(chiErr×−10, ±30°)                 ║
-                          ║  keasCmdSw= keasCmd   (speed reference)              ║
-                          ╠══════════════════════════════════════════════════════╣
-                          ║  LQR STABILITY AUGMENTATION  (when sasOn=1 or apOn=1)║
-                          ║  ─────────────────────────────────────────────────  ║
-    altMsl_ft     ───────►║  Longitudinal  [ΔV, Δα, q, Δθ]                      ║
-    Vequiv_kt     ───────►║    longLQR    = −[−0.063, 0.113, 10.113, 3.155]·x  ║
-    alpha_deg     ───────►║    throttleLQR= −[0.997, −0.025, 1.213, 0.209]·x   ║──► el  = −25×totLong  [deg]
-    beta_deg      ───────►║                                                      ║──► PWR= 100×totThrottle [%]
-    phi_deg       ───────►║  Lateral-directional  [Δφ, β, p, r]                 ║
-    theta_deg     ───────►║    latLQR = −[3.078, 0.032, 4.558, 0.589]·x        ║──► ail = −21.5×totLat [deg]
-    psi_deg       ───────►║    dirLQR = −[−0.706, −0.256, −1.074, 0.822]·x     ║──► rdr = −30×totPedal [deg]
-    pb,qb,rb      ───────►║                                          +0.008×ail ║
-                          ╠══════════════════════════════════════════════════════╣
-                          ║  TRIM FEED-FORWARD                                   ║
-    longStkTrim   ───────►║  totLong    = longStkTrim  + longLQR                 ║
-    throttleTrim  ───────►║  totThrottle= throttleTrim + throttleLQR             ║
-                          ╚══════════════════════════════════════════════════════╝
+   F-16 GNC two-loop control architecture: autopilot outer loop (altitude,
+   airspeed and heading hold) feeding commanded states to the LQR
+   stability-augmentation inner loop.
 
-:Inputs:  sensor feedbacks (altMsl, Vequiv, α, β, φ, θ, ψ, p, q, r),
-          autopilot commands (altCmd, keasCmd, baseChiCmd, latOffset),
-          trim values (longStkTrim, throttleTrim), mode flags (sasOn, apOn).
-:Outputs: el [deg, TED+], ail [deg, LWD+], rdr [deg, TEL+], PWR [0–100 %].
+:Inputs:  sensor feedbacks (:math:`h`, :math:`V_\mathrm{eq}`, :math:`\alpha`,
+          :math:`\beta`, :math:`\phi`, :math:`\theta`, :math:`\psi`,
+          :math:`p`, :math:`q`, :math:`r`),
+          autopilot commands (:math:`h_\mathrm{cmd}`, :math:`V_\mathrm{eq,cmd}`,
+          :math:`\chi_\mathrm{cmd}`, lateral offset),
+          trim feed-forwards (:math:`\ell_\mathrm{trim}`, :math:`t_\mathrm{trim}`),
+          mode flags (``sasOn``, ``apOn``).
+:Outputs: :math:`\delta_e` [deg, TED+],  :math:`\delta_a` [deg, LWD+],
+          :math:`\delta_r` [deg, TEL+],  :math:`N` [0–100 %].
 
 **LQR inner loop — longitudinal channel**
 
-.. code-block:: none
+.. figure:: _static/f16_lqr_longitudinal.png
+   :width: 100%
+   :alt: F-16 longitudinal LQR signal-flow diagram
 
-     State errors (−)              Gain blocks             Saturation   Surface
-     ────────────────────          ────────────────────    ──────────   ─────────
-                       ΔV                                     totLongStk
-   Vequiv ─►(−)─► ────┬──►[ K11 = −0.063 ]─►(Σ)─►(×−1)─►      │
-   keasCmdSw►(+)       │                       │                  │       el
-                       │   Δα                  │              clamp(·,   ─────
-   alpha  ─►(−)─► ────┼──►[ K12 = +0.113 ]───►│            −1, +1) ──►[×−25]──► el [deg]
-   trimmedα►(+)        │                       │                  │
-                       │   q                   │                  │       PWR
-   qb ─────────────────┼──►[ K13 = +10.113]───►│  longLQR         │      ─────
-                       │                       │  = −Σ(Ki·xi)     │   throttleTrim
-                       │   Δθ                  │                  │      + (×−1)
-   theta  ─►(−)─► ────┴──►[ K14 = +3.155 ]───►┘            ┌────►│─►clamp(0,1)─►[×100]──► PWR [%]
-   thetaCmd►(+)                                              │                │
-                                    ┌────────────────────────┤                │
-                                    │  Same ΔV,Δα,q,Δθ       │   throttleLQR  │
-                                    └──►[ K21..K24 ] ─────────►  = −Σ(Ki·xi)  │
-                                       [+0.997, −0.025,                        │
-                                        +1.213, +0.209]    throttleTrim ───────┘
+   Longitudinal LQR signal-flow: four state errors
+   (:math:`\Delta V`, :math:`\Delta\alpha`, :math:`q`, :math:`\Delta\theta`)
+   multiplied by gain matrices :math:`\mathbf{K}_\mathrm{long}` and
+   :math:`\mathbf{K}_\mathrm{throt}`, summed, negated, added to the trim
+   feed-forward, saturated, and scaled to elevator :math:`\delta_e` and
+   throttle :math:`N`.  Dashed lines indicate the throttle channel reuses
+   the same state errors.
 
 **LQR inner loop — lateral-directional channel**
 
-.. code-block:: none
+.. figure:: _static/f16_lqr_lateral.png
+   :width: 100%
+   :alt: F-16 lateral-directional LQR signal-flow diagram
 
-     State errors (−)              Gain blocks             Saturation   Surface
-     ────────────────────          ────────────────────    ──────────   ─────────
-                       Δφ                                    totLatStk
-   phi    ─►(−)─► ────┬──►[ K11 = +3.078 ]─►(Σ)─►(×−1)─►     │
-   phiCmdSw►(+)        │                       │                 │       ail
-                       │   β                   │             clamp(·,   ──────
-   beta ────────────────┼──►[ K12 = +0.032 ]──►│           −1, +1) ──►[×−21.5]──► ail [deg]
-                       │                       │                 │
-   pb ─────────────────┼──►[ K13 = +4.558 ]──►│   latLQR        │       rdr
-                       │                       │  = −Σ(Ki·xi)    │      ──────
-   rb ─────────────────┴──►[ K14 = +0.589 ]──►┘                 │   dirLQR
-                                                                  │   = −Σ(Ki·xi)
-                                    ┌────────────────────────────►│─►clamp(−1,1)─►[×−30]──►(+)──► rdr [deg]
-                                    │  Same Δφ,β,p,r              │                        ▲
-                                    └──►[ K21..K24 ] ─────────────┘          0.008 × ail──┘
-                                       [−0.706, −0.256,
-                                        −1.074, +0.822]
+   Lateral-directional LQR signal-flow: four state errors
+   (:math:`\Delta\phi`, :math:`\beta`, :math:`p`, :math:`r`) multiplied by
+   gain matrices :math:`\mathbf{K}_\mathrm{ail}` and
+   :math:`\mathbf{K}_\mathrm{rdr}`, summed and negated to aileron
+   :math:`\delta_a` and rudder :math:`\delta_r`.  The aileron-to-rudder
+   cross-coupling :math:`\delta_r \mathrel{+}= 0.008\,\delta_a` is shown
+   by the dashed feedback path.
 
 **Trim result (Scenario 13.1)**
 
