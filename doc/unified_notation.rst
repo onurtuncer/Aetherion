@@ -4,7 +4,7 @@ Unified Notation
 ================
 
 :Author: Onur Tuncer, PhD
-:Date: December 15\ :sup:`th`, 2025
+:Date: May 13\ :sup:`th`, 2026
 
 .. contents::
    :local:
