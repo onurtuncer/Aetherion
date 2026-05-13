@@ -2539,222 +2539,259 @@ reference to within floating-point precision:
    Scenario 11 atmosphere — temperature, density, pressure.
    Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
 
-.. TODO: Case 13.1 section — uncomment when ready for publication
-..
 
-   
-   .. _f16-scenario-13p1:
-   
-   F-16 Subsonic Altitude Change (NASA TM-2015-218675 Atmospheric Scenario 13.1)
-   ------------------------------------------------------------------------------
-   
-   **Scenario overview**
-   
-   Starting from the same Kitty Hawk trim as Scenario 11, the F-16 executes
-   a closed-loop **+100 ft altitude change** driven by the NASA LQR stability-
-   augmentation system (SAS) and altitude-hold autopilot defined in
-   ``F16_control.dml``.
-   
-   The control architecture is:
-   
-   * **Inner loop** — Linear Quadratic Regulator (LQR) with 4-state longitudinal
-     (V, α, q, θ) and 4-state lateral-directional (φ, β, p, r) gain matrices.
-   * **Outer loop** — altitude-error-to-pitch-command compensator
-     (K\ :sub:`alt` = −0.05 °/ft), airspeed hold via throttle, and heading
-     hold via bank angle command.
-   
-   All LQR gains and trim values are read at runtime from
-   ``data/F16_S119_source/F16_control.dml``; no gains are hardcoded.
-   
-   **Initial and command conditions**
-   
-   .. list-table::
-      :header-rows: 1
-      :widths: 40 30
-   
-      * - Parameter
-        - Value
-      * - Location
-        - 36.019° N, 75.674° W (Kitty Hawk, NC)
-      * - Altitude (initial)
-        - 10 013 ft (3 051.96 m)
-      * - Altitude command (altCmd)
-        - 10 113 ft (+100 ft step)
-      * - Heading
-        - 45° NE
-      * - TAS (trim)
-        - 335.15 KTAS (172.4 m/s)
-      * - Mach (trim)
-        - 0.525
-      * - KEAS command
-        - computed from US1976 atmosphere at trim altitude
-      * - Simulation duration
-        - 20 s
-   
-   **Numerical step-size requirement**
-   
-   The closed-loop LQR plant is **stiff** — the high gains create fast
-   eigenvalues that exceed the Radau IIA stability boundary at dt = 0.1 s.
-   A convergence study confirms:
-   
-   .. list-table::
-      :header-rows: 1
-      :widths: 10 18 15 12 12
-   
-      * - dt [s]
-        - alt @ 20 s [ft]
-        - Δ vs command [ft]
-        - pitch [°]
-        - roll [°]
-      * - 0.10
-        - 10 100.8
-        - −12.2 ❌
-        - 2.48
-        - +2.09
-      * - 0.05
-        - 10 110.2
-        - −2.8
-        - 2.75
-        - −0.79
-      * - **0.02**
-        - **10 113.6**
-        - **+0.6** ✓
-        - **2.63**
-        - **−0.10**
-      * - 0.01
-        - 10 113.6
-        - +0.6 ✓
-        - 2.63
-        - −0.10
-   
-   Use ``--timeStep 0.02`` (or smaller) for accurate closed-loop results.
-   
-   **Recommended run command**
-   
-   .. code-block:: bash
-   
-      F16AltitudeChange --endTime 20 --timeStep 0.02 \
-                        --outputFileName f16_s13p1.csv
-   
-   The reference CSVs ``Atmos_13p1_sim_02/04/05.csv`` and the plot script
-   ``plot_f16_s13p1_nasa02.py`` are copied to the build directory post-build.
-   
-   **Trim result (Scenario 13.1)**
-   
-   Identical to Scenario 11 (same initial conditions):
-   
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 25 25
-   
-      * - Quantity
-        - Aetherion
-        - NASA ref
-      * - α (trim)
-        - 2.656°
-        - 2.643°
-      * - δ\ :sub:`e` (trim)
-        - −3.242°
-        - −3.24°
-      * - Throttle (trim)
-        - 13.90 %
-        - 13.90 %
-   
-   **Validation results at t = 20 s (dt = 0.02 s)**
-   
-   .. list-table::
-      :header-rows: 1
-      :widths: 30 22 22
-   
-      * - Quantity
-        - Aetherion
-        - NASA ref
-      * - Altitude
-        - 10 113.6 ft (3 082.6 m)
-        - 10 112.7 ft (3 082.4 m)
-      * - Δ altitude (change from t=0)
-        - +100.6 ft
-        - +99.7 ft
-      * - TAS
-        - 172.69 m/s
-        - 172.46 m/s
-      * - Mach
-        - 0.5261
-        - 0.5251
-      * - Pitch θ
-        - 2.626°
-        - 2.656°
-      * - Roll φ
-        - −0.10°
-        - −0.24°
-   
-   Peak errors during the transient (t ≈ 0–15 s): altitude ±32 m, pitch
-   ±5.5°, roll ±0.18°.  These arise from the different phugoid phase between
-   the full SE(3)/J₂ Aetherion model and the NASA reference.  The final state
-   (t = 20 s) agrees to within **0.9 ft altitude**, **0.03° pitch**, and
-   **0.14° roll**.
-   
-   **Validation figures**
-   
-   .. figure:: _static/f16_s13p1/fig_overview.png
-      :width: 100%
-      :alt: Case 13.1 simulation overview
-   
-      Scenario 13.1 simulation overview.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
-   
-   .. figure:: _static/f16_s13p1/fig_flight_envelope.png
-      :width: 100%
-      :alt: Case 13.1 flight envelope (altitude, TAS, Mach)
-   
-      Scenario 13.1 flight envelope — altitude, TAS, Mach.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
-   
-   .. figure:: _static/f16_s13p1/fig_attitude.png
-      :width: 100%
-      :alt: Case 13.1 Euler attitude angles
-   
-      Scenario 13.1 Euler attitude angles — pitch, roll, yaw.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
-   
-   .. figure:: _static/f16_s13p1/fig_body_rates.png
-      :width: 100%
-      :alt: Case 13.1 body angular rates
-   
-      Scenario 13.1 body angular rates — roll, pitch, yaw rates.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
-   
-   .. figure:: _static/f16_s13p1/fig_position.png
-      :width: 100%
-      :alt: Case 13.1 geodetic position
-   
-      Scenario 13.1 geodetic position — altitude, latitude, longitude.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
-   
-   .. figure:: _static/f16_s13p1/fig_ned_velocity.png
-      :width: 100%
-      :alt: Case 13.1 NED velocity components
-   
-      Scenario 13.1 NED velocity components — North, East, Down.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
-   
-   .. figure:: _static/f16_s13p1/fig_aero_forces.png
-      :width: 100%
-      :alt: Case 13.1 aerodynamic body forces
-   
-      Scenario 13.1 aerodynamic body forces — X, Y, Z.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
-   
-   .. figure:: _static/f16_s13p1/fig_aero_moments.png
-      :width: 100%
-      :alt: Case 13.1 aerodynamic body moments
-   
-      Scenario 13.1 aerodynamic body moments — L, M, N.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
-   
-   .. figure:: _static/f16_s13p1/fig_atmosphere.png
-      :width: 100%
-      :alt: Case 13.1 atmosphere
-   
-      Scenario 13.1 atmosphere — temperature, density, pressure.
-      Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. _f16-scenario-13p1:
+
+F-16 Subsonic Altitude Change (NASA TM-2015-218675 Atmospheric Scenario 13.1)
+------------------------------------------------------------------------------
+
+**Scenario overview**
+
+Starting from the same Kitty Hawk trim as Scenario 11, the F-16 executes
+a closed-loop **+100 ft altitude change** driven by the NASA LQR stability-
+augmentation system (SAS) and altitude-hold autopilot defined in
+``F16_control.dml``.
+
+The control architecture is:
+
+* **Inner loop** — Linear Quadratic Regulator (LQR) with 4-state longitudinal
+  (V, α, q, θ) and 4-state lateral-directional (φ, β, p, r) gain matrices.
+* **Outer loop** — altitude-error-to-pitch-command compensator
+  (K\ :sub:`alt` = −0.05 °/ft), airspeed hold via throttle, and heading
+  hold via bank angle command.
+
+All LQR gains and trim values are read at runtime from
+``data/F16_S119_source/F16_control.dml``; no gains are hardcoded.
+
+**Initial and command conditions**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30
+
+   * - Parameter
+     - Value
+   * - Location
+     - 36.019° N, 75.674° W (Kitty Hawk, NC)
+   * - Altitude (initial)
+     - 10 013 ft (3 051.96 m)
+   * - Altitude command (altCmd)
+     - 10 113 ft (+100 ft step)
+   * - Heading
+     - 45° NE
+   * - TAS (trim)
+     - 335.15 KTAS (172.4 m/s)
+   * - Mach (trim)
+     - 0.525
+   * - KEAS command
+     - computed from US1976 atmosphere at trim altitude
+   * - Simulation duration
+     - 20 s
+
+**Numerical step-size requirement**
+
+The closed-loop LQR plant is **stiff** — the high gains create fast
+eigenvalues that exceed the Radau IIA stability boundary at dt = 0.1 s.
+A convergence study confirms:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 18 15 12 12
+
+   * - dt [s]
+     - alt @ 20 s [ft]
+     - Δ vs command [ft]
+     - pitch [°]
+     - roll [°]
+   * - 0.10
+     - 10 100.8
+     - −12.2 ❌
+     - 2.48
+     - +2.09
+   * - 0.05
+     - 10 110.2
+     - −2.8
+     - 2.75
+     - −0.79
+   * - **0.02**
+     - **10 113.6**
+     - **+0.6** ✓
+     - **2.63**
+     - **−0.10**
+   * - 0.01
+     - 10 113.6
+     - +0.6 ✓
+     - 2.63
+     - −0.10
+
+Use ``--timeStep 0.02`` (or smaller) for accurate closed-loop results.
+
+**Recommended run command**
+
+.. code-block:: bash
+
+   F16AltitudeChange --endTime 20 --timeStep 0.02 \
+                     --outputFileName f16_s13p1.csv
+
+The reference CSVs ``Atmos_13p1_sim_02/04/05.csv`` and the plot script
+``plot_f16_s13p1_nasa02.py`` are copied to the build directory post-build.
+
+**Controller block diagram**
+
+The GNC model (``F16_control.dml``) implements a two-loop architecture.
+All gains are loaded at runtime from the DML file; none are hard-coded.
+
+.. code-block:: none
+
+                          ╔══════════════════════════════════════════════════════╗
+                          ║         F-16 GNC  (F16_control.dml)                 ║
+                          ╠══════════════════════════════════════════════════════╣
+                          ║  AUTOPILOT OUTER LOOP  (active when apOn = 1)        ║
+                          ║  ─────────────────────────────────────────────────  ║
+    altCmd_ft     ───────►║  altErr   = altMsl − altCmd                          ║
+    keasCmd_kt    ───────►║  thetaCmd = trimTheta + clamp(altErr×−0.05, ±5°)    ║
+    baseChiCmd_deg───────►║  chiErr   = wrap180(beta+psi − baseChiCmd)           ║
+    latOffset_ft  ───────►║  phiCmd   = clamp(chiErr×−10, ±30°)                 ║
+                          ║  keasCmdSw= keasCmd   (speed reference)              ║
+                          ╠══════════════════════════════════════════════════════╣
+                          ║  LQR STABILITY AUGMENTATION  (when sasOn=1 or apOn=1)║
+                          ║  ─────────────────────────────────────────────────  ║
+    altMsl_ft     ───────►║  Longitudinal  [ΔV, Δα, q, Δθ]                      ║
+    Vequiv_kt     ───────►║    longLQR    = −[−0.063, 0.113, 10.113, 3.155]·x  ║
+    alpha_deg     ───────►║    throttleLQR= −[0.997, −0.025, 1.213, 0.209]·x   ║──► el  = −25×totLong  [deg]
+    beta_deg      ───────►║                                                      ║──► PWR= 100×totThrottle [%]
+    phi_deg       ───────►║  Lateral-directional  [Δφ, β, p, r]                 ║
+    theta_deg     ───────►║    latLQR = −[3.078, 0.032, 4.558, 0.589]·x        ║──► ail = −21.5×totLat [deg]
+    psi_deg       ───────►║    dirLQR = −[−0.706, −0.256, −1.074, 0.822]·x     ║──► rdr = −30×totPedal [deg]
+    pb,qb,rb      ───────►║                                          +0.008×ail ║
+                          ╠══════════════════════════════════════════════════════╣
+                          ║  TRIM FEED-FORWARD                                   ║
+    longStkTrim   ───────►║  totLong    = longStkTrim  + longLQR                 ║
+    throttleTrim  ───────►║  totThrottle= throttleTrim + throttleLQR             ║
+                          ╚══════════════════════════════════════════════════════╝
+
+:Inputs:  sensor feedbacks (altMsl, Vequiv, α, β, φ, θ, ψ, p, q, r),
+          autopilot commands (altCmd, keasCmd, baseChiCmd, latOffset),
+          trim values (longStkTrim, throttleTrim), mode flags (sasOn, apOn).
+:Outputs: el [deg, TED+], ail [deg, LWD+], rdr [deg, TEL+], PWR [0–100 %].
+
+**Trim result (Scenario 13.1)**
+
+Identical to Scenario 11 (same initial conditions):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 25 25
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - α (trim)
+     - 2.656°
+     - 2.643°
+   * - δ\ :sub:`e` (trim)
+     - −3.242°
+     - −3.24°
+   * - Throttle (trim)
+     - 13.90 %
+     - 13.90 %
+
+**Validation results at t = 20 s (dt = 0.02 s)**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 22 22
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - Altitude
+     - 10 113.6 ft (3 082.6 m)
+     - 10 112.7 ft (3 082.4 m)
+   * - Δ altitude (change from t=0)
+     - +100.6 ft
+     - +99.7 ft
+   * - TAS
+     - 172.69 m/s
+     - 172.46 m/s
+   * - Mach
+     - 0.5261
+     - 0.5251
+   * - Pitch θ
+     - 2.626°
+     - 2.656°
+   * - Roll φ
+     - −0.10°
+     - −0.24°
+
+Peak errors during the transient (t ≈ 0–15 s): altitude ±32 m, pitch
+±5.5°, roll ±0.18°.  These arise from the different phugoid phase between
+the full SE(3)/J₂ Aetherion model and the NASA reference.  The final state
+(t = 20 s) agrees to within **0.9 ft altitude**, **0.03° pitch**, and
+**0.14° roll**.
+
+**Validation figures**
+
+.. figure:: _static/f16_s13p1/fig_overview.png
+   :width: 100%
+   :alt: Case 13.1 simulation overview
+
+   Scenario 13.1 simulation overview.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_flight_envelope.png
+   :width: 100%
+   :alt: Case 13.1 flight envelope (altitude, TAS, Mach)
+
+   Scenario 13.1 flight envelope — altitude, TAS, Mach.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_attitude.png
+   :width: 100%
+   :alt: Case 13.1 Euler attitude angles
+
+   Scenario 13.1 Euler attitude angles — pitch, roll, yaw.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_body_rates.png
+   :width: 100%
+   :alt: Case 13.1 body angular rates
+
+   Scenario 13.1 body angular rates — roll, pitch, yaw rates.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_position.png
+   :width: 100%
+   :alt: Case 13.1 geodetic position
+
+   Scenario 13.1 geodetic position — altitude, latitude, longitude.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_ned_velocity.png
+   :width: 100%
+   :alt: Case 13.1 NED velocity components
+
+   Scenario 13.1 NED velocity components — North, East, Down.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_aero_forces.png
+   :width: 100%
+   :alt: Case 13.1 aerodynamic body forces
+
+   Scenario 13.1 aerodynamic body forces — X, Y, Z.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_aero_moments.png
+   :width: 100%
+   :alt: Case 13.1 aerodynamic body moments
+
+   Scenario 13.1 aerodynamic body moments — L, M, N.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+
+.. figure:: _static/f16_s13p1/fig_atmosphere.png
+   :width: 100%
+   :alt: Case 13.1 atmosphere
+
+   Scenario 13.1 atmosphere — temperature, density, pressure.
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
