@@ -25,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
 
       - name: Set up Python
@@ -33,43 +33,37 @@ jobs:
         with:
           python-version: '3.x'
 
-      - name: Install Python dependencies
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r doc/requirements.txt
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq doxygen graphviz
 
-      - name: Install system dependencies
+      - name: Build Doxygen XML  (needed by breathe even if no directives used)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y doxygen graphviz cmake make
-
-      - name: Generate Doxyfile from template
-        run: |
-          # Substitute all @CMAKE_*@ and @DOXYGEN_*@ placeholders from Doxyfile.in
           REPO="$(pwd)"
-          mkdir -p "${REPO}/build/doc/doxygen"
+          OUT="${REPO}/build/doxygen"
+          mkdir -p "${OUT}"
+          # Materialise the Doxyfile from the template
           sed \
             -e "s|@CMAKE_PROJECT_NAME@|Aetherion|g" \
             -e "s|@CMAKE_SOURCE_DIR@|${REPO}|g" \
             -e "s|@CMAKE_BINARY_DIR@|${REPO}/build|g" \
-            -e "s|@DOXYGEN_OUTPUT_DIR@|${REPO}/build/doc/doxygen|g" \
-            doc/Doxyfile.in > build/Doxyfile
-
-      - name: Build Doxygen XML
-        run: |
-          doxygen build/Doxyfile
-          ls build/doc/doxygen/xml/index.xml
+            -e "s|@DOXYGEN_OUTPUT_DIR@|${OUT}|g" \
+            doc/Doxyfile.in > "${REPO}/build/Doxyfile"
+          doxygen "${REPO}/build/Doxyfile"
 
       - name: Build Sphinx HTML
         run: |
           sphinx-build -T -b html \
-            -Dbreathe_projects.Aetherion=$(pwd)/build/doc/doxygen/xml \
-            doc/ build/doc/sphinx
+            -Dbreathe_projects.Aetherion="$(pwd)/build/doxygen/xml" \
+            doc/ build/sphinx
 
-      - name: Upload HTML docs to GitHub Pages artifact
+      - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: build/doc/sphinx
+          path: build/sphinx
 
   deploy:
     needs: build-docs
@@ -77,11 +71,9 @@ jobs:
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     permissions:
       pages: write
       id-token: write
-
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
