@@ -49,7 +49,7 @@ C++ Architecture
 ----------------
 
 The DAVE-ML subsystem lives under ``Aetherion/Serialization/DAVEML/`` and
-provides four public interfaces.
+provides five public interfaces.
 
 .. _daveml_reader:
 
@@ -128,15 +128,50 @@ DAVEMLAeroModel
 ~~~~~~~~~~~~~~~
 
 A **full-featured, CppAD-compatible evaluator** for ``.dml`` files that
-use breakpoint tables, gridded N-D linear interpolation, and
-``<piecewise>`` branching. It is the engine behind both the aerodynamic
-and propulsion models.
+use breakpoint tables, gridded N-D linear interpolation, piecewise
+branching, and full MathML arithmetic.  It is the evaluation engine
+shared by the aerodynamic, propulsion, and control-law models.
 
-*Additional MathML operators beyond* :ref:`daveml_reader`:
-``<abs>``, ``<cos>``, ``<sin>``,
-comparison operators (``<lt>``, ``<gt>``, ``<leq>``, ``<geq>``, ``<eq>``
-— each returns 1.0 or 0.0),
-and branching via ``<piecewise>/<piece>/<otherwise>``.
+*Supported MathML operators* (full set):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Operator(s)
+     - Notes
+   * - ``<times>``, ``<plus>``, ``<minus>``, ``<divide>``, ``<power>``
+     - Standard arithmetic; ``<minus>`` with one operand is unary negation.
+   * - ``<abs>``
+     - Absolute value.
+   * - ``<sqrt>``
+     - Square root; equivalent to ``<power>`` with exponent 0.5 but
+       more readable and handled as a dedicated case.
+   * - ``<cos>``, ``<sin>``, ``<tan>``
+     - Trigonometric functions (argument in radians).
+   * - ``<csymbol definitionURL="…">atan2</csymbol>``
+     - DAVE-ML named function ``atan2(y, x)`` via ``<csymbol>``
+       encoding.  Required by ``F16_gnc.dml`` for circumnavigator
+       bearing calculations.
+   * - ``<lt>``, ``<gt>``, ``<leq>``, ``<geq>``, ``<eq>``
+     - Comparison operators; each returns 1.0 (true) or 0.0 (false).
+       For the AD path the branch condition is extracted as plain
+       ``double`` via ``CppAD::Value()``, so it does not enter the
+       differentiation tape.
+   * - ``<piecewise>`` / ``<piece>`` / ``<otherwise>``
+     - Conditional selection; first matching ``<piece>`` is evaluated.
+       Inner ``<piecewise>`` blocks are supported (required by the
+       :math:`\pm 180°` track-angle wrap in ``F16_gnc.dml``).
+
+*Output clamping.* ``<variableDef>`` elements that carry
+``minValue`` and/or ``maxValue`` XML attributes have their computed
+result clamped to the declared range immediately after evaluation.
+For ``S = double`` the clamp uses ``std::clamp``; for
+``S = CppAD::AD<double>`` it is realised through
+``CppAD::CondExpLt`` / ``CondExpGt`` so the tape remains smooth.
+This is required by ``F16_control.dml``, where several variables
+(e.g. ``deltaThetaCmd``, ``totLongStk``, ``totThrottle``) carry
+explicit saturation limits.
 
 *Evaluation order* is established once at construction time using
 **Kahn's topological sort** of the variable dependency graph, ensuring
@@ -148,6 +183,11 @@ Branching conditions are always extracted as plain ``double`` via
 Arithmetic inside the selected branch is fully carried out in ``S``,
 giving correct first derivatives everywhere except at discontinuous
 switching boundaries (where derivatives are undefined in any case).
+
+*Generic access* via ``evaluateRaw``: accepts and returns a
+``std::unordered_map<std::string, S>`` keyed by DAVE-ML variable
+identifiers, making it usable for any DML file without needing a
+typed wrapper.
 
 .. code-block:: cpp
 
@@ -217,6 +257,135 @@ Unit conversion constants:
    * - ft·lbf
      - N·m
      - 1.355 817 948 329 279
+
+.. _daveml_control_model:
+
+DAVEMLControlModel
+~~~~~~~~~~~~~~~~~~
+
+A **double-only wrapper** around :ref:`daveml_aero` ``evaluateRaw()``
+that provides a typed interface for ``.dml`` files defining flight
+control or GNC laws — specifically ``F16_control.dml`` and
+``F16_gnc.dml``.
+
+Unlike ``DAVEMLAeroModel``, the control model is never placed on a
+CppAD differentiation tape: control surface commands are computed in
+plain ``double`` once per integration step (zero-order hold) and then
+applied to the vector-field policies before the ODE stepper runs.
+
+.. code-block:: cpp
+
+   #include "Aetherion/Serialization/DAVEML/DAVEMLControlModel.h"
+
+   DAVEMLControlModel ctrl("data/F16_S119_source/F16_control.dml");
+
+   DAVEMLControlModel::Inputs in;
+   // Mode flags
+   in.sasOn = 1.0;   in.apOn = 1.0;
+   // Autopilot commands
+   in.altCmd_ft       = 10113.0;   // commanded altitude [ft]
+   in.keasCmd_kt      = 287.81;    // commanded EAS [kt]
+   in.baseChiCmd_deg  =  45.0;     // commanded course [deg]
+   // Sensor feedbacks
+   in.altMsl_ft  = 10013.0;
+   in.Vequiv_kt  = 287.98;
+   in.alpha_deg  =  2.65;
+   in.theta_deg  =  2.65;
+   in.phi_deg    = -0.17;
+   in.qb_rad_s   =  0.0;
+   // (remaining fields default to zero)
+
+   DAVEMLControlModel::Outputs out = ctrl.evaluate(in);
+   // out.el_deg   — elevator [deg, TED+]
+   // out.ail_deg  — aileron  [deg, LWD+]
+   // out.rdr_deg  — rudder   [deg, TEL+]
+   // out.pwr_pct  — throttle [0–100 %]
+
+The ``Inputs`` struct covers every ``<isInput/>`` variable in both
+``F16_control.dml`` and ``F16_gnc.dml``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 10 65
+
+   * - Field
+     - varID
+     - Description
+   * - ``throttle_frac``
+     - ``throttle``
+     - Pilot throttle [0, 1]; ignored when ``apOn`` = 1
+   * - ``longStk_frac``
+     - ``longStk``
+     - Pilot longitudinal stick [−1, +1]; ignored when ``apOn`` = 1
+   * - ``latStk_frac``
+     - ``latStk``
+     - Pilot lateral stick [−1, +1]; ignored when ``apOn`` = 1
+   * - ``pedal_frac``
+     - ``pedal``
+     - Pilot rudder pedal [−1, +1]; ignored when ``apOn`` = 1
+   * - ``sasOn``
+     - ``sasOn``
+     - Stability-augmentation engage flag (0/1)
+   * - ``apOn``
+     - ``apOn``
+     - Autopilot engage flag (0/1; forces SAS on)
+   * - ``altCmd_ft``
+     - ``altCmd``
+     - Commanded altitude [ft]
+   * - ``keasCmd_kt``
+     - ``keasCmd``
+     - Commanded equivalent airspeed [kt]
+   * - ``baseChiCmd_deg``
+     - ``baseChiCmd``
+     - Commanded ground-track course [deg]
+   * - ``latOffset_ft``
+     - ``latOffset``
+     - Lateral offset from course [ft, +right]
+   * - ``altMsl_ft``
+     - ``altMsl``
+     - Current altitude MSL [ft]
+   * - ``Vequiv_kt``
+     - ``Vequiv``
+     - Current equivalent airspeed [kt]
+   * - ``alpha_deg``
+     - ``alpha``
+     - Angle of attack [deg]
+   * - ``beta_deg``
+     - ``beta``
+     - Sideslip angle [deg]
+   * - ``phi_deg``
+     - ``phi``
+     - Roll angle [deg]
+   * - ``theta_deg``
+     - ``theta``
+     - Pitch angle [deg]
+   * - ``psi_deg``
+     - ``psi``
+     - Yaw angle [deg]
+   * - ``pb_rad_s``
+     - ``pb``
+     - Body roll rate [rad/s]
+   * - ``qb_rad_s``
+     - ``qb``
+     - Body pitch rate [rad/s]
+   * - ``rb_rad_s``
+     - ``rb``
+     - Body yaw rate [rad/s]
+   * - ``throttleTrim``
+     - ``throttleTrim``
+     - Trim throttle fraction (default 0.139 from DML)
+   * - ``longStkTrim``
+     - ``longStkTrim``
+     - Trim longitudinal stick fraction (default 0.130 from DML)
+   * - ``ownshipN_deg``
+     - ``ownshipN_deg``
+     - Ownship latitude [deg] — ``F16_gnc.dml`` circumnavigator only
+   * - ``ownshipE_deg``
+     - ``ownshipE_deg``
+     - Ownship longitude [deg] — ``F16_gnc.dml`` circumnavigator only
+   * - ``circlePoleSW``
+     - ``circlePoleSW``
+     - Navigation mode selector — ``F16_gnc.dml`` only
 
 .. _load_inertia:
 
@@ -738,63 +907,69 @@ altitude hold, heading hold, and airspeed command modes.
    * - Longitudinal stick trim
      - 12.96 %
 
-**Inputs:**
+**Inputs** (DAVE-ML ``varID`` identifiers as they appear in the file):
 
 .. list-table::
    :header-rows: 1
    :widths: 20 15 65
 
-   * - VarID
+   * - varID
      - Units
      - Description
    * - ``throttle``
      - frac [0–1]
-     - Pilot throttle command
+     - Pilot throttle; zeroed when ``apOn`` = 1
    * - ``longStk``
      - frac [−1…+1]
-     - Pilot longitudinal (pitch) stick command
+     - Pilot longitudinal stick; zeroed when ``apOn`` = 1
    * - ``latStk``
      - frac [−1…+1]
-     - Pilot lateral (roll) stick command
+     - Pilot lateral stick; zeroed when ``apOn`` = 1
    * - ``pedal``
      - frac [−1…+1]
-     - Pilot rudder pedal command
-   * - ``SAS_on``
+     - Pilot rudder pedal; zeroed when ``apOn`` = 1
+   * - ``sasOn``
      - bool (0/1)
-     - Enable stability augmentation
-   * - ``AP_on``
+     - Enable stability-augmentation system
+   * - ``apOn``
      - bool (0/1)
-     - Enable autopilot
-   * - ``airspeed``
-     - ft/s
-     - Current true airspeed
-   * - ``alpha``
-     - deg
-     - Current angle of attack
-   * - ``beta``
-     - deg
-     - Current sideslip angle
-   * - ``phi``, ``theta``, ``psi``
-     - deg
-     - Current Euler angles (roll, pitch, yaw)
-   * - ``p``, ``q``, ``r``
-     - rad/s
-     - Current body rates
-   * - ``alt``
+     - Enable autopilot (forces ``sasOn`` on)
+   * - ``altMsl``
      - ft
      - Current altitude MSL
+   * - ``Vequiv``
+     - nmi/h (kt)
+     - Current equivalent airspeed
+   * - ``alpha``
+     - deg
+     - Angle of attack
+   * - ``beta``
+     - deg
+     - Sideslip angle
+   * - ``phi``, ``theta``, ``psi``
+     - deg
+     - Euler roll, pitch, yaw
+   * - ``pb``, ``qb``, ``rb``
+     - rad/s
+     - Body roll, pitch, yaw rates
    * - ``altCmd``
      - ft
-     - Autopilot altitude command
-   * - ``airspeedCmd``
-     - ft/s
-     - Autopilot airspeed command
+     - Commanded altitude MSL
+   * - ``keasCmd``
+     - nmi/h (kt)
+     - Commanded equivalent airspeed
    * - ``latOffset``
-     - ft
-     - Lateral offset from desired track
-   * - ``baseCourse``
+     - ft (+right)
+     - Lateral offset from desired course
+   * - ``baseChiCmd``
      - deg
-     - Desired base course heading
+     - Desired base-course ground-track angle
+   * - ``throttleTrim``
+     - frac
+     - Trim throttle feed-forward (default 0.1390 from file)
+   * - ``longStkTrim``
+     - frac
+     - Trim stick feed-forward (default 0.1296 from file)
 
 **Outputs:**
 
@@ -802,19 +977,19 @@ altitude hold, heading hold, and airspeed command modes.
    :header-rows: 1
    :widths: 20 15 65
 
-   * - VarID
+   * - varID
      - Units
      - Description
    * - ``el``
      - deg
-     - Elevator deflection command
+     - Elevator deflection command (+ trailing-edge down)
    * - ``ail``
      - deg
-     - Aileron deflection command
+     - Aileron deflection command (+ left-wing down)
    * - ``rdr``
      - deg
-     - Rudder deflection command
-   * - ``throttleCmd``
+     - Rudder deflection command (+ trailing-edge left)
+   * - ``PWR``
      - %
      - Power lever angle command (0–100)
 
@@ -853,6 +1028,8 @@ Outer-loop autopilot logic:
 **Note.** This file defines the control *law* only; it does not integrate
 actuator dynamics.  Actuator rate and position limits must be applied
 externally if required.
+
+**C++ class:** ``DAVEMLControlModel`` (see :ref:`daveml_control_model`).
 
 .. _dml_gnc:
 
@@ -906,6 +1083,12 @@ approximation:
 These quantities drive the lateral-offset and base-course inputs of the
 inner control law from :ref:`dml_control`.  All other inputs and outputs
 are identical to that file.
+
+The bearing computation uses the ``atan2`` DAVE-ML named function via
+``<csymbol>`` encoding, which is supported by the extended MathML
+evaluator in :ref:`daveml_aero`.
+
+**C++ class:** ``DAVEMLControlModel`` (see :ref:`daveml_control_model`).
 
 
 .. _daveml_tests:
