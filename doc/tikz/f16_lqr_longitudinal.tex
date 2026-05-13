@@ -15,7 +15,7 @@
                   font=\footnotesize},
   clamp/.style = {draw, rectangle, minimum width=1.5cm, minimum height=0.52cm,
                   align=center, fill=yellow!15, font=\footnotesize},
-  scale/.style = {draw, rectangle, rounded corners=2pt, minimum width=1.6cm,
+  scalebox/.style = {draw, rectangle, rounded corners=2pt, minimum width=1.6cm,
                   minimum height=0.52cm, align=center, fill=green!10,
                   font=\footnotesize},
   sum/.style   = {draw, circle, inner sep=0pt, minimum size=0.52cm,
@@ -114,7 +114,7 @@
 % ============ Clamp and surface scaling (stick → elevator) ===================
 
 \node[clamp] (ClpStk) at (\cC, {(\yDV+\yDT)/2}) {$\mathrm{sat}(\cdot,\pm1)$};
-\node[scale] (ScaEl)  at (\cO, {(\yDV+\yDT)/2}) {$\delta_e = -25\,\ell$};
+\node[scalebox] (ScaEl)  at (\cO, {(\yDV+\yDT)/2}) {$\delta_e = -25\,\ell$};
 \draw[arrow] (TrimStk) -- (ClpStk);
 \draw[arrow] (ClpStk)  -- node[above,font=\scriptsize]{$\ell_{\mathrm{tot}}$} (ScaEl);
 
@@ -153,7 +153,7 @@
 \draw[arrow] (thrtrim) -- node[right,font=\scriptsize]{$+$} (TrimThr);
 
 \node[clamp] (ClpThr) at (\cC, {\yThr-1.2}) {$\mathrm{sat}(\cdot,[0,1])$};
-\node[scale] (ScaN)   at (\cO, {\yThr-1.2}) {$N = 100\,t$};
+\node[scalebox] (ScaN)   at (\cO, {\yThr-1.2}) {$N = 100\,t$};
 \draw[arrow] (TrimThr) -- (ClpThr);
 \draw[arrow] (ClpThr)  -- node[above,font=\scriptsize]{$t_{\mathrm{tot}}$} (ScaN);
 

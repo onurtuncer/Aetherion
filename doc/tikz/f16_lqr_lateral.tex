@@ -14,7 +14,7 @@
                   font=\footnotesize},
   clamp/.style = {draw, rectangle, minimum width=1.6cm, minimum height=0.52cm,
                   align=center, fill=yellow!15, font=\footnotesize},
-  scale/.style = {draw, rectangle, rounded corners=2pt, minimum width=1.7cm,
+  scalebox/.style = {draw, rectangle, rounded corners=2pt, minimum width=1.7cm,
                   minimum height=0.52cm, align=center, fill=green!10,
                   font=\footnotesize},
   sum/.style   = {draw, circle, inner sep=0pt, minimum size=0.52cm,
@@ -85,7 +85,7 @@
 \draw[arrow] (K14.east) -| (SumAil);
 
 \node[clamp] (ClpAil) at (\cC, {(\yDP+\yR)/2}) {$\mathrm{sat}(\cdot,\pm1)$};
-\node[scale] (ScaAil) at (\cO, {(\yDP+\yR)/2}) {$\delta_a=-21.5\,a$};
+\node[scalebox] (ScaAil) at (\cO, {(\yDP+\yR)/2}) {$\delta_a=-21.5\,a$};
 \draw[arrow] (SumAil) -- node[above,font=\scriptsize]{$\times(-1)$} (ClpAil);
 \draw[arrow] (ClpAil) -- node[above,font=\scriptsize]{$a_{\mathrm{tot}}$} (ScaAil);
 
