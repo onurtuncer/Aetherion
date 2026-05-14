@@ -34,3 +34,11 @@ foreach(_csv Atmos_13p2_sim_02.csv Atmos_13p2_sim_04.csv Atmos_13p2_sim_05.csv)
             "$<TARGET_FILE_DIR:F16AirspeedChange>/${_csv}"
     COMMENT "Copying NASA Atmos-13.2 reference ${_csv}")
 endforeach()
+
+# Copy the Case-13.2 plotting script next to the executable
+add_custom_command(
+  TARGET F16AirspeedChange
+  POST_BUILD
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/scripts/plot_f16_s13p2_nasa02.py"
+          "$<TARGET_FILE_DIR:F16AirspeedChange>/plot_f16_s13p2_nasa02.py"
+  COMMENT "Copying Case-13.2 plot script plot_f16_s13p2_nasa02.py")
