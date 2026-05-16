@@ -61,6 +61,15 @@ struct F16AltitudeChangeCmds {
     /// Default 0.0 = apply immediately (correct for Scenarios 13.1/13.2).
     double chiStepTime_s     {   0.0  };
     double initialChiCmd_deg {  45.0  };              ///< Course held before chiStepTime_s [deg]
+
+    /// Lateral side-step parameters (Scenario 13.4).
+    /// When latStepOffset_ft != 0, the simulator computes latOffset dynamically
+    /// from the aircraft's position relative to the original courseline, applying
+    /// the commanded offset at latStepTime_s.  Set both to 0 (default) to fall
+    /// back to the fixed latOffset_ft value (correct for Scenarios 13.1–13.3).
+    double latStepTime_s     {   0.0  };              ///< When to apply lat step [s]
+    double latStepOffset_ft  {   0.0  };              ///< Commanded lateral offset right of course [ft]
+    double coursePsi_deg     {  45.0  };              ///< Reference course direction [deg CW from N]
 };
 
 class F16AltitudeChangeSimulator
@@ -101,7 +110,15 @@ public:
         , m_cmds(cmds)
         , m_trimPwr(trim.pwr_pct)
         , m_trimEl(trim.el_deg)
-    {}
+    {
+        // Store initial geodetic position for dynamic latOffset computation (Scenario 13.4)
+        namespace Coord = Aetherion::Coordinate;
+        const auto& p0 = state().g.p;
+        Coord::Vec3<double> r0_ecef = Coord::ECIToECEF(
+            Coord::Vec3<double>{ p0.x(), p0.y(), p0.z() }, theta0);
+        double alt0_m{};
+        Coord::ECEFToGeodeticWGS84(r0_ecef, m_lat0_rad, m_lon0_rad, alt0_m);
+    }
 
     // ── Closed-loop step ──────────────────────────────────────────────────────
 
@@ -155,6 +172,8 @@ private:
     AutopilotCmds m_cmds;
     double m_trimPwr;
     double m_trimEl;
+    double m_lat0_rad{ 0.0 };   // initial geodetic latitude [rad]  (for dynamic latOffset)
+    double m_lon0_rad{ 0.0 };   // initial geodetic longitude [rad] (for dynamic latOffset)
 };
 
 // ── extractFeedback — inline implementation ───────────────────────────────────
@@ -238,7 +257,22 @@ F16AltitudeChangeSimulator::extractFeedback() const noexcept
     fb.baseChiCmd_deg = (time() >= m_cmds.chiStepTime_s)
                         ? m_cmds.baseChiCmd_deg
                         : m_cmds.initialChiCmd_deg;
-    fb.latOffset_ft   = m_cmds.latOffset_ft;
+    // Dynamic lateral offset (Scenario 13.4): compute aircraft's lateral deviation
+    // from the original courseline; subtract the commanded step offset applied
+    // at latStepTime_s.  Fall back to fixed latOffset_ft when no step is set.
+    if (m_cmds.latStepOffset_ft != 0.0) {
+        constexpr double kRE_m = 6'371'000.0;
+        const double dp_N_m = (lat_rad  - m_lat0_rad) * kRE_m;
+        const double dp_E_m = (lon_rad  - m_lon0_rad) * kRE_m * std::cos(m_lat0_rad);
+        const double psi0   = m_cmds.coursePsi_deg * (std::numbers::pi / 180.0);
+        const double lat_dev_ft = (-dp_N_m * std::sin(psi0) + dp_E_m * std::cos(psi0))
+                                   / kFt_m;
+        const double step_ft = (time() >= m_cmds.latStepTime_s)
+                               ? m_cmds.latStepOffset_ft : 0.0;
+        fb.latOffset_ft = lat_dev_ft - step_ft;
+    } else {
+        fb.latOffset_ft = m_cmds.latOffset_ft;
+    }
     // Sensor feedbacks
     fb.altMsl_ft      = alt_m / kFt_m;
     fb.Vequiv_kt      = keas_kt;
