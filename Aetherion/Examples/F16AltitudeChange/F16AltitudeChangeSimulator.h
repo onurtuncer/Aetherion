@@ -51,10 +51,16 @@ using F16VF = F16SteadyFlight::F16VF;
 /// are complete before any enclosing class uses it as a default argument — a
 /// requirement that GCC enforces but MSVC relaxes.
 struct F16AltitudeChangeCmds {
-    double altCmd_ft      { 10113.0 };              ///< Commanded altitude [ft]
-    double keasCmd_kt     { 287.8088596053291 };     ///< Commanded KEAS [kt]
-    double baseChiCmd_deg {  45.0  };               ///< Commanded course [deg, +CW from N]
-    double latOffset_ft   {   0.0  };               ///< Lateral offset from course [ft]
+    double altCmd_ft         { 10113.0 };             ///< Commanded altitude [ft]
+    double keasCmd_kt        { 287.8088596053291 };   ///< Commanded KEAS [kt]
+    double baseChiCmd_deg    {  45.0  };              ///< Commanded course [deg, +CW from N]
+    double latOffset_ft      {   0.0  };              ///< Lateral offset from course [ft]
+    /// Time [s] at which baseChiCmd_deg is applied.  Before this time the
+    /// controller receives initialChiCmd_deg instead, matching the NASA
+    /// reference implementation that holds the trim heading until the step.
+    /// Default 0.0 = apply immediately (correct for Scenarios 13.1/13.2).
+    double chiStepTime_s     {   0.0  };
+    double initialChiCmd_deg {  45.0  };              ///< Course held before chiStepTime_s [deg]
 };
 
 class F16AltitudeChangeSimulator
@@ -226,10 +232,12 @@ F16AltitudeChangeSimulator::extractFeedback() const noexcept
     // Modes: both on
     fb.sasOn          = 1.0;
     fb.apOn           = 1.0;
-    // Autopilot commands
+    // Autopilot commands — chi step is held at initialChiCmd_deg until chiStepTime_s
     fb.altCmd_ft      = m_cmds.altCmd_ft;
     fb.keasCmd_kt     = m_cmds.keasCmd_kt;
-    fb.baseChiCmd_deg = m_cmds.baseChiCmd_deg;
+    fb.baseChiCmd_deg = (time() >= m_cmds.chiStepTime_s)
+                        ? m_cmds.baseChiCmd_deg
+                        : m_cmds.initialChiCmd_deg;
     fb.latOffset_ft   = m_cmds.latOffset_ft;
     // Sensor feedbacks
     fb.altMsl_ft      = alt_m / kFt_m;

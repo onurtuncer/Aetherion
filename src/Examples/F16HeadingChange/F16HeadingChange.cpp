@@ -66,9 +66,12 @@ namespace {
     constexpr double kXcgFromAC_m  =  (35.0 - 25.0) / 100.0 * 11.32 * 0.3048;
 
     // ── Scenario 13.3 autopilot commands ─────────────────────────────────────
-    // Hold altitude and airspeed at trim; command a +20° course step.
+    // Hold altitude and airspeed at trim; command a +20° course step at t=15 s.
+    // NASA TM-2015-218675 Table B-13.3: the chi step is applied at t = 15 s,
+    // not t = 0.  Before t = 15 s the controller holds the trim heading (45°).
     constexpr double kAltCmd_ft      = 10013.0;  // hold initial altitude
     constexpr double kChiCmd_deg     =   65.0;   // target course (+20° from 45°)
+    constexpr double kChiStepTime_s  =   15.0;   // step applied at t = 15 s
 }
 
 namespace Aetherion::Examples::F16HeadingChange {
@@ -81,12 +84,12 @@ void F16HeadingChangeApplication::logStartupBanner() const
 {
     AE_CORE_INFO("=======================================================");
     AE_CORE_INFO("Aetherion - NASA TM-2015-218675 Atmospheric Scenario 13.3");
-    AE_CORE_INFO("F-16 subsonic heading change  (closed-loop, +20 deg course step)");
+    AE_CORE_INFO("F-16 subsonic heading change  (+20 deg course step at t={:.0f} s)", kChiStepTime_s);
     AE_CORE_INFO("  Location : {:.5f} N, {:.5f} E  (Kitty Hawk, NC)", kLat_deg, kLon_deg);
     AE_CORE_INFO("  Altitude : {:.0f} ft ({:.2f} m)", kAlt_ft, kAlt_m);
-    AE_CORE_INFO("  Heading  : {:.1f} deg NE  (initial)", kHeading_deg);
+    AE_CORE_INFO("  Heading  : {:.1f} deg NE  (initial, held until t={:.0f} s)", kHeading_deg, kChiStepTime_s);
     AE_CORE_INFO("  TAS init : {:.2f} ft/s (335.15 KTAS)", kTAS_fps);
-    AE_CORE_INFO("  ChiCmd   : {:.1f} deg  (target course)", kChiCmd_deg);
+    AE_CORE_INFO("  ChiCmd   : {:.1f} deg  (applied at t={:.0f} s)", kChiCmd_deg, kChiStepTime_s);
     AE_CORE_INFO("=======================================================");
 }
 
@@ -172,17 +175,19 @@ void F16HeadingChangeApplication::prepareSimulation() const
     const double keas_kt = (tas_mps / kKt_mps) * std::sqrt(atm_trim.rho / kRhoSL_kg_m3);
 
     Sim::AutopilotCmds cmds;
-    cmds.altCmd_ft      = kAltCmd_ft;
-    cmds.keasCmd_kt     = keas_kt;
-    cmds.baseChiCmd_deg = kChiCmd_deg;
-    cmds.latOffset_ft   = 0.0;
+    cmds.altCmd_ft         = kAltCmd_ft;
+    cmds.keasCmd_kt        = keas_kt;
+    cmds.baseChiCmd_deg    = kChiCmd_deg;
+    cmds.latOffset_ft      = 0.0;
+    cmds.chiStepTime_s     = kChiStepTime_s;
+    cmds.initialChiCmd_deg = kHeading_deg;   // hold 45° until step
 
     AE_CORE_INFO("Autopilot commands:");
-    AE_CORE_INFO("  altCmd   = {:.0f} ft  (hold)", cmds.altCmd_ft);
-    AE_CORE_INFO("  keasCmd  = {:.4f} kt  (computed from US1976 atm at {:.0f} ft)",
+    AE_CORE_INFO("  altCmd      = {:.0f} ft  (hold)", cmds.altCmd_ft);
+    AE_CORE_INFO("  keasCmd     = {:.4f} kt  (computed from US1976 atm at {:.0f} ft)",
                  keas_kt, kAlt_ft);
-    AE_CORE_INFO("  chiCmd   = {:.1f} deg  (+{:.1f} deg step)",
-                 cmds.baseChiCmd_deg, kChiCmd_deg - kHeading_deg);
+    AE_CORE_INFO("  chiCmd      = {:.1f} deg  (+{:.1f} deg step at t={:.1f} s)",
+                 cmds.baseChiCmd_deg, kChiCmd_deg - kHeading_deg, kChiStepTime_s);
 
     m_Simulator = constructSimulator(ip, trim, aero_model, prop_model, ctrl_model,
                                      x0, theta0, cmds, kXcgFromAC_m);

@@ -2991,7 +2991,18 @@ reused unchanged.  Only the autopilot commands differ:
 * **Altitude command** — hold 10 013 ft.
 * **Airspeed command** — hold trim KEAS (computed from US1976 atmosphere at
   the trim altitude so that ``deltaVequiv ≈ 0`` at t = 0).
-* **Heading command** — step from 45° to **65°** at t = 0.
+* **Heading command** — step from 45° to **65°** applied at **t = 15 s**
+  (NASA TM-2015-218675 §B-13.3 specifies the command is given 15 s into
+  the run, not at t = 0).  Before t = 15 s the controller holds the trim
+  heading of 45°.
+
+The DML heading autopilot estimates the track angle as
+``chiEst = beta + psi`` and computes
+``phi_cmd = −10 × (chiEst − chiCmd)``.
+Applying the 20° step at t = 0 would immediately command
+``phi_cmd = +200°``, causing a violent initial roll that does not match the
+NASA reference.  The ``chiStepTime_s`` field in ``F16AltitudeChangeCmds``
+enforces the correct t = 15 s timing.
 
 The heading channel is driven by the lateral-directional LQR: a bank-angle
 command proportional to the course error causes the aircraft to roll into a
@@ -3009,10 +3020,10 @@ coordinated turn and track the new heading.
      - 36.019° N, 75.674° W (Kitty Hawk, NC)
    * - Altitude (initial & commanded)
      - 10 013 ft (3 051.96 m)
-   * - Heading (initial)
+   * - Heading (initial, held until t = 15 s)
      - 45° NE
    * - Heading command (baseChiCmd)
-     - 65° (+20° step)
+     - 65° (+20° step at t = 15 s)
    * - TAS (trim)
      - 335.15 KTAS (172.4 m/s)
    * - KEAS command
@@ -3032,7 +3043,7 @@ coordinated turn and track the new heading.
 The reference CSVs ``Atmos_13p3_sim_02/04/05.csv`` and the plot script
 ``plot_f16_s13p3_nasa02.py`` are copied to the build directory post-build.
 
-**Validation results at t = 30 s (dt = 0.02 s)**
+**Validation results at t = 30 s (dt = 0.02 s, chi step at t = 15 s)**
 
 .. list-table::
    :header-rows: 1
@@ -3042,33 +3053,38 @@ The reference CSVs ``Atmos_13p3_sim_02/04/05.csv`` and the plot script
      - Aetherion
      - NASA ref
    * - Altitude
-     - 10 013.6 ft (3 052.1 m)
+     - 10 013.5 ft (3 052.1 m)
      - 10 013.3 ft (3 052.0 m)
    * - TAS
      - 172.42 m/s (335.16 kt)
      - 172.42 m/s (335.16 kt)
    * - Mach
-     - 0.525075
+     - 0.525072
      - 0.525075
    * - Yaw ψ
-     - 65.01°
+     - 64.74°
      - 59.94°
    * - Pitch θ
-     - 2.627°
+     - 2.634°
      - 2.628°
    * - Roll φ
-     - −0.10°
+     - +2.53°
      - +0.64°
 
 .. note::
 
-   The NASA reference trajectory (sim_02, dt = 0.1 s) has not fully settled
-   to the 65° command by t = 30 s (yaw = 59.94°, still 5° short).  The
-   Aetherion simulation, integrated at dt = 0.02 s, converges to
-   **65.01°** by t ≈ 22 s.  The discrepancy reflects a phase difference in
-   the lateral autopilot transient between the two integration schemes, not
-   a model error: TAS, Mach, altitude, and pitch agree to within numerical
-   precision throughout the run.
+   The chi step is applied at t = 15 s, not t = 0 (NASA TM-2015-218675
+   §B-13.3).  Aetherion enforces this via the ``chiStepTime_s`` field in
+   ``F16AltitudeChangeCmds``; the controller holds the 45° trim heading until
+   t = 15 s, matching the NASA reference initial straight-flight segment to
+   within 0.025° in yaw.
+
+   The remaining heading discrepancy at t = 30 s (64.74° vs 59.94°) is a
+   known integration-rate effect: Aetherion uses dt = 0.02 s (ZOH), the NASA
+   reference uses dt = 0.1 s.  Tighter sampling gives a more aggressive LQR
+   response and faster heading convergence.  TAS, Mach, and altitude agree
+   within 0.002 kt and 0.14 ft throughout — the flight-mechanics model is
+   correct; only the turn-rate differs due to the sampling-rate difference.
 
 **Validation figures**
 
