@@ -2474,7 +2474,8 @@ reference to within floating-point precision:
      - ≈ 0 (Earth-rate residual)
      - 0.000°/s
 
-**Validation figures**
+Validation figures
+^^^^^^^^^^^^^^^^^^
 
 .. figure:: _static/f16_s11/fig_overview.png
    :width: 100%
@@ -2794,7 +2795,8 @@ Validation Figures
 F-16 Subsonic Altitude Change (NASA TM-2015-218675 Atmospheric Scenario 13.1)
 ------------------------------------------------------------------------------
 
-**Scenario overview**
+Scenario overview
+^^^^^^^^^^^^^^^^^
 
 Starting from the same Kitty Hawk trim as Scenario 11, the F-16 executes
 a closed-loop **+100 ft altitude change** driven by the NASA LQR stability-
@@ -2812,7 +2814,8 @@ The control architecture is:
 All LQR gains and trim values are read at runtime from
 ``data/F16_S119_source/F16_control.dml``; no gains are hardcoded.
 
-**Initial and command conditions**
+Initial and command conditions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2837,7 +2840,8 @@ All LQR gains and trim values are read at runtime from
    * - Simulation duration
      - 20 s
 
-**Numerical step-size requirement**
+Numerical step-size requirement
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The closed-loop LQR plant is **stiff** — the high gains create fast
 eigenvalues that exceed the Radau IIA stability boundary at dt = 0.1 s.
@@ -2875,7 +2879,8 @@ A convergence study confirms:
 
 Use ``--timeStep 0.02`` (or smaller) for accurate closed-loop results.
 
-**Recommended run command**
+Recommended run command
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
@@ -2885,7 +2890,8 @@ Use ``--timeStep 0.02`` (or smaller) for accurate closed-loop results.
 The reference CSVs ``Atmos_13p1_sim_02/04/05.csv`` and the plot script
 ``plot_f16_s13p1_nasa02.py`` are copied to the build directory post-build.
 
-**Controller architecture**
+Controller architecture
+^^^^^^^^^^^^^^^^^^^^^^^
 
 The GNC model (``F16_control.dml``) implements a two-loop architecture.
 All gains and trim values are read at runtime from the DML file.
@@ -2908,7 +2914,8 @@ All gains and trim values are read at runtime from the DML file.
 :Outputs: :math:`\delta_e` [deg, TED+],  :math:`\delta_a` [deg, LWD+],
           :math:`\delta_r` [deg, TEL+],  :math:`N` [0–100 %].
 
-**LQR inner loop — longitudinal channel**
+LQR inner loop — longitudinal channel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. figure:: _static/f16_lqr_longitudinal.png
    :width: 100%
@@ -2922,7 +2929,8 @@ All gains and trim values are read at runtime from the DML file.
    throttle :math:`N`.  Dashed lines indicate the throttle channel reuses
    the same state errors.
 
-**LQR inner loop — lateral-directional channel**
+LQR inner loop — lateral-directional channel
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. figure:: _static/f16_lqr_lateral.png
    :width: 100%
@@ -2936,7 +2944,8 @@ All gains and trim values are read at runtime from the DML file.
    cross-coupling :math:`\delta_r \mathrel{+}= 0.008\,\delta_a` is shown
    by the dashed feedback path.
 
-**Trim result (Scenario 13.1)**
+Trim result (Scenario 13.1)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Identical to Scenario 11 (same initial conditions):
 
@@ -2957,7 +2966,8 @@ Identical to Scenario 11 (same initial conditions):
      - 13.90 %
      - 13.90 %
 
-**Validation results at t = 20 s (dt = 0.02 s)**
+Validation results at t = 20 s (dt = 0.02 s)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2991,7 +3001,8 @@ the full SE(3)/J₂ Aetherion model and the NASA reference.  The final state
 (t = 20 s) agrees to within **0.9 ft altitude**, **0.03° pitch**, and
 **0.14° roll**.
 
-**Validation figures**
+Validation figures
+^^^^^^^^^^^^^^^^^^
 
 .. figure:: _static/f16_s13p1/fig_overview.png
    :width: 100%
@@ -3062,7 +3073,8 @@ the full SE(3)/J₂ Aetherion model and the NASA reference.  The final state
 F-16 Subsonic Airspeed Change (NASA TM-2015-218675 Atmospheric Scenario 13.2)
 ------------------------------------------------------------------------------
 
-**Scenario overview**
+Scenario overview
+^^^^^^^^^^^^^^^^^
 
 Starting from the same Kitty Hawk trim as Scenario 11, the F-16 executes
 a closed-loop **−10 kt KEAS airspeed reduction** driven by the NASA LQR SAS
@@ -3081,7 +3093,8 @@ engine power and decelerate the aircraft to the commanded equivalent airspeed.
 The reused simulator class is ``F16AltitudeChangeSimulator``; no new C++ code
 is required.
 
-**Initial and command conditions**
+Initial and command conditions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -3106,7 +3119,8 @@ is required.
    * - Simulation duration
      - 20 s
 
-**Recommended run command**
+Recommended run command
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
@@ -3116,7 +3130,8 @@ is required.
 The reference CSVs ``Atmos_13p2_sim_02/04/05.csv`` and the plot script
 ``plot_f16_s13p2_nasa02.py`` are copied to the build directory post-build.
 
-**Validation results at t = 20 s (dt = 0.02 s)**
+Validation results at t = 20 s (dt = 0.02 s)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -3149,7 +3164,8 @@ The final KEAS converges to **277.02 kt** against the 277.0 kt command
 The transient altitude excursion during deceleration (t ≈ 0–8 s) is
 ≤ 2.1 m, matching the NASA reference closely.
 
-**Validation figures**
+Validation figures
+^^^^^^^^^^^^^^^^^^
 
 .. figure:: _static/f16_s13p2/fig_overview.png
    :width: 100%
@@ -3227,7 +3243,8 @@ The transient altitude excursion during deceleration (t ≈ 0–8 s) is
 F-16 Subsonic Heading Change (NASA TM-2015-218675 Atmospheric Scenario 13.3)
 -----------------------------------------------------------------------------
 
-**Scenario overview**
+Scenario overview
+^^^^^^^^^^^^^^^^^
 
 Starting from the same Kitty Hawk trim as Scenario 11, the F-16 executes
 a closed-loop **+20° course step** (45° → 65° NE) driven by the NASA LQR SAS
@@ -3256,7 +3273,8 @@ The heading channel is driven by the lateral-directional LQR: a bank-angle
 command proportional to the course error causes the aircraft to roll into a
 coordinated turn and track the new heading.
 
-**Initial and command conditions**
+Initial and command conditions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -3281,7 +3299,8 @@ coordinated turn and track the new heading.
    * - Simulation duration
      - 30 s
 
-**Recommended run command**
+Recommended run command
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
@@ -3291,7 +3310,8 @@ coordinated turn and track the new heading.
 The reference CSVs ``Atmos_13p3_sim_02/04/05.csv`` and the plot script
 ``plot_f16_s13p3_nasa02.py`` are copied to the build directory post-build.
 
-**Validation results at t = 30 s (dt = 0.02 s, chi step at t = 15 s)**
+Validation results at t = 30 s (dt = 0.02 s, chi step at t = 15 s)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -3334,7 +3354,8 @@ The reference CSVs ``Atmos_13p3_sim_02/04/05.csv`` and the plot script
    within 0.002 kt and 0.14 ft throughout — the flight-mechanics model is
    correct; only the turn-rate differs due to the sampling-rate difference.
 
-**Validation figures**
+Validation figures
+^^^^^^^^^^^^^^^^^^
 
 .. figure:: _static/f16_s13p3/fig_overview.png
    :width: 100%
