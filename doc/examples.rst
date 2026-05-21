@@ -2540,6 +2540,247 @@ reference to within floating-point precision:
    Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
 
 
+.. _f16-case-12:
+
+F-16 Supersonic Trim Check (NASA TM-2015-218675 Atmospheric Check-Case 12)
+---------------------------------------------------------------------------
+
+**Scenario overview**
+
+Check-Case 12 is the supersonic analogue of Check-Case 11.  The same F-16
+vehicle flies steady straight-and-level flight, but at **Mach ≈ 2.01** and
+**30 013 ft** altitude instead of the subsonic condition.  As in Case 11,
+the simulation is **open-loop**: control surfaces and throttle are held fixed
+at the trim values for the entire 200 s run; no autopilot or SAS is active.
+
+Key aerodynamic differences from Case 11:
+
+* At supersonic speed, wave drag dominates.  The required throttle rises from
+  13.9 % (subsonic) to **56.9 %** to overcome the much higher drag.
+* The trim angle of attack is **−0.733°** (slightly nose-down) rather than
+  +2.643° (nose-up), because supersonic lift is generated more efficiently at
+  a lower α.
+* The trim elevator deflection is **−1.532°** (smaller and opposite direction
+  to the subsonic −3.242°) due to the different moment balance at Mach 2.
+
+The reused class is ``F16SteadyFlightSimulator``; the only differences from
+Case 11 are the flight-condition constants compiled into
+``F16SupersonicTrim.cpp``.
+
+**Initial and flight conditions**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30
+
+   * - Parameter
+     - Value
+   * - Location
+     - 36.019° N, 75.674° W (Kitty Hawk, NC)
+   * - Altitude
+     - 30 013 ft (9 147.96 m)
+   * - Heading
+     - 45° NE
+   * - TAS (initial)
+     - ≈ 2 000 ft/s  (1 184.96 KTAS)
+   * - v\ :sub:`N` = v\ :sub:`E`
+     - 1 414.2 ft/s = 430.9 m/s
+   * - v\ :sub:`D`
+     - 0 ft/s
+   * - Body rates
+     - all zero (trim)
+   * - Simulation duration
+     - 200 s
+
+**Trim result (Case 12)**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 25 25
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - Mach (trim)
+     - 2.0104
+     - 2.01045
+   * - α (trim)
+     - −0.733°
+     - −0.737°
+   * - δ\ :sub:`e` (trim)
+     - −1.532°
+     - n/a (not tabulated in CSV)
+   * - Throttle (trim)
+     - 56.90 %
+     - n/a
+   * - Thrust (trim)
+     - 54 099 N  (12 162 lbf)
+     - n/a
+   * - Speed of sound
+     - 303.11 m/s  (994.44 ft/s)
+     - 994.79 ft/s
+
+The small trim-alpha discrepancy (0.004°) is attributed to the US1976 speed-of-sound
+at 30 013 ft: Aetherion's atmosphere gives 303.11 m/s (994.44 ft/s) vs NASA's
+994.79 ft/s (+0.35 ft/s), a 0.035 % difference.  Because Mach = TAS/a, the
+trim solver converges at a very slightly lower α to maintain the commanded Mach.
+
+**Step-size convergence**
+
+Unlike the closed-loop scenarios (13.1–13.4), the supersonic trim is an
+**open-loop** problem with no stiff controller gains.  The Radau IIA implicit
+integrator converges to the same trajectory for all tested step sizes:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 18 15 12 12
+
+   * - dt [s]
+     - alt @ 200 s [ft]
+     - Δalt [ft]
+     - Mach
+     - pitch [°]
+   * - **0.10**
+     - **30 517.5**
+     - **+504.5** ✓
+     - **2.017266**
+     - **−0.496**
+   * - 0.05
+     - 30 517.5
+     - +504.5 ✓
+     - 2.017266
+     - −0.496
+   * - 0.02
+     - 30 517.5
+     - +504.5 ✓
+     - 2.017266
+     - −0.496
+
+dt = 0.1 s is recommended for Case 12 (10× faster than the closed-loop cases,
+no accuracy penalty).
+
+**Recommended run command**
+
+.. code-block:: bash
+
+   F16SupersonicTrim --endTime 200 --timeStep 0.1 \
+                     --outputFileName f16_s12_sim.csv
+
+The reference CSVs ``Atmos_12_sim_02/04/05.csv`` and the plot script
+``plot_f16_s12_nasa02.py`` are copied to the build directory post-build.
+
+**Validation results at t = 200 s (dt = 0.1 s)**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 22 22
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - Altitude
+     - 30 517.5 ft (9 301.7 m)
+     - 30 256.9 ft (9 222.1 m)
+   * - Δ altitude
+     - +504.5 ft
+     - +243.9 ft
+   * - TAS
+     - 609.60 m/s  (1 184.9 KTAS)
+     - 610.06 m/s  (1 186.3 KTAS)
+   * - Mach
+     - 2.017266
+     - 2.014849
+   * - Pitch θ
+     - −0.496°
+     - −0.616°
+   * - Roll φ
+     - −0.479°
+     - −0.559°
+   * - Yaw ψ
+     - 45.470°
+     - 45.657°
+
+.. note::
+
+   Both simulations show a slow altitude climb over 200 s — this is the
+   phugoid (long-period) oscillation excited by the small trim mismatch.
+   Aetherion's drift (+504 ft) is approximately 2× the NASA reference
+   (+244 ft).  The difference is caused by the atmosphere model: Aetherion
+   US1976 returns a speed of sound 0.35 ft/s lower than the NASA reference
+   value at 30 013 ft.  This shifts the trim α by 0.004°, which produces a
+   small net positive lift and a slow climb whose rate grows with the
+   phugoid.  All remaining quantities (TAS, Mach, body rates) track the
+   NASA reference within the phugoid-driven divergence.
+
+   The open-loop phugoid is an inherent property of the trim-check scenario,
+   not a numerical artefact.  The closed-loop scenarios 13.1–13.4 (which
+   include an altitude-hold autopilot) are not affected.
+
+**Validation figures**
+
+.. figure:: _static/f16_s12/fig_overview.png
+   :width: 100%
+   :alt: Case 12 simulation overview
+
+   Case 12 simulation overview.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
+.. figure:: _static/f16_s12/fig_flight_envelope.png
+   :width: 100%
+   :alt: Case 12 flight envelope (altitude, TAS, Mach)
+
+   Case 12 flight envelope — altitude, TAS, Mach.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
+.. figure:: _static/f16_s12/fig_attitude.png
+   :width: 100%
+   :alt: Case 12 Euler attitude angles
+
+   Case 12 Euler attitude angles — pitch, roll, yaw.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
+.. figure:: _static/f16_s12/fig_body_rates.png
+   :width: 100%
+   :alt: Case 12 body angular rates
+
+   Case 12 body angular rates — roll, pitch, yaw rates.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
+.. figure:: _static/f16_s12/fig_position.png
+   :width: 100%
+   :alt: Case 12 geodetic position
+
+   Case 12 geodetic position — altitude, latitude, longitude.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
+.. figure:: _static/f16_s12/fig_ned_velocity.png
+   :width: 100%
+   :alt: Case 12 NED velocity components
+
+   Case 12 NED velocity components — North, East, Down.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
+.. figure:: _static/f16_s12/fig_aero_forces.png
+   :width: 100%
+   :alt: Case 12 aerodynamic body forces
+
+   Case 12 aerodynamic body forces — X, Y, Z.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
+.. figure:: _static/f16_s12/fig_aero_moments.png
+   :width: 100%
+   :alt: Case 12 aerodynamic body moments
+
+   Case 12 aerodynamic body moments — L, M, N.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
+.. figure:: _static/f16_s12/fig_atmosphere.png
+   :width: 100%
+   :alt: Case 12 atmosphere
+
+   Case 12 atmosphere — temperature, density, pressure.
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+
 
 .. _f16-scenario-13p1:
 
