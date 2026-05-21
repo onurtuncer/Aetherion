@@ -2545,7 +2545,8 @@ reference to within floating-point precision:
 F-16 Supersonic Trim Check (NASA TM-2015-218675 Atmospheric Check-Case 12)
 ---------------------------------------------------------------------------
 
-**Scenario overview**
+Scenario Overview
+^^^^^^^^^^^^^^^^^
 
 Check-Case 12 is the supersonic analogue of Check-Case 11.  The same F-16
 vehicle flies steady straight-and-level flight, but at **Mach ≈ 2.01** and
@@ -2567,7 +2568,8 @@ The reused class is ``F16SteadyFlightSimulator``; the only differences from
 Case 11 are the flight-condition constants compiled into
 ``F16SupersonicTrim.cpp``.
 
-**Initial and flight conditions**
+Initial and Flight Conditions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2592,7 +2594,8 @@ Case 11 are the flight-condition constants compiled into
    * - Simulation duration
      - 200 s
 
-**Trim result (Case 12)**
+Trim Result
+^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2625,7 +2628,8 @@ at 30 013 ft: Aetherion's atmosphere gives 303.11 m/s (994.44 ft/s) vs NASA's
 994.79 ft/s (+0.35 ft/s), a 0.035 % difference.  Because Mach = TAS/a, the
 trim solver converges at a very slightly lower α to maintain the commanded Mach.
 
-**Step-size convergence**
+Step-Size Convergence
+^^^^^^^^^^^^^^^^^^^^^
 
 Unlike the closed-loop scenarios (13.1–13.4), the supersonic trim is an
 **open-loop** problem with no stiff controller gains.  The Radau IIA implicit
@@ -2659,7 +2663,8 @@ integrator converges to the same trajectory for all tested step sizes:
 dt = 0.1 s is recommended for Case 12 (10× faster than the closed-loop cases,
 no accuracy penalty).
 
-**Recommended run command**
+Recommended Run Command
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: bash
 
@@ -2669,7 +2674,8 @@ no accuracy penalty).
 The reference CSVs ``Atmos_12_sim_02/04/05.csv`` and the plot script
 ``plot_f16_s12_nasa02.py`` are copied to the build directory post-build.
 
-**Validation results at t = 200 s (dt = 0.1 s)**
+Validation Results at t = 200 s
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. list-table::
    :header-rows: 1
@@ -2716,7 +2722,8 @@ The reference CSVs ``Atmos_12_sim_02/04/05.csv`` and the plot script
    not a numerical artefact.  The closed-loop scenarios 13.1–13.4 (which
    include an altitude-hold autopilot) are not affected.
 
-**Validation figures**
+Validation Figures
+^^^^^^^^^^^^^^^^^^
 
 .. figure:: _static/f16_s12/fig_overview.png
    :width: 100%
