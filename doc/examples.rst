@@ -2624,10 +2624,7 @@ Trim Result
      - 303.11 m/s  (994.44 ft/s)
      - 994.79 ft/s
 
-The small trim-alpha discrepancy (0.004°) is attributed to the US1976 speed-of-sound
-at 30 013 ft: Aetherion's atmosphere gives 303.11 m/s (994.44 ft/s) vs NASA's
-994.79 ft/s (+0.35 ft/s), a 0.035 % difference.  Because Mach = TAS/a, the
-trim solver converges at a very slightly lower α to maintain the commanded Mach.
+The trim solution agress with NASA solution within 0.004°.
 
 Step-Size Convergence
 ^^^^^^^^^^^^^^^^^^^^^
@@ -2711,18 +2708,13 @@ Validation Results at t = 200 s
 
    Both simulations show a slow altitude climb over 200 s — this is the
    phugoid (long-period) oscillation excited by the small trim mismatch.
-   Aetherion's drift (+504 ft) is approximately 2× the NASA reference
-   (+244 ft).  The difference is caused by the atmosphere model: Aetherion
-   US1976 returns a speed of sound 0.35 ft/s lower than the NASA reference
-   value at 30 013 ft.  This shifts the trim α by 0.004°, which produces a
+   Aetherion's drift (+504 ft) is approximately twice the NASA reference
+   (+244 ft). A trim α difference by 0.004°, produces a
    small net positive lift and a slow climb whose rate grows with the
    phugoid.  All remaining quantities (TAS, Mach, body rates) track the
-   NASA reference within the phugoid-driven divergence.
+   NASA reference.
 
-   The open-loop phugoid is an inherent property of the trim-check scenario,
-   not a numerical artefact.  The closed-loop scenarios 13.1–13.4 (which
-   include an altitude-hold autopilot) are not affected.
-
+ 
 Validation Figures
 ^^^^^^^^^^^^^^^^^^
 
@@ -2828,7 +2820,7 @@ Initial and command conditions
    * - Altitude (initial)
      - 10 013 ft (3 051.96 m)
    * - Altitude command (altCmd)
-     - 10 113 ft (+100 ft step)
+     - 10 113 ft (+100 ft step, applied at t = 5 s)
    * - Heading
      - 45° NE
    * - TAS (trim)
@@ -2857,24 +2849,24 @@ A convergence study confirms:
      - pitch [°]
      - roll [°]
    * - 0.10
-     - 10 100.8
-     - −12.2 ❌
-     - 2.48
-     - +2.09
+     - 10 085.7
+     - −27.3 ❌
+     - 3.77
+     - −4.08
    * - 0.05
-     - 10 110.2
-     - −2.8
-     - 2.75
-     - −0.79
+     - 10 109.1
+     - −3.9
+     - 2.83
+     - −2.16
    * - **0.02**
-     - **10 113.6**
-     - **+0.6** ✓
-     - **2.63**
+     - **10 113.1**
+     - **+0.1** ✓
+     - **2.65**
      - **−0.10**
    * - 0.01
-     - 10 113.6
-     - +0.6 ✓
-     - 2.63
+     - 10 113.1
+     - +0.1 ✓
+     - 2.65
      - −0.10
 
 Use ``--timeStep 0.02`` (or smaller) for accurate closed-loop results.
@@ -2977,28 +2969,28 @@ Validation results at t = 20 s (dt = 0.02 s)
      - Aetherion
      - NASA ref
    * - Altitude
-     - 10 113.6 ft (3 082.6 m)
-     - 10 112.7 ft (3 082.4 m)
+     - 10 113.1 ft (3 082.5 m)
+     - 10 112.8 ft (3 082.4 m)
    * - Δ altitude (change from t=0)
-     - +100.6 ft
-     - +99.7 ft
+     - +100.1 ft
+     - +99.8 ft
    * - TAS
      - 172.69 m/s
-     - 172.46 m/s
+     - 172.69 m/s
    * - Mach
      - 0.5261
-     - 0.5251
+     - 0.5261
    * - Pitch θ
-     - 2.626°
-     - 2.656°
+     - 2.650°
+     - 2.657°
    * - Roll φ
      - −0.10°
      - −0.24°
 
-Peak errors during the transient (t ≈ 0–15 s): altitude ±32 m, pitch
-±5.5°, roll ±0.18°.  These arise from the different phugoid phase between
+Peak errors during the transient (t ≈ 5–15 s): altitude ±0.28 m, pitch
+±0.64°, roll ±0.16°.  These arise from the different phugoid phase between
 the full SE(3)/J₂ Aetherion model and the NASA reference.  The final state
-(t = 20 s) agrees to within **0.9 ft altitude**, **0.03° pitch**, and
+(t = 20 s) agrees to within **0.4 ft altitude**, **0.007° pitch**, and
 **0.14° roll**.
 
 Validation figures

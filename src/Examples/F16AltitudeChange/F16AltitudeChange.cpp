@@ -68,7 +68,8 @@ namespace {
     // altitude so that deltaVequiv ≈ 0 at t=0 (avoids spurious throttle
     // correction from the mismatch between our rho and the DML constant).
     constexpr double kAltCmd_ft      = 10113.0;  // +100 ft altitude step
-    constexpr double kBaseChiCmd_deg =  45.0;    // hold NE heading
+    constexpr double kAltStepTime_s  =    5.0;  // NASA applies the step at t=5 s
+    constexpr double kBaseChiCmd_deg =  45.0;   // hold NE heading
 }
 
 namespace Aetherion::Examples::F16AltitudeChange {
@@ -84,7 +85,7 @@ void F16AltitudeChangeApplication::logStartupBanner() const
     AE_CORE_INFO("  Altitude : {:.0f} ft ({:.2f} m)", kAlt_ft, kAlt_m);
     AE_CORE_INFO("  Heading  : {:.1f} deg NE", kHeading_deg);
     AE_CORE_INFO("  TAS      : {:.2f} ft/s (335.15 KTAS)", kTAS_fps);
-    AE_CORE_INFO("  AltCmd   : {:.0f} ft  (+100 ft step)", kAltCmd_ft);
+    AE_CORE_INFO("  AltCmd   : {:.0f} ft  (+100 ft step at t={:.0f} s)", kAltCmd_ft, kAltStepTime_s);
     AE_CORE_INFO("=======================================================");
 }
 
@@ -177,12 +178,15 @@ void F16AltitudeChangeApplication::prepareSimulation() const
 
     F16AltitudeChangeSimulator::AutopilotCmds cmds;
     cmds.altCmd_ft      = kAltCmd_ft;
+    cmds.altStepTime_s  = kAltStepTime_s;
+    cmds.initialAltCmd_ft = kAlt_ft;       // hold trim altitude before the step
     cmds.keasCmd_kt     = keas_kt;
     cmds.baseChiCmd_deg = kBaseChiCmd_deg;
     cmds.latOffset_ft   = 0.0;
 
     AE_CORE_INFO("Autopilot commands:");
-    AE_CORE_INFO("  altCmd   = {:.0f} ft", cmds.altCmd_ft);
+    AE_CORE_INFO("  altCmd   = {:.0f} ft  (step at t={:.0f} s, holding {:.0f} ft before)",
+                 cmds.altCmd_ft, cmds.altStepTime_s, cmds.initialAltCmd_ft);
     AE_CORE_INFO("  keasCmd  = {:.4f} kt  (computed from US1976 atm at {:.0f} ft)",
                  keas_kt, kAlt_ft);
     AE_CORE_INFO("  chiCmd   = {:.1f} deg", cmds.baseChiCmd_deg);

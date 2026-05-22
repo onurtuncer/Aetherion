@@ -55,6 +55,13 @@ struct F16AltitudeChangeCmds {
     double keasCmd_kt        { 287.8088596053291 };   ///< Commanded KEAS [kt]
     double baseChiCmd_deg    {  45.0  };              ///< Commanded course [deg, +CW from N]
     double latOffset_ft      {   0.0  };              ///< Lateral offset from course [ft]
+    /// Time [s] at which altCmd_ft is applied.  Before this time the
+    /// controller receives initialAltCmd_ft instead, matching the NASA
+    /// reference implementation that holds the trim altitude until the step.
+    /// Default 0.0 = apply immediately (correct for Scenarios 13.2–13.4).
+    double altStepTime_s     {   0.0  };
+    double initialAltCmd_ft  { 10013.0 };             ///< Altitude held before altStepTime_s [ft]
+
     /// Time [s] at which baseChiCmd_deg is applied.  Before this time the
     /// controller receives initialChiCmd_deg instead, matching the NASA
     /// reference implementation that holds the trim heading until the step.
@@ -251,9 +258,12 @@ F16AltitudeChangeSimulator::extractFeedback() const noexcept
     // Modes: both on
     fb.sasOn          = 1.0;
     fb.apOn           = 1.0;
-    // Autopilot commands — chi step is held at initialChiCmd_deg until chiStepTime_s
-    fb.altCmd_ft      = m_cmds.altCmd_ft;
+    // Autopilot commands — alt step is held at initialAltCmd_ft until altStepTime_s
+    fb.altCmd_ft      = (time() >= m_cmds.altStepTime_s)
+                        ? m_cmds.altCmd_ft
+                        : m_cmds.initialAltCmd_ft;
     fb.keasCmd_kt     = m_cmds.keasCmd_kt;
+    // chi step is held at initialChiCmd_deg until chiStepTime_s
     fb.baseChiCmd_deg = (time() >= m_cmds.chiStepTime_s)
                         ? m_cmds.baseChiCmd_deg
                         : m_cmds.initialChiCmd_deg;
