@@ -3077,11 +3077,12 @@ Only the autopilot commands differ:
 
 * **Altitude command** — hold 10 013 ft (no altitude change).
 * **Airspeed command** — reduce KEAS from ≈ 287.98 kt (trim) to **277 kt**
-  (a −10 kt step at t = 0).
+  (a −10 kt step applied at t = 5 s, matching the NASA reference).
 * **Heading command** — hold 45° NE.
 
-The non-zero ``deltaVequiv`` at t = 0 drives the throttle LQR to reduce
-engine power and decelerate the aircraft to the commanded equivalent airspeed.
+Before t = 5 s the controller holds the trim KEAS so that ``deltaVequiv ≈ 0``.
+At t = 5 s the KEAS command steps to 277 kt; the resulting ``deltaVequiv``
+drives the throttle LQR to reduce engine power and decelerate the aircraft.
 The reused simulator class is ``F16AltitudeChangeSimulator``; no new C++ code
 is required.
 
@@ -3105,7 +3106,7 @@ Initial and command conditions
    * - KEAS (trim, initial)
      - ≈ 287.98 kt
    * - KEAS command (keasCmd)
-     - 277.0 kt (−10 kt step)
+     - 277.0 kt (−10 kt step, applied at t = 5 s)
    * - Mach (trim)
      - 0.525
    * - Simulation duration
@@ -3153,7 +3154,7 @@ Validation results at t = 20 s (dt = 0.02 s)
 
 The final KEAS converges to **277.02 kt** against the 277.0 kt command
 (0.02 kt error). Altitude holds to within **0.3 ft** of the initial value.
-The transient altitude excursion during deceleration (t ≈ 0–8 s) is
+The transient altitude excursion during deceleration (t ≈ 5–15 s) is
 ≤ 2.1 m, matching the NASA reference closely.
 
 Validation figures

@@ -9,7 +9,7 @@
 // F16AirspeedChangeApplication.h
 //
 // Application driver for NASA TM-2015-218675 Atmospheric Scenario 13.2:
-// F-16 subsonic airspeed change (−10 kt KEAS step at t = 0).
+// F-16 subsonic airspeed change (−10 kt KEAS step at t = 5 s).
 //
 // Reuses F16AltitudeChangeSimulator unchanged — the only difference from
 // Scenario 13.1 is the autopilot commands:

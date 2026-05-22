@@ -62,6 +62,13 @@ struct F16AltitudeChangeCmds {
     double altStepTime_s     {   0.0  };
     double initialAltCmd_ft  { 10013.0 };             ///< Altitude held before altStepTime_s [ft]
 
+    /// Time [s] at which keasCmd_kt is applied.  Before this time the
+    /// controller receives initialKeasCmd_kt instead, matching the NASA
+    /// reference implementation that holds the trim KEAS until the step.
+    /// Default 0.0 = apply immediately (correct for Scenarios 13.1, 13.3–13.4).
+    double keasStepTime_s    {   0.0  };
+    double initialKeasCmd_kt { 287.0  };              ///< KEAS held before keasStepTime_s [kt]
+
     /// Time [s] at which baseChiCmd_deg is applied.  Before this time the
     /// controller receives initialChiCmd_deg instead, matching the NASA
     /// reference implementation that holds the trim heading until the step.
@@ -262,7 +269,9 @@ F16AltitudeChangeSimulator::extractFeedback() const noexcept
     fb.altCmd_ft      = (time() >= m_cmds.altStepTime_s)
                         ? m_cmds.altCmd_ft
                         : m_cmds.initialAltCmd_ft;
-    fb.keasCmd_kt     = m_cmds.keasCmd_kt;
+    fb.keasCmd_kt     = (time() >= m_cmds.keasStepTime_s)
+                        ? m_cmds.keasCmd_kt
+                        : m_cmds.initialKeasCmd_kt;
     // chi step is held at initialChiCmd_deg until chiStepTime_s
     fb.baseChiCmd_deg = (time() >= m_cmds.chiStepTime_s)
                         ? m_cmds.baseChiCmd_deg

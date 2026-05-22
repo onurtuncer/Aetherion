@@ -67,10 +67,12 @@ namespace {
 
     // ── Scenario 13.2 autopilot commands ─────────────────────────────────────
     // Hold altitude at trim; reduce KEAS by ~10 kt (287.98 → 277 kt).
-    // The NASA reference converges to KEAS ≈ 277 kt at t = 20 s.
+    // The NASA reference applies the KEAS step at t=5 s and converges to
+    // KEAS ≈ 277 kt by t ≈ 10 s.
     constexpr double kAltCmd_ft      = 10013.0;   // hold initial altitude
     constexpr double kKeasCmd_kt     = 277.0;      // target KEAS [kt]
-    constexpr double kBaseChiCmd_deg =  45.0;      // hold NE heading
+    constexpr double kKeasStepTime_s =    5.0;    // NASA applies the step at t=5 s
+    constexpr double kBaseChiCmd_deg =  45.0;     // hold NE heading
 }
 
 namespace Aetherion::Examples::F16AirspeedChange {
@@ -88,7 +90,7 @@ void F16AirspeedChangeApplication::logStartupBanner() const
     AE_CORE_INFO("  Altitude : {:.0f} ft ({:.2f} m)", kAlt_ft, kAlt_m);
     AE_CORE_INFO("  Heading  : {:.1f} deg NE", kHeading_deg);
     AE_CORE_INFO("  TAS init : {:.2f} ft/s (335.15 KTAS)", kTAS_fps);
-    AE_CORE_INFO("  KeasCmd  : {:.1f} kt  (target)", kKeasCmd_kt);
+    AE_CORE_INFO("  KeasCmd  : {:.1f} kt  (target, step at t={:.0f} s)", kKeasCmd_kt, kKeasStepTime_s);
     AE_CORE_INFO("=======================================================");
 }
 
@@ -164,21 +166,27 @@ void F16AirspeedChangeApplication::prepareSimulation() const
     const RigidBody::StateD x0 = buildInitialState(cfg, theta0);
 
     // ── 4. Autopilot commands ─────────────────────────────────────────────────
-    // keasCmd is the TARGET airspeed (below trim).  We do NOT override it with
-    // the computed trim KEAS — the non-zero deltaVequiv is intentional: it drives
-    // the throttle LQR to reduce power and decelerate to the commanded speed.
+    // Before t=kKeasStepTime_s the controller holds the trim KEAS so that
+    // deltaVequiv ≈ 0.  At t=kKeasStepTime_s the KEAS command steps to
+    // kKeasCmd_kt, driving the throttle LQR to decelerate to the target.
+    const auto atm_trim = Environment::US1976Atmosphere(kAlt_m);
+    constexpr double kRhoSL_kg_m3 = 1.225;
+    constexpr double kKt_mps      = 0.5144444;
+    const double tas_mps = kVelocity_mps * std::sqrt(2.0);
+    const double keas_trim_kt = (tas_mps / kKt_mps) * std::sqrt(atm_trim.rho / kRhoSL_kg_m3);
+
     Sim::AutopilotCmds cmds;
-    cmds.altCmd_ft      = kAltCmd_ft;
-    cmds.keasCmd_kt     = kKeasCmd_kt;
-    cmds.baseChiCmd_deg = kBaseChiCmd_deg;
-    cmds.latOffset_ft   = 0.0;
+    cmds.altCmd_ft        = kAltCmd_ft;
+    cmds.keasCmd_kt       = kKeasCmd_kt;
+    cmds.keasStepTime_s   = kKeasStepTime_s;
+    cmds.initialKeasCmd_kt = keas_trim_kt;          // hold trim KEAS before the step
+    cmds.baseChiCmd_deg   = kBaseChiCmd_deg;
+    cmds.latOffset_ft     = 0.0;
 
     AE_CORE_INFO("Autopilot commands:");
     AE_CORE_INFO("  altCmd   = {:.0f} ft  (hold)", cmds.altCmd_ft);
-    AE_CORE_INFO("  keasCmd  = {:.1f} kt  (target, trim = {:.2f} kt)",
-                 cmds.keasCmd_kt,
-                 (kVelocity_mps * std::sqrt(2.0) / 0.5144444) *
-                     std::sqrt(Environment::US1976Atmosphere(kAlt_m).rho / 1.225));
+    AE_CORE_INFO("  keasCmd  = {:.1f} kt  (step at t={:.0f} s, holding {:.2f} kt before)",
+                 cmds.keasCmd_kt, cmds.keasStepTime_s, cmds.initialKeasCmd_kt);
     AE_CORE_INFO("  chiCmd   = {:.1f} deg", cmds.baseChiCmd_deg);
 
     m_Simulator = constructSimulator(ip, trim, aero_model, prop_model, ctrl_model,
