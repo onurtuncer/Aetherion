@@ -3408,3 +3408,180 @@ Validation figures
 
    Scenario 13.3 atmosphere — temperature, density, pressure.
    Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+
+
+.. _f16-scenario-13p4:
+
+F-16 Subsonic Lateral Side Step (NASA TM-2015-218675 Atmospheric Scenario 13.4)
+--------------------------------------------------------------------------------
+
+Scenario overview
+^^^^^^^^^^^^^^^^^
+
+Starting from the same Kitty Hawk trim as Scenario 11, the F-16 executes a
+closed-loop **2 000 ft right-of-course lateral offset** driven by the NASA
+LQR SAS and lateral deviation autopilot defined in ``F16_control.dml``.
+
+The same two-loop GNC architecture and ``F16AltitudeChangeSimulator`` class are
+reused.  Only the autopilot commands differ:
+
+* **Altitude command** — hold 10 013 ft.
+* **Airspeed command** — hold trim KEAS throughout.
+* **Heading command** — hold 45° NE base course throughout.
+* **Lateral offset** — step from 0 ft to **2 000 ft right of the 45° NE
+  courseline** at **t = 20 s** (NASA TM-2015-218675 Check-case 13.4:
+  "At t = +20.0 sec, a 2 000-ft lateral offset was commanded to the right").
+
+The ``lateralDeviationError`` fed to the DML control law is computed
+dynamically at each integration step from the aircraft's geodetic position
+relative to the original 45° NE courseline, minus the commanded 2 000 ft
+offset (applied after t = 20 s).  This ensures the heading autopilot
+commands a return to the new parallel track rather than continuing to turn.
+The ``latStepTime_s`` / ``latStepOffset_ft`` fields in ``F16AltitudeChangeCmds``
+encode the step; the simulator recomputes ``latOffset_ft`` each step via
+the ``latStepOffset_ft != 0`` branch of ``extractFeedback()``.
+
+Initial and command conditions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30
+
+   * - Parameter
+     - Value
+   * - Location
+     - 36.019° N, 75.674° W (Kitty Hawk, NC)
+   * - Altitude (initial & commanded)
+     - 10 013 ft (3 051.96 m)
+   * - Heading command (base course)
+     - 45° NE (held throughout)
+   * - TAS (trim)
+     - 335.15 KTAS (172.4 m/s)
+   * - KEAS command
+     - computed from US1976 atmosphere at trim altitude (≈ 287.98 kt)
+   * - Mach (trim)
+     - 0.525
+   * - Lateral offset command
+     - 2 000 ft right of course (applied at t = 20 s)
+   * - Simulation duration
+     - 60 s
+
+Recommended run command
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   F16LateralSideStep --endTime 60 --timeStep 0.02 \
+                      --outputFileName f16_s13p4.csv
+
+The reference CSVs ``Atmos_13p4_sim_02/04/05.csv`` and the plot script
+``plot_f16_s13p4_nasa02.py`` are copied to the build directory post-build.
+
+Validation results at t = 60 s (dt = 0.02 s, lat step at t = 20 s)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 22 22
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - Altitude
+     - 10 013.5 ft (3 052.1 m)
+     - 10 013.1 ft (3 052.0 m)
+   * - TAS
+     - 172.42 m/s (335.16 kt)
+     - 172.42 m/s (335.16 kt)
+   * - Mach
+     - 0.5251
+     - 0.5251
+   * - Yaw ψ
+     - 45.28°
+     - 45.15°
+   * - Roll φ
+     - −0.74°
+     - −0.87°
+   * - Lateral deviation
+     - 1 980 ft
+     - —
+
+The aircraft returns to within **0.28°** of the base course heading at t = 60 s.
+Altitude holds to within **0.6 ft** of the commanded 10 013 ft throughout.
+Peak errors during the turn (t ≈ 20–45 s): yaw ±2.9°, roll ±14.2° — these
+arise from the different lateral-dynamics phugoid phase between the full
+SE(3)/J₂ Aetherion model and the NASA reference running at dt = 0.1 s.
+
+Validation figures
+^^^^^^^^^^^^^^^^^^
+
+.. figure:: _static/f16_s13p4/fig_overview.png
+   :width: 100%
+   :alt: Case 13.4 simulation overview
+
+   Scenario 13.4 simulation overview.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+.. figure:: _static/f16_s13p4/fig_lateral.png
+   :width: 100%
+   :alt: Case 13.4 lateral deviation response
+
+   Scenario 13.4 lateral deviation response — commanded 2 000 ft offset
+   (amber dotted), Aetherion (blue dashed), NASA ref (red).
+
+.. figure:: _static/f16_s13p4/fig_flight_envelope.png
+   :width: 100%
+   :alt: Case 13.4 flight envelope (altitude, TAS, Mach)
+
+   Scenario 13.4 flight envelope — altitude, TAS, Mach.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+.. figure:: _static/f16_s13p4/fig_attitude.png
+   :width: 100%
+   :alt: Case 13.4 Euler attitude angles
+
+   Scenario 13.4 Euler attitude angles — pitch, roll, yaw.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+.. figure:: _static/f16_s13p4/fig_body_rates.png
+   :width: 100%
+   :alt: Case 13.4 body angular rates
+
+   Scenario 13.4 body angular rates — roll, pitch, yaw rates.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+.. figure:: _static/f16_s13p4/fig_position.png
+   :width: 100%
+   :alt: Case 13.4 geodetic position
+
+   Scenario 13.4 geodetic position — altitude, latitude, longitude.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+.. figure:: _static/f16_s13p4/fig_ned_velocity.png
+   :width: 100%
+   :alt: Case 13.4 NED velocity components
+
+   Scenario 13.4 NED velocity components — North, East, Down.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+.. figure:: _static/f16_s13p4/fig_aero_forces.png
+   :width: 100%
+   :alt: Case 13.4 aerodynamic body forces
+
+   Scenario 13.4 aerodynamic body forces — X, Y, Z.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+.. figure:: _static/f16_s13p4/fig_aero_moments.png
+   :width: 100%
+   :alt: Case 13.4 aerodynamic body moments
+
+   Scenario 13.4 aerodynamic body moments — L, M, N.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+.. figure:: _static/f16_s13p4/fig_atmosphere.png
+   :width: 100%
+   :alt: Case 13.4 atmosphere
+
+   Scenario 13.4 atmosphere — temperature, density, pressure.
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
