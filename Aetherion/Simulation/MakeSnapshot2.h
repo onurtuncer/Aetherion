@@ -141,7 +141,14 @@ Snapshot2 MakeSnapshot2(
     const auto wrench = aero(g, s.nu_B, s.m, t);
 
     snap.aero_bodyMoment_Nm_L = wrench.f(0);
-    snap.aero_bodyMoment_Nm_M = wrench.f(1);
+    // Report pitch moment about the aerodynamic reference centre (25% MAC)
+    // so that it matches the NASA DML-model output convention.
+    // The wrench already carries M_CG = M_AC + xcg_from_ac * Fz for the EOM;
+    // here we undo the transfer term to recover M_AC for reporting.
+    if constexpr (requires { aero.xcg_from_ac_m; })
+        snap.aero_bodyMoment_Nm_M = wrench.f(1) - aero.xcg_from_ac_m * wrench.f(5);
+    else
+        snap.aero_bodyMoment_Nm_M = wrench.f(1);
     snap.aero_bodyMoment_Nm_N = wrench.f(2);
     snap.aero_bodyForce_N_X   = wrench.f(3);
     snap.aero_bodyForce_N_Y   = wrench.f(4);
