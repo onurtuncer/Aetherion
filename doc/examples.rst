@@ -3240,7 +3240,7 @@ Scenario overview
 ^^^^^^^^^^^^^^^^^
 
 Starting from the same Kitty Hawk trim as Scenario 11, the F-16 executes
-a closed-loop **+20° course step** (45° → 65° NE) driven by the NASA LQR SAS
+a closed-loop **+15° course step** (45° → 60° NE) driven by the NASA LQR SAS
 and heading-hold autopilot defined in ``F16_control.dml``.
 
 The same two-loop GNC architecture and ``F16AltitudeChangeSimulator`` class are
@@ -3249,16 +3249,16 @@ reused unchanged.  Only the autopilot commands differ:
 * **Altitude command** — hold 10 013 ft.
 * **Airspeed command** — hold trim KEAS (computed from US1976 atmosphere at
   the trim altitude so that ``deltaVequiv ≈ 0`` at t = 0).
-* **Heading command** — step from 45° to **65°** applied at **t = 15 s**
-  (NASA TM-2015-218675 §B-13.3 specifies the command is given 15 s into
-  the run, not at t = 0).  Before t = 15 s the controller holds the trim
-  heading of 45°.
+* **Heading command** — step from 45° to **60°** applied at **t = 15 s**
+  (NASA TM-2015-218675 Check-case 13.3: "At t = +15.0 sec, a 15° change in
+  commanded heading to the right was made").  Before t = 15 s the controller
+  holds the trim heading of 45°.
 
 The DML heading autopilot estimates the track angle as
 ``chiEst = beta + psi`` and computes
 ``phi_cmd = −10 × (chiEst − chiCmd)``.
-Applying the 20° step at t = 0 would immediately command
-``phi_cmd = +200°``, causing a violent initial roll that does not match the
+Applying the 15° step at t = 0 would immediately command
+``phi_cmd = +150°``, causing a violent initial roll that does not match the
 NASA reference.  The ``chiStepTime_s`` field in ``F16AltitudeChangeCmds``
 enforces the correct t = 15 s timing.
 
@@ -3282,7 +3282,7 @@ Initial and command conditions
    * - Heading (initial, held until t = 15 s)
      - 45° NE
    * - Heading command (baseChiCmd)
-     - 65° (+20° step at t = 15 s)
+     - 60° (+15° step at t = 15 s)
    * - TAS (trim)
      - 335.15 KTAS (172.4 m/s)
    * - KEAS command
@@ -3314,38 +3314,26 @@ Validation results at t = 30 s (dt = 0.02 s, chi step at t = 15 s)
      - Aetherion
      - NASA ref
    * - Altitude
-     - 10 013.5 ft (3 052.1 m)
+     - 10 013.8 ft (3 052.2 m)
      - 10 013.3 ft (3 052.0 m)
    * - TAS
      - 172.42 m/s (335.16 kt)
      - 172.42 m/s (335.16 kt)
    * - Mach
-     - 0.525072
+     - 0.525077
      - 0.525075
    * - Yaw ψ
-     - 64.74°
+     - 59.92°
      - 59.94°
    * - Pitch θ
-     - 2.634°
+     - 2.617°
      - 2.628°
    * - Roll φ
-     - +2.53°
+     - +0.82°
      - +0.64°
 
-.. note::
-
-   The chi step is applied at t = 15 s, not t = 0 (NASA TM-2015-218675
-   §B-13.3).  Aetherion enforces this via the ``chiStepTime_s`` field in
-   ``F16AltitudeChangeCmds``; the controller holds the 45° trim heading until
-   t = 15 s, matching the NASA reference initial straight-flight segment to
-   within 0.025° in yaw.
-
-   The remaining heading discrepancy at t = 30 s (64.74° vs 59.94°) is a
-   known integration-rate effect: Aetherion uses dt = 0.02 s (ZOH), the NASA
-   reference uses dt = 0.1 s.  Tighter sampling gives a more aggressive LQR
-   response and faster heading convergence.  TAS, Mach, and altitude agree
-   within 0.002 kt and 0.14 ft throughout — the flight-mechanics model is
-   correct; only the turn-rate differs due to the sampling-rate difference.
+The final yaw agrees to within **0.02°** of the NASA reference.
+TAS, Mach, and altitude match to within 0.002 kt and 0.5 ft throughout.
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^
@@ -3361,9 +3349,9 @@ Validation figures
    :width: 100%
    :alt: Case 13.3 heading response
 
-   Scenario 13.3 heading (yaw) response — commanded 65° (amber dotted),
-   Aetherion (blue dashed), NASA ref (red).  Aetherion settles to 65.01° by
-   t ≈ 22 s; NASA ref (dt = 0.1 s) reaches 59.94° at t = 30 s.
+   Scenario 13.3 heading (yaw) response — commanded 60° (amber dotted),
+   Aetherion (blue dashed), NASA ref (red).  Both settle to ≈ 59.9° at t = 30 s
+   (Aetherion 59.92°, NASA ref 59.94°).
 
 .. figure:: _static/f16_s13p3/fig_flight_envelope.png
    :width: 100%

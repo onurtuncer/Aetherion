@@ -9,7 +9,7 @@
 // F16HeadingChange.cpp  —  NASA TM-2015-218675 Atmospheric Scenario 13.3
 //
 // F-16 subsonic heading change: closed-loop LQR SAS + autopilot commands a
-// +20° course step (45° → 65°) from the Case-11 trim condition.
+// +15° course step (45° → 60°) from the Case-11 trim condition at t=15 s.
 //
 // Recommended step size: --timeStep 0.02  (LQR plant is stiff; dt=0.1 diverges)
 //
@@ -66,11 +66,13 @@ namespace {
     constexpr double kXcgFromAC_m  =  (35.0 - 25.0) / 100.0 * 11.32 * 0.3048;
 
     // ── Scenario 13.3 autopilot commands ─────────────────────────────────────
-    // Hold altitude and airspeed at trim; command a +20° course step at t=15 s.
-    // NASA TM-2015-218675 Table B-13.3: the chi step is applied at t = 15 s,
-    // not t = 0.  Before t = 15 s the controller holds the trim heading (45°).
+    // Hold altitude and airspeed at trim; command a +15° course step at t=15 s.
+    // NASA TM-2015-218675 Table B-13.3 / Check-case 13.3: "At t=+15.0 sec,
+    // a 15° change in commanded heading to the right was made."
+    // Initial heading 45°  →  target 60°.  Before t=15 s the controller
+    // holds the trim heading (45°).
     constexpr double kAltCmd_ft      = 10013.0;  // hold initial altitude
-    constexpr double kChiCmd_deg     =   65.0;   // target course (+20° from 45°)
+    constexpr double kChiCmd_deg     =   60.0;   // target course (+15° from 45°)
     constexpr double kChiStepTime_s  =   15.0;   // step applied at t = 15 s
 }
 
