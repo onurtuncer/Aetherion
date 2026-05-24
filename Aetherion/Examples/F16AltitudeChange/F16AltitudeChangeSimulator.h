@@ -84,6 +84,11 @@ struct F16AltitudeChangeCmds {
     double latStepTime_s     {   0.0  };              ///< When to apply lat step [s]
     double latStepOffset_ft  {   0.0  };              ///< Commanded lateral offset right of course [ft]
     double coursePsi_deg     {  45.0  };              ///< Reference course direction [deg CW from N]
+
+    /// Circumnavigator switch (Scenario 15 only).
+    /// When set to 1.0 the F16_gnc.dml circumnavigator is engaged; ownship
+    /// lat/lon are forwarded automatically from the current geodetic state.
+    double circlePoleSW      {   0.0  };              ///< 1.0 = enable north-pole circumnavigator
 };
 
 class F16AltitudeChangeSimulator
@@ -304,6 +309,11 @@ F16AltitudeChangeSimulator::extractFeedback() const noexcept
     fb.qb_rad_s       = q_rad_s;
     fb.rb_rad_s       = r_rad_s;
     // Trim values use struct defaults (match the DML initialValue constants)
+
+    // Circumnavigator inputs (F16_gnc.dml Scenario 15; zero / no-op for 13.x)
+    fb.ownshipN_deg = lat_rad * (180.0 / std::numbers::pi);
+    fb.ownshipE_deg = lon_rad * (180.0 / std::numbers::pi);
+    fb.circlePoleSW = m_cmds.circlePoleSW;
 
     return fb;
 }

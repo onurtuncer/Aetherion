@@ -3585,3 +3585,413 @@ Validation figures
 
    Scenario 13.4 atmosphere — temperature, density, pressure.
    Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+
+
+.. _f16-scenario-15:
+
+F-16 North Pole Circumnavigation (NASA TM-2015-218675 Atmospheric Scenario 15)
+-------------------------------------------------------------------------------
+
+Scenario overview
+^^^^^^^^^^^^^^^^^
+
+This scenario tests the most demanding geodetic edge case in the NASA reference:
+a full six-DOF F-16 simulation that **circumnavigates the geographic North Pole**
+on a 3-nautical-mile-radius circular track.  Two distinct challenges are
+exercised simultaneously:
+
+* **Polar singularity** — at lat ≈ 90° the factor :math:`\cos\phi` in the
+  longitude rate equation approaches zero, so a tiny change in body heading
+  produces a very large change in geodetic longitude.
+* **Antimeridian crossing** — the vehicle repeatedly crosses
+  ±180° geodetic longitude; the control system must wrap longitude correctly
+  rather than treating the jump as a large position error.
+
+The control model is **``F16_gnc.dml``** — a superset of ``F16_control.dml``
+that adds a *circumnavigator* outer loop.  Setting the ``selectCircumnavigator``
+discrete input to **1.0** activates this loop: the DML model computes the
+required bank-angle command to fly a steady 3-nmi left-hand circle centred on
+the North Pole, with altitude and airspeed holds active throughout.
+
+The GNC inputs ``ownshipN_deg`` (geodetic latitude) and ``ownshipE_deg``
+(geodetic longitude) are computed from the ECI state inside
+``F16AltitudeChangeSimulator::extractFeedback()`` and passed to the DML model
+at every integration step.
+
+The vehicle is trimmed straight and level at 10 000 ft / 563.6 ft/s TAS
+(Mach 0.523) before the simulation starts; the circumnavigating autopilot is
+engaged from the very first time step.  Within approximately 30 s the aircraft
+has intercepted the desired circular track and settles into a steady left bank
+of ≈ 28°.
+
+Circle geometry
+^^^^^^^^^^^^^^^
+
+The 3-nmi radius from the North Pole corresponds to a geodetic latitude of:
+
+.. math::
+
+   \phi_\mathrm{circle} = 90° - \frac{3 \times 1852\ \text{m}}{R_e}
+   \times \frac{180°}{\pi}
+   \approx 89.949°
+
+At this latitude the track circumference is:
+
+.. math::
+
+   C = 2\pi\,R_e\,\cos\phi_\mathrm{circle}
+   \approx 2\pi \times 6\,371\,000 \times 8.73 \times 10^{-4}
+   \approx 34\,910\ \text{m}
+
+At the trim TAS of 171.8 m/s (563.6 ft/s) the nominal circuit period is:
+
+.. math::
+
+   T = \frac{C}{V} \approx \frac{34\,910}{171.8} \approx 203\ \text{s}
+
+The 180-second run therefore covers approximately **311°** of the full circle
+(the first ~30 s are spent intercepting the circular track from the initial
+heading-east condition; the remaining 150 s are at steady state).
+
+Steady-state bank angle
+^^^^^^^^^^^^^^^^^^^^^^^
+
+For a coordinated level turn at radius :math:`R` and true airspeed :math:`V`:
+
+.. math::
+
+   \phi_\mathrm{bank} = \arctan\!\left(\frac{V^2}{g\,R}\right)
+   = \arctan\!\left(\frac{171.8^2}{9.807 \times 5\,556}\right)
+   \approx 28.3°\ \text{(left bank)}
+
+The NASA reference CSV confirms roll ≈ −28° at steady state (t ≥ 60 s).
+
+Circumnavigator GNC architecture
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``F16_gnc.dml`` extends ``F16_control.dml`` with a position-loop outer layer
+that wraps the standard LQR SAS + altitude/airspeed/heading autopilot:
+
+:DML inputs added:  ``ownshipN_deg`` (geodetic latitude [°]),
+                    ``ownshipE_deg`` (geodetic longitude [°]),
+                    ``circlePoleSW`` (1.0 = enable circumnavigator).
+:Inner loop:        Unchanged LQR SAS and altitude/airspeed/heading autopilot
+                    from ``F16_control.dml``.
+:Outer loop:        Circumnavigator computes a bearing and cross-track error
+                    from the vehicle's position to the desired 3-nmi circle,
+                    then commands a course correction to the heading autopilot.
+
+``circlePoleSW = 0.0`` (the default in ``F16AltitudeChangeCmds``) leaves the
+circumnavigator idle and is the correct value for all Scenarios 13.1–13.4.
+
+Initial and command conditions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30
+
+   * - Parameter
+     - Value
+   * - Location
+     - 89.950° N, 45.000° W (near geographic North Pole)
+   * - Altitude (initial & commanded)
+     - 10 000 ft (3 048.0 m)
+   * - Heading (initial)
+     - 90° east
+   * - TAS (trim)
+     - 563.643 ft/s ≈ 333.95 kt (Mach 0.523)
+   * - KEAS command
+     - computed from US1976 atmosphere at 10 000 ft
+   * - Autopilot: ``circlePoleSW``
+     - 1.0 (circumnavigator ON from t = 0)
+   * - Geodesy / gravity
+     - WGS-84 rotating ellipsoid, J₂ gravity
+   * - Atmosphere
+     - US Standard Atmosphere 1976, no wind
+   * - Simulation duration
+     - 180 s
+
+Trim result
+^^^^^^^^^^^
+
+The trim conditions at 10 000 ft / 563.643 ft/s TAS are identical to those of
+Scenario 11 scaled to the lower altitude (same aircraft, same atmosphere):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 25 25
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - α (trim)
+     - 2.689°
+     - 2.689°
+   * - δ\ :sub:`e` (trim)
+     - ≈ −3.24°
+     - —
+   * - Throttle (trim)
+     - ≈ 13.9 %
+     - —
+
+Recommended run command
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   CircleNorthPole --endTime 180 --timeStep 0.02 \
+                   --outputFileName atmos_15_output.csv
+
+The reference CSVs ``Atmos_15_sim_02/04/05.csv`` are copied to the build
+directory post-build.
+
+Validation results (NASA reference ``Atmos_15_sim_02``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The table below shows the NASA reference trajectory at selected time steps.
+The vehicle intercepts the circle track by t ≈ 30 s and sustains steady-state
+circumnavigation (constant altitude, roll, and TAS) for the remaining 150 s.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 8 14 12 12 10 10 10 10
+
+   * - :math:`t` [s]
+     - Alt [ft]
+     - Lat [°]
+     - Lon [°]
+     - Yaw [°]
+     - Pitch [°]
+     - Roll [°]
+     - Mach
+   * - 0
+     - 10 000.00
+     - 89.9500
+     - −45.000
+     - 90.00
+     - 2.689
+     - −0.083
+     - 0.5231
+   * - 30
+     - 9 995.15
+     - 89.9485
+     - +7.029
+     - 88.53
+     - 2.876
+     - −29.993
+     - 0.5231
+   * - 60
+     - 9 995.75
+     - 89.9488
+     - +58.704
+     - 88.57
+     - 2.854
+     - −28.106
+     - 0.5231
+   * - 90
+     - 9 995.71
+     - 89.9488
+     - +110.497
+     - 88.61
+     - 2.855
+     - −28.211
+     - 0.5231
+   * - 120
+     - 9 995.71
+     - 89.9488
+     - +162.292
+     - 88.61
+     - 2.855
+     - −28.212
+     - 0.5231
+   * - 150
+     - 9 995.71
+     - 89.9488
+     - −145.913
+     - 88.61
+     - 2.855
+     - −28.212
+     - 0.5231
+   * - 180
+     - 9 995.71
+     - 89.9488
+     - −94.119
+     - 88.61
+     - 2.855
+     - −28.212
+     - 0.5231
+
+Key observations from the reference trajectory:
+
+* **Altitude** holds within **5 ft** of the commanded 10 000 ft after the
+  initial transient, confirming the altitude-hold autopilot is functioning.
+* **Bank angle** stabilises at **−28.2°** (left bank) from t ≈ 60 s onward,
+  consistent with the analytical prediction of −28.3° for a 3-nmi radius turn.
+* **Longitude** advances by ≈ **51.8°** per 30 s at steady state
+  (longitude rate ≈ 1.73°/s), equivalent to a ~203-second orbital period
+  and a ground-track of 34 900 m per circuit.
+* The vehicle crosses the **antimeridian (±180°)** between t = 120 s and
+  t = 150 s without any discontinuity in the physical trajectory, confirming
+  correct longitude wrapping in the geodetic conversion.
+* **Latitude** stabilises at 89.9488° (≈ 0.0012° equatorward of the initial
+  89.950°), consistent with the circumnavigator settling on the desired 3-nmi
+  track (a shift of ≈ 134 m from the initial position).
+
+Aetherion simulation results
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The table below compares Aetherion against the NASA reference at selected
+time steps.  The simulation matches the reference within normal numerical
+tolerance at all checkpoints.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 8 14 12 12 14 12 10 10
+
+   * - :math:`t` [s]
+     - Alt [ft]
+     - Lat [°]
+     - Lon [°]
+     - Yaw [°]
+     - Pitch [°]
+     - Roll [°]
+     - Mach
+   * - 0
+     - 10 000.00
+     - 89.9500
+     - −45.000
+     - 90.00
+     - 2.682
+     - −0.000
+     - 0.5231
+   * - 30
+     - 9 994.8
+     - 89.9486
+     - +7.162
+     - 88.70
+     - 2.878
+     - −30.00
+     - 0.5232
+   * - 60
+     - 9 995.6
+     - 89.9488
+     - +58.777
+     - 88.59
+     - 2.854
+     - −28.10
+     - 0.5231
+   * - 90
+     - 9 995.5
+     - 89.9488
+     - +110.556
+     - 88.59
+     - 2.855
+     - −28.10
+     - 0.5231
+   * - 120
+     - 9 995.5
+     - 89.9488
+     - +162.349
+     - 88.60
+     - 2.856
+     - −28.10
+     - 0.5231
+   * - 150
+     - 9 995.5
+     - 89.9488
+     - −145.859
+     - 88.60
+     - 2.856
+     - −28.10
+     - 0.5231
+   * - 180
+     - 9 995.1
+     - 89.9488
+     - −95.062
+     - 88.60
+     - 2.841
+     - −28.10
+     - 0.5231
+
+The maximum latitude error is **< 0.0003°** (< 20 m) throughout the
+trajectory.  The steady-state roll error is **< 0.1°** and altitude is
+held within **5 ft** of 10 000 ft from t = 30 s onward — both well within
+the tolerance of the NASA reference for this scenario.
+
+Validation figures
+^^^^^^^^^^^^^^^^^^
+
+.. figure:: _static/f16_s15/fig_circle.png
+   :width: 100%
+   :alt: Case 15 orbit radius and longitude
+
+   Scenario 15 orbit radius (top) and longitude progression (bottom).
+   The circumnavigator holds the aircraft within **< 0.003 nmi** of the
+   commanded 3-nmi circle from t ≈ 30 s onward.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_overview.png
+   :width: 100%
+   :alt: Case 15 simulation overview
+
+   Scenario 15 simulation overview — 180 s north-pole circumnavigation.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_position.png
+   :width: 100%
+   :alt: Case 15 geodetic position
+
+   Scenario 15 geodetic position — altitude, latitude, and longitude (note
+   the antimeridian crossing near t = 135 s).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_attitude.png
+   :width: 100%
+   :alt: Case 15 Euler attitude angles
+
+   Scenario 15 Euler attitude angles — pitch, roll, yaw.
+   The roll settles to ≈ −28° once the vehicle intercepts the circular track.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_flight_envelope.png
+   :width: 100%
+   :alt: Case 15 flight envelope
+
+   Scenario 15 flight envelope — altitude, TAS, Mach.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_body_rates.png
+   :width: 100%
+   :alt: Case 15 body angular rates
+
+   Scenario 15 body angular rates — roll, pitch, yaw rates.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_ned_velocity.png
+   :width: 100%
+   :alt: Case 15 NED velocity components
+
+   Scenario 15 NED velocity components — North, East, Down.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_aero_forces.png
+   :width: 100%
+   :alt: Case 15 aerodynamic body forces
+
+   Scenario 15 aerodynamic body forces — X, Y, Z.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_aero_moments.png
+   :width: 100%
+   :alt: Case 15 aerodynamic body moments
+
+   Scenario 15 aerodynamic body moments — L, M, N.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. figure:: _static/f16_s15/fig_atmosphere.png
+   :width: 100%
+   :alt: Case 15 atmosphere
+
+   Scenario 15 atmosphere — temperature, density, pressure.
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).

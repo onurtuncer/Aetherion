@@ -482,7 +482,7 @@ DAVEMLAeroModel::evaluate(const Inputs<S>& in) const
     // Evaluate each step in topological order
     for (const auto& step : m_steps) {
         const auto& id = step.varID;
-        if (vars.count(id)) continue;  // already set (e.g. an input)
+        if (step.isInput && vars.count(id)) continue;  // keep DML-input values, recompute everything else
 
         // Table > MathML calc > const initialValue (table overrides default)
         if (step.isTable)                    vars[id] = interpolate<S>(m_tables.at(id), vars);
@@ -561,7 +561,7 @@ DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, S> vars) const
 {
     for (const auto& step : m_steps) {
         const auto& id = step.varID;
-        if (vars.count(id)) continue;
+        if (step.isInput && vars.count(id)) continue;  // keep DML-input values, recompute everything else
         // Table takes priority over initialValue (initialValue is just a default)
         if (step.isTable)                    vars[id] = interpolate<S>(m_tables.at(id), vars);
         else if (!step.mathmlXml.empty())    vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
