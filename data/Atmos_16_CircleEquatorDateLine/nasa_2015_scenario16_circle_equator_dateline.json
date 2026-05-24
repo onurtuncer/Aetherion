@@ -1,0 +1,33 @@
+{
+  "pose": {
+    "lat_deg":      0.0,
+    "lon_deg":    -179.95,
+    "azimuth_deg":  0.0,
+    "zenith_deg":  87.333,
+    "roll_deg":     0.0,
+    "alt_m":     3048.0
+  },
+  "velocityNED": {
+    "north_mps":  171.791,
+    "east_mps":     0.0,
+    "down_mps":     0.0
+  },
+  "bodyRates": {
+    "roll_rad_s":  0.0,
+    "pitch_rad_s": 0.0,
+    "yaw_rad_s":   0.0
+  },
+  "notes": {
+    "scenario":    "NASA TM-2015-218675 Atmospheric Scenario 16",
+    "description": "F-16 CCW circumnavigation of the equator/international date line intersection",
+    "circlePoleSW":  0,
+    "circleRadius_nmi": 3.0,
+    "center_lat_deg":   0.0,
+    "center_lon_deg":  180.0,
+    "heading_deg":      0.0,
+    "TAS_fps":        563.643,
+    "alt_ft":       10000.0,
+    "sim_duration_s": 180.0,
+    "recommended_dt_s": 0.02
+  }
+}
