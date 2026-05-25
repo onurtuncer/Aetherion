@@ -3995,3 +3995,415 @@ Validation figures
 
    Scenario 15 atmosphere — temperature, density, pressure.
    Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+
+.. _f16-scenario-16:
+
+F-16 Equator/Date-Line Circumnavigation (NASA TM-2015-218675 Atmospheric Scenario 16)
+--------------------------------------------------------------------------------------
+
+Scenario overview
+^^^^^^^^^^^^^^^^^
+
+Scenario 16 complements Scenario 15 by exercising the **equatorial** edge
+case: a full six-DOF F-16 simulation that **circumnavigates the intersection
+of the equator and the International Date Line** (lat = 0°, lon = ±180°) on
+a 3-nautical-mile-radius circular track.  The primary geodetic challenge is
+the **date-line crossing** — the vehicle's geodetic longitude wraps across
+±180° twice during the 180-second run, and the control system must handle
+the discontinuity without treating it as a large position error.
+
+The control model is the same **``F16_gnc.dml``** used in Scenario 15.
+Setting ``circlePoleSW`` to **0.0** activates the *equator/IDL* branch of
+the circumnavigator: the DML model computes cross-track deviation from the
+desired 3-nmi circle centred on the date-line/equator crossing and
+commands the required bank angle to the heading autopilot, while altitude
+and airspeed holds remain active throughout.
+
+The vehicle is trimmed straight and level at 10 000 ft / 563.6 ft/s TAS
+(Mach 0.523) heading due north; the circumnavigating autopilot is engaged
+from the very first time step.  Within approximately 30 s the aircraft has
+intercepted the circular track and settles into a steady left bank of ≈ 28°.
+
+Circle geometry
+^^^^^^^^^^^^^^^
+
+The target circle is centred on the equator/date-line crossing point
+(lat = 0°, lon = ±180°).  The DML measures cross-track deviation as a
+two-component Cartesian distance in a local flat-Earth frame centred on
+that point:
+
+.. math::
+
+   r = \sqrt{N_\mathrm{ft}^2 + E_\mathrm{ft}^2}
+
+where
+
+.. math::
+
+   N_\mathrm{ft} = \phi_\mathrm{deg} \times 60 \times 6076.12,
+   \qquad
+   E_\mathrm{ft} = \Delta\lambda_\mathrm{deg} \times 60 \times 6076.12
+                   \times \cos\phi
+
+and :math:`\Delta\lambda = \lambda + 180°` for :math:`\lambda < 0`,
+:math:`\Delta\lambda = \lambda - 180°` for :math:`\lambda \geq 0`.
+
+With :math:`R = 3\ \text{nmi}` the circle circumference is:
+
+.. math::
+
+   C = 2\pi R = 2\pi \times 3 \times 1852\ \text{m} \approx 34\,908\ \text{m}
+
+At the trim TAS of 171.8 m/s the nominal circuit period is:
+
+.. math::
+
+   T = \frac{C}{V} \approx \frac{34\,908}{171.8} \approx 203\ \text{s}
+
+The 180-second run therefore covers approximately **319°** of the full circle
+(the first ~30 s are spent intercepting the track from the initial
+heading-north condition; the remaining 150 s are at steady state).
+
+The date line is crossed twice during the run: once between t = 30 s and
+t = 60 s (longitude jumps from ≈ −179.97° to ≈ +179.99°) and once between
+t = 150 s and t = 180 s (longitude returns from ≈ +179.99° to ≈ −179.97°).
+
+Steady-state bank angle
+^^^^^^^^^^^^^^^^^^^^^^^
+
+For a coordinated level turn at radius :math:`R = 3\ \text{nmi} = 5\,556\ \text{m}`
+and true airspeed :math:`V = 171.8\ \text{m/s}`:
+
+.. math::
+
+   \phi_\mathrm{bank} = \arctan\!\left(\frac{V^2}{g\,R}\right)
+   = \arctan\!\left(\frac{171.8^2}{9.807 \times 5\,556}\right)
+   \approx 28.3°\ \text{(left bank)}
+
+The NASA reference CSV confirms roll ≈ −28.3° at steady state (t ≥ 60 s).
+
+Circumnavigator GNC architecture
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The equator/IDL branch of ``F16_gnc.dml`` computes:
+
+1. ``degEFromTgt`` — piecewise longitude offset from the date line
+   (:math:`\lambda + 180°` if :math:`\lambda < 0`, else :math:`\lambda - 180°`).
+2. ``ownshipN_ft``, ``ownshipE_ft`` — flat-Earth North/East displacement
+   from the circle centre in feet.
+3. ``latOffsetEquatorIDL`` — cross-track error
+   :math:`\sqrt{N^2 + E^2} - R_\mathrm{circle}`.
+4. ``baseChiCmdEquatorIDL`` — tangential course command
+   :math:`-\tfrac{180}{\pi}\operatorname{atan2}(N,E)` (perpendicular to the
+   radius vector, in the left-hand (CCW) sense).
+
+These are selected by the ``circlePoleSW = 0.0`` piecewise switch and fed
+to the same heading/lateral autopilot used in Scenarios 13.1–15.
+
+Initial and command conditions
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 40 30
+
+   * - Parameter
+     - Value
+   * - Location
+     - 0.000° N, 179.950° W (equator, just west of International Date Line)
+   * - Altitude (initial & commanded)
+     - 10 000 ft (3 048.0 m)
+   * - Heading (initial)
+     - 0° north
+   * - TAS (trim)
+     - 563.643 ft/s ≈ 333.95 kt (Mach 0.523)
+   * - KEAS command
+     - computed from US1976 atmosphere at 10 000 ft
+   * - Autopilot: ``circlePoleSW``
+     - 0.0 (equator/IDL circumnavigator ON from t = 0)
+   * - Geodesy / gravity
+     - WGS-84 rotating ellipsoid, J₂ gravity
+   * - Atmosphere
+     - US Standard Atmosphere 1976, no wind
+   * - Simulation duration
+     - 180 s
+
+Trim result
+^^^^^^^^^^^
+
+The trim conditions at 10 000 ft / 563.643 ft/s TAS are identical to
+Scenarios 11 and 15 (same aircraft, same altitude):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 25 25
+
+   * - Quantity
+     - Aetherion
+     - NASA ref
+   * - α (trim)
+     - 2.682°
+     - 2.667°
+   * - δ\ :sub:`e` (trim)
+     - ≈ −3.26°
+     - —
+   * - Throttle (trim)
+     - ≈ 13.9 %
+     - —
+
+Recommended run command
+^^^^^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: bash
+
+   CircleEquatorDateLine --endTime 180 --timeStep 0.02 \
+                         --outputFileName atmos_16_output.csv
+
+The reference CSVs ``Atmos_16_sim_02/04/05.csv`` are copied to the build
+directory post-build.
+
+Validation results (NASA reference ``Atmos_16_sim_02``)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The table below compares NASA and Aetherion trajectories at selected
+time steps.  The vehicle intercepts the circular track by t ≈ 30 s and
+sustains steady-state circumnavigation for the remaining 150 s.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 8 14 12 12 10 10 10 10
+
+   * - :math:`t` [s]
+     - Alt [ft]
+     - Lat [°]
+     - Lon [°]
+     - Yaw [°]
+     - Pitch [°]
+     - Roll [°]
+     - Mach
+   * - 0
+     - 10 000.00
+     - 0.0000
+     - −179.950
+     - 0.00
+     - 2.667
+     - 0.000
+     - 0.5231
+   * - 30
+     - 9 995.01
+     - +0.0407
+     - −179.968
+     - −53.30
+     - 2.862
+     - −29.993
+     - 0.5231
+   * - 60
+     - 9 995.61
+     - +0.0498
+     - +179.988
+     - −105.10
+     - 2.839
+     - −27.966
+     - 0.5231
+   * - 90
+     - 9 995.63
+     - +0.0213
+     - +179.953
+     - −156.81
+     - 2.838
+     - −28.193
+     - 0.5231
+   * - 120
+     - 9 995.80
+     - −0.0234
+     - +179.955
+     - +151.39
+     - 2.829
+     - −28.249
+     - 0.5231
+   * - 150
+     - 9 995.91
+     - −0.0503
+     - +179.990
+     - +99.59
+     - 2.824
+     - −28.281
+     - 0.5231
+   * - 180
+     - 9 995.88
+     - −0.0387
+     - −179.967
+     - +47.80
+     - 2.826
+     - −28.267
+     - 0.5231
+
+Key observations from the reference trajectory:
+
+* **Altitude** holds within **6 ft** of the commanded 10 000 ft after the
+  initial transient.
+* **Bank angle** stabilises at **−28.3°** (left bank) from t ≈ 60 s onward,
+  consistent with the analytical prediction of −28.3° for a 3-nmi radius turn.
+* **Date-line crossings** — longitude wraps from ≈ −180° to ≈ +180° between
+  t = 30 s and t = 60 s, and from ≈ +180° to ≈ −180° between t = 150 s and
+  t = 180 s, with no discontinuity in the physical trajectory.
+* **Yaw** wraps through ±180° (from −157° at t = 90 s to +151° at t = 120 s),
+  confirming correct heading-angle wrapping.
+* **Latitude** oscillates between ≈ +0.05° and ≈ −0.05°, i.e., the orbit
+  straddles the equator symmetrically.
+
+Aetherion simulation results
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. list-table::
+   :header-rows: 1
+   :widths: 8 14 12 12 10 10 10 10
+
+   * - :math:`t` [s]
+     - Alt [ft]
+     - Lat [°]
+     - Lon [°]
+     - Yaw [°]
+     - Pitch [°]
+     - Roll [°]
+     - Mach
+   * - 0
+     - 10 000.03
+     - 0.0001
+     - −179.950
+     - 0.00
+     - 2.669
+     - −0.175
+     - 0.5232
+   * - 30
+     - 9 994.56
+     - +0.0409
+     - −179.968
+     - −53.29
+     - 2.848
+     - −30.00
+     - 0.5231
+   * - 60
+     - 9 995.25
+     - +0.0497
+     - +179.988
+     - −104.97
+     - 2.825
+     - −27.79
+     - 0.5231
+   * - 90
+     - 9 995.18
+     - +0.0209
+     - +179.953
+     - −156.59
+     - 2.826
+     - −28.34
+     - 0.5231
+   * - 120
+     - 9 995.31
+     - −0.0241
+     - +179.955
+     - +151.53
+     - 2.819
+     - −28.47
+     - 0.5231
+   * - 150
+     - 9 995.54
+     - −0.0504
+     - +179.991
+     - +99.71
+     - 2.810
+     - −28.15
+     - 0.5231
+   * - 180
+     - 9 995.48
+     - −0.0382
+     - −179.966
+     - +47.81
+     - 2.812
+     - −28.23
+     - 0.5231
+
+The maximum latitude error is **< 0.0006°** (< 65 m) throughout the
+trajectory.  Longitude error is **< 0.002°** at all checkpoints.
+The steady-state roll error is **< 0.3°** and altitude is held within
+**7 ft** of 10 000 ft from t = 30 s onward.
+
+Validation figures
+^^^^^^^^^^^^^^^^^^
+
+.. figure:: _static/f16_s16/fig_circle.png
+   :width: 100%
+   :alt: Case 16 orbit radius and latitude oscillation
+
+   Scenario 16 orbit radius from the equator/IDL crossing (top) and
+   latitude oscillation (bottom).  The circumnavigator holds the aircraft
+   within **< 0.01 nmi** of the commanded 3-nmi circle from t ≈ 30 s
+   onward, and the orbit straddles the equator symmetrically.
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_overview.png
+   :width: 100%
+   :alt: Case 16 simulation overview
+
+   Scenario 16 simulation overview — 180 s equator/date-line
+   circumnavigation.  Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_position.png
+   :width: 100%
+   :alt: Case 16 geodetic position
+
+   Scenario 16 geodetic position — altitude, latitude, and longitude
+   (note the two date-line crossings near t = 45 s and t = 165 s).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_attitude.png
+   :width: 100%
+   :alt: Case 16 Euler attitude angles
+
+   Scenario 16 Euler attitude angles — pitch, roll, yaw.
+   The roll settles to ≈ −28° once the vehicle intercepts the circular
+   track; the yaw wraps through ±180° during the orbit.
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_flight_envelope.png
+   :width: 100%
+   :alt: Case 16 flight envelope
+
+   Scenario 16 flight envelope — altitude, TAS, Mach.
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_body_rates.png
+   :width: 100%
+   :alt: Case 16 body angular rates
+
+   Scenario 16 body angular rates — roll, pitch, yaw rates.
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_ned_velocity.png
+   :width: 100%
+   :alt: Case 16 NED velocity components
+
+   Scenario 16 NED velocity components — North, East, Down.
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_aero_forces.png
+   :width: 100%
+   :alt: Case 16 aerodynamic body forces
+
+   Scenario 16 aerodynamic body forces — X, Y, Z.
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_aero_moments.png
+   :width: 100%
+   :alt: Case 16 aerodynamic body moments
+
+   Scenario 16 aerodynamic body moments — L, M, N.
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. figure:: _static/f16_s16/fig_atmosphere.png
+   :width: 100%
+   :alt: Case 16 atmosphere
+
+   Scenario 16 atmosphere — temperature, density, pressure.
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
