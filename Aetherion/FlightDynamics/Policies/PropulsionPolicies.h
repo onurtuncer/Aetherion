@@ -54,4 +54,32 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(PropulsionPolicy<ConstantThrustPolicy>);
 
+    /// @brief Axial thrust along the body +x axis (forward/nose direction).
+    ///
+    /// Puts @f$F_x = \text{thrust\_N}@f$ in the body frame; all other wrench
+    /// components are zero.  Matches the @c bodyThrustForce_X convention used
+    /// by the NASA two-stage rocket DAVE-ML propulsion model.
+    ///
+    /// @c thrust_N is a mutable public member so closed-loop and staged-burn
+    /// simulators can update it between integration steps (zero-order hold).
+    ///
+    /// Satisfies @c PropulsionPolicy.
+    struct AxialThrustPolicy {
+        double thrust_N{ 0.0 }; ///< Thrust magnitude [N] (positive = forward along body +x).
+
+        template<class S>
+        Spatial::Wrench<S>
+            operator()(const ODE::RKMK::Lie::SE3<S>&,
+                const Eigen::Matrix<S, 6, 1>&,
+                S, S) const
+        {
+            Spatial::Wrench<S> w{};
+            w.f.setZero();
+            w.f(3) = S(thrust_N);  // Fx body (+x = nose / thrust axis)
+            return w;
+        }
+    };
+
+    static_assert(PropulsionPolicy<AxialThrustPolicy>);
+
 } // namespace Aetherion::FlightDynamics
