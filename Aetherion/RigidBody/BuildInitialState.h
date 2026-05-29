@@ -85,12 +85,6 @@
 
 namespace Aetherion::RigidBody {
 
-    // -------------------------------------------------------------------------
-    // Constants
-    // -------------------------------------------------------------------------
-    inline constexpr double kDegreesToRadians = std::numbers::pi / 180.0;
-    inline constexpr double kEarthRotationRate_rad_s = Environment::WGS84::kRotationRate_rad_s;
-
     // =========================================================================
     // BuildInitialStateVector
     //
@@ -106,14 +100,15 @@ namespace Aetherion::RigidBody {
             const double  theta_era_rad)
     {
         using namespace Coordinate;
+        constexpr double deg2rad = std::numbers::pi / 180.0;
 
         // ── Convert pose angles from degrees to radians ───────────────────────
-        const double lat_rad = cfg.pose.lat_deg * kDegreesToRadians;
-        const double lon_rad = cfg.pose.lon_deg * kDegreesToRadians;
-        const double h_m = cfg.pose.alt_m;
-        const double az_rad = cfg.pose.azimuth_deg * kDegreesToRadians;
-        const double zen_rad = cfg.pose.zenith_deg * kDegreesToRadians;
-        const double roll_rad = cfg.pose.roll_deg * kDegreesToRadians;
+        const double lat_rad  = cfg.pose.lat_deg     * deg2rad;
+        const double lon_rad  = cfg.pose.lon_deg     * deg2rad;
+        const double h_m      = cfg.pose.alt_m;
+        const double az_rad   = cfg.pose.azimuth_deg * deg2rad;
+        const double zen_rad  = cfg.pose.zenith_deg  * deg2rad;
+        const double roll_rad = cfg.pose.roll_deg    * deg2rad;
 
         // ── 1) ECI position: geodetic → ECEF → ECI ───────────────────────────
         //
@@ -179,8 +174,8 @@ namespace Aetherion::RigidBody {
 
         // Earth-surface velocity at this point in ECI (ω_E × r_eci):
         const Vec3<double> v_eci{
-            v_eci_kinematic[0] - kEarthRotationRate_rad_s * r_eci[1],
-            v_eci_kinematic[1] + kEarthRotationRate_rad_s * r_eci[0],
+            v_eci_kinematic[0] - Environment::WGS84::kRotationRate_rad_s * r_eci[1],
+            v_eci_kinematic[1] + Environment::WGS84::kRotationRate_rad_s * r_eci[0],
             v_eci_kinematic[2]
         };
 
@@ -207,7 +202,7 @@ namespace Aetherion::RigidBody {
             cfg.bodyRates.roll_rad_s,
             cfg.bodyRates.pitch_rad_s,
             cfg.bodyRates.yaw_rad_s);
-        const Eigen::Vector3d omega_E_eci(0.0, 0.0, kEarthRotationRate_rad_s);
+        const Eigen::Vector3d omega_E_eci(0.0, 0.0, Environment::WGS84::kRotationRate_rad_s);
         const Eigen::Vector3d omega_B_eci =
             omega_B_ecef + q_EB_eigen.conjugate() * omega_E_eci;
 

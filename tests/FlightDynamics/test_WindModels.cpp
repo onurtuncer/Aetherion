@@ -9,8 +9,8 @@
 // test_WindModels.cpp
 //
 // Catch2 tests for:
-//   FlightDynamics/WindModels.h  (ZeroWind, ConstantECEFWind,
-//                                 PowerLawWindShear, GeodesicCallbackWind)
+//   Environment/WindModels.h  (ZeroWind, ConstantECEFWind,
+//                              LinearWindShear, GeodesicCallbackWind)
 //   FlightDynamics/Policies/AeroPolicies.h  (WindAwareDragPolicy)
 // ------------------------------------------------------------------------------
 
@@ -21,15 +21,15 @@
 #include <cppad/cppad.hpp>
 #include <cmath>
 
-#include <Aetherion/FlightDynamics/WindModels.h>
+#include <Aetherion/Environment/WindModels.h>
 #include <Aetherion/FlightDynamics/GeodesicCallbackWind.h>
 #include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
 
 // Verify all wind models are registered
-static_assert(Aetherion::FlightDynamics::is_wind_model_v<Aetherion::FlightDynamics::ZeroWind>);
-static_assert(Aetherion::FlightDynamics::is_wind_model_v<Aetherion::FlightDynamics::ConstantECEFWind>);
-static_assert(Aetherion::FlightDynamics::is_wind_model_v<Aetherion::FlightDynamics::PowerLawWindShear>);
-static_assert(Aetherion::FlightDynamics::is_wind_model_v<Aetherion::FlightDynamics::GeodesicCallbackWind>);
+static_assert(Aetherion::Environment::is_wind_model_v<Aetherion::Environment::ZeroWind>);
+static_assert(Aetherion::Environment::is_wind_model_v<Aetherion::Environment::ConstantECEFWind>);
+static_assert(Aetherion::Environment::is_wind_model_v<Aetherion::Environment::LinearWindShear>);
+static_assert(Aetherion::Environment::is_wind_model_v<Aetherion::FlightDynamics::GeodesicCallbackWind>);
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/Atmosphere.h>
 
@@ -108,50 +108,6 @@ TEST_CASE("ConstantECEFWind: AD<double> returns same value as double",
     CHECK_THAT(CppAD::Value(v(0)), WithinAbs(5.0,  1e-14));
     CHECK_THAT(CppAD::Value(v(1)), WithinAbs(-3.0, 1e-14));
     CHECK_THAT(CppAD::Value(v(2)), WithinAbs(1.5,  1e-14));
-}
-
-// =============================================================================
-// PowerLawWindShear
-// =============================================================================
-
-TEST_CASE("PowerLawWindShear: at h_ref returns reference wind", "[wind][shear]")
-{
-    PowerLawWindShear w(0.0, 21.336, 0.0, kR - WGS84::kSemiMajorAxis_m, 4.0/3.0);
-    auto v = w.velocity_ecef(kR_ECI, 0.0);
-    CHECK_THAT(v(1), WithinAbs(21.336, 1e-10));
-}
-
-TEST_CASE("PowerLawWindShear: scales with altitude power law", "[wind][shear]")
-{
-    const double v_ref  = 21.336;
-    const double h_ref  = 9144.0;
-    const double n      = 4.0/3.0;
-    PowerLawWindShear w(0.0, v_ref, 0.0, h_ref, n);
-
-    const double h_test = 4966.0;
-    const Vec3d  r_test{ WGS84::kSemiMajorAxis_m + h_test, 0.0, 0.0 };
-    auto v = w.velocity_ecef(r_test, 0.0);
-
-    const double expected = v_ref * std::pow(h_test / h_ref, n);
-    CHECK_THAT(v(1), WithinAbs(expected, expected * 1e-9));
-}
-
-TEST_CASE("PowerLawWindShear: wind is zero at sea level (h→0)", "[wind][shear]")
-{
-    PowerLawWindShear w(0.0, 21.336, 0.0, 9144.0, 4.0/3.0);
-    const Vec3d r_sl{ WGS84::kSemiMajorAxis_m + 1.0, 0.0, 0.0 }; // near sea level
-    auto v = w.velocity_ecef(r_sl, 0.0);
-    CHECK(v.norm() < 0.1);  // very small near sea level
-}
-
-TEST_CASE("PowerLawWindShear: AD<double> evaluates without error", "[wind][shear][AD]")
-{
-    using AD = CppAD::AD<double>;
-    PowerLawWindShear w(0.0, 21.336, 0.0, 9144.0, 4.0/3.0);
-    Eigen::Matrix<AD,3,1> r{ AD(kR), AD(0), AD(0) };
-    auto v = w.velocity_ecef(r, AD(0.0));
-    CHECK(CppAD::Value(v(1)) > 0.0);
-    CHECK_THAT(CppAD::Value(v(1)), WithinAbs(21.336, 1e-6));
 }
 
 // =============================================================================
@@ -256,27 +212,6 @@ TEST_CASE("WindAwareDragPolicy<ConstantECEFWind>: TAS equals wind speed at t=0 f
     const double F   = w.f.tail<3>().norm();
     const double TAS = std::sqrt(2.0 * F / (rho * 0.1 * 0.018241));
     CHECK_THAT(TAS, WithinAbs(6.096, 6.096 * 1e-5));
-}
-
-TEST_CASE("WindAwareDragPolicy<PowerLawWindShear>: TAS at h_ref equals reference wind",
-    "[wind][policy]")
-{
-    // Co-rotating sphere at initial altitude. Wind at h_ref must equal v_ref.
-    const Vec3d v_surf = Mat3d::Identity().transpose() *
-        Vec3d(0, 0, kOmegaE).cross(kR_ECI);
-
-    SE3d g(Mat3d::Identity(), kR_ECI);
-    Vec6d nu;
-    nu << 0,0,0, v_surf(0), v_surf(1), v_surf(2);
-
-    auto shear = PowerLawWindShear::from_ned(0.0, 21.336, 0.0, 0.0, 0.0, 9144.0, 4.0/3.0);
-    WindAwareDragPolicy<PowerLawWindShear> wp{ 0.1, 0.018241, shear };
-    auto w = wp(g, nu, 14.59, 0.0);
-
-    const double rho = US1976Atmosphere(9144.0).rho;
-    const double F   = w.f.tail<3>().norm();
-    const double TAS = std::sqrt(2.0 * F / (rho * 0.1 * 0.018241));
-    CHECK_THAT(TAS, WithinAbs(21.336, 21.336 * 1e-4));
 }
 
 TEST_CASE("WindAwareDragPolicy<GeodesicCallbackWind>: callback-driven wind",

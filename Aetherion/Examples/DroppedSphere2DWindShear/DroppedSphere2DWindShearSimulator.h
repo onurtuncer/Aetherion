@@ -14,7 +14,7 @@
 #include <Aetherion/Simulation/Snapshot1.h>
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/RigidBody/AerodynamicParameters.h>
-#include <Aetherion/Environment/Wind.h>
+#include <Aetherion/Environment/WindModels.h>
 #include <Aetherion/ODE/RKMK/Core/NewtonOptions.h>
 
 namespace Aetherion::Examples::DroppedSphere2DWindShear {
@@ -87,7 +87,7 @@ private:
         const Environment::WindShear&           ws,
         double lat0_rad, double lon0_rad)
     {
-        auto lws = FlightDynamics::LinearWindShear::from_ned(
+        auto lws = Environment::LinearWindShear::from_ned(
             ws.gradient_N_mps_m, ws.gradient_E_mps_m,
             ws.intercept_N_mps,  ws.intercept_E_mps,
             lat0_rad, lon0_rad);

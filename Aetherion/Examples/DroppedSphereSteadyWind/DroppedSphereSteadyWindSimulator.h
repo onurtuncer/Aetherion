@@ -14,7 +14,7 @@
 #include <Aetherion/Simulation/Snapshot1.h>
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/RigidBody/AerodynamicParameters.h>
-#include <Aetherion/Environment/Wind.h>
+#include <Aetherion/Environment/WindModels.h>
 #include <Aetherion/ODE/RKMK/Core/NewtonOptions.h>
 #include <Eigen/Dense>
 

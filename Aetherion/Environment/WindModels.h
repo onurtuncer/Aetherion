@@ -8,10 +8,15 @@
 //
 // WindModels.h
 //
-// WindModel concept and built-in implementations for WindAwareDragPolicy.
+// Wind configuration structs and built-in functional wind models.
 //
-// INTERFACE CONTRACT
-// ──────────────────
+// CONFIGURATION STRUCTS (NED, serialisable)
+// ──────────────────────────────────────────
+//   ConstantWind    — ambient wind as NED components [m/s]; used in RigidBody::Config
+//   WindShear       — linear altitude wind-shear coefficients in NED; used in RigidBody::Config
+//
+// WIND MODEL INTERFACE CONTRACT
+// ──────────────────────────────
 // A WindModel must provide a single templated method:
 //
 //   template<class S>
@@ -22,21 +27,23 @@
 // The method returns the ambient wind velocity in the ECI frame [m/s].
 // It must be callable for both S = double and S = CppAD::AD<double>.
 //
-// BUILT-IN MODELS
-// ───────────────
+// BUILT-IN FUNCTIONAL MODELS
+// ───────────────────────────
 //   ZeroWind             — calm atmosphere, always (0,0,0)
 //   ConstantECEFWind     — uniform, time-invariant ECEF vector; from_ned() helper
-//   PowerLawWindShear    — v ∝ (h/h_ref)^n in fixed ECEF direction; from_ned() helper
-//   GeodesicCallbackWind — wraps any callable f(lat,lon,alt,t)→NED for weather
-//                          APIs; AD path uses a frozen ECEF cache updated during
-//                          each double evaluation.
+//   LinearWindShear      — v(h) = gradient × h + intercept in NED; from_ned() helper
+//
+// GeodesicCallbackWind (wraps any callable f(lat,lon,alt,t)→NED for weather APIs;
+//   AD path uses a frozen ECEF cache updated during each double evaluation) is
+//   defined in a separate header to avoid pulling in heavy geodetic dependencies:
+//     #include <Aetherion/FlightDynamics/GeodesicCallbackWind.h>
 //
 // EXTENDING
 // ─────────
-// Implement the templated velocity_ecef(r_eci, t) method.  For AD-safe operation
-// without external data (e.g. a lookup table), return an expression involving
-// r_eci and t using only AD-compatible operations (arithmetic, SquareRoot, etc.).
-// For external-data sources (weather APIs), see GeodesicCallbackWind.
+// Implement the templated velocity_ecef(r_eci, t) method.  Register with:
+//   namespace Aetherion::Environment {
+//     template<> struct is_wind_model<MyWind> : std::true_type {};
+//   }
 // ------------------------------------------------------------------------------
 
 #pragma once
@@ -45,24 +52,56 @@
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
 #include <type_traits>
+#include <cmath>
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::Environment {
 
 // ─────────────────────────────────────────────────────────────────────────────
-// WindModel concept
+// NED configuration structs (serialisable, used in RigidBody::Config)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// @brief Concept satisfied by any type providing ECI wind velocity.
+/// @brief Constant ambient wind velocity in the local NED frame.
 ///
-/// The implementor receives the full ECI position (allowing altitude- and
-/// position-dependent models) and the current simulation time.
+/// A positive East component means the wind blows eastward (meteorological
+/// "westerly").  All components default to zero (calm atmosphere).
+struct ConstantWind
+{
+    double north_mps{ 0.0 }; ///< Northward wind component [m/s].
+    double east_mps { 0.0 }; ///< Eastward  wind component [m/s].
+    double down_mps { 0.0 }; ///< Downward  wind component [m/s] (usually zero).
+};
+
+/// @brief Linear altitude wind-shear configuration (NED frame).
+///
+/// Wind at geocentric altitude h [m]:
+///   v_N(h) = gradient_N_mps_m * h + intercept_N_mps
+///   v_E(h) = gradient_E_mps_m * h + intercept_E_mps
+///
+/// NASA TM-2015-218675 Scenario 8:
+///   v_E(h) = 0.003 * h_m - 6.096  m/s   (= (0.003*h_ft - 20) ft/s from west)
+///   gradient_E_mps_m = 0.003
+///   intercept_E_mps  = -6.096
+///
+/// Use with WindAwareDragPolicy\<LinearWindShear\>.
+struct WindShear
+{
+    double gradient_N_mps_m { 0.0 }; ///< North wind altitude gradient [m/s per m].
+    double gradient_E_mps_m { 0.0 }; ///< East  wind altitude gradient [m/s per m].
+    double intercept_N_mps  { 0.0 }; ///< North wind at h = 0 m (sea level) [m/s].
+    double intercept_E_mps  { 0.0 }; ///< East  wind at h = 0 m (sea level) [m/s].
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WindModel concept tag
+// ─────────────────────────────────────────────────────────────────────────────
+
 /// @brief Tag struct: specialise to std::true_type for each WindModel type.
 ///
-/// All built-in models (ZeroWind, ConstantECEFWind, PowerLawWindShear,
+/// All built-in models (ZeroWind, ConstantECEFWind, LinearWindShear,
 /// GeodesicCallbackWind) are registered below.  User-defined wind models
 /// must also specialise this to enable use with WindAwareDragPolicy:
 ///
-///   namespace Aetherion::FlightDynamics {
+///   namespace Aetherion::Environment {
 ///     template\<\> struct is_wind_model\<MyWind\> : std::true_type {};
 ///   }
 template<class W> struct is_wind_model : std::false_type {};
@@ -180,7 +219,7 @@ struct LinearWindShear {
     Eigen::Matrix<S, 3, 1>
     velocity_ecef(const Eigen::Matrix<S,3,1>& r_eci, S /*t*/) const {
         // Geocentric altitude
-        const S h  = r_eci.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
+        const S h  = r_eci.norm() - S(WGS84::kSemiMajorAxis_m);
         // Linear NED wind at altitude h
         const S vN = S(grad_N) * h + S(int_N);
         const S vE = S(grad_E) * h + S(int_E);
@@ -194,48 +233,4 @@ struct LinearWindShear {
 };
 template<> struct is_wind_model<LinearWindShear> : std::true_type {};
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PowerLawWindShear  (kept for reference; not used by any current scenario)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// @brief Altitude-dependent wind: v(h) = v_ref × (h/h_ref)^n.
-/// @deprecated Use LinearWindShear for NASA Scenario 8.
-struct PowerLawWindShear {
-    double vx_ref   { 0.0 };
-    double vy_ref   { 0.0 };
-    double vz_ref   { 0.0 };
-    double h_ref_m  { 9144.0 };
-    double shear_exp{ 1.3333 };
-
-    PowerLawWindShear() = default;
-    PowerLawWindShear(double vx, double vy, double vz, double h_ref, double n)
-        : vx_ref(vx), vy_ref(vy), vz_ref(vz), h_ref_m(h_ref), shear_exp(n) {}
-
-    static PowerLawWindShear from_ned(
-        double north_mps, double east_mps, double down_mps,
-        double lat_rad, double lon_rad,
-        double h_ref_m, double shear_exp = 4.0/3.0)
-    {
-        auto c = ConstantECEFWind::from_ned(north_mps, east_mps, down_mps,
-                                            lat_rad, lon_rad);
-        return { c.vx, c.vy, c.vz, h_ref_m, shear_exp };
-    }
-
-    template<class S>
-    Eigen::Matrix<S, 3, 1>
-    velocity_ecef(const Eigen::Matrix<S,3,1>& r_eci, S /*t*/) const {
-        using Environment::detail::Power;
-        const S h     = r_eci.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
-        const S scale = Power(h / S(h_ref_m), S(shear_exp));
-        return Eigen::Matrix<S, 3, 1>{ S(vx_ref)*scale,
-                                       S(vy_ref)*scale,
-                                       S(vz_ref)*scale };
-    }
-};
-template<> struct is_wind_model<PowerLawWindShear> : std::true_type {};
-
-// GeodesicCallbackWind (wraps a position-aware callback for weather APIs) is
-// defined in a separate header to avoid pulling in heavy geodetic dependencies:
-//   #include <Aetherion/FlightDynamics/GeodesicCallbackWind.h>
-
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::Environment

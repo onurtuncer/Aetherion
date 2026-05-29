@@ -14,12 +14,12 @@
 #include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/PropulsionPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/MassPolicies.h>
-#include <Aetherion/FlightDynamics/WindModels.h>
+#include <Aetherion/Environment/WindModels.h>
 
 namespace Aetherion::Examples::DroppedSphere2DWindShear {
 
 /// @brief Wind-aware drag with a linear altitude shear profile.
-using ShearWindPolicy = FlightDynamics::WindAwareDragPolicy<FlightDynamics::LinearWindShear>;
+using ShearWindPolicy = FlightDynamics::WindAwareDragPolicy<Environment::LinearWindShear>;
 
 /// @brief Six-DoF VF for NASA Atmos-08: J2 gravity + altitude-shear wind drag.
 using DroppedSphere2DWindShearVF = RigidBody::VectorField<

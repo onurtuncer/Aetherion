@@ -29,7 +29,7 @@
 
 #pragma once
 
-#include <Aetherion/FlightDynamics/WindModels.h>
+#include <Aetherion/Environment/WindModels.h>
 #include <Aetherion/Coordinate/InertialToLocal.h>
 #include <Eigen/Dense>
 #include <cmath>
@@ -94,6 +94,8 @@ private:
     mutable Eigen::Vector3d m_cached_ecef{ 0.0, 0.0, 0.0 };
 };
 
-template<> struct is_wind_model<GeodesicCallbackWind> : std::true_type {};
-
 } // namespace Aetherion::FlightDynamics
+
+namespace Aetherion::Environment {
+    template<> struct is_wind_model<FlightDynamics::GeodesicCallbackWind> : std::true_type {};
+} // namespace Aetherion::Environment

@@ -13,7 +13,7 @@
 #include "AerodynamicParameters.h"
 #include "VelocityNED.h"
 #include "BodyRates.h"
-#include <Aetherion/Environment/Wind.h>
+#include <Aetherion/Environment/WindModels.h>
 
 namespace Aetherion::RigidBody {
 

@@ -14,7 +14,7 @@
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
-#include <Aetherion/FlightDynamics/WindModels.h>
+#include <Aetherion/Environment/WindModels.h>
 
 namespace Aetherion::FlightDynamics {
 
@@ -264,14 +264,14 @@ namespace Aetherion::FlightDynamics {
 /// The wind velocity is obtained from the WindModel via
 /// @c WindModel::velocity_ecef(h, t), which may depend on altitude, time,
 /// or any other quantity.  Concrete models: @c ZeroWind, @c ConstantECEFWind,
-/// @c PowerLawWindShear (all in WindModels.h).
+/// @c LinearWindShear (all in WindModels.h).
 ///
 /// @tparam Wind  A type satisfying the @c WindModel concept.
 /// Satisfies @c AeroPolicy.
     template<class Wind>
     struct WindAwareDragPolicy {
-        static_assert(is_wind_model_v<Wind>,
-            "Wind must be a registered WindModel (specialise is_wind_model<Wind>).");
+        static_assert(Environment::is_wind_model_v<Wind>,
+            "Wind must be a registered WindModel (specialise Environment::is_wind_model<Wind>).");
         double CD   { 0.0 }; ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].
         Wind   wind {};      ///< Wind model instance.
@@ -302,7 +302,7 @@ namespace Aetherion::FlightDynamics {
             // ── Wind in ECI from model (model receives full ECI position) ─
             // The model is responsible for ECEF→ECI rotation if it works in
             // ECEF internally.  For models that return an ECEF vector
-            // independently (ZeroWind, ConstantECEFWind, PowerLawWindShear),
+            // independently (ZeroWind, ConstantECEFWind, LinearWindShear),
             // velocity_ecef returns the ECEF wind and we rotate it here.
             // GeodesicCallbackWind returns ECI directly.
             //

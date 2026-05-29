@@ -28,25 +28,9 @@
 #include <Eigen/Dense>
 
 #include "Aetherion/Spatial/Wrench.h"
-#include "Aetherion/Environment/Gravity.h"
+#include "Aetherion/Environment/Gravity.h"   // also pulls in WGS84.h
 
 namespace Aetherion::RigidBody {
-
-    template <class Scalar>
-    using Vec3E = Eigen::Matrix<Scalar, 3, 1>;
-
-    // -------------------------------------------------------------------------
-    // Cross product (branch-free, Eigen-vector in/out)
-    // -------------------------------------------------------------------------
-    template <class Scalar>
-    inline Vec3E<Scalar> Cross(const Vec3E<Scalar>& a, const Vec3E<Scalar>& b)
-    {
-        return Vec3E<Scalar>{
-            a(1)* b(2) - a(2) * b(1),
-                a(2)* b(0) - a(0) * b(2),
-                a(0)* b(1) - a(1) * b(0)
-        };
-    }
 
     // =========================================================================
     // (1) Central gravity wrench applied at CG (no moment)
@@ -55,20 +39,17 @@ namespace Aetherion::RigidBody {
     inline Spatial::Wrench<Scalar> GravitationalWrenchAtCG(
         const Aetherion::Environment::Vec3<Scalar>& r_W,
         const Scalar& mass_kg,
-        const Scalar& mu = Scalar(3.986004418e14)) // [m^3/s^2]
+        const Scalar& mu = Scalar(Environment::WGS84::kGM_m3_s2))
     {
         Spatial::Wrench<Scalar> w{};
 
-        // g_W (std::array<Scalar,3>)
         const Aetherion::Environment::Vec3<Scalar> g_arr = Environment::CentralGravity(r_W, mu);
 
-        Vec3E<Scalar> g_W;
+        Eigen::Matrix<Scalar, 3, 1> g_W;
         g_W << g_arr[0], g_arr[1], g_arr[2];
 
-        const Vec3E<Scalar> F_W_N = mass_kg * g_W;
-
         w.f.template segment<3>(0).setZero(); // M_W = 0 at CG
-        w.f.template segment<3>(3) = F_W_N;   // F_W
+        w.f.template segment<3>(3) = mass_kg * g_W;
         return w;
     }
 
@@ -79,22 +60,19 @@ namespace Aetherion::RigidBody {
     inline Spatial::Wrench<Scalar> GravitationalWrenchJ2AtCG(
         const Aetherion::Environment::Vec3<Scalar>& r_W,
         const Scalar& mass_kg,
-        const Scalar& mu = Scalar(3.986004418e14),      // [m^3/s^2]
-        const Scalar& Re = Scalar(6378137.0),           // [m]
-        const Scalar& J2_coeff = Scalar(1.08262668e-3)) // [-]  <-- DO NOT name this "J2"
+        const Scalar& mu       = Scalar(Environment::WGS84::kGM_m3_s2),
+        const Scalar& Re       = Scalar(Environment::WGS84::kSemiMajorAxis_m),
+        const Scalar& J2_coeff = Scalar(Environment::WGS84::kJ2))
     {
         Spatial::Wrench<Scalar> w{};
 
-        // Fully qualify to avoid any accidental name hiding
         const Aetherion::Environment::Vec3<Scalar> g_arr = Aetherion::Environment::J2(r_W, mu, Re, J2_coeff);
 
-        Vec3E<Scalar> g_W;
+        Eigen::Matrix<Scalar, 3, 1> g_W;
         g_W << g_arr[0], g_arr[1], g_arr[2];
 
-        const Vec3E<Scalar> F_W_N = mass_kg * g_W;
-
         w.f.template segment<3>(0).setZero();
-        w.f.template segment<3>(3) = F_W_N;
+        w.f.template segment<3>(3) = mass_kg * g_W;
         return w;
     }
 
@@ -104,20 +82,20 @@ namespace Aetherion::RigidBody {
     // =========================================================================
     template <class Scalar>
     inline Spatial::Wrench<Scalar> GravitationalWrenchWithOffset(
-        const Aetherion::Environment::Vec3<Scalar>& r_W,
-        const Scalar& mass_kg,
-        const Vec3E<Scalar>& r_app_minus_cg_W_m,
-        const Scalar& mu = Scalar(3.986004418e14)) // [m^3/s^2]
+        const Aetherion::Environment::Vec3<Scalar>&  r_W,
+        const Scalar&                                mass_kg,
+        const Eigen::Matrix<Scalar, 3, 1>&           r_app_minus_cg_W_m,
+        const Scalar& mu = Scalar(Environment::WGS84::kGM_m3_s2))
     {
         Spatial::Wrench<Scalar> w{};
 
         const Environment::Vec3<Scalar> g_arr = Environment::CentralGravity(r_W, mu);
 
-        Vec3E<Scalar> g_W;
+        Eigen::Matrix<Scalar, 3, 1> g_W;
         g_W << g_arr[0], g_arr[1], g_arr[2];
 
-        const Vec3E<Scalar> F_W_N = mass_kg * g_W;
-        const Vec3E<Scalar> M_W_Nm = Cross(r_app_minus_cg_W_m, F_W_N);
+        const Eigen::Matrix<Scalar, 3, 1> F_W_N  = mass_kg * g_W;
+        const Eigen::Matrix<Scalar, 3, 1> M_W_Nm = r_app_minus_cg_W_m.cross(F_W_N);
 
         w.f.template segment<3>(0) = M_W_Nm;
         w.f.template segment<3>(3) = F_W_N;
