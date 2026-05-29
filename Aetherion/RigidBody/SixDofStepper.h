@@ -27,7 +27,7 @@
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/RigidBody/State.h>
 #include <Aetherion/RigidBody/VectorField.h>
-#include <Aetherion/FlightDynamics/KinematicsXiField.h>
+#include <Aetherion/RigidBody/KinematicsXiField.h>
 #include <Aetherion/ODE/RKMK/Concepts.h>
 #include <Aetherion/ODE/RKMK/Core/NewtonOptions.h>
 #include <Aetherion/ODE/RKMK/Integrators/RadauIIA_RKMK_ProductSE3.h>
@@ -75,7 +75,7 @@ namespace Aetherion::RigidBody {
     template<class VectorField>
         requires
     ODE::RKMK::KinematicsFieldOnSE3
-        <FlightDynamics::KinematicsXiField, double >&&
+        <KinematicsXiField, double >&&
         ODE::RKMK::VectorFieldOnProductSE3<VectorField, 7, double>
         class SixDoFStepper
     {
@@ -85,7 +85,7 @@ namespace Aetherion::RigidBody {
         // ------------------------------------------------------------------
         static constexpr int EuclidDim = RigidBody6DoFEuclidDim;
 
-        using KinematicsField = FlightDynamics::KinematicsXiField;
+        using KinematicsField = KinematicsXiField;
         using SE3d = ODE::RKMK::Lie::SE3<double>;
         using VecE = Eigen::Matrix<double, EuclidDim, 1>;
 

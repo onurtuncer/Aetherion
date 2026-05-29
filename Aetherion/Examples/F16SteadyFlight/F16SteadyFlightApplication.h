@@ -36,7 +36,7 @@
 #include <Aetherion/Simulation/Snapshot2.h>
 #include <Aetherion/Simulation/SnapshotTraits.h>
 #include <Aetherion/Simulation/MakeSnapshot1.h>
-#include <Aetherion/FlightDynamics/BuildInitialStateVector.h>
+#include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/Examples/F16SteadyFlight/F16SteadyFlightSimulator.h>
 
 #include <fstream>

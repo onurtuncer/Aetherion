@@ -183,7 +183,7 @@ four policy types.  Each policy must satisfy the corresponding C++20 concept:
 All policies satisfy their concept for both ``S = double`` and
 ``S = CppAD::AD<double>`` (enforced by ``static_assert`` at definition time).
 
-:cpp:class:`Aetherion::FlightDynamics::KinematicsXiField` implements the
+:cpp:class:`Aetherion::RigidBody::KinematicsXiField` implements the
 right-trivialised kinematic equation
 :math:`\dot{g} = g\,\hat{\xi}` as a stateless identity pass-through
 (the body-frame twist *is* the Lie-algebra velocity in this formulation).

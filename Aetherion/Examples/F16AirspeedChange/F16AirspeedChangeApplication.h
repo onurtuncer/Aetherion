@@ -24,7 +24,7 @@
 #include <Aetherion/Simulation/Log.h>
 #include <Aetherion/Simulation/Snapshot2.h>
 #include <Aetherion/Simulation/SnapshotTraits.h>
-#include <Aetherion/FlightDynamics/BuildInitialStateVector.h>
+#include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/Examples/F16AltitudeChange/F16AltitudeChangeSimulator.h>
 
 #include <fstream>

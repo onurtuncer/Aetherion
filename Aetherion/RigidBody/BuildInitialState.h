@@ -6,9 +6,9 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 //
-// BuildInitialStateVector.h
+// BuildInitialState.h
 //
-// Builds the 1×14 flat initial state vector from a SimulationConfig,
+// Builds the 1×14 flat initial state vector from a Config,
 // using the existing Aetherion coordinate transforms.
 //
 // State layout (StateLayout.h):
@@ -21,7 +21,7 @@
 //   10..12 IDX_V     v_B        Linear velocity in body frame           [m/s]
 //   13     IDX_M     m          Vehicle mass                            [kg]
 //
-// Inputs from SimulationConfig:
+// Inputs from Config:
 //   cfg.pose                       → PoseWGS84_NED  (deg, deg, m, deg, deg, deg)
 //   cfg.velocityNED                → VelocityNED    (m/s, NED)
 //   cfg.initialRotationAboutBodyAxes → roll/pitch/yaw rates [rad/s] in body
@@ -77,13 +77,13 @@
 // WGS-84 constants — single source of truth
 #include <Aetherion/Environment/WGS84.h>
 
-// FlightDynamics types
+// RigidBody types
 #include <Aetherion/RigidBody/Config.h>
 
 // State layout
 #include <Aetherion/RigidBody/StateLayout.h>
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
     // -------------------------------------------------------------------------
     // Constants
@@ -96,16 +96,15 @@ namespace Aetherion::FlightDynamics {
     //
     // Primary overload: caller supplies the Earth Rotation Angle (ERA) at t0.
     //
-    // @param cfg           Fully populated SimulationConfig
+    // @param cfg           Fully populated Config
     // @param theta_era_rad ERA at simulation start time t0  [rad]
     // @return              Eigen column vector of length 14
     // =========================================================================
-    inline Eigen::Matrix<double, RigidBody::StateLayout::N, 1>
+    inline Eigen::Matrix<double, StateLayout::N, 1>
         BuildInitialStateVector(
-            const RigidBody::Config& cfg,
-            const double            theta_era_rad)
+            const Config& cfg,
+            const double  theta_era_rad)
     {
-        using namespace RigidBody;
         using namespace Coordinate;
 
         // ── Convert pose angles from degrees to radians ───────────────────────
@@ -246,26 +245,4 @@ namespace Aetherion::FlightDynamics {
         return x0;
     }
 
-    // =========================================================================
-    // BuildInitialStateVector  (convenience overload)
-    //
-    // Computes ERA from cfg.simulation.startTime using the simple linear model:
-    //     θ_ERA = ω_E × t0
-    //
-    // Suitable when t0 is measured from an epoch at which the ECI and ECEF
-    // X-axes were aligned (e.g. a J2000-like epoch with zero GMST offset).
-    // For higher fidelity, use the primary overload and supply the correct ERA.
-    //
-    // @param cfg  Fully populated SimulationConfig
-    // @return     Eigen column vector of length 14
-    // =========================================================================
-  /*  inline Eigen::Matrix<double, RigidBody::StateLayout::N, 1>
-        BuildInitialStateVector(const SimulationConfig& cfg)
-    {
-        const double theta_era_rad =
-            kEarthRotationRate_rad_s * cfg.simulation.startTime;
-
-        return BuildInitialStateVector(cfg, theta_era_rad);
-    }*/
-
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody

@@ -38,7 +38,7 @@
 #include <Aetherion/Simulation/Snapshot1.h>
 #include <Aetherion/Simulation/MakeSnapshot1.h>
 #include <Aetherion/Serialization/LoadConfig.h>
-#include <Aetherion/FlightDynamics/BuildInitialStateVector.h>
+#include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/Examples/SphereWithAtmosphericDrag/SphereWithAtmosphericDragSimulator.h>
 
 #include <Aetherion/RigidBody/State.h>

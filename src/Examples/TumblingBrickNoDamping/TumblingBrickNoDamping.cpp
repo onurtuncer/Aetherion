@@ -25,7 +25,7 @@
 #include <Aetherion/Simulation/Snapshot1.h>
 #include <Aetherion/Simulation/MakeSnapshot1.h>
 #include <Aetherion/Serialization/LoadConfig.h>
-#include <Aetherion/FlightDynamics/BuildInitialStateVector.h>
+#include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/RigidBody/StateLayout.h>
 
 #include <cmath>
@@ -177,7 +177,7 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
         const RigidBody::Config& rb_cfg, double theta0)
     {
         AE_CORE_INFO("Building initial state vector (ECI frame)...");
-        const auto x0 = FlightDynamics::BuildInitialStateVector(rb_cfg, theta0);
+        const auto x0 = RigidBody::BuildInitialStateVector(rb_cfg, theta0);
 
         RigidBody::StateD state;
         using Layout = RigidBody::StateLayout;

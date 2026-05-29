@@ -26,7 +26,7 @@
 
 #include <Aetherion/Simulation/Log.h>
 #include <Aetherion/Simulation/SnapshotTraits.h>
-#include <Aetherion/FlightDynamics/BuildInitialStateVector.h>
+#include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/RigidBody/Config.h>
 #include <Aetherion/RigidBody/StateLayout.h>
@@ -150,7 +150,7 @@ void TwoStageRocketApplication::prepareSimulation() const
     cfg.bodyRates.yaw_rad_s   = kYawRate_rps;
     cfg.inertialParameters    = ip;
 
-    const auto x0_flat = FlightDynamics::BuildInitialStateVector(cfg, theta0);
+    const auto x0_flat = RigidBody::BuildInitialStateVector(cfg, theta0);
 
     RigidBody::StateD x0{};
     using Layout = RigidBody::StateLayout;

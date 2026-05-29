@@ -37,7 +37,7 @@
 #include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/PropulsionPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/MassPolicies.h>
-#include <Aetherion/FlightDynamics/KinematicsXiField.h>
+#include <Aetherion/RigidBody/KinematicsXiField.h>
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/Spatial/Adjoint.h>
 #include <Aetherion/Spatial/Twist.h>

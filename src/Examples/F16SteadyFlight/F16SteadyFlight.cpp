@@ -13,7 +13,7 @@
 
 #include <Aetherion/Simulation/Log.h>
 #include <Aetherion/Simulation/SnapshotTraits.h>
-#include <Aetherion/FlightDynamics/BuildInitialStateVector.h>
+#include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/FlightDynamics/Trim/TrimSolver.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
@@ -250,7 +250,7 @@ double F16SteadyFlightApplication::computeInitialERA(double t0) noexcept
 RigidBody::StateD F16SteadyFlightApplication::buildInitialState(
     const RigidBody::Config& cfg, double theta0)
 {
-    const auto x0 = FlightDynamics::BuildInitialStateVector(cfg, theta0);
+    const auto x0 = RigidBody::BuildInitialStateVector(cfg, theta0);
 
     RigidBody::StateD state;
     using Layout = RigidBody::StateLayout;

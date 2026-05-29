@@ -19,7 +19,7 @@
 // The call operator is templated on Scalar S (not the class) so that
 // StageResidualIRKProductSE3 can call it with S = CppAD::AD<double> when
 // building the Newton Jacobian tape, and with S = double at runtime.
-// This matches the pattern used by RigidBodyVectorField::operator().
+// This matches the pattern used by VectorField::operator().
 //
 // Convention (body frame, right-trivialised):
 //
@@ -32,7 +32,7 @@
 #include <cppad/cppad.hpp>
 #include <Eigen/Core>
 
-namespace Aetherion::FlightDynamics {
+namespace Aetherion::RigidBody {
 
 /// @brief Stateless kinematics field for a free rigid body (right-trivialised SE(3)).
 ///
@@ -73,4 +73,4 @@ namespace Aetherion::FlightDynamics {
     /// @brief Convenience alias — @c KinematicsXiField is already double-precision only.
     using KinematicsXiFieldd = KinematicsXiField;
 
-} // namespace Aetherion::FlightDynamics
+} // namespace Aetherion::RigidBody

@@ -12,7 +12,7 @@
 
 #include <Aetherion/ODE/RKMK/Concepts.h>
 #include <Aetherion/ODE/RKMK/Integrators/RadauIIA_RKMK_ProductSE3.h>
-#include <Aetherion/FlightDynamics/KinematicsXiField.h>
+#include <Aetherion/RigidBody/KinematicsXiField.h>
 #include <Aetherion/RigidBody/VectorField.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
 
@@ -24,7 +24,7 @@ using namespace Aetherion::ODE::RKMK;
 // ------------------------------------------------------------------------------
 // Concrete aliases -- all templates fully specialised with Scalar=double
 // ------------------------------------------------------------------------------
-using KFd = FlightDynamics::KinematicsXiField;
+using KFd = RigidBody::KinematicsXiField;
 using CVFd = RigidBody::VectorField<FlightDynamics::CentralGravityPolicy>;
 using Itgd = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<KFd, CVFd, 7>;
 

@@ -1,4 +1,4 @@
-ï»¿// ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
 // Project: Aetherion
 // Copyright(c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 //
@@ -21,7 +21,7 @@
 //                       full orthonormal frame, direct match to MakeLaunchStateECI
 //   [velocity]       -- body-frame velocity (v_B = R^T*v_eci) vs. independent reference,
 //                       speed preservation (via recovered v_eci = R*v_B)
-//   [earth_rotation] -- omegaÃ—r term: magnitude, direction, ERA independence,
+//   [earth_rotation] -- omega×r term: magnitude, direction, ERA independence,
 //                       equator/pole values, NED-round-trip, NASA Atmos-01 IC
 //   [corner]         -- equator/prime-meridian/theta=0, north pole, due-East heading,
 //                       LEO altitude, ERA=2pi identity, 360 deg roll identity
@@ -40,7 +40,7 @@
 #include <Eigen/Dense>
 
 // Unit under test
-#include <Aetherion/FlightDynamics/BuildInitialStateVector.h>
+#include <Aetherion/RigidBody/BuildInitialState.h>
 
 // Reference transforms (used for independent ground-truth computations)
 #include <Aetherion/Coordinate/LocalToInertial.h>
@@ -56,7 +56,7 @@
 using Catch::Approx;
 
 namespace AC = Aetherion::Coordinate;
-namespace FD = Aetherion::FlightDynamics;
+namespace RB = Aetherion::RigidBody;
 using SL = Aetherion::RigidBody::StateLayout;
 namespace RigidBody = Aetherion::RigidBody;
 
@@ -147,7 +147,7 @@ static double Dot3(const Vec3d& a, const Vec3d& b) {
     return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 }
 
-// Compute omega_E Ã— r_eci analytically (omega = [0,0,kOmegaE]).
+// Compute omega_E × r_eci analytically (omega = [0,0,kOmegaE]).
 static Vec3d OmegaCrossR(const Vec3d& r) {
     return Vec3d{ -kOmegaE * r[1], kOmegaE * r[0], 0.0 };
 }
@@ -159,7 +159,7 @@ static Vec3d OmegaCrossR(const Vec3d& r) {
 TEST_CASE("BuildInitialStateVector - output has exactly N=14 elements",
     "[structural][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(), 0.0);
     STATIC_REQUIRE(SL::N == 14);
     REQUIRE(x0.size() == 14);
     REQUIRE(x0.rows() == 14);
@@ -184,7 +184,7 @@ TEST_CASE("BuildInitialStateVector - every slot is finite for a representative c
         100.0, -50.0, 5.0,
         0.01, -0.02, 0.005,
         5000.0);
-    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
+    const auto x0 = RB::BuildInitialStateVector(cfg, 0.0);
 
     for (int i = 0; i < SL::N; ++i) {
         INFO("slot " << i << " = " << x0[i]);
@@ -200,7 +200,7 @@ TEST_CASE("BuildInitialStateVector - every slot is finite when all inputs are ze
         0.0, 0.0, 0.0,
         0.0, 0.0, 0.0,
         1.0);
-    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
+    const auto x0 = RB::BuildInitialStateVector(cfg, 0.0);
 
     for (int i = 0; i < SL::N; ++i) {
         INFO("slot " << i << " = " << x0[i]);
@@ -218,7 +218,7 @@ TEST_CASE("BuildInitialStateVector - mass slot equals cfg.inertialParameters.mas
 {
     const double m = 7654.321;
     const auto cfg = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, m);
-    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
+    const auto x0 = RB::BuildInitialStateVector(cfg, 0.0);
     REQUIRE(x0[SL::IDX_M] == Approx(m).epsilon(1e-15));
 }
 
@@ -229,8 +229,8 @@ TEST_CASE("BuildInitialStateVector - mass slot is independent of pose, velocity,
     const auto cfg_a = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, m);
     const auto cfg_b = MakeCfg(45, 90, 1000, 90, 45, 30, 10, 5, -2, 0.1, -0.05, 0.03, m);
 
-    const auto x_a = FD::BuildInitialStateVector(cfg_a, 0.3);
-    const auto x_b = FD::BuildInitialStateVector(cfg_b, 1.7);
+    const auto x_a = RB::BuildInitialStateVector(cfg_a, 0.3);
+    const auto x_b = RB::BuildInitialStateVector(cfg_b, 1.7);
 
     REQUIRE(x_a[SL::IDX_M] == Approx(m).epsilon(1e-15));
     REQUIRE(x_b[SL::IDX_M] == Approx(m).epsilon(1e-15));
@@ -248,7 +248,7 @@ TEST_CASE("BuildInitialStateVector - omega slots store ECI-relative body rates",
     const double roll_s = 0.12, pitch_s = -0.07, yaw_s = 0.03;
     const double theta = 0.5;
     const auto cfg = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, roll_s, pitch_s, yaw_s);
-    const auto x0 = FD::BuildInitialStateVector(cfg, theta);
+    const auto x0 = RB::BuildInitialStateVector(cfg, theta);
 
     const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
                                    x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
@@ -266,7 +266,7 @@ TEST_CASE("BuildInitialStateVector - zero ECEF body rates give omega equal to R^
 {
     // With zero ECEF body rates the ECI-relative body rate equals
     // R^T * omega_E_eci (Earth's spin expressed in the body frame).
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(), 0.0);
 
     const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
                                    x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
@@ -287,8 +287,8 @@ TEST_CASE("BuildInitialStateVector - omega slots satisfy ECI composition for any
     const auto cfg_a = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, roll_s, pitch_s, yaw_s);
     const auto cfg_b = MakeCfg(45, 30, 500, 60, 20, 15, 50, -20, 3, roll_s, pitch_s, yaw_s);
 
-    const auto x_a = FD::BuildInitialStateVector(cfg_a, 0.2);
-    const auto x_b = FD::BuildInitialStateVector(cfg_b, 1.0);
+    const auto x_a = RB::BuildInitialStateVector(cfg_a, 0.2);
+    const auto x_b = RB::BuildInitialStateVector(cfg_b, 1.0);
 
     const Eigen::Vector3d omega_B_ecef(roll_s, pitch_s, yaw_s);
     const Eigen::Vector3d omega_E_eci(0.0, 0.0, kOmegaE);
@@ -319,7 +319,7 @@ TEST_CASE("BuildInitialStateVector - ECI position matches independent GeodeticTo
     "[position][initial_state]")
 {
     const double lat_deg = 28.6, lon_deg = -80.6, alt_m = 200.0, theta = 0.75;
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(lat_deg, lon_deg, alt_m), theta);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(lat_deg, lon_deg, alt_m), theta);
 
     const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, alt_m);
     const Vec3d r_eci = AC::ECEFToECI(r_ecef, theta);
@@ -333,7 +333,7 @@ TEST_CASE("BuildInitialStateVector - ECI position magnitude equals WGS-84 radius
     "[position][initial_state]")
 {
     const double h = 1500.0;
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
     REQUIRE(x0.segment<3>(SL::IDX_P).norm() == Approx(kReq + h).epsilon(1e-8));
 }
 
@@ -342,8 +342,8 @@ TEST_CASE("BuildInitialStateVector - increasing altitude increases radial distan
 {
     const double theta = 0.4;
     const double dh = 1000.0;
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(45.0, 60.0, 0.0), theta);
-    const auto x1 = FD::BuildInitialStateVector(MakeCfg(45.0, 60.0, dh), theta);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(45.0, 60.0, 0.0), theta);
+    const auto x1 = RB::BuildInitialStateVector(MakeCfg(45.0, 60.0, dh), theta);
 
     const double dr = x1.segment<3>(SL::IDX_P).norm()
         - x0.segment<3>(SL::IDX_P).norm();
@@ -354,9 +354,9 @@ TEST_CASE("BuildInitialStateVector - position is independent of launch attitude 
     "[position][initial_state]")
 {
     const double theta = 0.6;
-    const auto x_a = FD::BuildInitialStateVector(MakeCfg(50, 10, 300, 0, 0, 0), theta);
-    const auto x_b = FD::BuildInitialStateVector(MakeCfg(50, 10, 300, 90, 45, 30), theta);
-    const auto x_c = FD::BuildInitialStateVector(MakeCfg(50, 10, 300, 180, 60, -20), theta);
+    const auto x_a = RB::BuildInitialStateVector(MakeCfg(50, 10, 300, 0, 0, 0), theta);
+    const auto x_b = RB::BuildInitialStateVector(MakeCfg(50, 10, 300, 90, 45, 30), theta);
+    const auto x_c = RB::BuildInitialStateVector(MakeCfg(50, 10, 300, 180, 60, -20), theta);
 
     for (int i = SL::IDX_P; i < SL::IDX_P + 3; ++i) {
         REQUIRE(x_a[i] == Approx(x_b[i]).margin(1e-6));
@@ -368,9 +368,9 @@ TEST_CASE("BuildInitialStateVector - position is independent of initial velocity
     "[position][initial_state]")
 {
     const double theta = 0.8;
-    const auto x_a = FD::BuildInitialStateVector(
+    const auto x_a = RB::BuildInitialStateVector(
         MakeCfg(30, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), theta);
-    const auto x_b = FD::BuildInitialStateVector(
+    const auto x_b = RB::BuildInitialStateVector(
         MakeCfg(30, 20, 0, 0, 0, 0, 100, 50, -10, 0.1, -0.05, 0.02), theta);
 
     for (int i = SL::IDX_P; i < SL::IDX_P + 3; ++i)
@@ -386,7 +386,7 @@ TEST_CASE("BuildInitialStateVector - quaternion is unit-normalised",
     "[attitude][initial_state]")
 {
     const auto cfg = MakeCfg(35.0, 139.0, 100.0, 30.0, 45.0, 20.0);
-    const auto x0 = FD::BuildInitialStateVector(cfg, 1.1);
+    const auto x0 = RB::BuildInitialStateVector(cfg, 1.1);
 
     const double norm = std::sqrt(
         x0[SL::IDX_Q + 0] * x0[SL::IDX_Q + 0] + x0[SL::IDX_Q + 1] * x0[SL::IDX_Q + 1] +
@@ -401,7 +401,7 @@ TEST_CASE("BuildInitialStateVector - body +x in ECI matches MakeLaunchStateECI d
     const double az_deg = 60.0, zen_deg = 20.0, roll_deg = 5.0;
     const double theta = 0.4;
 
-    const auto x0 = FD::BuildInitialStateVector(
+    const auto x0 = RB::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, alt_m, az_deg, zen_deg, roll_deg), theta);
 
     const Vec3d dir_eci = RotateVec(QuatFromState(x0), Vec3d{ 1.0, 0.0, 0.0 });
@@ -423,7 +423,7 @@ TEST_CASE("BuildInitialStateVector - attitude quaternion matches MakeLaunchState
     const double az_deg = 90.0, zen_deg = 15.0, roll_deg = 0.0;
     const double theta = 2.3;
 
-    const auto x0 = FD::BuildInitialStateVector(
+    const auto x0 = RB::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, alt_m, az_deg, zen_deg, roll_deg), theta);
 
     const auto launch = AC::MakeLaunchStateECI(
@@ -437,7 +437,7 @@ TEST_CASE("BuildInitialStateVector - attitude quaternion matches MakeLaunchState
 TEST_CASE("BuildInitialStateVector - body frame axes are orthonormal in ECI",
     "[attitude][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(
+    const auto x0 = RB::BuildInitialStateVector(
         MakeCfg(35.0, 139.0, 100.0, 30.0, 45.0, 20.0), 1.1);
     const Quatd q = QuatFromState(x0);
 
@@ -463,11 +463,11 @@ TEST_CASE("BuildInitialStateVector - body-frame velocity matches R^T*(NEDToECEF-
     "[velocity][initial_state]")
 {
     // IDX_V stores v_B = q_EB^{-1} * v_eci.
-    // Reference: v_eci = ECEFToECI(NEDToECEF(v_ned)) + omega_E Ã— r_eci.
+    // Reference: v_eci = ECEFToECI(NEDToECEF(v_ned)) + omega_E × r_eci.
     const double lat_deg = 45.0, lon_deg = 30.0, theta = 1.0;
     const double vN = 100.0, vE = -50.0, vD = 20.0;
 
-    const auto x0 = FD::BuildInitialStateVector(
+    const auto x0 = RB::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, 0.0, 0, 0, 0, vN, vE, vD), theta);
 
     const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, 0.0);
@@ -492,11 +492,11 @@ TEST_CASE("BuildInitialStateVector - body-frame velocity matches R^T*(NEDToECEF-
 TEST_CASE("BuildInitialStateVector - zero NED velocity gives body-frame velocity equal to R^T*(omega*r)",
     "[velocity][initial_state]")
 {
-    // When v_NED = 0, v_eci = omega_E Ã— r_eci (surface velocity only).
-    // IDX_V stores v_B = q_EB^{-1} * v_eci, so v_B = R^T * (omega_E Ã— r_eci).
+    // When v_NED = 0, v_eci = omega_E × r_eci (surface velocity only).
+    // IDX_V stores v_B = q_EB^{-1} * v_eci, so v_B = R^T * (omega_E × r_eci).
     const double lat_deg = 28.6, lon_deg = -80.6, theta = 0.5;
 
-    const auto x0 = FD::BuildInitialStateVector(
+    const auto x0 = RB::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, 0.0), theta);
 
     const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, 0.0);
@@ -518,12 +518,12 @@ TEST_CASE("BuildInitialStateVector - NED-to-ECI rotation preserves speed magnitu
 {
     // The NED->ECEF->ECI kinematic rotation is isometric, so the speed
     // contribution from v_NED is preserved.  The total ECI speed also includes
-    // omegaÃ—r, so we check the NED contribution specifically.
+    // omega×r, so we check the NED contribution specifically.
     // IDX_V stores v_B = R^T * v_eci; recover v_eci = R * v_B first.
     const double vN = 200.0, vE = -100.0, vD = 50.0;
     const double lat_deg = 60.0, lon_deg = -120.0, theta = 0.7;
 
-    const auto x0 = FD::BuildInitialStateVector(
+    const auto x0 = RB::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, 0.0, 0, 0, 0, vN, vE, vD), theta);
 
     const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, 0.0);
@@ -554,9 +554,9 @@ TEST_CASE("BuildInitialStateVector - ECI velocity is independent of launch attit
     const double theta = 0.9;
     const double vN = 50.0, vE = -30.0, vD = 10.0;
 
-    const auto x_a = FD::BuildInitialStateVector(
+    const auto x_a = RB::BuildInitialStateVector(
         MakeCfg(20, -40, 0, 0, 0, 0, vN, vE, vD), theta);
-    const auto x_b = FD::BuildInitialStateVector(
+    const auto x_b = RB::BuildInitialStateVector(
         MakeCfg(20, -40, 0, 90, 45, 15, vN, vE, vD), theta);
 
     const Eigen::Quaterniond q_EB_a(x_a[SL::IDX_Q+0], x_a[SL::IDX_Q+1],
@@ -575,7 +575,7 @@ TEST_CASE("BuildInitialStateVector - ECI velocity is independent of launch attit
 
 
 // =============================================================================
-// GROUP 7 - Earth rotation: omega_E Ã— r term
+// GROUP 7 - Earth rotation: omega_E × r term
 // =============================================================================
 
 TEST_CASE("BuildInitialStateVector - earth rotation: zero NED velocity gives non-zero ECI velocity",
@@ -584,7 +584,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: zero NED velocity gives non
     // A vehicle at rest on the surface cannot have zero inertial velocity.
     // This test guards against the regression of setting v_eci=[0,0,0] for v_NED=[0,0,0].
     for (const double theta : {0.0, 0.3, 1.0, kPi}) {
-        const auto x0 = FD::BuildInitialStateVector(MakeCfg(45.0, 90.0, 0.0), theta);
+        const auto x0 = RB::BuildInitialStateVector(MakeCfg(45.0, 90.0, 0.0), theta);
         const double v_eci_norm = x0.segment<3>(SL::IDX_V).norm();
         INFO("theta=" << theta << "  |v_eci|=" << v_eci_norm);
         REQUIRE(v_eci_norm > 100.0);  // must be of order omega_E * Re ~ 465 m/s
@@ -597,7 +597,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: equator surface speed equal
     // At the equator with v_NED = [0,0,0] and theta = 0, the ECI velocity
     // is purely in the +Y_ECI direction with magnitude omega_E * (Re + h).
     const double h = 9144.0;   // NASA Atmos-01 initial altitude
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
 
     // WGS-84: prime vertical radius of curvature N at equator equals kReq
     const double e2 = 2.0 * kFlat - kFlat * kFlat;
@@ -612,9 +612,9 @@ TEST_CASE("BuildInitialStateVector - earth rotation: equator surface speed equal
 TEST_CASE("BuildInitialStateVector - earth rotation: north pole surface speed is zero",
     "[earth_rotation][initial_state]")
 {
-    // At the pole r is parallel to omega, so omega Ã— r = 0.
-    // The surface velocity (and thus the omegaÃ—r term) must vanish.
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(90.0, 0.0, 0.0), 0.0);
+    // At the pole r is parallel to omega, so omega × r = 0.
+    // The surface velocity (and thus the omega×r term) must vanish.
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(90.0, 0.0, 0.0), 0.0);
 
     REQUIRE(x0[SL::IDX_V + 0] == Approx(0.0).margin(1e-6));
     REQUIRE(x0[SL::IDX_V + 1] == Approx(0.0).margin(1e-6));
@@ -624,7 +624,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: north pole surface speed is
 TEST_CASE("BuildInitialStateVector - earth rotation: omega*r is perpendicular to spin axis",
     "[earth_rotation][initial_state]")
 {
-    // omega Ã— r has no Z-component in ECI regardless of site or ERA.
+    // omega × r has no Z-component in ECI regardless of site or ERA.
     // IDX_V stores body-frame velocity; recover v_eci = q_EB * v_B to check.
     for (const auto& [lat, lon, theta] : std::initializer_list<std::tuple<double, double, double>>{
             {0.0,   0.0,  0.0},
@@ -632,7 +632,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: omega*r is perpendicular to
             {-33.9, 151.2, 1.2},
             {28.6, -80.6,  2.7} })
     {
-        const auto x0 = FD::BuildInitialStateVector(MakeCfg(lat, lon, 0.0), theta);
+        const auto x0 = RB::BuildInitialStateVector(MakeCfg(lat, lon, 0.0), theta);
         const Eigen::Quaterniond q_EB(x0[SL::IDX_Q+0], x0[SL::IDX_Q+1],
                                        x0[SL::IDX_Q+2], x0[SL::IDX_Q+3]);
         const Eigen::Vector3d v_eci =
@@ -646,12 +646,12 @@ TEST_CASE("BuildInitialStateVector - earth rotation: v_eci round-trips to zero N
     "[earth_rotation][initial_state]")
 {
     // The fundamental contract: if we convert the computed v_eci back to NED
-    // (using ECIToECEF then ECEFToNED then subtracting omegaÃ—r_ecef), we must
+    // (using ECIToECEF then ECEFToNED then subtracting omega×r_ecef), we must
     // recover the original v_NED = [0, 0, 0].
     // IDX_V stores body-frame velocity; recover v_eci = q_EB * v_B first.
     const double lat_deg = 28.6, lon_deg = -80.6, theta = 0.5;
 
-    const auto x0 = FD::BuildInitialStateVector(
+    const auto x0 = RB::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, 0.0), theta);
 
     // Recover v_eci from body-frame velocity stored at IDX_V
@@ -664,7 +664,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: v_eci round-trips to zero N
     // Convert v_eci back to ECEF frame
     const Vec3d v_ecef_frame = AC::ECIToECEF(v_eci_vec, theta);
 
-    // Subtract Earth surface velocity (omega Ã— r_ecef)
+    // Subtract Earth surface velocity (omega × r_ecef)
     const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, 0.0);
     const Vec3d omega_cross_r_ecef{
         -kOmegaE * r_ecef[1],
@@ -693,7 +693,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: non-zero NED velocity round
     const double lat_deg = 51.5, lon_deg = -0.1, theta = 1.3;
     const double vN = 150.0, vE = -75.0, vD = 10.0;
 
-    const auto x0 = FD::BuildInitialStateVector(
+    const auto x0 = RB::BuildInitialStateVector(
         MakeCfg(lat_deg, lon_deg, 500.0, 0, 0, 0, vN, vE, vD), theta);
 
     const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, 500.0);
@@ -723,12 +723,12 @@ TEST_CASE("BuildInitialStateVector - earth rotation: NASA Atmos-01 initial condi
 {
     // NASA TM-2015-218675 Atmos-01 check case:
     //   lat=0, lon=0, alt=30000 ft = 9144 m, v_NED=[0,0,0], theta=0
-    // Expected initial ECI velocity = omega_E Ã— r_eci ~ [0, 465.77, 0] m/s
+    // Expected initial ECI velocity = omega_E × r_eci ~ [0, 465.77, 0] m/s
     const double h = 9144.0;
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
 
     // At lat=0, lon=0, theta=0: r_eci = [Re+h, 0, 0]
-    // omega Ã— r = [0, omega_E*(Re+h), 0]
+    // omega × r = [0, omega_E*(Re+h), 0]
     const double e2 = 2.0 * kFlat - kFlat * kFlat;
     const double N = kReq / std::sqrt(1.0 - e2 * 0.0);
     const double expected_vy = kOmegaE * (N + h);
@@ -743,16 +743,16 @@ TEST_CASE("BuildInitialStateVector - earth rotation: omega*r magnitude scales wi
 {
     // The perpendicular distance from the spin axis is r * cos(geocentric_lat).
     // For WGS-84, the ECEF X-component at lon=0 is (N+h)*cos(lat), so
-    // |omega Ã— r_eci| ~ omega_E * (N+h) * cos(lat).  We verify the ratio
+    // |omega × r_eci| ~ omega_E * (N+h) * cos(lat).  We verify the ratio
     // between equator and 60 deg latitude.
     const double h = 0.0;
-    const auto x_eq = FD::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
-    const auto x_60 = FD::BuildInitialStateVector(MakeCfg(60.0, 0.0, h), 0.0);
+    const auto x_eq = RB::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
+    const auto x_60 = RB::BuildInitialStateVector(MakeCfg(60.0, 0.0, h), 0.0);
 
     const double v_eq = x_eq.segment<3>(SL::IDX_V).norm();
     const double v_60 = x_60.segment<3>(SL::IDX_V).norm();
 
-    // v_60 / v_eq â‰ˆ cos(60Â°) * (N_60+h) / (N_eq+h)
+    // v_60 / v_eq ˜ cos(60°) * (N_60+h) / (N_eq+h)
     // Both N values are close to kReq, so the ratio is dominated by cos(60)=0.5.
     REQUIRE(v_60 / v_eq == Approx(0.5).epsilon(0.01));
 }
@@ -765,7 +765,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: omega*r magnitude scales wi
 TEST_CASE("BuildInitialStateVector - equator/prime-meridian/theta=0: position on +X_ECI",
     "[corner][position][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, 0), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, 0), 0.0);
     REQUIRE(x0[SL::IDX_P + 0] == Approx(kReq).epsilon(1e-8));
     REQUIRE(x0[SL::IDX_P + 1] == Approx(0.0).margin(1.0));
     REQUIRE(x0[SL::IDX_P + 2] == Approx(0.0).margin(1.0));
@@ -774,7 +774,7 @@ TEST_CASE("BuildInitialStateVector - equator/prime-meridian/theta=0: position on
 TEST_CASE("BuildInitialStateVector - equator/prime-meridian/theta=0/zen=0: body +x points along +X_ECI",
     "[corner][attitude][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), 0.0);
     const Vec3d dir = RotateVec(QuatFromState(x0), Vec3d{ 1,0,0 });
 
     REQUIRE(dir[0] == Approx(1.0).margin(1e-12));
@@ -785,7 +785,7 @@ TEST_CASE("BuildInitialStateVector - equator/prime-meridian/theta=0/zen=0: body 
 TEST_CASE("BuildInitialStateVector - due-East heading at equator/prime-meridian: body +x aligns +Y_ECI",
     "[corner][attitude][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, 0, 90, 90, 0), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, 0, 90, 90, 0), 0.0);
     const Vec3d dir = RotateVec(QuatFromState(x0), Vec3d{ 1,0,0 });
 
     REQUIRE(dir[0] == Approx(0.0).margin(1e-12));
@@ -796,7 +796,7 @@ TEST_CASE("BuildInitialStateVector - due-East heading at equator/prime-meridian:
 TEST_CASE("BuildInitialStateVector - north pole: Z component equals WGS-84 polar radius",
     "[corner][position][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(90.0, 0.0, 0.0), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(90.0, 0.0, 0.0), 0.0);
     REQUIRE(x0[SL::IDX_P + 0] == Approx(0.0).margin(1.0));
     REQUIRE(x0[SL::IDX_P + 1] == Approx(0.0).margin(1.0));
     REQUIRE(x0[SL::IDX_P + 2] == Approx(kRpol).epsilon(1e-7));
@@ -806,7 +806,7 @@ TEST_CASE("BuildInitialStateVector - LEO altitude (400 km): radial distance corr
     "[corner][position][initial_state]")
 {
     const double h = 400'000.0;
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, h), 0.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, h), 0.0);
     REQUIRE(x0.segment<3>(SL::IDX_P).norm() == Approx(kReq + h).epsilon(1e-7));
 }
 
@@ -814,8 +814,8 @@ TEST_CASE("BuildInitialStateVector - ERA=2pi gives identical result to ERA=0",
     "[corner][era][initial_state]")
 {
     const auto cfg = MakeCfg(35.0, 45.0, 500.0, 30.0, 20.0, 5.0, 10, -5, 1);
-    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
-    const auto x2pi = FD::BuildInitialStateVector(cfg, 2.0 * kPi);
+    const auto x0 = RB::BuildInitialStateVector(cfg, 0.0);
+    const auto x2pi = RB::BuildInitialStateVector(cfg, 2.0 * kPi);
 
     for (int i = 0; i < SL::N; ++i)
         REQUIRE(x0[i] == Approx(x2pi[i]).margin(1e-7));
@@ -827,8 +827,8 @@ TEST_CASE("BuildInitialStateVector - roll=360 deg gives same attitude and direct
     const auto cfg0 = MakeCfg(45, 90, 0, 30, 45, 0.0);
     const auto cfg360 = MakeCfg(45, 90, 0, 30, 45, 360.0);
 
-    const auto x0 = FD::BuildInitialStateVector(cfg0, 0.5);
-    const auto x360 = FD::BuildInitialStateVector(cfg360, 0.5);
+    const auto x0 = RB::BuildInitialStateVector(cfg0, 0.5);
+    const auto x360 = RB::BuildInitialStateVector(cfg360, 0.5);
 
     REQUIRE(QuatAbsDot(QuatFromState(x0), QuatFromState(x360)) == Approx(1.0).margin(1e-10));
 
@@ -843,7 +843,7 @@ TEST_CASE("BuildInitialStateVector - roll=360 deg gives same attitude and direct
 TEST_CASE("BuildInitialStateVector - negative altitude (below ellipsoid) stays finite",
     "[corner][structural][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(31.5, 35.5, -400.0), 0.3);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(31.5, 35.5, -400.0), 0.3);
 
     for (int i = 0; i < SL::N; ++i) {
         INFO("slot " << i << " = " << x0[i]);
@@ -864,8 +864,8 @@ TEST_CASE("BuildInitialStateVector - convenience overload equals ERA overload wi
     const double theta = kOmegaE * t0;
     const auto   cfg = MakeCfg(28.6, -80.6, 0, 45, 30, 10, 5, -3, 0, 0.01, -0.02, 0.005, 5000);
 
-    const auto x0_explicit = FD::BuildInitialStateVector(cfg, theta);
-    const auto x0_conv = FD::BuildInitialStateVector(cfg, theta);
+    const auto x0_explicit = RB::BuildInitialStateVector(cfg, theta);
+    const auto x0_conv = RB::BuildInitialStateVector(cfg, theta);
 
     for (int i = 0; i < SL::N; ++i)
         REQUIRE(x0_explicit[i] == Approx(x0_conv[i]).margin(1e-12));
@@ -875,8 +875,8 @@ TEST_CASE("BuildInitialStateVector - convenience overload at t0=0 matches ERA ov
     "[era][initial_state]")
 {
     const auto cfg = MakeCfg(28.6, -80.6, 0, 45, 30, 10, 5, -3, 0, 0.01, -0.02, 0.005, 5000);
-    const auto x0_explicit = FD::BuildInitialStateVector(cfg, 0.0);
-    const auto x0_conv = FD::BuildInitialStateVector(cfg, 0.0);
+    const auto x0_explicit = RB::BuildInitialStateVector(cfg, 0.0);
+    const auto x0_conv = RB::BuildInitialStateVector(cfg, 0.0);
 
     for (int i = 0; i < SL::N; ++i)
         REQUIRE(x0_explicit[i] == Approx(x0_conv[i]).margin(1e-12));
@@ -889,8 +889,8 @@ TEST_CASE("BuildInitialStateVector - ECI position rotates by Dtheta in the XY pl
     const double theta2 = kPi / 4.0;
     const auto   cfg = MakeCfg(0.0, 0.0, 0.0);
 
-    const auto x1 = FD::BuildInitialStateVector(cfg, theta1);
-    const auto x2 = FD::BuildInitialStateVector(cfg, theta2);
+    const auto x1 = RB::BuildInitialStateVector(cfg, theta1);
+    const auto x2 = RB::BuildInitialStateVector(cfg, theta2);
 
     REQUIRE(x1[SL::IDX_P + 2] == Approx(x2[SL::IDX_P + 2]).margin(1e-6));
     REQUIRE(x1.segment<3>(SL::IDX_P).norm()
@@ -904,8 +904,8 @@ TEST_CASE("BuildInitialStateVector - ECI position rotates by Dtheta in the XY pl
 TEST_CASE("BuildInitialStateVector - attitude also rotates consistently with ERA",
     "[era][attitude][initial_state]")
 {
-    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), 0.0);
-    const auto x_half = FD::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), kPi / 2.0);
+    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), 0.0);
+    const auto x_half = RB::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), kPi / 2.0);
 
     const Vec3d dir0 = RotateVec(QuatFromState(x0), Vec3d{ 1,0,0 });
     const Vec3d dir_pi2 = RotateVec(QuatFromState(x_half), Vec3d{ 1,0,0 });
@@ -926,8 +926,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff dr/dh has unit magnitude",
     "[perturbation][position][initial_state]")
 {
     const double dh = 1.0, theta = 0.3;
-    const auto x_p = FD::BuildInitialStateVector(MakeCfg(45.0, 60.0, dh), theta);
-    const auto x_m = FD::BuildInitialStateVector(MakeCfg(45.0, 60.0, -dh), theta);
+    const auto x_p = RB::BuildInitialStateVector(MakeCfg(45.0, 60.0, dh), theta);
+    const auto x_m = RB::BuildInitialStateVector(MakeCfg(45.0, 60.0, -dh), theta);
 
     const Eigen::Vector3d dr =
         (x_p.segment<3>(SL::IDX_P) - x_m.segment<3>(SL::IDX_P)) / (2.0 * dh);
@@ -938,11 +938,11 @@ TEST_CASE("BuildInitialStateVector - finite-diff dv_eci/dvN has unit magnitude",
     "[perturbation][velocity][initial_state]")
 {
     // The NED->ECEF->ECI kinematic part is a pure rotation, so the Jacobian
-    // of v_eci w.r.t. v_N has unit norm.  The omegaÃ—r term is constant
+    // of v_eci w.r.t. v_N has unit norm.  The omega×r term is constant
     // w.r.t. v_N, so it cancels in the finite difference.
     const double eps = 1e-3, theta = 0.7;
-    const auto x_p = FD::BuildInitialStateVector(MakeCfg(30, 45, 0, 0, 0, 0, eps, 0, 0), theta);
-    const auto x_m = FD::BuildInitialStateVector(MakeCfg(30, 45, 0, 0, 0, 0, -eps, 0, 0), theta);
+    const auto x_p = RB::BuildInitialStateVector(MakeCfg(30, 45, 0, 0, 0, 0, eps, 0, 0), theta);
+    const auto x_m = RB::BuildInitialStateVector(MakeCfg(30, 45, 0, 0, 0, 0, -eps, 0, 0), theta);
 
     const Eigen::Vector3d dv =
         (x_p.segment<3>(SL::IDX_V) - x_m.segment<3>(SL::IDX_V)) / (2.0 * eps);
@@ -958,8 +958,8 @@ TEST_CASE("BuildInitialStateVector - small azimuth perturbation produces continu
     const auto cfg1 = MakeCfg(40, 20, 0, 45.0, 30.0, 0.0);
     const auto cfg2 = MakeCfg(40, 20, 0, 45.0 + delta_az_rad / kD2R, 30.0, 0.0);
 
-    const auto x1 = FD::BuildInitialStateVector(cfg1, theta);
-    const auto x2 = FD::BuildInitialStateVector(cfg2, theta);
+    const auto x1 = RB::BuildInitialStateVector(cfg1, theta);
+    const auto x2 = RB::BuildInitialStateVector(cfg2, theta);
 
     REQUIRE(QuatAbsDot(QuatFromState(x1), QuatFromState(x2)) == Approx(1.0).margin(1e-9));
 }
@@ -973,9 +973,9 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
     const auto cfg_p = MakeCfg(30, 20, 0, 45.0, 30.0 + dzen_rad / kD2R, 0.0);
     const auto cfg_m = MakeCfg(30, 20, 0, 45.0, 30.0 - dzen_rad / kD2R, 0.0);
 
-    const Vec3d dir_p = RotateVec(QuatFromState(FD::BuildInitialStateVector(cfg_p, theta)),
+    const Vec3d dir_p = RotateVec(QuatFromState(RB::BuildInitialStateVector(cfg_p, theta)),
         Vec3d{ 1,0,0 });
-    const Vec3d dir_m = RotateVec(QuatFromState(FD::BuildInitialStateVector(cfg_m, theta)),
+    const Vec3d dir_m = RotateVec(QuatFromState(RB::BuildInitialStateVector(cfg_m, theta)),
         Vec3d{ 1,0,0 });
 
     const Vec3d ddir{
@@ -1026,7 +1026,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //#include <Eigen/Dense>
 //
 //// Unit under test
-//#include <Aetherion/FlightDynamics/BuildInitialStateVector.h>
+//#include <Aetherion/RigidBody/BuildInitialState.h>
 //
 //// Reference transforms (used for independent ground-truth computations)
 //#include <Aetherion/Coordinate/LocalToInertial.h>
@@ -1041,7 +1041,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //using Catch::Approx;
 //
 //namespace AC = Aetherion::Coordinate;
-//namespace FD = Aetherion::FlightDynamics;
+//namespace RB = Aetherion::RigidBody;
 //using SL = Aetherion::RigidBody::StateLayout;
 //namespace RigidBody = Aetherion::RigidBody;
 //
@@ -1151,7 +1151,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //TEST_CASE("BuildInitialStateVector - output has exactly N=14 elements",
 //    "[structural][initial_state]")
 //{
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(), 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(), 0.0);
 //    STATIC_REQUIRE(SL::N == 14);
 //    REQUIRE(x0.size() == 14);
 //    REQUIRE(x0.rows() == 14);
@@ -1177,7 +1177,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //        100.0, -50.0, 5.0,
 //        0.01, -0.02, 0.005,
 //        5000.0); //, 1000.0);
-//    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(cfg, 0.0);
 //
 //    for (int i = 0; i < SL::N; ++i) {
 //        INFO("slot " << i << " = " << x0[i]);
@@ -1193,7 +1193,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //        0.0, 0.0, 0.0,
 //        0.0, 0.0, 0.0,
 //        1.0);  // mass must be non-zero for physical sense
-//    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(cfg, 0.0);
 //
 //    for (int i = 0; i < SL::N; ++i) {
 //        INFO("slot " << i << " = " << x0[i]);
@@ -1211,7 +1211,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //{
 //    const double m = 7654.321;
 //    const auto cfg = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, m);
-//    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(cfg, 0.0);
 //
 //    REQUIRE(x0[SL::IDX_M] == Approx(m).epsilon(1e-15));
 //}
@@ -1225,8 +1225,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const auto cfg_a = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, m);
 //    const auto cfg_b = MakeCfg(45, 90, 1000, 90, 45, 30, 10, 5, -2, 0.1, -0.05, 0.03, m);
 //
-//    const auto x_a = FD::BuildInitialStateVector(cfg_a, 0.3);
-//    const auto x_b = FD::BuildInitialStateVector(cfg_b, 1.7);
+//    const auto x_a = RB::BuildInitialStateVector(cfg_a, 0.3);
+//    const auto x_b = RB::BuildInitialStateVector(cfg_b, 1.7);
 //
 //    REQUIRE(x_a[SL::IDX_M] == Approx(m).epsilon(1e-15));
 //    REQUIRE(x_b[SL::IDX_M] == Approx(m).epsilon(1e-15));
@@ -1245,7 +1245,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double yaw_s = 0.03;
 //
 //    const auto cfg = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, roll_s, pitch_s, yaw_s);
-//    const auto x0 = FD::BuildInitialStateVector(cfg, 0.5);
+//    const auto x0 = RB::BuildInitialStateVector(cfg, 0.5);
 //
 //    REQUIRE(x0[SL::IDX_W + 0] == Approx(roll_s).epsilon(1e-15));
 //    REQUIRE(x0[SL::IDX_W + 1] == Approx(pitch_s).epsilon(1e-15));
@@ -1255,7 +1255,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //TEST_CASE("BuildInitialStateVector - zero angular rates produce zero omega slots",
 //    "[omega][initial_state]")
 //{
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(), 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(), 0.0);
 //    REQUIRE(x0[SL::IDX_W + 0] == Approx(0.0).margin(1e-20));
 //    REQUIRE(x0[SL::IDX_W + 1] == Approx(0.0).margin(1e-20));
 //    REQUIRE(x0[SL::IDX_W + 2] == Approx(0.0).margin(1e-20));
@@ -1269,8 +1269,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const auto cfg_a = MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0, roll_s, pitch_s, yaw_s);
 //    const auto cfg_b = MakeCfg(45, 30, 500, 60, 20, 15, 50, -20, 3, roll_s, pitch_s, yaw_s);
 //
-//    const auto x_a = FD::BuildInitialStateVector(cfg_a, 0.2);
-//    const auto x_b = FD::BuildInitialStateVector(cfg_b, 1.0);
+//    const auto x_a = RB::BuildInitialStateVector(cfg_a, 0.2);
+//    const auto x_b = RB::BuildInitialStateVector(cfg_b, 1.0);
 //
 //    REQUIRE(x_a[SL::IDX_W + 0] == Approx(x_b[SL::IDX_W + 0]).epsilon(1e-15));
 //    REQUIRE(x_a[SL::IDX_W + 1] == Approx(x_b[SL::IDX_W + 1]).epsilon(1e-15));
@@ -1287,7 +1287,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //{
 //    const double lat_deg = 28.6, lon_deg = -80.6, alt_m = 200.0, theta = 0.75;
 //
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(lat_deg, lon_deg, alt_m), theta);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(lat_deg, lon_deg, alt_m), theta);
 //
 //    const Vec3d r_ecef = AC::GeodeticToECEF(lat_deg * kD2R, lon_deg * kD2R, alt_m);
 //    const Vec3d r_eci = AC::ECEFToECI(r_ecef, theta);
@@ -1302,7 +1302,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //{
 //    // At lat=0, lon=0 the WGS-84 surface radius equals kReq exactly.
 //    const double h = 1500.0;
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
 //
 //    const double r = x0.segment<3>(SL::IDX_P).norm();
 //    REQUIRE(r == Approx(kReq + h).epsilon(1e-8));
@@ -1314,8 +1314,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double theta = 0.4;
 //    const double dh = 1000.0;
 //
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(45.0, 60.0, 0.0), theta);
-//    const auto x1 = FD::BuildInitialStateVector(MakeCfg(45.0, 60.0, dh), theta);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(45.0, 60.0, 0.0), theta);
+//    const auto x1 = RB::BuildInitialStateVector(MakeCfg(45.0, 60.0, dh), theta);
 //
 //    const double dr = x1.segment<3>(SL::IDX_P).norm()
 //        - x0.segment<3>(SL::IDX_P).norm();
@@ -1328,9 +1328,9 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //{
 //    // r_ECI depends only on (lat, lon, alt, theta_ERA); changing az/zen/roll must not move it.
 //    const double theta = 0.6;
-//    const auto x_a = FD::BuildInitialStateVector(MakeCfg(50, 10, 300, 0, 0, 0), theta);
-//    const auto x_b = FD::BuildInitialStateVector(MakeCfg(50, 10, 300, 90, 45, 30), theta);
-//    const auto x_c = FD::BuildInitialStateVector(MakeCfg(50, 10, 300, 180, 60, -20), theta);
+//    const auto x_a = RB::BuildInitialStateVector(MakeCfg(50, 10, 300, 0, 0, 0), theta);
+//    const auto x_b = RB::BuildInitialStateVector(MakeCfg(50, 10, 300, 90, 45, 30), theta);
+//    const auto x_c = RB::BuildInitialStateVector(MakeCfg(50, 10, 300, 180, 60, -20), theta);
 //
 //    for (int i = SL::IDX_P; i < SL::IDX_P + 3; ++i) {
 //        REQUIRE(x_a[i] == Approx(x_b[i]).margin(1e-6));
@@ -1342,8 +1342,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    "[position][initial_state]")
 //{
 //    const double theta = 0.8;
-//    const auto x_a = FD::BuildInitialStateVector(MakeCfg(30, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), theta);
-//    const auto x_b = FD::BuildInitialStateVector(MakeCfg(30, 20, 0, 0, 0, 0, 100, 50, -10, 0.1, -0.05, 0.02), theta);
+//    const auto x_a = RB::BuildInitialStateVector(MakeCfg(30, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), theta);
+//    const auto x_b = RB::BuildInitialStateVector(MakeCfg(30, 20, 0, 0, 0, 0, 100, 50, -10, 0.1, -0.05, 0.02), theta);
 //
 //    for (int i = SL::IDX_P; i < SL::IDX_P + 3; ++i)
 //        REQUIRE(x_a[i] == Approx(x_b[i]).margin(1e-6));
@@ -1358,7 +1358,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    "[attitude][initial_state]")
 //{
 //    const auto cfg = MakeCfg(35.0, 139.0, 100.0, 30.0, 45.0, 20.0);
-//    const auto x0 = FD::BuildInitialStateVector(cfg, 1.1);
+//    const auto x0 = RB::BuildInitialStateVector(cfg, 1.1);
 //
 //    const double norm = std::sqrt(x0[SL::IDX_Q + 0] * x0[SL::IDX_Q + 0]
 //        + x0[SL::IDX_Q + 1] * x0[SL::IDX_Q + 1]
@@ -1374,7 +1374,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double az_deg = 60.0, zen_deg = 20.0, roll_deg = 5.0;
 //    const double theta = 0.4;
 //
-//    const auto x0 = FD::BuildInitialStateVector(
+//    const auto x0 = RB::BuildInitialStateVector(
 //        MakeCfg(lat_deg, lon_deg, alt_m, az_deg, zen_deg, roll_deg), theta);
 //
 //    const Vec3d dir_eci = RotateVec(QuatFromState(x0), Vec3d{ 1.0, 0.0, 0.0 });
@@ -1397,7 +1397,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double az_deg = 90.0, zen_deg = 15.0, roll_deg = 0.0;
 //    const double theta = 2.3;
 //
-//    const auto x0 = FD::BuildInitialStateVector(
+//    const auto x0 = RB::BuildInitialStateVector(
 //        MakeCfg(lat_deg, lon_deg, alt_m, az_deg, zen_deg, roll_deg), theta);
 //
 //    const auto launch = AC::MakeLaunchStateECI(
@@ -1412,7 +1412,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //TEST_CASE("BuildInitialStateVector - body frame axes are orthonormal in ECI",
 //    "[attitude][initial_state]")
 //{
-//    const auto x0 = FD::BuildInitialStateVector(
+//    const auto x0 = RB::BuildInitialStateVector(
 //        MakeCfg(35.0, 139.0, 100.0, 30.0, 45.0, 20.0), 1.1);
 //    const Quatd q = QuatFromState(x0);
 //
@@ -1440,7 +1440,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double lat_deg = 45.0, lon_deg = 30.0, theta = 1.0;
 //    const double vN = 100.0, vE = -50.0, vD = 20.0;
 //
-//    const auto x0 = FD::BuildInitialStateVector(
+//    const auto x0 = RB::BuildInitialStateVector(
 //        MakeCfg(lat_deg, lon_deg, 0.0, 0, 0, 0, vN, vE, vD), theta);
 //
 //    const Vec3d v_ecef = AC::NEDToECEF(Vec3d{ vN,vE,vD }, lat_deg * kD2R, lon_deg * kD2R);
@@ -1454,7 +1454,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //TEST_CASE("BuildInitialStateVector - zero NED velocity produces zero ECI velocity",
 //    "[velocity][initial_state]")
 //{
-//    const auto x0 = FD::BuildInitialStateVector(
+//    const auto x0 = RB::BuildInitialStateVector(
 //        MakeCfg(0, 0, 0, 0, 0, 0, 0, 0, 0), 0.5);
 //
 //    REQUIRE(x0[SL::IDX_V + 0] == Approx(0.0).margin(1e-20));
@@ -1468,7 +1468,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double vN = 200.0, vE = -100.0, vD = 50.0;
 //    const double speed_ned = std::sqrt(vN * vN + vE * vE + vD * vD);
 //
-//    const auto x0 = FD::BuildInitialStateVector(
+//    const auto x0 = RB::BuildInitialStateVector(
 //        MakeCfg(60.0, -120.0, 0.0, 0, 0, 0, vN, vE, vD), 0.7);
 //
 //    const double speed_eci = x0.segment<3>(SL::IDX_V).norm();
@@ -1481,9 +1481,9 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double theta = 0.9;
 //    const double vN = 50.0, vE = -30.0, vD = 10.0;
 //
-//    const auto x_a = FD::BuildInitialStateVector(
+//    const auto x_a = RB::BuildInitialStateVector(
 //        MakeCfg(20, -40, 0, 0, 0, 0, vN, vE, vD), theta);
-//    const auto x_b = FD::BuildInitialStateVector(
+//    const auto x_b = RB::BuildInitialStateVector(
 //        MakeCfg(20, -40, 0, 90, 45, 15, vN, vE, vD), theta);
 //
 //    for (int i = SL::IDX_V; i < SL::IDX_V + 3; ++i)
@@ -1496,7 +1496,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const auto cfg = MakeCfg(10.0, 20.0, 500.0);
 //
 //    for (const double theta : {0.0, 0.5, kPi, 2.0 * kPi - 0.1}) {
-//        const auto x0 = FD::BuildInitialStateVector(cfg, theta);
+//        const auto x0 = RB::BuildInitialStateVector(cfg, theta);
 //        REQUIRE(x0[SL::IDX_V + 0] == Approx(0.0).margin(1e-20));
 //        REQUIRE(x0[SL::IDX_V + 1] == Approx(0.0).margin(1e-20));
 //        REQUIRE(x0[SL::IDX_V + 2] == Approx(0.0).margin(1e-20));
@@ -1512,7 +1512,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    "[corner][position][initial_state]")
 //{
 //    // At lat=0, lon=0, alt=0, theta=0 the site is on the +X_ECI axis.
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, 0), 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, 0), 0.0);
 //
 //    REQUIRE(x0[SL::IDX_P + 0] == Approx(kReq).epsilon(1e-8));
 //    REQUIRE(x0[SL::IDX_P + 1] == Approx(0.0).margin(1.0));   // float rounding only
@@ -1523,7 +1523,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    "[corner][attitude][initial_state]")
 //{
 //    // zen=0 means straight Up.  Up at lat=0, lon=0, theta=0 is +X_ECI.
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), 0.0);
 //    const Vec3d dir = RotateVec(QuatFromState(x0), Vec3d{ 1,0,0 });
 //
 //    REQUIRE(dir[0] == Approx(1.0).margin(1e-12));
@@ -1536,7 +1536,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //{
 //    // az=90 deg (East), zen=90 deg (horizontal).
 //    // East at lat=0, lon=0, theta=0 is the +Y_ECEF = +Y_ECI direction.
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, 0, 90, 90, 0), 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, 0, 90, 90, 0), 0.0);
 //    const Vec3d dir = RotateVec(QuatFromState(x0), Vec3d{ 1,0,0 });
 //
 //    REQUIRE(dir[0] == Approx(0.0).margin(1e-12));
@@ -1547,7 +1547,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //TEST_CASE("BuildInitialStateVector - north pole: Z component equals WGS-84 polar radius",
 //    "[corner][position][initial_state]")
 //{
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(90.0, 0.0, 0.0), 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(90.0, 0.0, 0.0), 0.0);
 //
 //    // At the North Pole X~=Y~=0, Z = b (semi-minor axis)
 //    REQUIRE(x0[SL::IDX_P + 0] == Approx(0.0).margin(1.0));
@@ -1559,7 +1559,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    "[corner][position][initial_state]")
 //{
 //    const double h = 400'000.0;
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, h), 0.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, h), 0.0);
 //
 //    REQUIRE(x0.segment<3>(SL::IDX_P).norm() == Approx(kReq + h).epsilon(1e-7));
 //}
@@ -1568,8 +1568,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    "[corner][era][initial_state]")
 //{
 //    const auto cfg = MakeCfg(35.0, 45.0, 500.0, 30.0, 20.0, 5.0, 10, -5, 1);
-//    const auto x0 = FD::BuildInitialStateVector(cfg, 0.0);
-//    const auto x2pi = FD::BuildInitialStateVector(cfg, 2.0 * kPi);
+//    const auto x0 = RB::BuildInitialStateVector(cfg, 0.0);
+//    const auto x2pi = RB::BuildInitialStateVector(cfg, 2.0 * kPi);
 //
 //    for (int i = 0; i < SL::N; ++i)
 //        REQUIRE(x0[i] == Approx(x2pi[i]).margin(1e-7));
@@ -1581,8 +1581,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const auto cfg0 = MakeCfg(45, 90, 0, 30, 45, 0.0);
 //    const auto cfg360 = MakeCfg(45, 90, 0, 30, 45, 360.0);
 //
-//    const auto x0 = FD::BuildInitialStateVector(cfg0, 0.5);
-//    const auto x360 = FD::BuildInitialStateVector(cfg360, 0.5);
+//    const auto x0 = RB::BuildInitialStateVector(cfg0, 0.5);
+//    const auto x360 = RB::BuildInitialStateVector(cfg360, 0.5);
 //
 //    // Quaternion must represent the same rotation (|dot| ~= 1)
 //    REQUIRE(QuatAbsDot(QuatFromState(x0), QuatFromState(x360)) == Approx(1.0).margin(1e-10));
@@ -1600,7 +1600,7 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    "[corner][structural][initial_state]")
 //{
 //    // e.g. dead sea / underground test facility at -400 m
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(31.5, 35.5, -400.0), 0.3);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(31.5, 35.5, -400.0), 0.3);
 //
 //    for (int i = 0; i < SL::N; ++i) {
 //        INFO("slot " << i << " = " << x0[i]);
@@ -1622,8 +1622,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double theta = kOmegaE * t0;
 //
 //    const auto cfg = MakeCfg(28.6, -80.6, 0, 45, 30, 10, 5, -3, 0, 0.01, -0.02, 0.005, 5000); // , t0);
-//    const auto x0_explicit = FD::BuildInitialStateVector(cfg, theta);
-//    const auto x0_conv = FD::BuildInitialStateVector(cfg, theta);
+//    const auto x0_explicit = RB::BuildInitialStateVector(cfg, theta);
+//    const auto x0_conv = RB::BuildInitialStateVector(cfg, theta);
 //
 //    for (int i = 0; i < SL::N; ++i)
 //        REQUIRE(x0_explicit[i] == Approx(x0_conv[i]).margin(1e-12));
@@ -1633,8 +1633,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    "[era][initial_state]")
 //{
 //    const auto cfg = MakeCfg(28.6, -80.6, 0, 45, 30, 10, 5, -3, 0, 0.01, -0.02, 0.005, 5000); //, 0.0);
-//    const auto x0_explicit = FD::BuildInitialStateVector(cfg, 0.0);
-//    const auto x0_conv = FD::BuildInitialStateVector(cfg, 0.0);
+//    const auto x0_explicit = RB::BuildInitialStateVector(cfg, 0.0);
+//    const auto x0_conv = RB::BuildInitialStateVector(cfg, 0.0);
 //
 //    for (int i = 0; i < SL::N; ++i)
 //        REQUIRE(x0_explicit[i] == Approx(x0_conv[i]).margin(1e-12));
@@ -1650,8 +1650,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const double theta2 = kPi / 4.0;
 //    const auto   cfg = MakeCfg(0.0, 0.0, 0.0);
 //
-//    const auto x1 = FD::BuildInitialStateVector(cfg, theta1);
-//    const auto x2 = FD::BuildInitialStateVector(cfg, theta2);
+//    const auto x1 = RB::BuildInitialStateVector(cfg, theta1);
+//    const auto x2 = RB::BuildInitialStateVector(cfg, theta2);
 //
 //    // Z unchanged
 //    REQUIRE(x1[SL::IDX_P + 2] == Approx(x2[SL::IDX_P + 2]).margin(1e-6));
@@ -1671,8 +1671,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //{
 //    // At lat=0, lon=0, theta=0 body +x is along +X_ECI (zen=0, straight Up).
 //    // At ERA = pi/2 the same body +x must rotate by pi/2 in the XY plane -> +Y_ECI.
-//    const auto x0 = FD::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), 0.0);
-//    const auto x_half = FD::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), kPi / 2.0);
+//    const auto x0 = RB::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), 0.0);
+//    const auto x_half = RB::BuildInitialStateVector(MakeCfg(0, 0, 0, 0, 0, 0), kPi / 2.0);
 //
 //    const Vec3d dir0 = RotateVec(QuatFromState(x0), Vec3d{ 1,0,0 });
 //    const Vec3d dir_pi2 = RotateVec(QuatFromState(x_half), Vec3d{ 1,0,0 });
@@ -1699,8 +1699,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    // along the local outward normal.  So ||dr/dh|| ~= 1 m/m.
 //    const double dh = 1.0, theta = 0.3;
 //
-//    const auto x_p = FD::BuildInitialStateVector(MakeCfg(45.0, 60.0, dh), theta);
-//    const auto x_m = FD::BuildInitialStateVector(MakeCfg(45.0, 60.0, -dh), theta);
+//    const auto x_p = RB::BuildInitialStateVector(MakeCfg(45.0, 60.0, dh), theta);
+//    const auto x_m = RB::BuildInitialStateVector(MakeCfg(45.0, 60.0, -dh), theta);
 //
 //    const Eigen::Vector3d dr =
 //        (x_p.segment<3>(SL::IDX_P) - x_m.segment<3>(SL::IDX_P)) / (2.0 * dh);
@@ -1714,8 +1714,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    // The NED->ECEF->ECI transform is a rotation, so ||dv_eci/dvN|| = 1.
 //    const double eps = 1e-3, theta = 0.7;
 //
-//    const auto x_p = FD::BuildInitialStateVector(MakeCfg(30, 45, 0, 0, 0, 0, eps, 0, 0), theta);
-//    const auto x_m = FD::BuildInitialStateVector(MakeCfg(30, 45, 0, 0, 0, 0, -eps, 0, 0), theta);
+//    const auto x_p = RB::BuildInitialStateVector(MakeCfg(30, 45, 0, 0, 0, 0, eps, 0, 0), theta);
+//    const auto x_m = RB::BuildInitialStateVector(MakeCfg(30, 45, 0, 0, 0, 0, -eps, 0, 0), theta);
 //
 //    const Eigen::Vector3d dv =
 //        (x_p.segment<3>(SL::IDX_V) - x_m.segment<3>(SL::IDX_V)) / (2.0 * eps);
@@ -1734,8 +1734,8 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const auto cfg1 = MakeCfg(40, 20, 0, 45.0, 30.0, 0.0);
 //    const auto cfg2 = MakeCfg(40, 20, 0, 45.0 + delta_az_rad / kD2R, 30.0, 0.0);
 //
-//    const auto x1 = FD::BuildInitialStateVector(cfg1, theta);
-//    const auto x2 = FD::BuildInitialStateVector(cfg2, theta);
+//    const auto x1 = RB::BuildInitialStateVector(cfg1, theta);
+//    const auto x2 = RB::BuildInitialStateVector(cfg2, theta);
 //
 //    REQUIRE(QuatAbsDot(QuatFromState(x1), QuatFromState(x2)) == Approx(1.0).margin(1e-9));
 //}
@@ -1751,9 +1751,9 @@ TEST_CASE("BuildInitialStateVector - finite-diff ddir/dzen has unit magnitude",
 //    const auto cfg_p = MakeCfg(30, 20, 0, 45.0, 30.0 + dzen_rad / kD2R, 0.0);
 //    const auto cfg_m = MakeCfg(30, 20, 0, 45.0, 30.0 - dzen_rad / kD2R, 0.0);
 //
-//    const Vec3d dir_p = RotateVec(QuatFromState(FD::BuildInitialStateVector(cfg_p, theta)),
+//    const Vec3d dir_p = RotateVec(QuatFromState(RB::BuildInitialStateVector(cfg_p, theta)),
 //        Vec3d{ 1,0,0 });
-//    const Vec3d dir_m = RotateVec(QuatFromState(FD::BuildInitialStateVector(cfg_m, theta)),
+//    const Vec3d dir_m = RotateVec(QuatFromState(RB::BuildInitialStateVector(cfg_m, theta)),
 //        Vec3d{ 1,0,0 });
 //
 //    const Vec3d ddir{
