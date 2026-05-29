@@ -9,7 +9,7 @@
 #include "Aetherion/Serialization/LoadConfig.h"
 
 #include "Aetherion/RigidBody/Config.h"
-#include "Aetherion/Serialization/ConfigJson.h"
+#include "Aetherion/Serialization/Json/ConfigJson.h"
 
 #include <fstream>
 #include <stdexcept>
@@ -83,7 +83,7 @@ namespace Aetherion::Serialization {
 //#include "Aetherion/Serialization/LoadConfig.h"
 //
 //#include "Aetherion/RigidBody/Config.h"
-//#include "Aetherion/Serialization/ConfigJson.h" 
+//#include "Aetherion/Serialization/Json/ConfigJson.h" 
 //
 //#include <fstream>
 //#include <stdexcept>

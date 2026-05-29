@@ -8,15 +8,15 @@
 
 #pragma once
 
-#include "Aetherion/Serialization/JsonConfigNlohmannAdapter.h"
+#include "Aetherion/Serialization/Json/JsonConfigNlohmannAdapter.h"
 
-namespace Aetherion::FlightDynamics {
-    struct SimulationParameters;
-}
+namespace Aetherion::RigidBody {
+    struct BodyRates;
+} // namespace Aetherion::RigidBody
 
 namespace Aetherion::Serialization {
 
-    void from_json(const nlohmann::json& j, FlightDynamics::SimulationParameters& sp);
-    void to_json(nlohmann::json& j, const FlightDynamics::SimulationParameters& sp);
+    void from_json(const nlohmann::json& j, RigidBody::BodyRates& ir);
+    void to_json(nlohmann::json& j, const RigidBody::BodyRates& ir);
 
 } // namespace Aetherion::Serialization

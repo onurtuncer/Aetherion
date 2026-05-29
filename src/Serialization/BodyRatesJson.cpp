@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/RigidBody/BodyRates.h"
-#include "Aetherion/Serialization/BodyRatesJson.h"
+#include "Aetherion/Serialization/Json/BodyRatesJson.h"
 
 namespace Aetherion::Serialization {
 

@@ -7,14 +7,14 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/RigidBody/Config.h"
-#include "Aetherion/Serialization/ConfigJson.h"
+#include "Aetherion/Serialization/Json/ConfigJson.h"
 
-#include "Aetherion/Serialization/SimulationParametersJson.h"
-#include "Aetherion/Serialization/GeodeticPoseNEDJson.h"
-#include "Aetherion/Serialization/InertialParametersJson.h"
-#include "Aetherion/Serialization/AerodynamicParametersJson.h"
-#include "Aetherion/Serialization/VelocityNEDJson.h"
-#include "Aetherion/Serialization/BodyRatesJson.h"
+#include "Aetherion/Serialization/Json/SimulationParametersJson.h"
+#include "Aetherion/Serialization/Json/GeodeticPoseNEDJson.h"
+#include "Aetherion/Serialization/Json/InertialParametersJson.h"
+#include "Aetherion/Serialization/Json/AerodynamicParametersJson.h"
+#include "Aetherion/Serialization/Json/VelocityNEDJson.h"
+#include "Aetherion/Serialization/Json/BodyRatesJson.h"
 
 #include <vendor/nlohmann/json.hpp>
 

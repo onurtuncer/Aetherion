@@ -23,7 +23,7 @@
 #include <string_view>
 #include <utility>
 
-#include "Aetherion/Serialization/JsonAdapter.h"
+#include "Aetherion/Serialization/Json/JsonAdapter.h"
 
 namespace Aetherion::FlightDynamics::Serialization {
 

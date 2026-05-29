@@ -12,7 +12,7 @@
 #include <vendor/nlohmann/json.hpp>
 
 #include "Aetherion/RigidBody/InertialParameters.h"
-#include "Aetherion/Serialization/InertialParametersJson.h"
+#include "Aetherion/Serialization/Json/InertialParametersJson.h"
 
 namespace Ser = Aetherion::Serialization;
 namespace RigidBody = Aetherion::RigidBody;

@@ -12,7 +12,7 @@
 #include <vendor/nlohmann/json.hpp>
 
 #include "Aetherion/RigidBody/GeodeticPoseNED.h"
-#include "Aetherion/Serialization/GeodeticPoseNEDJson.h"
+#include "Aetherion/Serialization/Json/GeodeticPoseNEDJson.h"
 
 namespace RigidBody = Aetherion::RigidBody;
 namespace Ser = Aetherion::Serialization;

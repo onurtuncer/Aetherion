@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/RigidBody/AerodynamicParameters.h"
-#include "Aetherion/Serialization/InertialParametersJson.h"
+#include "Aetherion/Serialization/Json/InertialParametersJson.h"
 
 namespace Aetherion::Serialization {
 

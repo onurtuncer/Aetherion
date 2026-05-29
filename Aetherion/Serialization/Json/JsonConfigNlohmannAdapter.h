@@ -22,8 +22,8 @@
 
 #include <memory>
 
-#include "Aetherion/Serialization/JsonAdapter.h"
-#include "Aetherion/Serialization/JsonConfig.h" // for Aetherion::Cfg::Json declaration + ConfigError
+#include "Aetherion/Serialization/Json/JsonAdapter.h"
+#include "Aetherion/Serialization/Json/JsonConfig.h" // for Aetherion::Cfg::Json declaration + ConfigError
 
 // ---- nlohmann json ----
 #include <vendor/nlohmann/json.hpp> //TODO fix this later: should not specify vendor directory explicitly

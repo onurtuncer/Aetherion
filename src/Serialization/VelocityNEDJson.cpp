@@ -7,7 +7,7 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/RigidBody/VelocityNED.h"
-#include "Aetherion/Serialization/VelocityNEDJson.h"
+#include "Aetherion/Serialization/Json/VelocityNEDJson.h"
 
 namespace Aetherion::Serialization {
 

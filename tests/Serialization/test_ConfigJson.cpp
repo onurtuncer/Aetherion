@@ -12,7 +12,7 @@
 #include <vendor/nlohmann/json.hpp>
 
 #include "Aetherion/RigidBody/Config.h"
-#include "Aetherion/Serialization/ConfigJson.h"
+#include "Aetherion/Serialization/Json/ConfigJson.h"
 
 namespace Ser = ::Aetherion::Serialization;
 namespace RigidBody = Aetherion::RigidBody;
