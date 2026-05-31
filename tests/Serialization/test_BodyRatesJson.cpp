@@ -10,7 +10,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <vendor/nlohmann/json.hpp>  //TODO [Onur] this should be nlohhmann/json.hpp later on
-#include "Aetherion/Serialization/Json/BodyRatesJson.h"
+#include "Aetherion/Serialization/Json/BodyRates.h"
 #include "Aetherion/RigidBody/BodyRates.h"
 
 namespace RigidBody = Aetherion::RigidBody;

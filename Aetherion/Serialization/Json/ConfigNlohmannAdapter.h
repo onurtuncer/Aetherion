@@ -22,13 +22,13 @@
 
 #include <memory>
 
-#include "Aetherion/Serialization/Json/JsonAdapter.h"
+#include "Aetherion/Serialization/Json/Adapter.h"
 #include "Aetherion/Serialization/Json/JsonConfig.h" // for Aetherion::Cfg::Json declaration + ConfigError
 
 // ---- nlohmann json ----
 #include <vendor/nlohmann/json.hpp> //TODO fix this later: should not specify vendor directory explicitly
 
-namespace Aetherion::FlightDynamics::Serialization {
+namespace Aetherion::FlightDynamics::Serialization::Json {
 
     // ============================================================================
     // Json opaque handle implementation

@@ -6,12 +6,12 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#include "Aetherion/RigidBody/VelocityNED.h"
-#include "Aetherion/Serialization/Json/VelocityNEDJson.h"
+#include "Aetherion/RigidBody/BodyRates.h"
+#include "Aetherion/Serialization/Json/BodyRates.h"
 
-namespace Aetherion::Serialization {
+namespace Aetherion::Serialization::Json {
 
-    void from_json(const nlohmann::json& j, RigidBody::VelocityNED& v)
+    void from_json(const nlohmann::json& j, RigidBody::BodyRates& w)
     {
         auto get = [&](const char* key, double& field)
             {
@@ -20,25 +20,25 @@ namespace Aetherion::Serialization {
                 }
                 catch (const nlohmann::json::out_of_range&) {
                     throw std::runtime_error(
-                        std::string("VelocityNED: missing key '") + key + "'");
+                        std::string("BodyRates: missing key '") + key + "'");
                 }
                 catch (const nlohmann::json::type_error&) {
                     throw std::runtime_error(
-                        std::string("VelocityNED: key '") + key + "' is not a number");
+                        std::string("BodyRates: key '") + key + "' is not a number");
                 }
             };
 
-        get("north_mps", v.north_mps);
-        get("east_mps", v.east_mps);
-        get("down_mps", v.down_mps);
+        get("roll_rad_s", w.roll_rad_s);
+        get("pitch_rad_s", w.pitch_rad_s);
+        get("yaw_rad_s", w.yaw_rad_s);
     }
 
-     void to_json(nlohmann::json& j, const RigidBody::VelocityNED& v)
+    void to_json(nlohmann::json& j, const RigidBody::BodyRates& w)
     {
         j = nlohmann::json::object();
-        j["north_mps"] = v.north_mps;
-        j["east_mps"] = v.east_mps;
-        j["down_mps"] = v.down_mps;
+        j["roll_rad_s"] = w.roll_rad_s;
+        j["pitch_rad_s"] = w.pitch_rad_s;
+        j["yaw_rad_s"] = w.yaw_rad_s;
     }
 
-} // namespace Aetherion::Serialization
+} // namespace Aetherion::Serialization::Json

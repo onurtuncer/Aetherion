@@ -9,7 +9,7 @@
 #include "Aetherion/Serialization/LoadConfig.h"
 
 #include "Aetherion/RigidBody/Config.h"
-#include "Aetherion/Serialization/Json/ConfigJson.h"
+#include "Aetherion/Serialization/Json/Config.h"
 
 #include <fstream>
 #include <stdexcept>
@@ -27,7 +27,7 @@ namespace Aetherion::Serialization {
     {
         RigidBody::Config cfg{};
         try {
-            ::Aetherion::Serialization::from_json(j, cfg);
+            ::Aetherion::Serialization::Json::from_json(j, cfg);
         }
         catch (const std::exception& e) {
             throw std::runtime_error(
@@ -83,7 +83,7 @@ namespace Aetherion::Serialization {
 //#include "Aetherion/Serialization/LoadConfig.h"
 //
 //#include "Aetherion/RigidBody/Config.h"
-//#include "Aetherion/Serialization/Json/ConfigJson.h" 
+//#include "Aetherion/Serialization/Json/Config.h" 
 //
 //#include <fstream>
 //#include <stdexcept>
@@ -108,7 +108,7 @@ namespace Aetherion::Serialization {
 //
 //        RigidBody::Config cfg{};
 //        try {
-//            ::Aetherion::Serialization::from_json(j, cfg);
+//            ::Aetherion::Serialization::Json::from_json(j, cfg);
 //        }
 //        catch (const std::exception& e) {
 //            throw std::runtime_error(
@@ -121,7 +121,7 @@ namespace Aetherion::Serialization {
 //    {
 //        RigidBody::Config cfg{};
 //        try {
-//            ::Aetherion::Serialization::from_json(j, cfg);
+//            ::Aetherion::Serialization::Json::from_json(j, cfg);
 //        }
 //        catch (const std::exception& e) {
 //            throw std::runtime_error(

@@ -12,7 +12,7 @@
 #include <vendor/nlohmann/json.hpp>
 
 #include "Aetherion/RigidBody/VelocityNED.h"
-#include "Aetherion/Serialization/Json/VelocityNEDJson.h"
+#include "Aetherion/Serialization/Json/VelocityNED.h"
 
 namespace RigidBody =  Aetherion::RigidBody;
 namespace Ser = Aetherion::Serialization;

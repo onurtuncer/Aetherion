@@ -7,9 +7,9 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/RigidBody/GeodeticPoseNED.h"
-#include "Aetherion/Serialization/Json/GeodeticPoseNEDJson.h"
+#include "Aetherion/Serialization/Json/GeodeticPoseNED.h"
 
-namespace Aetherion::Serialization {
+namespace Aetherion::Serialization::Json {
 
     void from_json(const nlohmann::json& j, RigidBody::GeodeticPoseNED& pose)
     {
@@ -49,4 +49,4 @@ namespace Aetherion::Serialization {
         };
     }
 
-} // namespace Aetherion::Serialization
+} // namespace Aetherion::Serialization::Json

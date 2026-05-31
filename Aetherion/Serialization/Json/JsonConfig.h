@@ -23,11 +23,9 @@
 #include <string_view>
 #include <utility>
 
-#include "Aetherion/Serialization/Json/JsonAdapter.h"
+#include "Aetherion/Serialization/Json/Adapter.h"
 
-namespace Aetherion::FlightDynamics::Serialization {
-
-    struct Json;
+namespace Aetherion::FlightDynamics::Serialization::Json {
 
     // ============================================================================
     // Errors
@@ -44,7 +42,5 @@ namespace Aetherion::FlightDynamics::Serialization {
         if (!json_has(parent, key)) return default_value;
         return getter(json_at(parent, key));
     }
-  
- //   FlightDynamics::InitialPoseWGS84_NED load_initial_pose(const std::filesystem::path& path); //TODO [Onur] remove this!
-    
-} // namespace Aetherion::FlightDynamics::Serialization
+
+} // namespace Aetherion::FlightDynamics::Serialization::Json

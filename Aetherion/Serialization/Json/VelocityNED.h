@@ -8,16 +8,15 @@
 
 #pragma once
 
-#include "Aetherion/Serialization/Json/JsonConfigNlohmannAdapter.h"
+#include "Aetherion/Serialization/Json/ConfigNlohmannAdapter.h"
 
-namespace Aetherion::RigidBody{
-
-    struct GeodeticPoseNED;
+namespace Aetherion::RigidBody {
+    struct VelocityNED;
 } // namespace Aetherion::RigidBody
 
-namespace Aetherion::Serialization {
+namespace Aetherion::Serialization::Json {
 
-    void from_json(const nlohmann::json& j, RigidBody::GeodeticPoseNED& pose);
-    void to_json(nlohmann::json& j, const RigidBody::GeodeticPoseNED& pose);
+    void from_json(const nlohmann::json& j, RigidBody::VelocityNED& vned);
+    void to_json(nlohmann::json& j, const RigidBody::VelocityNED& vned);
 
-} // namespace Aetherion::Serialization
+} // namespace Aetherion::RigidBody

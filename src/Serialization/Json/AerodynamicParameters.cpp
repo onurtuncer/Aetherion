@@ -7,9 +7,9 @@
 // ------------------------------------------------------------------------------
 
 #include "Aetherion/RigidBody/AerodynamicParameters.h"
-#include "Aetherion/Serialization/Json/InertialParametersJson.h"
+#include "Aetherion/Serialization/Json/AerodynamicParameters.h"
 
-namespace Aetherion::Serialization {
+namespace Aetherion::Serialization::Json {
 
     void from_json(const nlohmann::json& j, RigidBody::AerodynamicParameters& aero)
     {
@@ -81,4 +81,4 @@ namespace Aetherion::Serialization {
         };
     }
 
-} // namespace Aetherion::Serialization
+} // namespace Aetherion::Serialization::Json
