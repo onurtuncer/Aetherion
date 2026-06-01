@@ -15,7 +15,7 @@
 #include "Aetherion/Serialization/Json/GeodeticPoseNED.h"
 
 namespace RigidBody = Aetherion::RigidBody;
-namespace Ser = Aetherion::Serialization;
+namespace Ser = Aetherion::Serialization::Json;
 
 TEST_CASE("PoseWGS84_NED: from_json parses expected values", "[json][initial_pose]")
 {

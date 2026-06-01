@@ -14,7 +14,7 @@
 #include "Aetherion/RigidBody/InertialParameters.h"
 #include "Aetherion/Serialization/Json/InertialParameters.h"
 
-namespace Ser = Aetherion::Serialization;
+namespace Ser = Aetherion::Serialization::Json;
 namespace RigidBody = Aetherion::RigidBody;
 
 TEST_CASE("InertialParameters: from_json parses expected values", "[json][inertial]")

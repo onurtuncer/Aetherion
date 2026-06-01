@@ -14,7 +14,7 @@
 #include "Aetherion/RigidBody/AerodynamicParameters.h"
 #include "Aetherion/Serialization/Json/AerodynamicParameters.h"
 
-namespace Ser = Aetherion::Serialization;
+namespace Ser = Aetherion::Serialization::Json;
 namespace RigidBody = Aetherion::RigidBody;
 
 TEST_CASE("AerodynamicParameters: from_json parses expected values", "[json][aero]")

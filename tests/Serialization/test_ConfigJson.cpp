@@ -14,7 +14,7 @@
 #include "Aetherion/RigidBody/Config.h"
 #include "Aetherion/Serialization/Json/Config.h"
 
-namespace Ser = ::Aetherion::Serialization;
+namespace Ser = ::Aetherion::Serialization::Json;
 namespace RigidBody = Aetherion::RigidBody;
 
 TEST_CASE("RigidBodyConfig: JSON round-trip preserves all fields", "[json][rigidbody][config]")
