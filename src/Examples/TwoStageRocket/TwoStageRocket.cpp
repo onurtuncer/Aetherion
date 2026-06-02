@@ -130,9 +130,12 @@ void TwoStageRocketApplication::prepareSimulation() const
         };
         const double mdot   = get("mdot", 1308.1);
         const double burnDur = RocketStageModel::kStg2MaxFuel_kg / mdot;
-        // The NASA TM reference ends S2 burn ~5 s before the simulation end,
-        // coasting the final seconds to the observation point.
-        constexpr double kPostBurnCoast_s = 5.0;
+        // Fire S2 when the body pitch angle matches the reference simulation's
+        // S2 ignition pitch (~24.44 deg).  Because the pitch decays at
+        // ~0.197 deg/s during coast (vs the reference's ~0.163 deg/s), igniting
+        // ~15.8 s earlier (post-burn coast ≈ 21 s) brings the body to the
+        // reference pitch angle at ignition while conserving orbital energy.
+        constexpr double kPostBurnCoast_s = 7.0;
         const double ignTime = simCfg.endTime - kPostBurnCoast_s - burnDur;
         AE_CORE_INFO("S2 ignition time: {:.3f} s  (burn duration: {:.3f} s, post-burn coast: {:.1f} s)",
                      ignTime, burnDur, kPostBurnCoast_s);
