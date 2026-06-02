@@ -26,12 +26,13 @@ RocketStageModel::RocketStageModel(
 
 // ── propulsion ────────────────────────────────────────────────────────────────
 
-RocketPropulsionResult RocketStageModel::propulsion() const
+RocketPropulsionResult RocketStageModel::propulsion(double t_sim) const
 {
     const bool s1Firing = !m_fuel.staged &&
                            (m_fuel.stg1FuelUsed_kg < kStg1MaxFuel_kg);
     const bool s2Firing =  m_fuel.staged &&
-                           (m_fuel.stg2FuelUsed_kg < kStg2MaxFuel_kg);
+                           (m_fuel.stg2FuelUsed_kg < kStg2MaxFuel_kg) &&
+                           (t_sim >= stg2IgnitionTime_s);
 
     std::unordered_map<std::string, double> vars;
     vars["stg1firing"] = s1Firing ? 1.0 : 0.0;

@@ -114,13 +114,14 @@ namespace Aetherion::RigidBody {
             // Translational inertia block (bottom-right 3x3)
             M(3, 3) = m;  M(4, 4) = m;  M(5, 5) = m;
 
-            // CG offset cross-coupling
-            M(0, 4) = m * rz;  M(0, 5) = -m * ry;
-            M(1, 3) = -m * rz;  M(1, 5) = m * rx;
-            M(2, 3) = m * ry;  M(2, 4) = -m * rx;
-            M(3, 1) = -m * rz;  M(3, 2) = m * ry;
-            M(4, 0) = m * rz;  M(4, 2) = -m * rx;
-            M(5, 0) = -m * ry;  M(5, 1) = m * rx;
+            // CG offset cross-coupling (Featherstone spatial inertia: h× = m·[c×])
+            // [c×] = [[0,-rz,ry],[rz,0,-rx],[-ry,rx,0]]; bottom-left = [c×]^T = -[c×]
+            M(0, 4) = -m * rz;  M(0, 5) =  m * ry;
+            M(1, 3) =  m * rz;  M(1, 5) = -m * rx;
+            M(2, 3) = -m * ry;  M(2, 4) =  m * rx;
+            M(3, 1) =  m * rz;  M(3, 2) = -m * ry;
+            M(4, 0) = -m * rz;  M(4, 2) =  m * rx;
+            M(5, 0) =  m * ry;  M(5, 1) = -m * rx;
 
             M_inv = M.inverse();
         }

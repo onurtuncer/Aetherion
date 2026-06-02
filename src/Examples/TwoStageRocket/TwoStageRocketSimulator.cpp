@@ -21,13 +21,15 @@ TwoStageRocketSimulator::TwoStageRocketSimulator(
     double                                                theta0,
     std::shared_ptr<Serialization::DAVEMLAeroModel>       inertiaDml,
     std::shared_ptr<Serialization::DAVEMLAeroModel>       propDml,
-    std::shared_ptr<const Serialization::DAVEMLAeroModel> aeroDml)
+    std::shared_ptr<const Serialization::DAVEMLAeroModel> aeroDml,
+    double                                                stg2IgnitionTime_s)
     : m_stepper   (VF{ ip, RocketGravityPolicy{}, RocketAeroPolicy{std::move(aeroDml)} })
     , m_state     (x0)
     , m_time      (0.0)
     , m_theta0    (theta0)
     , m_stageModel(std::move(inertiaDml), std::move(propDml))
 {
+    m_stageModel.stg2IgnitionTime_s = stg2IgnitionTime_s;
     // Prime the VF with the initial propulsion and inertia state so that
     // snapshot2() at t=0 shows the correct mass properties.
     updateVectorField();
@@ -61,13 +63,13 @@ void TwoStageRocketSimulator::rebuildSpatialInertia(
     // Translational inertia block (bottom-right 3×3)
     vf.M(3, 3) = m;   vf.M(4, 4) = m;   vf.M(5, 5) = m;
 
-    // CG-offset cross-coupling (r = [rx, ry, rz] from MRC to CG in body frame)
-    vf.M(0, 4) =  m * rz;   vf.M(0, 5) = -m * ry;
-    vf.M(1, 3) = -m * rz;   vf.M(1, 5) =  m * rx;
-    vf.M(2, 3) =  m * ry;   vf.M(2, 4) = -m * rx;
-    vf.M(3, 1) = -m * rz;   vf.M(3, 2) =  m * ry;
-    vf.M(4, 0) =  m * rz;   vf.M(4, 2) = -m * rx;
-    vf.M(5, 0) = -m * ry;   vf.M(5, 1) =  m * rx;
+    // CG-offset cross-coupling (Featherstone: h× = m·[c×], [c×]^T = -[c×])
+    vf.M(0, 4) = -m * rz;   vf.M(0, 5) =  m * ry;
+    vf.M(1, 3) =  m * rz;   vf.M(1, 5) = -m * rx;
+    vf.M(2, 3) = -m * ry;   vf.M(2, 4) =  m * rx;
+    vf.M(3, 1) =  m * rz;   vf.M(3, 2) = -m * ry;
+    vf.M(4, 0) = -m * rz;   vf.M(4, 2) =  m * rx;
+    vf.M(5, 0) =  m * ry;   vf.M(5, 1) = -m * rx;
 
     vf.M_inv = vf.M.inverse();
 }
@@ -79,7 +81,7 @@ void TwoStageRocketSimulator::updateVectorField()
     auto& vf = m_stepper.vectorField();
 
     // 1. Propulsion — update thrust and mass-depletion rate
-    const auto prop = m_stageModel.propulsion();
+    const auto prop = m_stageModel.propulsion(m_time);
     vf.thrust.thrust_N     =  prop.thrust_N;
     vf.mass_model.mdot_kgs = -prop.mdot_kgs;   // negative → mass decreases
 
@@ -99,7 +101,7 @@ TwoStageRocketSimulator::step(double h)
 {
     // ── Pre-step: synchronise VF with current stage/fuel state (ZOH) ─────────
     updateVectorField();
-    const double mdot_kgs = m_stageModel.propulsion().mdot_kgs;
+    const double mdot_kgs = m_stageModel.propulsion(m_time).mdot_kgs;
 
     // ── Integrate ─────────────────────────────────────────────────────────────
     auto res = m_stepper.step(m_time, m_state, h);

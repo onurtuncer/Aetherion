@@ -85,14 +85,18 @@ public:
     /// @param theta0     Earth Rotation Angle at t=0 [rad].
     /// @param inertiaDml Parsed @c twostage_inertia.dml engine.
     /// @param propDml    Parsed @c twostage_prop.dml engine.
-    /// @param aeroDml    Parsed @c twostage_aero.dml engine.
+    /// @param aeroDml            Parsed @c twostage_aero.dml engine.
+    /// @param stg2IgnitionTime_s Absolute sim time at which S2 may ignite [s].
+    ///                           Pass (endTime − S2_burn_duration) to match the
+    ///                           NASA TM reference coast-then-fire sequencing.
     explicit TwoStageRocketSimulator(
         const RigidBody::InertialParameters&                  ip,
         const RigidBody::StateD&                              x0,
         double                                                theta0,
         std::shared_ptr<Serialization::DAVEMLAeroModel>       inertiaDml,
         std::shared_ptr<Serialization::DAVEMLAeroModel>       propDml,
-        std::shared_ptr<const Serialization::DAVEMLAeroModel> aeroDml);
+        std::shared_ptr<const Serialization::DAVEMLAeroModel> aeroDml,
+        double                                                stg2IgnitionTime_s = 0.0);
 
     // ── Step ──────────────────────────────────────────────────────────────────
 

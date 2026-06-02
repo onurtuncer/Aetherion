@@ -106,11 +106,20 @@ public:
         std::shared_ptr<Serialization::DAVEMLAeroModel> inertiaDml,
         std::shared_ptr<Serialization::DAVEMLAeroModel> propDml);
 
+    // ── S2 ignition gate ──────────────────────────────────────────────────────
+
+    /// Absolute simulation time at which Stage 2 is allowed to ignite [s].
+    /// Default 0 = ignite immediately after staging.
+    /// Set to (endTime − S2_burn_duration) to match the NASA TM reference,
+    /// where S2 fires late enough to burn exactly until the simulation end.
+    double stg2IgnitionTime_s = 0.0;
+
     // ── Per-step queries ──────────────────────────────────────────────────────
 
     /// @brief Evaluate the propulsion DML at the current firing state.
+    /// @param t_sim Current simulation time [s]; used to gate S2 ignition.
     /// @return Thrust [N] and propellant flow rate [kg/s] for this step.
-    [[nodiscard]] RocketPropulsionResult propulsion() const;
+    [[nodiscard]] RocketPropulsionResult propulsion(double t_sim) const;
 
     /// @brief Evaluate the inertia DML at the current fuel state.
     /// @return Mass properties referenced to the moment reference centre (MRC).

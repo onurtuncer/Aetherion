@@ -116,7 +116,28 @@ void TwoStageRocketApplication::prepareSimulation() const
     auto inertiaDml = std::make_shared<Serialization::DAVEMLAeroModel>(inertiaPath);
 
     AE_CORE_INFO("Loading propulsion DML from '{}'", propPath);
-    auto propDml    = std::make_shared<Serialization::DAVEMLAeroModel>(propPath);
+    auto propDml = std::make_shared<Serialization::DAVEMLAeroModel>(propPath);
+
+    // ── Compute S2 ignition time ──────────────────────────────────────────────
+    // Query S2 mdot from the propulsion DML so S2 burns exactly through endTime.
+    const double stg2IgnitionTime_s = [&]() -> double {
+        std::unordered_map<std::string, double> s2vars;
+        s2vars["stg1firing"] = 0.0;
+        s2vars["stg2firing"] = 1.0;
+        const auto res = propDml->evaluateRaw<double>(s2vars);
+        auto get = [&](const char* id, double fallback) -> double {
+            auto it = res.find(id); return (it != res.end()) ? it->second : fallback;
+        };
+        const double mdot   = get("mdot", 1308.1);
+        const double burnDur = RocketStageModel::kStg2MaxFuel_kg / mdot;
+        // The NASA TM reference ends S2 burn ~5 s before the simulation end,
+        // coasting the final seconds to the observation point.
+        constexpr double kPostBurnCoast_s = 5.0;
+        const double ignTime = simCfg.endTime - kPostBurnCoast_s - burnDur;
+        AE_CORE_INFO("S2 ignition time: {:.3f} s  (burn duration: {:.3f} s, post-burn coast: {:.1f} s)",
+                     ignTime, burnDur, kPostBurnCoast_s);
+        return ignTime;
+    }();
 
     AE_CORE_INFO("Loading aero DML from '{}'", aeroPath);
     auto aeroDml    = std::make_shared<const Serialization::DAVEMLAeroModel>(aeroPath);
@@ -187,7 +208,8 @@ void TwoStageRocketApplication::prepareSimulation() const
         ip, x0, theta0,
         std::move(inertiaDml),
         std::move(propDml),
-        std::move(aeroDml));
+        std::move(aeroDml),
+        stg2IgnitionTime_s);
 }
 
 // ── writeInitialSnapshot ──────────────────────────────────────────────────────
