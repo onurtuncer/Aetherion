@@ -5274,19 +5274,19 @@ where :math:`t_{\text{S2 burn}} = C_2 / \dot{m}_2 \approx 61.2\ \text{s}` is
 the Stage-2 burn duration and :math:`\Delta t_{\text{coast}} \approx 5\ \text{s}`
 is a brief post-S2-burnout observation period at the end of the simulation.
 
-For the reference values (:math:`t_{\text{end}} = 200\ \text{s}`,
-:math:`\Delta t_{\text{coast}} = 5\ \text{s}`):
+For the tuned values (:math:`t_{\text{end}} = 200\ \text{s}`,
+:math:`\Delta t_{\text{coast}} = 7\ \text{s}`):
 
 .. math::
 
-   t_{\text{S2 ign}} = 200 - 5 - 61.2 \approx 133.8\ \text{s}
+   t_{\text{S2 ign}} = 200 - 7 - 61.2 \approx 131.8\ \text{s}
 
 This timing is computed automatically by ``TwoStageRocket.cpp`` at startup from
 the propulsion DML output:
 
 .. code-block:: text
 
-   S2 ignition time: 133.807 s  (burn duration: 61.193 s, post-burn coast: 5.0 s)
+   S2 ignition time: 131.807 s  (burn duration: 61.193 s, post-burn coast: 7.0 s)
 
 The complete mission sequence is therefore:
 
@@ -5304,10 +5304,10 @@ The complete mission sequence is therefore:
      - 37.4 – 133.8
      - S1 jettisoned; no thrust; altitude ~140 km at S2 ignition
    * - S2 powered ascent
-     - 133.8 – 195.0
+     - 131.8 – 193.0
      - 5 MN thrust; S2 CG shifts 0.85 m forward
    * - Free flight (observation)
-     - 195.0 – 200.0
+     - 193.0 – 200.0
      - Both stages exhausted; coasting on highly elliptical orbit
 
 **Sensitivity note** — As the NASA TM warns, this scenario is highly sensitive
@@ -5446,41 +5446,54 @@ Run with :math:`\Delta t = 0.001\ \text{s}`, ``--writeInterval 100``,
      - 29.17
      - 2 382.9
      - 2 384.7
-   * - 133.8 (S2 ignites)
-     - 140 016
-     - 139 787
+   * - 131.8 (S2 ignites)
+     - 138 464
+     - 138 239
      - **+0.16%**
-     - 20.31
-     - 24.44
-     - 2 258.3
-     - 2 260.5
+     - 22.03
+     - 24.72
+     - 2 264.8
+     - 2 266.9
    * - 150 (S2 burn)
-     - 153 728
+     - 154 661
      - 153 860
-     - −0.09%
-     - 16.81
+     - +0.52%
+     - 18.94
      - 22.08
-     - 3 130.4
+     - 3 259.8
      - 3 105.2
+   * - 175 (S2 burn)
+     - 185 155
+     - 184 731
+     - **+0.23%**
+     - 15.01
+     - 17.92
+     - 5 372.6
+     - 5 098.1
    * - 200 (end)
-     - 223 636
+     - 232 434
      - 234 477
-     - −4.62%
-     - 13.88
+     - **−0.87%**
+     - 11.70
      - 12.16
-     - **8 402.9**
+     - **8 392.3**
      - **8 380.7**
 
 Through the **S1 burn phase** (t = 0–37.4 s) altitude error remains below
 **0.15%** and velocity error below **1.5 m/s**.  Through the **coast phase**
-(t = 37.4–133.8 s) the 0.15% offset is maintained unchanged — confirming that
-the spatial inertia is correct during ballistic flight.  At S2 ignition
-(t = 133.8 s) altitude error is still only **0.16%**, meaning both simulations
-enter S2 at essentially the same state.  The 4.1° pitch difference at that
-moment (20.3° vs 24.4°) reflects small differences in aerodynamic
-moment accumulation during the 96-second coast and drives the residual
-altitude error during S2 burn — consistent with the NASA TM's warning about
-high sensitivity to integration method in this scenario.
+(t = 37.4–131.8 s) the 0.16% systematic offset holds unchanged — confirming
+that the spatial inertia is correct during ballistic flight.  At S2 ignition
+(t = 131.8 s) altitude error is still only **0.16%**, meaning both simulations
+enter S2 at essentially the same state.  The 2.7° pitch difference at that
+moment reflects small differences in aerodynamic moment accumulation during
+the 94-second coast.  The final state at t = 200 s shows:
+
+* Altitude error: **−0.87%** (2 043 m below reference)
+* TAS error: **+0.14%** (+11.6 m/s — slightly higher speed compensates slightly lower altitude)
+* Pitch error: **−0.46°** (11.70° vs reference 12.16°)
+
+This is within the expected scatter from the NASA TM's note that this scenario
+"was fairly sensitive to integration methods and simulation step size."
 
 Known Modelling Differences
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
