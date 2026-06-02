@@ -211,6 +211,78 @@ Key types:
 * :cpp:class:`Aetherion::RigidBody::SixDoFStepper` — high-level facade combining kinematics and dynamics into a single ``step()`` call via Radau IIA RKMK.
 * :cpp:struct:`Aetherion::RigidBody::StateLayout` — flat 14-element index map for serialised state vectors.
 
+**State vector representations**
+
+Two complementary representations are used throughout the library.
+
+*Manifold representation* — :cpp:struct:`Aetherion::RigidBody::State`
+
+The state lives on the product manifold :math:`SE(3) \times \mathbb{R}^7`:
+
+.. math::
+
+   x \;=\; \bigl(g,\;\nu_B,\;m\bigr)
+   \;\in\; SE(3) \times \mathbb{R}^6 \times \mathbb{R},
+
+where
+
+- :math:`g = (R_{WB},\,\mathbf{p}_W) \in SE(3)` — pose: body-to-inertial rotation matrix
+  and ECI position of the CoM.
+- :math:`\nu_B = [\boldsymbol{\omega}_B;\,\mathbf{v}_B] \in \mathbb{R}^6` — body-frame
+  twist: angular velocity [rad/s] stacked above linear velocity [m/s].
+- :math:`m \in \mathbb{R}` — current vehicle mass [kg].
+
+The Lie-group part :math:`g` is advanced by the RKMK integrator directly on the
+:math:`SE(3)` manifold; the Euclidean part :math:`[\nu_B;\,m] \in \mathbb{R}^7` is
+advanced by the standard Euclidean ODE solver.
+
+*Serialised representation* — :cpp:struct:`Aetherion::RigidBody::StateLayout`
+
+For file I/O, finite-difference Jacobians, or any context that requires a
+contiguous :math:`\mathbb{R}^{14}` vector, the state is packed in this order:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 12 18 10 60
+
+   * - Indices
+     - Constant
+     - Size
+     - Quantity
+   * - 0–2
+     - ``IDX_P``
+     - 3
+     - ECI position :math:`\mathbf{p}_W` [m]
+   * - 3–6
+     - ``IDX_Q``
+     - 4
+     - Unit quaternion :math:`q_{WB}` stored as :math:`(w,\,x,\,y,\,z)` — scalar part first
+   * - 7–9
+     - ``IDX_W``
+     - 3
+     - Body angular velocity :math:`\boldsymbol{\omega}_B` [rad/s]
+   * - 10–12
+     - ``IDX_V``
+     - 3
+     - Body linear velocity :math:`\mathbf{v}_B` [m/s]
+   * - 13
+     - ``IDX_M``
+     - 1
+     - Vehicle mass :math:`m` [kg]
+
+Total: :math:`N = 14` elements (``StateLayout::N``).
+
+.. note::
+
+   The quaternion :math:`q_{WB}` represents the rotation that maps vectors from body
+   frame :math:`B` to inertial frame :math:`W`.  Storage order is scalar-first:
+   :math:`(w, x, y, z)`, satisfying :math:`w^2 + x^2 + y^2 + z^2 = 1`.
+
+   The corresponding rotation matrix is :math:`R_{WB}` stored in :math:`g`.
+   Both :math:`g` (manifold) and the serialised :math:`q_{WB}` (flat vector)
+   encode the same orientation; ``BuildInitialState`` populates them from the
+   same configuration, and they remain consistent throughout integration.
+
 .. doxygennamespace:: Aetherion::RigidBody
    :content-only:
 
