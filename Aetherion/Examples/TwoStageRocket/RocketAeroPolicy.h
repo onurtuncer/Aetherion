@@ -112,9 +112,23 @@ public:
         const S beta_deg  = ArcSine(v / vt)
                           * S(180.0 / kPi);
 
-        // ── Dynamic pressure [Pa] ─────────────────────────────────────────────
-        const S alt  = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
-        const S rho  = Environment::US1976Atmosphere(alt).rho;
+        // ── Geometric altitude above WGS-84 ellipsoid ────────────────────────
+        // Approximate: use geocentric latitude to get the ellipsoid surface
+        // radius at the current position, then subtract from the ECI radius.
+        // Correct at all latitudes (equatorial approx.: r - a gives ~21 km
+        // error at the poles which would badly misplace the atmosphere layer).
+        constexpr double a   = Environment::WGS84::kSemiMajorAxis_m;
+        constexpr double b   = a * (1.0 - Environment::WGS84::kFlattening);
+        constexpr double a2  = a * a;
+        constexpr double b2  = b * b;
+        const S r        = SquareRoot(g.p.squaredNorm() + S(1.0e-30));
+        const S sin_gc   = g.p(2) / r;                   // sin(geocentric lat)
+        const S cos2_gc  = S(1) - sin_gc * sin_gc;       // cos²(geocentric lat)
+        // Ellipsoid surface radius: r_s = a·b / sqrt(b²cos²φ + a²sin²φ)
+        const S r_surf   = SquareRoot(S(a2 * b2) /
+            (S(b2) * cos2_gc + S(a2) * sin_gc * sin_gc + S(1.0e-30)));
+        const S alt      = r - r_surf;
+        const S rho      = Environment::US1976Atmosphere(alt).rho;
         const S qbar = S(0.5) * rho * vt * vt;
         const S qS   = qbar * S(kSref_m2);
 

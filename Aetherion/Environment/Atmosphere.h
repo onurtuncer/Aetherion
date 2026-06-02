@@ -50,13 +50,23 @@ namespace Aetherion::Environment {
         // Geopotential reference Earth radius (USSA-76) [m]
         const Scalar Re = Scalar(6356766.0);
 
-        // ---- Clamp altitude to model limits: 0 .. 84.852 km --------------------
+        // ---- Clamp / extend altitude ────────────────────────────────────────────
+        // Below 0: clamp to sea level.
+        // 0–84.852 km: standard US1976 layers.
+        // Above 84.852 km: isothermal exponential decay using the scale height
+        //   H_s = R·T_top / g0 ≈ 5 480 m at the model ceiling (T=186.946 K).
+        //   Temperature and speed of sound are held at the 84.852 km values so
+        //   that Mach number remains well-defined; only pressure and density decay.
         Scalar h = altitude_m_in;
         if (h < Scalar(0)) {
             h = Scalar(0);
         }
-        const Scalar h_max = Scalar(84852.0); // 84.852 km
+        const Scalar h_max = Scalar(84852.0); // 84.852 km — top of US1976 homosphere
+        Scalar above_decay = Scalar(1.0);     // multiplier applied to p and rho
         if (h > h_max) {
+            // Isothermal scale height at T_top = 186.946 K
+            const Scalar H_scale = Scalar(287.05287 * 186.946 / 9.80665); // ≈5 480 m
+            above_decay = Exponential(-(h - h_max) / H_scale);
             h = h_max;
         }
 
@@ -150,10 +160,13 @@ namespace Aetherion::Environment {
             p = Pb * Power(theta, exponent);
         }
 
+        // Apply above-ceiling decay to pressure (temperature held at ceiling value)
+        p = p * above_decay;
+
         // Ideal gas: rho = p / (R T)
         const Scalar rho = p / (R * T);
 
-        // Speed of sound
+        // Speed of sound (based on ceiling temperature above 84.852 km)
         const Scalar a = SquareRoot(gamma * R * T);
 
         Us1976State<Scalar> out{ T, p, rho, a };
