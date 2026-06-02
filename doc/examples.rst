@@ -4407,3 +4407,896 @@ Validation figures
 
    Scenario 16 atmosphere — temperature, density, pressure.
    Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+
+.. _example_two_stage_rocket:
+
+Two-Stage Rocket to Orbit (NASA TM-2015-218675 Atmospheric Scenario 17)
+------------------------------------------------------------------------
+
+**Reference:** `NASA TM-2015-218675`_,
+*Atmospheric and Space Flight Vehicle Equations of Motion*,
+Appendix B, Section B.1.17 — Atmospheric Simulation 17.
+
+**DAVE-ML data files:** :file:`data/TwoStageRocket_S119_source/twostage_aero.dml`,
+:file:`twostage_inertia.dml`, :file:`twostage_prop.dml`
+(authored by E. M. Queen and B. Jackson, NASA Langley Research Center, 2013).
+
+Scenario Overview
+^^^^^^^^^^^^^^^^^
+
+This is the most complex atmospheric example in the NASA reference: a full
+six-degree-of-freedom simulation of an **open-loop two-stage rocket ascending
+to orbit** from the equatorial prime meridian.  Unlike the F-16 scenarios,
+the vehicle is not trimmed — it follows a **gravity-turn** trajectory dictated
+entirely by its initial attitude and the physical forces acting on it.
+
+Three new phenomena distinguish this example from all earlier scenarios:
+
+1. **Variable mass** — propellant is consumed continuously, shrinking the total
+   mass and shifting the centre of gravity (CG) along the body axis.
+2. **Stage separation** — when Stage 1 propellant is exhausted the first-stage
+   hardware (35 000 kg) is jettisoned instantaneously; Stage 2 ignites
+   immediately.
+3. **CG–MRC offset** — the DAVE-ML aerodynamic and inertia models define moments
+   about a fixed Moment Reference Centre (MRC) while gravity and inertia forces
+   act at the (moving) CG; the equations of motion must correct for this offset.
+
+The vehicle is based on Eric Queen's conceptual two-stage-to-orbit design
+(source document: *twostagetoorbit.pptx*, NASA LaRC, 2013).
+
+Physics Model
+^^^^^^^^^^^^^
+
+The simulation composes four physics policies into a single ``VectorField``:
+
+.. code-block:: cpp
+
+   using TwoStageRocketVF = RigidBody::VectorField<
+       RocketGravityPolicy,              // J₂ gravity + CG–MRC moment transfer
+       RocketAeroPolicy,                 // DAVE-ML CL/CD/CY/Cm/Cn, wind-to-body
+       FlightDynamics::AxialThrustPolicy,// body +x thrust from propulsion DML
+       FlightDynamics::LinearBurnPolicy  // variable mdot, updated each step (ZOH)
+   >;
+
+   using Stepper = RigidBody::SixDoFStepper<TwoStageRocketVF>;
+
+All four policies are evaluated at every stage evaluation of the Radau IIA
+RKMK integrator.  The mass properties (inertia matrix, CG offset) and
+propulsion state (thrust, mass flow rate) are refreshed once per integration
+*step* using a zero-order-hold (ZOH) scheme.
+
+.. _atmos17_inertia_model:
+
+Inertia Model — ``twostage_inertia.dml``
+"""""""""""""""""""""""""""""""""""""""""
+
+The inertia model computes five outputs as piecewise-linear functions of the
+cumulative fuel consumed in each stage and a binary staging flag.
+
+**Inputs**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 15 55
+
+   * - Variable ID
+     - Unit
+     - Description
+   * - ``stagedFlag``
+     - —
+     - 0 = Stage 1 active; > 0 = Stage 2 active (S1 jettisoned)
+   * - ``stg1fuelUsed``
+     - kg
+     - Cumulative Stage-1 propellant consumed
+   * - ``stg2fuelUsed``
+     - kg
+     - Cumulative Stage-2 propellant consumed
+
+**Reference constants**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 15 15 35
+
+   * - Quantity
+     - Stage 1 (ignition)
+     - Stage 1 (burnout)
+     - Notes
+   * - Mass :math:`m` [kg]
+     - 314 000
+     - 134 000
+     - Fuel capacity: 180 000 kg
+   * - :math:`x_{CG}` [m aft of nose]
+     - 16.919
+     - 9.422
+     - CG travels 7.50 m forward as S1 burns
+   * - :math:`I_{xx}` [kg·m²]
+     - 353 250
+     - 150 750
+     - Roll (axial) inertia
+   * - :math:`I_{yy} = I_{zz}` [kg·m²]
+     - 33 501 637
+     - 10 886 637
+     - Pitch / yaw inertia (axisymmetric)
+   * - MRC position [m aft of nose]
+     - 16.919
+     - 16.919
+     - Fixed during Stage 1
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 15 15 35
+
+   * - Quantity
+     - Stage 2 (ignition)
+     - Stage 2 (burnout)
+     - Notes
+   * - Mass :math:`m` [kg]
+     - 99 000
+     - 19 000
+     - Fuel capacity: 80 000 kg
+   * - :math:`x_{CG}` [m aft of nose]
+     - 4.798
+     - 3.947
+     - CG travels 0.85 m forward as S2 burns
+   * - :math:`I_{xx}` [kg·m²]
+     - 111 375
+     - 21 375
+     - Roll inertia (S2 only)
+   * - :math:`I_{yy} = I_{zz}` [kg·m²]
+     - 941 064
+     - 212 385
+     - Pitch / yaw inertia (S2 only)
+   * - MRC position [m aft of nose]
+     - 4.798
+     - 4.798
+     - Fixed during Stage 2
+
+**Fuel fraction and linear interpolation**
+
+The DML first computes a *remaining fuel fraction* for each stage:
+
+.. math::
+
+   f_i = \frac{C_i - m_{f,i}^{\text{used}}}{C_i}, \qquad f_i \in [0,\,1]
+
+where :math:`C_1 = 180\,000\ \text{kg}` and :math:`C_2 = 80\,000\ \text{kg}`
+are the propellant capacities.  :math:`f_i = 1` when the stage is full;
+:math:`f_i = 0` at burnout.
+
+Every mass property :math:`P` is then linearly interpolated between its
+ignition value :math:`P_{\text{ign}}` and its burnout value
+:math:`P_{\text{bo}}`:
+
+.. math::
+
+   P = P_{\text{bo}} + (P_{\text{ign}} - P_{\text{bo}})\,f_i
+
+This single formula covers mass, :math:`x_{CG}`, :math:`I_{xx}`,
+:math:`I_{yy}`, and :math:`I_{zz}`.  The active stage is selected by the
+piecewise condition on ``stagedFlag``:
+
+.. math::
+
+   P =
+   \begin{cases}
+     P_{\text{bo,1}} + \Delta P_1\,f_1 & \text{if } \texttt{stagedFlag} = 0 \\
+     P_{\text{bo,2}} + \Delta P_2\,f_2 & \text{if } \texttt{stagedFlag} > 0
+   \end{cases}
+
+**CG–MRC offset (DXCG)**
+
+The aerodynamic lookup tables define moments about the Moment Reference Centre
+(MRC).  Because the CG shifts as propellant is consumed, the DML tracks the
+signed offset:
+
+.. math::
+
+   \text{DXCG} = x_{\text{MRC}} - x_{CG}  \quad \text{[m, positive forward]}
+
+During Stage 1, the MRC is fixed at 16.919 m aft of the nose.  As propellant
+burns, :math:`x_{CG}` decreases (moves forward), so DXCG grows from 0 m
+(at liftoff, where CG ≅ MRC) to +7.50 m at S1 burnout.  During Stage 2 the
+MRC shifts to 4.798 m aft of the nose.
+
+All products of inertia (:math:`I_{xz}`, :math:`I_{xy}`, :math:`I_{yz}`) are
+identically zero — the vehicle is axisymmetric.
+
+.. figure:: _static/atmos17/mass_properties_stage1.png
+   :alt: Stage 1 mass properties vs. fuel consumed
+   :align: center
+   :width: 95%
+
+   Stage 1 mass, CG position, roll inertia :math:`I_{xx}`, and pitch/yaw
+   inertia :math:`I_{yy}` as functions of cumulative fuel consumed.  All
+   quantities vary linearly with fuel fraction :math:`f_1`.
+
+.. figure:: _static/atmos17/mass_properties_stage2.png
+   :alt: Stage 2 mass properties vs. fuel consumed
+   :align: center
+   :width: 95%
+
+   Stage 2 mass properties after separation.  The much smaller inertias
+   (note the axis scales) reflect the slender upper-stage geometry.
+
+.. figure:: _static/atmos17/cg_mrc_offset.png
+   :alt: CG and MRC positions vs. fuel consumed
+   :align: center
+   :width: 90%
+
+   CG position (solid line) and fixed MRC (dashed) for each stage.  The
+   shaded band is the DXCG offset that enters the gravity moment-transfer
+   correction.  At Stage 1 liftoff the CG and MRC nearly coincide (DXCG ≈ 0);
+   by burnout DXCG has grown to ~7.5 m, creating a substantial gravity moment.
+
+.. _atmos17_prop_model:
+
+Propulsion Model — ``twostage_prop.dml``
+"""""""""""""""""""""""""""""""""""""""""
+
+**Inputs**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 10 65
+
+   * - Variable ID
+     - Unit
+     - Description
+   * - ``stg1firing``
+     - —
+     - > 0 when Stage 1 is burning
+   * - ``stg2firing``
+     - —
+     - > 0 when Stage 2 is burning
+
+**Engine constants**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 20 20 25
+
+   * - Quantity
+     - Stage 1
+     - Stage 2
+     - Notes
+   * - Maximum thrust :math:`T` [N]
+     - 17 000 000
+     - 5 000 000
+     - Constant during burn (no throttle model)
+   * - Specific impulse :math:`I_{sp}` [s]
+     - 360
+     - 390
+     - S2 is more efficient (higher-altitude vacuum Isp)
+
+**Thrust (piecewise constant)**
+
+.. math::
+
+   T =
+   \begin{cases}
+     17\,000\,000\ \text{N} & \text{if } \texttt{stg1firing} > 0 \\
+     5\,000\,000\ \text{N}  & \text{if } \texttt{stg2firing} > 0 \\
+     0                      & \text{otherwise}
+   \end{cases}
+
+Thrust acts solely along the body :math:`+x` axis (nose direction); lateral
+and axial moment components from thrust are identically zero:
+
+.. math::
+
+   \mathbf{F}_{\text{thrust}}^B = [T,\ 0,\ 0]^\top, \qquad
+   \mathbf{M}_{\text{thrust}}^B = [0,\ 0,\ 0]^\top
+
+**Propellant mass flow rate (Tsiolkovsky)**
+
+The propellant consumption rate follows directly from the rocket equation
+definition of specific impulse:
+
+.. math::
+
+   \dot{m} = \frac{T}{I_{sp}\,g_0}, \qquad g_0 = 9.806\,6\ \text{m/s}^2
+
+Numerically:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 20 20 20 40
+
+   * - Stage
+     - :math:`T` [N]
+     - :math:`I_{sp}` [s]
+     - :math:`\dot{m}` [kg/s]
+   * - 1
+     - 17 000 000
+     - 360
+     - :math:`\approx 4\,810.5`
+   * - 2
+     - 5 000 000
+     - 390
+     - :math:`\approx 1\,307.3`
+
+At these rates, Stage 1 exhausts its 180 000 kg propellant in
+:math:`180\,000 / 4810.5 \approx 37.4\ \text{s}`, and Stage 2 exhausts
+its 80 000 kg in :math:`80\,000 / 1307.3 \approx 61.2\ \text{s}`.
+
+.. figure:: _static/atmos17/propulsion_constants.png
+   :alt: Propulsion constants per stage
+   :align: center
+   :width: 70%
+
+   Maximum thrust and derived propellant mass flow rate for each stage.
+   Stage 1 produces 3.4× more thrust and burns propellant 3.7× faster than
+   Stage 2; Stage 2 compensates with a 8.3% higher specific impulse.
+
+**Staging event**
+
+When ``RocketStageModel::advance()`` detects that the cumulative
+Stage-1 fuel consumed equals the capacity :math:`C_1 = 180\,000\ \text{kg}`,
+it sets the staging flag and returns ``true``.  The simulator then applies
+a discrete mass drop of :math:`\Delta m = 35\,000\ \text{kg}` to the ODE
+state, representing the jettison of the empty Stage-1 hardware:
+
+.. math::
+
+   m^+ = m^- - \Delta m_{\text{S1 dry}}, \qquad
+   \Delta m_{\text{S1 dry}}
+     = m_{\text{S1 burnout}} - m_{\text{S2 ignite}}
+     = 134\,000 - 99\,000
+     = 35\,000\ \text{kg}
+
+The MRC immediately shifts from 16.919 m (S1 reference) to 4.798 m
+(S2 reference) and the spatial inertia matrix is rebuilt for the S2-only
+configuration.
+
+.. _atmos17_aero_model:
+
+Aerodynamic Model — ``twostage_aero.dml``
+""""""""""""""""""""""""""""""""""""""""""
+
+The aerodynamic model receives two scalar inputs — angle of attack
+:math:`\alpha` and sideslip angle :math:`\beta` (both in degrees) — and
+returns five force/moment coefficients.  All moments are defined about the
+current MRC.
+
+**Reference geometry**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 20 35
+
+   * - Quantity (DAVE-ML ID)
+     - Value
+     - Description
+   * - Reference area :math:`S_{\text{ref}}` (``sref``)
+     - 7.0 m²
+     - Approximate frontal area of the rocket base
+   * - Longitudinal ref. length :math:`\bar{c}` (``cbar``)
+     - 3.0 m
+     - Used to non-dimensionalise pitching moment
+   * - Lateral ref. length :math:`b` (``bspan``)
+     - 3.0 m
+     - Used to non-dimensionalise yawing moment
+
+**Total angle of attack**
+
+Before the drag table lookup the DML computes a *total* angle of attack that
+combines both the pitch and sideslip contributions:
+
+.. math::
+
+   \alpha_T = \sqrt{\alpha^2 + \beta^2}
+
+This makes :math:`C_D` symmetric with respect to the direction of incidence
+rather than purely pitch-plane.
+
+**Lookup tables and breakpoints**
+
+*Force coefficients* — 11-point tables, extrapolation clamped to ±10°:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 12 12 12 12 12 12 12 12 12 12 12
+
+   * - α (β) [°]
+     - −10
+     - −8
+     - −6
+     - −4
+     - −2
+     - 0
+     - +2
+     - +4
+     - +6
+     - +8
+     - +10
+   * - :math:`C_L(\alpha)`
+     - −1.60
+     - −1.00
+     - −0.73
+     - −0.49
+     - −0.24
+     - 0
+     - +0.24
+     - +0.49
+     - +0.73
+     - +1.00
+     - +1.60
+   * - :math:`C_D(\alpha_T)`
+     - 0.48
+     - 0.38
+     - 0.31
+     - 0.25
+     - 0.23
+     - **0.21**
+     - 0.23
+     - 0.25
+     - 0.31
+     - 0.38
+     - 0.48
+   * - :math:`C_Y(\beta)`
+     - +1.60
+     - +1.00
+     - +0.73
+     - +0.49
+     - +0.24
+     - 0
+     - −0.24
+     - −0.49
+     - −0.73
+     - −1.00
+     - −1.60
+
+Observations: :math:`C_L(\alpha)` and :math:`C_Y(\beta)` are
+**odd functions** (antisymmetric); :math:`C_D(\alpha_T)` is an **even
+function** with a minimum value of 0.21 at zero incidence, rising to 0.48
+at ±10°.
+
+*Moment coefficients* — 3-point linear tables, range ±20°:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 20 20 10
+
+   * - Coefficient
+     - α (β) = −20°
+     - 0°
+     - +20°
+     - Slope
+   * - :math:`C_m(\alpha)`
+     - +0.60
+     - 0
+     - −0.60
+     - −0.03 / deg
+   * - :math:`C_n(\beta)`
+     - −0.60
+     - 0
+     - +0.60
+     - +0.03 / deg
+
+Both moment tables are linear and pass through zero at zero incidence.
+:math:`C_m` is statically stable in pitch (negative slope → restoring moment
+for positive :math:`\alpha`); :math:`C_n` is statically stable in yaw.
+The rolling moment coefficient is identically zero (axisymmetric vehicle).
+
+.. figure:: _static/atmos17/aero_force_coefficients.png
+   :alt: Aerodynamic force coefficients
+   :align: center
+   :width: 95%
+
+   Lift (:math:`C_L`), drag (:math:`C_D`), and sideforce (:math:`C_Y`)
+   coefficients from the DAVE-ML lookup tables.  Filled circles mark the
+   11 breakpoint values; the solid lines are the piecewise-linear
+   interpolant used by the simulator.  :math:`C_D` uses the *total* angle
+   of attack :math:`\alpha_T = \sqrt{\alpha^2+\beta^2}` as its independent
+   variable.
+
+.. figure:: _static/atmos17/aero_moment_coefficients.png
+   :alt: Aerodynamic moment coefficients
+   :align: center
+   :width: 70%
+
+   Pitching (:math:`C_m`) and yawing (:math:`C_n`) moment coefficients.
+   The 3-breakpoint linear tables give a constant slope of ±0.03 /deg,
+   reflecting a simple static stability model.  :math:`C_l = 0` (axisymmetric).
+
+**Dynamic pressure**
+
+The atmosphere-relative airspeed and dynamic pressure are computed at each
+integrator stage evaluation:
+
+.. math::
+
+   \mathbf{v}_{\text{rel}}^B
+     = \mathbf{v}_B - R_{BI}\,(\boldsymbol{\omega}_E \times \mathbf{r})
+
+where :math:`\mathbf{r}` is the ECI position vector,
+:math:`\boldsymbol{\omega}_E = [0,\,0,\,\omega_E]^\top` in ECI with
+:math:`\omega_E = 7.292\,115 \times 10^{-5}\ \text{rad/s}`, and
+:math:`R_{BI}` rotates ECI to body frame.  The atmosphere-relative speed is:
+
+.. math::
+
+   V_T = \lVert \mathbf{v}_{\text{rel}}^B \rVert
+
+and the dynamic pressure:
+
+.. math::
+
+   \bar{q} = \tfrac{1}{2}\,\rho(h)\,V_T^2
+
+where :math:`\rho(h)` is the US Standard Atmosphere 1976 density at the
+current geocentric altitude :math:`h \approx \lVert\mathbf{r}\rVert - R_e`.
+
+**Aerodynamic angles**
+
+From the atmosphere-relative velocity components
+:math:`(u, v, w)` in the body frame:
+
+.. math::
+
+   \alpha = \arctan\!\left(\frac{w}{u}\right), \qquad
+   \beta  = \arcsin\!\left(\frac{v}{V_T}\right)
+
+Both angles are passed to the DAVE-ML model in **degrees**.  Table lookups
+are clamped at ±10° for force coefficients and ±20° for moment coefficients
+(no extrapolation).
+
+**Wind-to-body force transform**
+
+Force coefficients are defined in the **wind frame**
+:math:`\mathbf{F}_w = [-C_D,\;C_Y,\;-C_L]^\top \bar{q}S`
+(drag opposing motion, lift perpendicular to drag, sideforce positive
+starboard).  The wind-to-body rotation matrix is:
+
+.. math::
+
+   R_{BW} = R_y(\alpha)\,R_z(\beta)
+
+Expanding :math:`\mathbf{F}_B = R_{BW}\,\mathbf{F}_w` with
+:math:`c_\alpha = \cos\alpha`, :math:`s_\alpha = \sin\alpha`,
+:math:`c_\beta  = \cos\beta`,  :math:`s_\beta  = \sin\beta`:
+
+.. math::
+
+   F_x^B &= (-C_D\,c_\alpha c_\beta - C_Y\,c_\alpha s_\beta + C_L\,s_\alpha)\,\bar{q}S \\
+   F_y^B &= (-C_D\,s_\beta         + C_Y\,c_\beta                           )\,\bar{q}S \\
+   F_z^B &= (-C_D\,s_\alpha c_\beta - C_Y\,s_\alpha s_\beta - C_L\,c_\alpha )\,\bar{q}S
+
+.. figure:: _static/atmos17/wind_body_transform.png
+   :alt: Wind-to-body force transform convention
+   :align: center
+   :width: 70%
+
+   Sign convention for aerodynamic angle of attack :math:`\alpha` and the
+   wind-to-body force transform.  Drag :math:`D` opposes the velocity vector;
+   lift :math:`L` is perpendicular (upward in the body :math:`-z` direction for
+   positive :math:`\alpha`).  The moment axis :math:`y_B` points into the page.
+
+**Aerodynamic moments (about MRC)**
+
+The DML moment outputs are already defined about the MRC so no transfer
+correction is required here:
+
+.. math::
+
+   M_x^B &= 0                          \quad \text{(axisymmetric — no roll moment)} \\
+   M_y^B &= C_m\,\bar{q}\,S\,\bar{c}   \quad \text{(pitching moment about MRC)} \\
+   M_z^B &= C_n\,\bar{q}\,S\,b         \quad \text{(yawing moment about MRC)}
+
+.. _atmos17_gravity_policy:
+
+Gravity Policy — J₂ with CG–MRC Moment Transfer
+"""""""""""""""""""""""""""""""""""""""""""""""""
+
+The simulator integrates the Newton–Euler equations about the MRC, but
+gravity acts at the CG.  When these two points do not coincide, gravity
+produces an additional moment.
+
+The gravitational acceleration in the ECI frame uses the J₂ zonal harmonic:
+
+.. math::
+
+   \mathbf{g}(\mathbf{r}) = -\frac{\mu}{r^3}\,\mathbf{r}
+   + \frac{3\,\mu\,J_2\,R_e^2}{2\,r^5}
+     \!\left[
+       \left(5\frac{r_z^2}{r^2} - 1\right)\mathbf{r}
+       - 2\,r_z\,\hat{\mathbf{z}}_I
+     \right]
+
+where :math:`\mu = 3.986\,004\,418 \times 10^{14}\ \text{m}^3/\text{s}^2`,
+:math:`R_e = 6\,378\,137\ \text{m}`, and
+:math:`J_2 = 1.082\,626\,68 \times 10^{-3}`.
+
+The gravitational force in the body frame is:
+
+.. math::
+
+   \mathbf{F}_{\text{grav}}^B = R_{BI}\,m\,\mathbf{g}(\mathbf{r})
+
+The CG lies at position
+:math:`\mathbf{r}_{CG}^B = [x_{CG},\,0,\,0]^\top = [\text{DXCG},\,0,\,0]^\top`
+forward of the MRC (DXCG ≥ 0 with the sign convention in the DML).
+The additional moment that gravity produces about the MRC is:
+
+.. math::
+
+   \mathbf{M}_{\text{grav}}^{\text{MRC}}
+     = \mathbf{r}_{CG}^B \times \mathbf{F}_{\text{grav}}^B
+
+Expanding with :math:`r_y = r_z = 0` (axisymmetric CG, so CG lies on
+the body :math:`x`-axis):
+
+.. math::
+
+   M_x &= 0 \\
+   M_y &= -x_{CG}\,F_z^B \\
+   M_z &= +x_{CG}\,F_y^B
+
+``RocketGravityPolicy`` implements these corrections directly and updates
+:math:`x_{CG}` (stored as ``xcg_m`` = DXCG) at the start of every
+integration step.
+
+.. _atmos17_spatial_inertia:
+
+Spatial Inertia Matrix
+""""""""""""""""""""""
+
+The six-DoF integrator uses Featherstone's **spatial inertia** formulation.
+With the body origin at the MRC, CG offset :math:`\mathbf{c} = [x_{CG},\,0,\,0]^\top`,
+and body inertia :math:`\mathbf{I}` about the MRC:
+
+.. math::
+
+   \mathbf{M} =
+   \begin{bmatrix}
+     \mathbf{I} & m\,[\mathbf{c}]_\times^\top \\
+     m\,[\mathbf{c}]_\times & m\,\mathbf{1}_{3}
+   \end{bmatrix}
+   \in \mathbb{R}^{6\times 6}
+
+where :math:`[\mathbf{c}]_\times` is the skew-symmetric matrix of
+:math:`\mathbf{c}`.  For this axisymmetric vehicle (:math:`c_y = c_z = 0`):
+
+.. math::
+
+   \mathbf{M} =
+   \begin{bmatrix}
+     I_{xx}  & 0        & 0        & 0        & 0                & 0       \\
+     0        & I_{yy}  & 0        & 0        & 0                & -m\,x_{CG}\\
+     0        & 0       & I_{zz}   & 0        & m\,x_{CG}        & 0       \\
+     0        & 0       & 0        & m        & 0                & 0       \\
+     0        & 0       & m\,x_{CG}& 0        & m                & 0       \\
+     0        & -m\,x_{CG}& 0      & 0        & 0                & m
+   \end{bmatrix}
+
+The matrix is rebuilt (together with its inverse :math:`\mathbf{M}^{-1}`)
+before each integration step from the current DML-interpolated values of
+:math:`m`, :math:`I_{xx}`, :math:`I_{yy}`, and DXCG.
+
+Initial Conditions
+^^^^^^^^^^^^^^^^^^
+
+All initial conditions for Scenario 17 are defined in
+:file:`src/Examples/TwoStageRocket/TwoStageRocket.cpp`.
+
+**Launch site and attitude**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Geodetic latitude
+     - 0.0°
+     - Equatorial launch site
+   * - Geodetic longitude
+     - 0.0°
+     - Prime meridian
+   * - Altitude (MSL)
+     - 0.0 m
+     - Sea-level launch pad
+   * - Azimuth (heading)
+     - 90.0°
+     - Due East — maximises the benefit of Earth's rotation for orbit insertion
+   * - Pitch (from horizontal)
+     - 55.22°
+     - Zenith angle = 34.78° from vertical
+   * - Roll
+     - 0.0°
+     -
+
+**Body rates and velocity (ECEF-relative)**
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 20 45
+
+   * - Parameter
+     - Value
+     - Notes
+   * - NED velocity (N, E, D)
+     - [0, 0, 0] m/s
+     - Stationary on the launch pad
+   * - Body rates (roll, pitch, yaw)
+     - [0, 0, 0] rad/s
+     - ECEF-relative; Earth rotation (~7.29 × 10⁻⁵ rad/s pitch-rate) is
+       implicitly present in the ECI frame
+
+**Liftoff mass and inertia**
+
+The initial inertial parameters are read from the inertia DML with
+``stg1fuelUsed = 0`` and ``stagedFlag = 0``:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 25 40
+
+   * - Parameter
+     - Value
+     - Notes
+   * - Total mass :math:`m_0`
+     - 314 000 kg
+     - Full Stage-1 + Stage-2 stack
+   * - :math:`I_{xx}`
+     - 353 250 kg·m²
+     - Roll inertia at liftoff
+   * - :math:`I_{yy} = I_{zz}`
+     - 33 501 637 kg·m²
+     - Pitch/yaw inertia at liftoff
+   * - :math:`x_{CG}` (aft of nose)
+     - 16.919 m
+     - Nearly coincides with MRC at liftoff (DXCG ≈ 0)
+
+**Earth Rotation Angle**
+
+The initial Earth Rotation Angle (ERA) is computed as:
+
+.. math::
+
+   \theta_0 = \omega_E\,t_0, \qquad \omega_E = 7.292\,115 \times 10^{-5}\ \text{rad/s}
+
+For the default start time :math:`t_0 = 0` this gives :math:`\theta_0 = 0`.
+
+Per-Step Integration Loop
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The ``TwoStageRocketSimulator`` employs a **zero-order-hold (ZOH)** scheme to
+couple the variable-mass state with the fixed-structure Radau IIA RKMK
+integrator.  The sequence for each time step of size :math:`h` is:
+
+1. **Propulsion query** — evaluate ``twostage_prop.dml`` at the current
+   staging/fuel state to obtain :math:`T` [N] and :math:`\dot{m}` [kg/s].
+   Update ``AxialThrustPolicy::thrust_N`` and ``LinearBurnPolicy::mdot_kgs``
+   in the VectorField.
+
+2. **Inertia rebuild** — evaluate ``twostage_inertia.dml`` to obtain current
+   :math:`m`, :math:`I_{xx}`, :math:`I_{yy}`, :math:`I_{zz}`, and DXCG.
+   Rebuild the 6×6 spatial inertia matrix :math:`\mathbf{M}` and its inverse.
+   Update ``RocketGravityPolicy::xcg_m`` for the gravity moment correction.
+
+3. **Integration** — advance the 13-component ODE state
+   :math:`(\mathbf{q},\,\mathbf{p},\,\boldsymbol{\nu}_B,\,m)` by one step
+   :math:`h` using the 3-stage Radau IIA RKMK integrator.  The VectorField
+   is evaluated multiple times per step (6 function evaluations for a
+   3-stage implicit Runge-Kutta method) but the inertia and propulsion
+   parameters are held **constant** throughout the step (ZOH).
+
+4. **Fuel advance** — call ``RocketStageModel::advance(h, mdot)`` to
+   integrate fuel consumption: :math:`m_{f,i}^{\text{used}} \mathrel{+}= \dot{m}\,h`.
+
+5. **Staging check** — if Stage 1 fuel is exhausted, apply the discrete mass
+   drop and rebuild the inertia matrix for the S2-only configuration:
+
+   .. math::
+
+      m_{\text{state}}^+ = m_{\text{state}}^- - \Delta m_{\text{S1 dry}}
+
+Atmosphere Model
+^^^^^^^^^^^^^^^^
+
+The aerodynamic policy uses the **US Standard Atmosphere 1976** to compute
+air density at the current altitude.  This is the same model used throughout
+the Aetherion validation suite.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 30 35
+
+   * - Layer (altitude range)
+     - Temperature lapse rate
+     - Notes
+   * - Troposphere (0–11 km)
+     - −6.5 K/km
+     - Below the tropopause; most of ascent occurs here
+   * - Tropopause (11–20 km)
+     - Isothermal, 216.65 K
+     - Roughly 11–20 km
+   * - Stratosphere lower (20–32 km)
+     - +1.0 K/km
+     - Density drops below 0.1 kg/m³ here
+
+At the launch pad (sea level, 288.15 K):
+
+.. math::
+
+   \rho_0 = 1.225\ \text{kg/m}^3, \qquad
+   p_0    = 101\,325\ \text{Pa}
+
+The altitude used for the atmospheric query is the geocentric height
+:math:`h = \lVert\mathbf{r}\rVert - R_e`, consistent with the spherical
+approximation used in the NASA reference.
+
+Output Format
+^^^^^^^^^^^^^
+
+Each row of the output CSV corresponds to one
+:cpp:struct:`Aetherion::Simulation::Snapshot2` (31 columns).  The schema is
+compatible with the NASA Scenario 17 reference CSV
+(:file:`data/TwoStageRocket_S119_source/Atmos_17_sim_06.csv`).
+
+Key columns specific to Scenario 17 compared to earlier snapshots:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 20 45
+
+   * - Column group
+     - Columns
+     - Description
+   * - Propellant state
+     - ``stg1fuelUsed_kg``, ``stg2fuelUsed_kg``
+     - Cumulative fuel consumed per stage [kg]
+   * - Staging flag
+     - ``staged``
+     - 0 before separation; 1 after Stage 1 jettison
+   * - Vehicle mass
+     - ``mass_kg``
+     - Total mass from ODE state [kg]
+
+Building and Running
+^^^^^^^^^^^^^^^^^^^^
+
+CMake injects the three DML file paths at configure time:
+
+.. code-block:: bash
+
+   cmake --build build --target TwoStageRocket
+
+   ./build/TwoStageRocket \
+       --outputFileName twostage_output.csv \
+       --startTime      0.0                 \
+       --endTime        120.0               \
+       --timeStep       0.01                \
+       --writeInterval  10
+
+The DML files are read from
+:file:`data/TwoStageRocket_S119_source/` at configure time and their absolute
+paths are embedded into the binary via ``-DTWOSTAGE_INERTIA_FILE``,
+``-DTWOSTAGE_PROP_FILE``, and ``-DTWOSTAGE_AERO_FILE`` compile definitions.
+
+Architecture
+^^^^^^^^^^^^
+
+The TwoStageRocket example departs from the ``ISimulator`` template used in
+earlier scenarios because the discontinuous stage-separation mass drop requires
+direct write access to the ODE state vector.  Instead, it owns the state
+directly:
+
+.. code-block:: text
+
+   Simulation::Application                (base — defines run() loop)
+       └── TwoStageRocketApplication
+               prepareSimulation()         load DML engines → build ECI state
+               writeInitialSnapshot()      write t=0 row
+               stepAndRecord()             advance by Δt, write CSV row
+               logFinalSummary()           print final altitude, speed, mass
+
+   TwoStageRocketSimulator                (owns state directly — no ISimulator)
+       ├── SixDoFStepper<TwoStageRocketVF>   Radau IIA RKMK integrator
+       ├── RocketStageModel                  fuel tracker + DML engine wrapper
+       │       ├── twostage_inertia.dml      mass properties interpolation
+       │       └── twostage_prop.dml         thrust / mdot selection
+       └── RocketAeroPolicy                  DAVE-ML aero (twostage_aero.dml)
