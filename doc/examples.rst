@@ -5478,6 +5478,23 @@ above ~70 km:
    :align: center
    :width: 90%
 
+**3-D trajectory** — East–Up projection from the equatorial launch site.
+Trajectory segments are colour-coded by mission phase (S1 burn red,
+ballistic coast blue, S2 burn purple, final coast green).  The dashed grey
+line is NASA Sim 06.  Mission events are annotated with vertical drop lines
+to the ground plane:
+
+.. figure:: _static/atmos17/trajectory_3d.png
+   :alt: 3D rocket trajectory — Aetherion vs. NASA Sim 06
+   :align: center
+   :width: 95%
+
+   3-D trajectory of the two-stage rocket.  The ground plane (altitude = 0)
+   is shown as a translucent blue surface.  Phase boundaries at S1 burnout
+   (t = 37.4 s), S2 ignition (t = 131.8 s), and S2 burnout (t = 193 s) are
+   marked with annotated drop-lines.  Aetherion ends 2 km lower than NASA
+   Sim 06 (232 km vs 234 km) with near-identical speed (8 392 vs 8 381 m/s).
+
 Reference Data — Three Bundled Simulations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
