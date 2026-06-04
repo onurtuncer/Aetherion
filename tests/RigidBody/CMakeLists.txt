@@ -10,7 +10,8 @@ add_executable(
   test_GravitationalWrench.cpp
   test_SixDofStepper.cpp
   test_SE3StateInit.cpp
-  test_Config.cpp)
+  test_Config.cpp
+  test_SpatialInertiaSignConvention.cpp)
 
 target_compile_features(test_rigidBody PRIVATE cxx_std_23)
 
