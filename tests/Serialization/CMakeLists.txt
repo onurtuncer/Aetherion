@@ -61,6 +61,21 @@ target_link_libraries(test_daveml_aero_model PRIVATE Aetherion Catch2::Catch2Wit
 
 catch_discover_tests(test_daveml_aero_model)
 
+# DAVE-ML control model smoke tests
+set(DAVEML_F16_CONTROL "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_control.dml")
+
+add_executable(test_daveml_control_model test_DAVEMLControlModel.cpp)
+
+target_compile_definitions(test_daveml_control_model PRIVATE "DAVEML_CONTROL_FILE=\"${DAVEML_F16_CONTROL}\"")
+
+target_compile_options(test_daveml_control_model PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_include_directories(test_daveml_control_model PRIVATE "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+
+target_link_libraries(test_daveml_control_model PRIVATE Aetherion Catch2::Catch2WithMain)
+
+catch_discover_tests(test_daveml_control_model)
+
 # DAVE-ML propulsion model smoke tests
 set(DAVEML_F16_PROP "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_prop.dml")
 

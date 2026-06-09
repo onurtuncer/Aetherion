@@ -8,6 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 
+#include <cstdio>
 #include <iostream>
 #include <sstream>
 
@@ -193,6 +194,47 @@ TEST_CASE("Application rejects flag with no value", "[Application][ArgumentParse
 }
 
 // ─────────────────────────────────────────────────────────────
+// Sentinel thrown by the exit stub so --help tests stay in-process
+// ─────────────────────────────────────────────────────────────
+namespace { struct HelpExitCalled {}; }
+
+// ─────────────────────────────────────────────────────────────
+// Tests — ArgumentParser --help / -h
+// ─────────────────────────────────────────────────────────────
+TEST_CASE("ArgumentParser --help prints usage and triggers exit", "[ArgumentParser][help]") {
+    ArgumentParser parser("my_prog",
+        [](int) { throw HelpExitCalled{}; });
+    parser.addArgument("--foo", "A foo argument", [](const std::string&) {});
+
+    std::ostringstream buf;
+    auto* old = std::cerr.rdbuf(buf.rdbuf());
+    bool exited = false;
+    try {
+        std::vector<const char*> argv{ "my_prog", "--help" };
+        parser.parse(static_cast<int>(argv.size()),
+                     const_cast<char**>(argv.data()));
+    }
+    catch (const HelpExitCalled&) { exited = true; }
+    std::cerr.rdbuf(old);
+
+    REQUIRE(exited);
+    CHECK(buf.str().find("Usage:") != std::string::npos);
+    CHECK(buf.str().find("my_prog") != std::string::npos);
+    CHECK(buf.str().find("--foo") != std::string::npos);
+}
+
+TEST_CASE("ArgumentParser -h is an alias for --help", "[ArgumentParser][help]") {
+    ArgumentParser parser("my_prog",
+        [](int) { throw HelpExitCalled{}; });
+
+    std::vector<const char*> argv{ "my_prog", "-h" };
+    REQUIRE_THROWS_AS(
+        parser.parse(static_cast<int>(argv.size()),
+                     const_cast<char**>(argv.data())),
+        HelpExitCalled);
+}
+
+// ─────────────────────────────────────────────────────────────
 // Tests — ArgumentParser::printUsage
 // ─────────────────────────────────────────────────────────────
 TEST_CASE("ArgumentParser::printUsage writes Usage header to cerr", "[ArgumentParser][printUsage]") {
@@ -209,6 +251,102 @@ TEST_CASE("ArgumentParser::printUsage writes Usage header to cerr", "[ArgumentPa
     CHECK(out.find("my_program") != std::string::npos);
     CHECK(out.find("--foo") != std::string::npos);
     CHECK(out.find("--help") != std::string::npos);
+}
+
+// ─────────────────────────────────────────────────────────────
+// RunableStub — concrete Application that can actually run().
+// stepAndRecord advances simulation time by the given step h.
+// failOnStep (1-based) optionally reports one non-convergent step.
+// ─────────────────────────────────────────────────────────────
+class RunableStub : public Application
+{
+public:
+    explicit RunableStub(FakeArgv& args, int failOnStep = -1)
+        : Application(args.argc(), args.argv())
+        , failOnStep_(failOnStep)
+    {
+        time_ = getConfig().startTime;
+    }
+
+    int stepsCalled() const { return stepsCalled_; }
+
+protected:
+    void prepareSimulation()                  const override {}
+    void writeInitialSnapshot(std::ofstream&) const override {}
+    void logFinalSummary()                    const override {}
+
+    StepObservation stepAndRecord(std::ofstream&, double h, bool) const override
+    {
+        ++stepsCalled_;
+        time_ += h;
+        StepObservation obs;
+        obs.time_s    = time_;
+        obs.converged = (stepsCalled_ != failOnStep_);
+        obs.residual  = obs.converged ? 0.0 : 1.23e-4;
+        return obs;
+    }
+
+private:
+    int            failOnStep_;
+    mutable int    stepsCalled_ = 0;
+    mutable double time_        = 0.0;
+};
+
+// ─────────────────────────────────────────────────────────────
+// Tests — Application::run()
+// Covers: logSimulationParameters, openOutputCsv (happy path
+// and error path), run, runTimeStepLoop (convergence warn,
+// per-10-step progress log).
+// ─────────────────────────────────────────────────────────────
+TEST_CASE("Application::run completes a short simulation", "[Application][run]") {
+    const std::string outFile = "_ae_run_test_output.csv";
+    FakeArgv args{ "test_program",
+        "--timeStep",       "0.1",
+        "--endTime",        "0.3",
+        "--outputFileName", outFile.c_str() };
+    RunableStub app(args);
+
+    REQUIRE_NOTHROW(app.run());
+    CHECK(app.stepsCalled() == 3);
+
+    std::remove(outFile.c_str());
+}
+
+TEST_CASE("Application::run continues past a non-converging step", "[Application][run]") {
+    const std::string outFile = "_ae_run_test_nonconv.csv";
+    FakeArgv args{ "test_program",
+        "--timeStep",       "0.1",
+        "--endTime",        "0.3",
+        "--outputFileName", outFile.c_str() };
+    RunableStub app(args, /*failOnStep=*/2);
+
+    REQUIRE_NOTHROW(app.run());
+    CHECK(app.stepsCalled() == 3);
+
+    std::remove(outFile.c_str());
+}
+
+TEST_CASE("Application::run exercises per-10-step progress logging", "[Application][run]") {
+    const std::string outFile = "_ae_run_test_10steps.csv";
+    FakeArgv args{ "test_program",
+        "--timeStep",       "0.1",
+        "--endTime",        "2.0",
+        "--outputFileName", outFile.c_str() };
+    RunableStub app(args);
+
+    REQUIRE_NOTHROW(app.run());
+    CHECK(app.stepsCalled() == 20);
+
+    std::remove(outFile.c_str());
+}
+
+TEST_CASE("Application::run throws std::runtime_error for unwritable output path",
+          "[Application][run][openOutputCsv]") {
+    FakeArgv args{ "test_program",
+        "--outputFileName", "nonexistent_subdir_xyz/output.csv" };
+    RunableStub app(args);
+
+    REQUIRE_THROWS_AS(app.run(), std::runtime_error);
 }
 
 // ─────────────────────────────────────────────────────────────

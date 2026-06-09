@@ -26,6 +26,8 @@
 #include <Aetherion/Serialization/DAVEML/LoadInertiaFromDAVEML.h>
 
 #include <string>
+#include <fstream>
+#include <cstdio>
 
 using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinRel;
@@ -37,6 +39,25 @@ using Catch::Matchers::WithinAbs;
 #endif
 
 static const std::string kFile = DAVEML_TEST_FILE;
+
+// ── Minimal self-contained DML used for unit-factor and evalMathML tests ─────
+namespace {
+
+const char* kMinDML = R"(<?xml version="1.0" encoding="UTF-8"?>
+<DAVEfunc>
+  <variableDef varID="x_pct"   units="pct" initialValue="50.0"/>
+  <variableDef varID="x_plain" units="nd"  initialValue="7.0"/>
+</DAVEfunc>)";
+
+std::string writeMinDML()
+{
+    const std::string path = "_ae_test_reader_min.dml";
+    std::ofstream f(path);
+    f << kMinDML;
+    return path;
+}
+
+} // namespace
 
 // ── Unit conversion constants ────────────────────────────────────────────────
 constexpr double kSlugFt2_to_kgm2 = 1.355817948329279;
@@ -172,4 +193,131 @@ TEST_CASE("LoadInertiaFromDAVEML: F-16 inertia at non-reference CG", "[daveml][s
     // xbar_m = (35 - 30) * 0.01 * 11.32 ft → m (forward = positive)
     const double expected_xbar = 0.01 * 11.32 * (35.0 - 30.0) * kFt_to_m;
     CHECK_THAT(ip.xbar_m, WithinRel(expected_xbar, 1e-9));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Error paths — no real file required
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLReader: constructor throws for non-existent file", "[daveml]")
+{
+    REQUIRE_THROWS_AS(DAVEMLReader("_nonexistent_file_xyz.dml"), std::runtime_error);
+}
+
+TEST_CASE("DAVEMLReader: getValue throws out_of_range for unknown varID", "[daveml]")
+{
+    if (kFile.empty()) return;
+    DAVEMLReader r(kFile);
+    REQUIRE_THROWS_AS(r.getValue("NONEXISTENT_VAR_XYZ"), std::out_of_range);
+}
+
+TEST_CASE("DAVEMLReader: getValueSI throws out_of_range for unknown varID", "[daveml]")
+{
+    if (kFile.empty()) return;
+    DAVEMLReader r(kFile);
+    REQUIRE_THROWS_AS(r.getValueSI("NONEXISTENT_VAR_XYZ"), std::out_of_range);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// evalMathML — arithmetic operators via minimal DML
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLReader: evalMathML plus", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    CHECK_THAT(r.evalMathML(
+        "<math><apply><plus/><cn>3</cn><cn>4</cn></apply></math>"),
+        WithinAbs(7.0, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: evalMathML unary minus", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    CHECK_THAT(r.evalMathML(
+        "<math><apply><minus/><cn>5</cn></apply></math>"),
+        WithinAbs(-5.0, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: evalMathML divide", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    CHECK_THAT(r.evalMathML(
+        "<math><apply><divide/><cn>10</cn><cn>4</cn></apply></math>"),
+        WithinAbs(2.5, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: evalMathML power", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    CHECK_THAT(r.evalMathML(
+        "<math><apply><power/><cn>2</cn><cn>10</cn></apply></math>"),
+        WithinAbs(1024.0, 1e-9));
+}
+
+TEST_CASE("DAVEMLReader: evalMathML unsupported operator throws", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    REQUIRE_THROWS_AS(r.evalMathML(
+        "<math><apply><modulo/><cn>7</cn><cn>3</cn></apply></math>"),
+        std::runtime_error);
+}
+
+TEST_CASE("DAVEMLReader: evalMathML unexpected element throws", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    REQUIRE_THROWS_AS(r.evalMathML("<math><bogus_elem/></math>"),
+        std::runtime_error);
+}
+
+TEST_CASE("DAVEMLReader: evalMathML ci with unknown varID throws", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    REQUIRE_THROWS_AS(r.evalMathML(
+        "<math><apply><plus/><ci>NONEXISTENT</ci><cn>1</cn></apply></math>"),
+        std::runtime_error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getValueSI unit-factor coverage — pct and unknown (default 1.0)
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLReader: getValueSI applies pct factor", "[daveml][units]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    // x_pct = 50.0, units="pct" → factor 0.01 → SI = 0.5
+    CHECK_THAT(r.getValueSI("x_pct"), WithinAbs(0.5, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: getValueSI uses factor 1.0 for unrecognised unit", "[daveml][units]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::remove(path.c_str());
+
+    // x_plain = 7.0, units="nd" (not recognised) → factor 1.0 → SI = 7.0
+    CHECK_THAT(r.getValueSI("x_plain"), WithinAbs(7.0, 1e-12));
 }

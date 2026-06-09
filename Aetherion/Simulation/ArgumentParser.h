@@ -34,9 +34,14 @@ public:
     /// @brief Callable invoked with the string token that immediately follows a registered flag.
     using Handler = std::function<void(const std::string&)>;
 
+    /// @brief Callable invoked instead of std::exit when --help/-h is parsed.
+    ///        The default is std::exit; tests may supply a throwing stub.
+    using ExitFn = std::function<void(int)>;
+
     /// @brief Constructs the parser with the executable name shown in usage output.
     /// @param programName Name of the program (typically argv[0]).
-    explicit ArgumentParser(std::string programName);
+    /// @param exitFn      Function called on --help/-h (default: std::exit).
+    explicit ArgumentParser(std::string programName, ExitFn exitFn = std::exit);
 
     /// @brief Registers a flag, its help text, and the callback to invoke when the flag is encountered.
     /// @param flag Flag string including any leading dashes, e.g. "--config".
@@ -57,6 +62,7 @@ public:
 
 private:
     std::string programName_;
+    ExitFn      exitFn_;
     std::unordered_map<std::string, Handler>     handlers_;
     std::unordered_map<std::string, std::string> descriptions_;
     std::vector<std::string>                     order_;

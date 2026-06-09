@@ -131,3 +131,102 @@ TEST_CASE("DAVEMLAeroModel: physical sanity at alpha=10 deg", "[daveml_aero][smo
     // CZ (body down) should be increasingly negative as alpha increases (lift)
     CHECK(out.cz < 0.0);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Error path — no file required
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLAeroModel: constructor throws for non-existent file", "[daveml_aero]")
+{
+    REQUIRE_THROWS_AS(DAVEMLAeroModel("_nonexistent_file_xyz.dml"), std::runtime_error);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// evaluateRaw — direct test
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLAeroModel: evaluateRaw returns all six force-moment coefficients",
+          "[daveml_aero][smoke]")
+{
+    if (kAeroFile.empty()) return;
+    DAVEMLAeroModel m(kAeroFile);
+
+    std::unordered_map<std::string, double> vars;
+    vars["vt"]    = 300.0;
+    vars["alpha"] = 5.0;
+    vars["beta"]  = 0.0;
+    vars["p"] = vars["q"] = vars["r"] = 0.0;
+    vars["el"] = vars["ail"] = vars["rdr"] = 0.0;
+
+    auto result = m.evaluateRaw(vars);
+
+    for (const char* id : {"cx", "cy", "cz", "cl", "cm", "cn"}) {
+        auto it = result.find(id);
+        REQUIRE(it != result.end());
+        CHECK(std::isfinite(it->second));
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Physical sanity at varied flight conditions
+// (exercises additional evaluation-graph branches: beta coupling, damping,
+//  negative alpha, non-zero control deflections)
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLAeroModel: non-zero sideslip gives non-zero cy", "[daveml_aero][smoke]")
+{
+    if (kAeroFile.empty()) return;
+    DAVEMLAeroModel m(kAeroFile);
+
+    DAVEMLAeroModel::Inputs<double> in;
+    in.vt_fps    = 300.0;
+    in.alpha_deg =   5.0;
+    in.beta_deg  =   5.0;
+
+    auto out = m.evaluate(in);
+    CHECK(out.cy != 0.0);
+}
+
+TEST_CASE("DAVEMLAeroModel: non-zero elevator shifts cm", "[daveml_aero][smoke]")
+{
+    if (kAeroFile.empty()) return;
+    DAVEMLAeroModel m(kAeroFile);
+
+    DAVEMLAeroModel::Inputs<double> baseline, deflected;
+    baseline.vt_fps = deflected.vt_fps = 300.0;
+    baseline.alpha_deg = deflected.alpha_deg = 5.0;
+    deflected.el_deg = 10.0;
+
+    auto b = m.evaluate(baseline);
+    auto d = m.evaluate(deflected);
+    CHECK(b.cm != d.cm);
+}
+
+TEST_CASE("DAVEMLAeroModel: negative alpha is evaluated without error", "[daveml_aero][smoke]")
+{
+    if (kAeroFile.empty()) return;
+    DAVEMLAeroModel m(kAeroFile);
+
+    DAVEMLAeroModel::Inputs<double> in;
+    in.vt_fps    = 300.0;
+    in.alpha_deg = -5.0;
+
+    auto out = m.evaluate(in);
+    CHECK(std::isfinite(out.cx));
+    CHECK(std::isfinite(out.cz));
+}
+
+TEST_CASE("DAVEMLAeroModel: non-zero pitch rate q affects cm", "[daveml_aero][smoke]")
+{
+    if (kAeroFile.empty()) return;
+    DAVEMLAeroModel m(kAeroFile);
+
+    DAVEMLAeroModel::Inputs<double> baseline, pitching;
+    baseline.vt_fps = pitching.vt_fps = 300.0;
+    baseline.alpha_deg = pitching.alpha_deg = 5.0;
+    pitching.q_rps = 0.1;
+
+    auto b = m.evaluate(baseline);
+    auto p = m.evaluate(pitching);
+    CHECK(b.cm != p.cm);
+}

@@ -14,8 +14,9 @@
 
 namespace Aetherion::Simulation {
 
-ArgumentParser::ArgumentParser(std::string programName)
-    : programName_(std::move(programName)) {}
+ArgumentParser::ArgumentParser(std::string programName, ExitFn exitFn)
+    : programName_(std::move(programName))
+    , exitFn_(std::move(exitFn)) {}
 
 void ArgumentParser::addArgument(const std::string& flag,
                                  const std::string& description,
@@ -31,7 +32,8 @@ void ArgumentParser::parse(int argc, char* argv[]) {
 
         if (arg == "--help" || arg == "-h") {
             printUsage();
-            std::exit(EXIT_SUCCESS);
+            exitFn_(EXIT_SUCCESS);
+            return;
         }
 
         auto it = handlers_.find(arg);

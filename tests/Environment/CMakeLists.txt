@@ -35,3 +35,17 @@ include(Catch)
 catch_discover_tests(test_gravity)
 
 # add_test(NAME gravity_tests COMMAND test_gravity)
+
+add_executable(test_wind_geometry test_wind_geometry.cpp)
+
+target_link_libraries(
+  test_wind_geometry
+  PRIVATE Aetherion
+          Catch2::Catch2WithMain
+          CppAD::cppad
+          Eigen3::Eigen)
+
+target_include_directories(test_wind_geometry PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+include(Catch)
+catch_discover_tests(test_wind_geometry)
