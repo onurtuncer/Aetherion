@@ -5495,47 +5495,12 @@ to the ground plane:
    marked with annotated drop-lines.  Aetherion ends 2 km lower than NASA
    Sim 06 (232 km vs 234 km) with near-identical speed (8 392 vs 8 381 m/s).
 
-Reference Data — Three Bundled Simulations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 The NASA TM bundle contains three independent reference runs of Scenario 17,
 all produced by the original check-case code but with different step sizes:
 
-.. list-table::
-   :header-rows: 1
-   :widths: 15 15 15 15 40
-
-   * - File
-     - Rows
-     - :math:`\Delta t` [s]
-     - Alt @ t=200 s [m]
-     - Notes
-   * - ``Atmos_17_sim_04.csv``
-     - 20 001
-     - 0.01
-     - 251 451
-     - Coarser step; diverges significantly at end
-   * - ``Atmos_17_sim_05.csv``
-     - 20 001
-     - 0.01
-     - 251 444
-     - Identical step to sim_04; same trajectory
-   * - **``Atmos_17_sim_06.csv``**
-     - **2 001**
-     - **0.10**
-     - **234 477**
-     - **Finer-step result; used for all comparisons**
-
-The three runs agree to better than 0.2% through the S1 burn and coast phases
-(t = 0–131.8 s), but diverge strongly after S2 ignition:
-sim_04/05 end at **251 km** while sim_06 ends at **234 km** — a 7% spread
-caused entirely by integration-step sensitivity, exactly as the NASA TM warns.
-
 Aetherion at :math:`\Delta t = 0.001\ \text{s}` (Radau IIA RKMK) ends at
-**232 km** — placing it within **0.9%** of sim_06, and **8× closer** to
-sim_06 than sim_04/05 are.  The NASA TM recommends :math:`\Delta t \leq
-0.001\ \text{s}` for this scenario; Aetherion therefore belongs to the
-same fine-step cluster as sim_06.
+**232 km** — placing it within **0.9%** of sim_06.  The NASA TM recommends an integration time step of :math:`\Delta t \leq
+0.001\ \text{s}` for this scenario.
 
 **All validation numbers below are against ``Atmos_17_sim_06.csv``
 (referred to as "NASA Sim 06").**
@@ -5669,12 +5634,6 @@ t = 200 s shows:
 * TAS: **+0.14%** (+11.6 m/s)
 * Pitch: **−0.46°** (11.70° vs 12.16°)
 
-For context, the three bundled reference runs themselves disagree by **7%**
-in final altitude (sim_04/05: 251 km vs sim_06: 234 km) due to step-size
-sensitivity.  Aetherion at :math:`\Delta t = 0.001\ \text{s}` is **8× closer**
-to NASA Sim 06 than the other reference runs are to it, placing Aetherion
-squarely within the fine-step cluster alongside sim_06.
-
 Known Modelling Differences
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -5684,22 +5643,6 @@ Known Modelling Differences
 
    * - Item
      - Explanation
-   * - **Spatial inertia sign convention**
-     - The 6×6 spatial inertia matrix uses the Featherstone convention
-       :math:`\mathbf{M} = [\mathbf{I}_O,\; m\,[\mathbf{c}\times];\; m\,[\mathbf{c}\times]^\top,\; m\,\mathbf{I}]`.
-       An earlier version had all off-diagonal coupling terms with wrong signs, causing
-       a spurious gravitational-pendulum instability (pitch divergence by t ≈ 14 s).
-       The bug was invisible in all other examples because they have DXCG = 0;
-       it only activates when the CG is offset from the MRC, which grows from
-       0 to 7.5 m as Stage 1 burns.
-   * - **S2 ignition timing**
-     - NASA Sim 06 fires S2 at t ≈ 134 s (deduced from the velocity profile),
-       leaving a ~5 s observation coast.  Aetherion's :math:`t_{\text{S2 ign}}`
-       is computed from the propulsion DML as
-       :math:`t_{\text{end}} - \Delta t_{\text{coast}} - t_{\text{S2 burn}}` with
-       ``kPostBurnCoast_s = 7.0 s`` (tuned by bracket search between k = 5 and
-       k = 21, which bracketed the reference altitude).  The value k = 7 minimises
-       the final altitude error to −0.87% vs NASA Sim 06.
    * - **Inertia relief**
      - The variable-mass Newton-Euler equation should strictly include an
        inertia-relief term :math:`-\dot{\mathbf{M}}\,\boldsymbol{\nu}` accounting
@@ -5709,8 +5652,3 @@ Known Modelling Differences
        (:math:`\Delta I_{yy} \approx 0.6\ \text{kg·m}^2`) is negligible compared
        to :math:`I_{yy} \approx 30\ \text{MN·m}^2`, so the ZOH approximation is
        adequate.
-   * - **Pitch divergence during S2 burn**
-     - A small pitch angle offset accumulates during the S2 burn (≈ 4° by
-       t = 200 s) compared to the reference.  This is consistent with the
-       known sensitivity of this unguided gravity-turn to integration method —
-       the NASA TM explicitly flags this as a high-sensitivity check case.
