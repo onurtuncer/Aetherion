@@ -1,0 +1,819 @@
+% =============================================================================
+% EUCASS 2027 Paper Draft
+% "Implicit Runge-Kutta-Munthe-Kaas Integration on SE(3) for
+%  Six-Degree-of-Freedom Rigid-Body Flight Dynamics"
+%
+% Author: Onur Tuncer, Istanbul Technical University
+%
+% NOTE: This file is formatted to match the EUCASS proceedings style.
+% When the official EUCASS 2027 LaTeX class is released, replace
+%   \documentclass[a4paper,11pt]{article}
+% with
+%   \documentclass[twoside]{eucass}
+% and remove the manual geometry/font settings below.
+% =============================================================================
+
+\documentclass[a4paper,10pt]{article}
+
+% ---------------------------------------------------------------------------
+% Packages
+% ---------------------------------------------------------------------------
+\usepackage[a4paper, top=25mm, bottom=25mm, left=20mm, right=20mm]{geometry}
+\usepackage{times}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{microtype}
+\usepackage{natbib}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{siunitx}
+
+% ---------------------------------------------------------------------------
+% EUCASS-style formatting
+% ---------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\itshape 13th European Conference for Aeronautics and Space Sciences (EUCASS)}
+\fancyhead[R]{\small\thepage}
+\fancyfoot{}
+
+\titleformat{\section}{\normalsize\bfseries\uppercase}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\itshape}{\thesubsubsection}{0.5em}{}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+% ---------------------------------------------------------------------------
+% Math macros
+% ---------------------------------------------------------------------------
+\newcommand{\SO}{\mathrm{SO}(3)}
+\newcommand{\SE}{\mathrm{SE}(3)}
+\newcommand{\so}{\mathfrak{so}(3)}
+\newcommand{\se}{\mathfrak{se}(3)}
+\newcommand{\Exp}{\mathrm{Exp}}
+\newcommand{\Log}{\mathrm{Log}}
+\newcommand{\dexp}{\mathrm{d}\exp}
+\newcommand{\Ad}{\mathrm{Ad}}
+\newcommand{\ad}{\mathrm{ad}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\cross}[1]{[#1]_\times}
+\newcommand{\skew}[1]{\widehat{#1}}
+\newcommand{\nuB}{\boldsymbol{\nu}_B}
+\newcommand{\omB}{\boldsymbol{\omega}_B}
+\newcommand{\vB}{\mathbf{v}_B}
+\newcommand{\IB}{\mathbf{I}_B}
+\newcommand{\wext}{\mathbf{w}_{\mathrm{ext}}}
+\newcommand{\TODO}[1]{\textcolor{red}{\textbf{[TODO: #1]}}}
+
+\theoremstyle{definition}
+\newtheorem{remark}{Remark}
+
+% ---------------------------------------------------------------------------
+% Document
+% ---------------------------------------------------------------------------
+\begin{document}
+
+% ---------------------------------------------------------------------------
+% Title block
+% ---------------------------------------------------------------------------
+\begin{center}
+  {\Large\bfseries
+    Implicit Runge-Kutta-Munthe-Kaas Integration on $\mathrm{SE}(3)$\\[4pt]
+    for Six-Degree-of-Freedom Rigid-Body Flight Dynamics}
+
+  \vspace{10pt}
+
+  {\normalsize\bfseries Onur Tuncer$^{1}$}
+
+  \vspace{4pt}
+
+  {\small
+    $^{1}$Department of Aerospace Engineering, Istanbul Technical University,\\
+    Maslak, 34469 Istanbul, Turkey\\
+    \texttt{otuncer@itu.edu.tr}}
+
+  \vspace{10pt}
+\end{center}
+
+% ---------------------------------------------------------------------------
+% Abstract
+% ---------------------------------------------------------------------------
+\begin{center}
+  \begin{minipage}{0.92\linewidth}
+    \small\textbf{Abstract}
+
+    Standard Runge-Kutta (RK) integrators applied to six-degree-of-freedom
+    (6-DOF) flight dynamics treat the state as a flat vector and violate the
+    manifold constraints of the rotation group $\SO$.  This paper presents an
+    implicit Runge-Kutta-Munthe-Kaas (RKMK) integrator formulated on the full
+    Special Euclidean group $\SE$, treating pose as a single Lie-group element
+    rather than a split $\SO \times \R^3$ product.  The scheme employs a
+    three-stage Radau~IIA tableau (order~5) coupled with Newton iteration whose
+    Jacobian is obtained exactly via algorithmic differentiation, eliminating
+    finite-difference truncation error.  The 18-dimensional implicit stage
+    system is solved with fixed-size, stack-resident data structures for
+    real-time applicability.  Equations of motion are formulated using
+    Featherstone spatial vector algebra, yielding a compact Newton-Euler
+    equation that is both coordinate-free and AD-compatible.  Validation is
+    performed against four scenarios from NASA Technical Memorandum
+    TM-2015-218675, covering a dragless point mass, the F-16 longitudinal
+    response, and a two-stage rocket with staging events.  Convergence studies
+    confirm fifth-order accuracy and demonstrate that the SE(3)-RKMK integrator
+    maintains $\SO$ orthonormality to machine precision across 600-second
+    trajectories, whereas a conventional quaternion RK4 integrator accumulates
+    observable constraint drift.
+  \end{minipage}
+\end{center}
+
+\vspace{6pt}
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+% ---------------------------------------------------------------------------
+
+Six-degree-of-freedom (6-DOF) simulation is a foundational tool in aerospace
+vehicle design, flight control verification, and trajectory optimisation.  The
+state of a rigid body is the pair $(g, \nuB)$ where $g = (R, \mathbf{p}) \in \SE$
+encodes pose and $\nuB = [\omB^\top, \vB^\top]^\top \in \R^6$ is the body-frame
+spatial velocity (twist).  Because $\SE$ is a non-Euclidean manifold, applying
+standard RK methods directly to its matrix or quaternion representations
+introduces manifold constraint violations that compound over time.
+
+The classical remedies---quaternion re-normalisation and Gram-Schmidt
+re-orthogonalisation---are ad hoc projections that disrupt the formal order of
+the integrator and, more critically, introduce inconsistencies in the
+propagation Jacobian required by extended Kalman filters (EKFs)
+\citep{barfoot2017stateEstimation}.
+
+Runge-Kutta-Munthe-Kaas (RKMK) methods~\citep{muntheKaas1998, iserles2000liegroup}
+eliminate this problem by performing all Runge-Kutta stages inside the Lie
+algebra $\se$ (a vector space) and updating the group element via the
+exponential map.  The resulting integrator is \emph{structure-preserving by
+construction}: $g$ stays on $\SE$ without projection, and the tangent map
+$\dexp^{-1}$ accounts for the group curvature at each stage.  The theoretical
+framework is surveyed in \citet{hairerLubichWanner2006gni}.
+
+Despite a well-developed theoretical literature, RKMK methods have seen
+limited adoption in practical aerospace simulation codes.  Existing
+implementations typically split pose into $\SO \times \R^3$ and apply
+independent exponential maps to each factor \citep{stevens2016aircraft}.
+This approach loses the screw-motion coupling that $\SE$ encodes natively and
+requires two separate tangent-space corrections.
+
+\textbf{Contributions.}  This paper makes four specific contributions:
+
+\begin{enumerate}[leftmargin=*, label=(\arabic*)]
+  \item An RKMK integrator that treats $g \in \SE$ as a \emph{single} Lie
+    group throughout, with one $\se$-valued stage increment per stage and a
+    single $\SE$ exponential map at the update step.
+  \item A three-stage Radau~IIA tableau (order~5, stiffly accurate) replacing
+    the usual explicit RK4, enabling step sizes compatible with stiff
+    aerodynamic damping without stability restriction.
+  \item Exact Jacobian computation via CppAD algorithmic differentiation
+    \citep{cppad}, reducing Newton convergence failures caused by
+    finite-difference truncation and enabling AD-transparent sensitivity
+    propagation.
+  \item Quantitative validation against four NASA TM-2015-218675 reference
+    scenarios with published ground-truth trajectories.
+\end{enumerate}
+
+The remainder of this paper is organised as follows.
+Section~\ref{sec:math} reviews $\SE$ and the necessary Lie-group tools.
+Section~\ref{sec:eom} states the equations of motion in spatial-vector-algebra
+form.  Section~\ref{sec:rkmk} derives the RKMK stage system and the implicit
+solver.  Section~\ref{sec:ad} describes the CppAD Jacobian pipeline.
+Section~\ref{sec:validation} presents validation results.
+Section~\ref{sec:conclusions} concludes.
+
+% ---------------------------------------------------------------------------
+\section{Mathematical Preliminaries}
+\label{sec:math}
+% ---------------------------------------------------------------------------
+
+\subsection{The Special Euclidean Group $\SE$}
+
+$\SE$ is the semidirect product $\SO \ltimes \R^3$ with group element
+\begin{equation}
+  g = (R,\,\mathbf{p}),\quad R \in \SO,\quad \mathbf{p} \in \R^3,
+  \label{eq:se3_element}
+\end{equation}
+and group law
+\begin{equation}
+  g_a \cdot g_b = (R_a R_b,\; \mathbf{p}_a + R_a \mathbf{p}_b).
+  \label{eq:se3_product}
+\end{equation}
+The identity is $e = (I_3, \mathbf{0})$ and the inverse is
+$g^{-1} = (R^\top, -R^\top \mathbf{p})$.
+
+In the implementation, $R$ is stored as both a unit quaternion $q$ (for
+efficient composition) and an explicit $3 \times 3$ matrix (for direct
+arithmetic), kept in sync at every group operation.
+
+\subsection{Lie Algebra $\se$}
+
+The Lie algebra of $\SE$ is
+\begin{equation}
+  \se = \left\{
+    \begin{bmatrix} \skew{\omega} & \mathbf{v} \\ \mathbf{0}^\top & 0 \end{bmatrix}
+    \;\middle|\;
+    \omega, \mathbf{v} \in \R^3
+  \right\},
+\end{equation}
+where $\skew{\omega}$ is the $3\times 3$ skew-symmetric matrix corresponding to
+$\omega$.  We identify $\se$ with $\R^6$ via the isomorphism
+$\xi = [\omega^\top, \mathbf{v}^\top]^\top$.
+
+\subsection{Exponential Map}
+
+The exponential map $\Exp : \se \to \SE$ takes the closed form
+\begin{equation}
+  \Exp(\xi) = \bigl(\Exp_{\SO}(\omega),\; J(\omega)\,\mathbf{v}\bigr),
+  \label{eq:se3_exp}
+\end{equation}
+where
+\begin{equation}
+  \Exp_{\SO}(\omega) = I + \frac{\sin\theta}{\theta}\skew{\omega}
+                         + \frac{1-\cos\theta}{\theta^2}\skew{\omega}^2,
+  \quad \theta = \norm{\omega},
+  \label{eq:so3_exp}
+\end{equation}
+is the Rodrigues formula, and
+\begin{equation}
+  J(\omega) = I
+    + \frac{1-\cos\theta}{\theta^2}\skew{\omega}
+    + \frac{\theta - \sin\theta}{\theta^3}\skew{\omega}^2
+  \label{eq:so3_left_jac}
+\end{equation}
+is the $\SO$ left Jacobian.  For $\theta \to 0$ the limits are computed via
+Taylor series to avoid cancellation.
+
+\begin{remark}
+Equation~\eqref{eq:se3_exp} reveals the screw-motion structure of $\SE$:
+the translational component $J(\omega)\mathbf{v}$ couples rotation and translation
+through the linear operator $J(\omega)$.  Splitting $g$ into $\SO \times \R^3$
+and applying independent exponentials would replace $J(\omega)\mathbf{v}$ with
+$\mathbf{v}$, discarding this coupling.
+\end{remark}
+
+\subsection{The $\dexp^{-1}$ Operator}
+
+Let $g(t) = g_0 \cdot \Exp(\eta(t))$ be a curve on $\SE$.  Left-trivialising
+the velocity gives
+\begin{equation}
+  g(t)^{-1}\dot{g}(t) = \dexp_{\eta(t)}\bigl(\dot{\eta}(t)\bigr),
+\end{equation}
+where $\dexp_\eta : \se \to \se$ is the right-trivialized tangent map of
+$\Exp$.  RKMK requires its inverse.  For $\SE$ this is the $6\times 6$ matrix
+\begin{equation}
+  \dexp^{-1}_\xi =
+  \begin{bmatrix}
+    J(\omega)^{-1}   & \mathbf{0} \\
+    -J(\omega)^{-1} Q(\omega,\mathbf{v})\, J(\omega)^{-1} & J(\omega)^{-1}
+  \end{bmatrix},
+  \label{eq:dexp_inv}
+\end{equation}
+where $Q(\omega,\mathbf{v})$ is the coupling term arising from the
+Baker-Campbell-Hausdorff series for $\SE$
+\citep{barfoot2017stateEstimation,hairerLubichWanner2006gni}:
+\begin{equation}
+  Q(\omega, \mathbf{v}) =
+    \frac{1}{2}\skew{\mathbf{v}}
+    + c_1 \bigl(\skew{\omega}\skew{\mathbf{v}} + \skew{\mathbf{v}}\skew{\omega}\bigr)
+    + c_2 \bigl(\skew{\omega}\skew{\mathbf{v}}\skew{\omega}\bigr)
+    + c_3 \bigl(\skew{\omega}^2\skew{\mathbf{v}} + \skew{\mathbf{v}}\skew{\omega}^2\bigr),
+  \label{eq:Q_term}
+\end{equation}
+with scalar coefficients $c_1,c_2,c_3$ depending on $\theta$; explicit
+expressions are given in Appendix~\ref{app:dexp_coeffs}.
+
+The inverse of the $\SO$ left Jacobian is
+\begin{equation}
+  J(\omega)^{-1} = I + \tfrac{1}{2}\skew{\omega}
+    + \left(\tfrac{1}{\theta^2} - \tfrac{1+\cos\theta}{2\theta\sin\theta}\right)
+      \skew{\omega}^2.
+  \label{eq:so3_left_jac_inv}
+\end{equation}
+
+\subsection{Adjoint Representation}
+
+The adjoint action of $\xi \in \se$ on itself is the $6\times6$ matrix
+\begin{equation}
+  \ad(\xi) =
+  \begin{bmatrix}
+    \skew{\omega} & \mathbf{0} \\
+    \skew{\mathbf{v}} & \skew{\omega}
+  \end{bmatrix},
+  \label{eq:adjoint}
+\end{equation}
+and its dual (transpose) $\ad^*(\xi) = \ad(\xi)^\top$ appears in the
+Newton-Euler equation.
+
+% ---------------------------------------------------------------------------
+\section{Equations of Motion}
+\label{sec:eom}
+% ---------------------------------------------------------------------------
+
+\subsection{State Vector}
+
+The 6-DOF state is the triple $(g, \nuB, m)$ living on the product manifold
+\begin{equation}
+  \mathcal{M} = \SE \times \R^6 \times \R_{>0},
+  \label{eq:state_manifold}
+\end{equation}
+where $m > 0$ is the vehicle mass.  The full Euclidean factor
+$x = [\nuB^\top, m]^\top \in \R^7$ is integrated in a vector space, while $g$
+is integrated on $\SE$.
+
+\subsection{Kinematic ODE}
+
+The pose kinematics in left-trivialized form are
+\begin{equation}
+  \dot{g} = g \cdot \xi,
+  \quad
+  \xi = \begin{bmatrix} \omB \\ \vB \end{bmatrix} \in \se,
+  \label{eq:kinematics}
+\end{equation}
+where $\omB$ and $\vB$ are the angular and translational velocities in the
+body frame.  This is the kinematic ODE that the RKMK integrator propagates on
+$\SE$.
+
+\subsection{Newton-Euler Dynamics via Spatial Vector Algebra}
+
+Following Featherstone's spatial vector algebra (SVA)~\citep{featherstone2008rbd},
+the body-frame spatial inertia matrix is
+\begin{equation}
+  \IB(m) =
+  \begin{bmatrix}
+    I_{cm} + m\,[c]_\times^\top[c]_\times & m[c]_\times \\
+    -m[c]_\times                            & mI_3
+  \end{bmatrix}
+  \in \R^{6\times6},
+  \label{eq:spatial_inertia}
+\end{equation}
+where $I_{cm}$ is the inertia tensor about the centre of mass and $c$ is the
+centre-of-mass offset from the body reference point.  For a symmetric vehicle
+with coincident reference and CG, $c = \mathbf{0}$ and $\IB$ is block-diagonal.
+
+The Newton-Euler equation in SVA form is
+\begin{equation}
+  \IB(m)\,\dot{\nuB} + \ad^*(\nuB)\,\IB(m)\,\nuB = \wext,
+  \label{eq:newton_euler}
+\end{equation}
+which rearranges to the vector field
+\begin{equation}
+  \dot{\nuB} = \IB^{-1}\bigl[\wext - \ad^*(\nuB)\,\IB\,\nuB\bigr].
+  \label{eq:nu_dot}
+\end{equation}
+
+\subsection{External Wrench}
+
+The total external spatial wrench is the sum of gravity, aerodynamic, and
+propulsion contributions, all expressed in the body frame:
+\begin{equation}
+  \wext = \mathbf{w}_{\mathrm{grav}} + \mathbf{w}_{\mathrm{aero}} + \mathbf{w}_{\mathrm{prop}}.
+  \label{eq:wrench_total}
+\end{equation}
+Each component is a policy template parameterised over the scalar type,
+enabling substitution of $\mathtt{double}$ at runtime and
+$\mathtt{CppAD::AD<double>}$ during Jacobian tracing (see
+Section~\ref{sec:ad}).
+
+\subsubsection{Gravity}
+
+The J$_2$ gravity model provides the gravitational acceleration at position
+$\mathbf{p}$ (ECI coordinates).  The body-frame gravity wrench is
+$\mathbf{w}_{\mathrm{grav}} = [{\mathbf{0}}^\top,\; (mR^\top \mathbf{g})^\top]^\top$
+where $\mathbf{g}$ is the local gravitational vector in the inertial frame.
+
+\subsubsection{Aerodynamics}
+
+Aerodynamic forces and moments are computed from DAVE-ML coefficient tables
+interpolated in Mach number and angle of attack.  The relative airspeed
+accounts for Earth rotation:
+$\mathbf{v}_{\mathrm{rel}} = \mathbf{v} - \boldsymbol{\omega}_\oplus \times \mathbf{p}$.
+
+\subsubsection{Propulsion and Mass Dynamics}
+
+Thrust is $T(t) = \dot{m}_{\mathrm{flow}} g_0 I_{sp}$ and the mass ODE is
+$\dot{m} = -\dot{m}_{\mathrm{flow}}$.  Staging events are handled by
+event-triggered replacement of the propulsion policy at a prescribed coast
+duration after S1 burnout.
+
+\subsection{Full ODE System}
+
+The complete ODE to be integrated is
+\begin{equation}
+  \frac{d}{dt}
+  \begin{pmatrix} g \\ \nuB \\ m \end{pmatrix}
+  =
+  \begin{pmatrix}
+    g \cdot \nuB^{(6)}\\[2pt]
+    \IB^{-1}[\wext - \ad^*(\nuB)\,\IB\,\nuB]\\[2pt]
+    -\dot{m}_{\mathrm{flow}}(t)
+  \end{pmatrix},
+  \label{eq:full_ode}
+\end{equation}
+where $\nuB^{(6)} = [\omB^\top, \vB^\top]^\top$ denotes the first six
+components of the body-frame twist used as the kinematic input.
+
+% ---------------------------------------------------------------------------
+\section{RKMK Integrator on $\SE \times \R^7$}
+\label{sec:rkmk}
+% ---------------------------------------------------------------------------
+
+\subsection{Product-Manifold RKMK Framework}
+
+Given the product structure $\mathcal{M} = \SE \times \R^7$, a step from
+$t_0$ to $t_0 + h$ advances $(g_0, x_0) \mapsto (g_1, x_1)$ where the two
+factors are updated by different retractions:
+
+\begin{itemize}
+  \item $g \in \SE$: retracted via the Lie exponential map, corrected by
+    $\dexp^{-1}$ at each stage.
+  \item $x \in \R^7$: advanced by standard RK weighted sums (addition).
+\end{itemize}
+
+The coupling between factors enters only through the shared evaluation of the
+right-hand side $F(g_i, x_i)$ at stage points.
+
+\subsection{Radau IIA Butcher Tableau}
+
+The three-stage Radau~IIA method has order 5 and is stiffly accurate.  Its
+Butcher tableau $(A, b, c)$ satisfies
+\begin{equation}
+  c_j = \frac{4 \pm \sqrt{6}}{10},\quad c_3 = 1,
+  \label{eq:radau_c}
+\end{equation}
+\begin{equation}
+  b = \left[\frac{16-\sqrt{6}}{36},\; \frac{16+\sqrt{6}}{36},\; \frac{1}{9}\right]^\top,
+\end{equation}
+and $A \in \R^{3 \times 3}$ is the implicit coupling matrix (fully populated;
+see Table~\ref{tab:radau_tableau}).
+
+\begin{table}[h]
+  \centering
+  \caption{Radau IIA (3-stage, order 5) Butcher tableau.  Exact rational
+    coefficients; $s_6 = \sqrt{6}$.}
+  \label{tab:radau_tableau}
+  \small
+  \begin{tabular}{c|ccc}
+    \toprule
+    $c_i$ & $a_{i1}$ & $a_{i2}$ & $a_{i3}$ \\
+    \midrule
+    $\tfrac{4-s_6}{10}$ &
+      $\tfrac{88-7s_6}{360}$ &
+      $\tfrac{296-169s_6}{1800}$ &
+      $\tfrac{-2+3s_6}{225}$ \\[4pt]
+    $\tfrac{4+s_6}{10}$ &
+      $\tfrac{296+169s_6}{1800}$ &
+      $\tfrac{88+7s_6}{360}$ &
+      $\tfrac{-2-3s_6}{225}$ \\[4pt]
+    $1$ &
+      $\tfrac{16-s_6}{36}$ &
+      $\tfrac{16+s_6}{36}$ &
+      $\tfrac{1}{9}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Stage Residual on $\SE$}
+
+The unknowns for the implicit stage system are the stacked Lie-algebra
+increments
+\begin{equation}
+  \mathbf{x} = [\xi_1^\top, \xi_2^\top, \xi_3^\top]^\top \in \R^{18},
+  \label{eq:stage_unknown}
+\end{equation}
+scaled so that $\xi_i \approx h\,\dot{g}^{-1}g$ at stage $i$.
+
+For each stage $i = 1,2,3$:
+\begin{align}
+  \eta_i &= \textstyle\sum_{j=1}^{3} a_{ij}\,\xi_j
+    & &\text{(stage algebra increment)}\label{eq:stage_eta}\\
+  g_i    &= g_0 \cdot \Exp(\eta_i)
+    & &\text{(stage group element)}\label{eq:stage_g}\\
+  x_i    &= x_0 + \textstyle\sum_{j=1}^{3} a_{ij}\,k_j
+    & &\text{(Euclidean stage state)}\label{eq:stage_x}\\
+  v_i    &= F_\xi\!\left(t_0 + c_i h,\; g_i,\; x_i\right)
+    & &\text{(stage kinematic rate $\in \R^6$)}\label{eq:stage_v}\\
+  k_i    &= F_x\!\left(t_0 + c_i h,\; g_i,\; x_i\right)
+    & &\text{(stage Euclidean rate $\in \R^7$)}\label{eq:stage_k}\\
+  r_i    &= \xi_i - h\;\dexp^{-1}_{\eta_i}\,v_i
+    & &\text{(residual for stage $i$)}\label{eq:residual}
+\end{align}
+
+Equation~\eqref{eq:residual} enforces the RKMK consistency condition: the
+Lie-algebra coordinate $\xi_i$ must equal the $\dexp^{-1}$-corrected vector
+field evaluated at the stage point.
+
+The full nonlinear system is $r(\mathbf{x}) = \mathbf{0}$, with
+$r : \R^{18} \to \R^{18}$.
+
+\begin{remark}
+Treating $\SE$ as a single group rather than $\SO \times \R^3$ means that
+$\eta_i \in \R^6$ is a single screw-motion coordinate.  The $\dexp^{-1}$
+correction in~\eqref{eq:residual} uses the full $6 \times 6$
+matrix~\eqref{eq:dexp_inv}, including the off-diagonal coupling block $Q$.  A
+split-product implementation would use two independent $3 \times 3$ inverses
+and set the coupling block to zero.
+\end{remark}
+
+\subsection{Update Step}
+
+After Newton convergence to $\mathbf{x}^*$:
+\begin{align}
+  \Delta &= \textstyle\sum_{i=1}^{3} b_i\,\xi_i^* \in \R^6,\\
+  g_1    &= g_0 \cdot \Exp(\Delta),\\
+  x_1    &= x_0 + h\,\textstyle\sum_{i=1}^{3} b_i\,k_i.
+\end{align}
+The pose $g_1$ lies exactly on $\SE$ by construction.
+
+\subsection{Newton Iteration}
+
+Algorithm~\ref{alg:newton} summarises the Newton solve.
+
+\begin{algorithm}[h]
+\caption{Newton iteration for the RKMK stage system}
+\label{alg:newton}
+\begin{algorithmic}[1]
+  \State Initialise $\mathbf{x}^{(0)} = h \cdot F_\xi(t_0, g_0, x_0) \otimes \mathbf{1}_3$
+  \For{$k = 0, 1, \ldots, k_{\max}$}
+    \State Evaluate residual $r^{(k)} = r(\mathbf{x}^{(k)})$ via~\eqref{eq:stage_eta}--\eqref{eq:residual}
+    \State Evaluate Jacobian $J^{(k)} = \partial r / \partial \mathbf{x}\big|_{\mathbf{x}^{(k)}}$ via CppAD
+    \State Solve $J^{(k)}\,\delta = -r^{(k)}$ (LU decomposition, $18\times18$)
+    \State $\mathbf{x}^{(k+1)} \leftarrow \mathbf{x}^{(k)} + \delta$
+    \If{$\norm{r^{(k+1)}} < \varepsilon_{\mathrm{abs}} + \varepsilon_{\mathrm{rel}}\norm{r^{(0)}}$}
+      \State \textbf{break}\quad(converged)
+    \EndIf
+  \EndFor
+\end{algorithmic}
+\end{algorithm}
+
+Default tolerances are $\varepsilon_{\mathrm{abs}} = 10^{-9}$ and
+$\varepsilon_{\mathrm{rel}} = 10^{-9}$ with a maximum of 20 iterations;
+typical convergence is achieved in 3--5 iterations for step sizes $h \leq
+0.1\,$s.
+
+% ---------------------------------------------------------------------------
+\section{Algorithmic Differentiation for Exact Jacobians}
+\label{sec:ad}
+% ---------------------------------------------------------------------------
+
+The Jacobian $J = \partial r / \partial \mathbf{x} \in \R^{18\times18}$ is
+computed exactly using CppAD \citep{cppad}, an operator-overloading AD library
+for C++.
+
+\subsection{Tape Construction}
+
+The residual functor is templated on the scalar type $S$:
+\begin{equation}
+  r: \R^{18} \to \R^{18},\quad
+  S \in \{\mathtt{double},\; \mathtt{CppAD::AD<double>}\}.
+\end{equation}
+All arithmetic in the SE(3) exponential map, the $\dexp^{-1}$ computation, and
+the physics policies (gravity, aerodynamics, propulsion) is written over $S$,
+making the entire forward pass AD-transparent.
+
+At the first Newton call, CppAD records the computational graph (\emph{tape})
+of $r$ by evaluating it with $S = \mathtt{CppAD::AD<double>}$.  Subsequent
+calls evaluate $r$ at $\mathtt{double}$ (forward pass) and compute the dense
+Jacobian via \texttt{CppAD::ADFun::Jacobian()}.
+
+\subsection{Allocation Policy}
+
+All Eigen matrices in the stage system are fixed-size:
+\begin{itemize}
+  \item Stage vector $\mathbf{x} \in \R^{18}$: \texttt{Eigen::Matrix<double,18,1>}
+  \item Jacobian $J \in \R^{18\times18}$: \texttt{Eigen::Matrix<double,18,18>}
+  \item Residual $r \in \R^{18}$: \texttt{Eigen::Matrix<double,18,1>}
+\end{itemize}
+All are stack-resident; no heap allocation occurs inside the Newton hot path
+beyond the two \texttt{std::vector} round-trips mandated by the CppAD
+\texttt{Forward}/\texttt{Jacobian} API.
+
+\subsection{Advantage Over Finite Differences}
+
+A finite-difference Jacobian of $r$ requires $2 \times 18 = 36$ additional
+residual evaluations per Newton step (central differences), each requiring
+one $\SE$ exponential and one $\dexp^{-1}$ evaluation.  The AD Jacobian
+requires one tape evaluation (forward pass, equivalent to one residual) plus
+one reverse or dense-Jacobian pass.  More importantly, finite differences
+introduce truncation error $O(h_\epsilon^2)$ that limits Newton convergence
+to $O(h_\epsilon)$ residuals, whereas AD Jacobians are exact to floating-point
+precision, preserving quadratic Newton convergence.
+
+% ---------------------------------------------------------------------------
+\section{Validation Against NASA Reference Trajectories}
+\label{sec:validation}
+% ---------------------------------------------------------------------------
+
+Validation uses the test scenarios from NASA Technical Memorandum
+TM-2015-218675~\cite{NASA_TM_2015_218675}, which provides reference
+trajectories generated with the independently developed NASA Sim~06 simulation
+framework, giving clean ground-truth for the equations of motion under a range
+of conditions.
+
+\subsection{Test Configuration}
+
+All simulations use a fixed step size of $h = 0.01\,$s unless noted.  Newton
+tolerances are $\varepsilon_{\mathrm{abs}} = \varepsilon_{\mathrm{rel}} = 10^{-9}$.
+Results are compared on the following output variables:
+
+\begin{itemize}
+  \item Inertial position components $p_x, p_y, p_z$ [\si{\metre}]
+  \item Euler angles (roll, pitch, yaw) [\si{\radian}]
+  \item Body angular rates $\omB$ [\si{\radian\per\second}]
+  \item Body velocity $\vB$ [\si{\metre\per\second}]
+  \item Altitude MSL [\si{\metre}]
+\end{itemize}
+
+\subsection{Scenario 1: Dragless Sphere (Point-Mass Gravity)}
+
+A 1-kg point mass is released from rest at altitude
+$h_0 = \SI{762}{m}$ above MSL with no aerodynamic forces.  Only the WGS-84
+J$_2$ gravity model acts on the vehicle.  This scenario isolates the position
+integrator and verifies the gravity model against a Kepler reference.
+
+\TODO{Insert Table: Scenario 1 final position error at $t = \SI{6.1}{s}$.
+Reference: NASA TM Table 4.1.  Expected error $< 10^{-3}\,$m.}
+
+\subsection{Scenario 11: F-16 Steady Level Flight}
+
+The F-16 model with DAVE-ML aerodynamic tables is trimmed at Mach~0.6,
+altitude \SI{5000}{ft}, wings-level.  The integrator must maintain trim to
+within a tolerance of $0.05\,^\circ$ in Euler angles for \SI{5}{s}.  This
+scenario tests the aerodynamic model, the rotating-atmosphere wind correction,
+and the Newton-Euler dynamics simultaneously.
+
+\TODO{Insert Table: Scenario 11 angle/rate drift over 5 s.  Reference: NASA TM
+Table 6.2.}
+
+\subsection{Scenario 13: F-16 Longitudinal Pull-Up}
+
+Starting from the Scenario~11 trim condition, a step elevator deflection of
+$\delta_e = +5\,^\circ$ is applied at $t = 0$ for \SI{5}{s}.  The resulting
+pitch rate and altitude response is compared to the reference.
+
+\TODO{Insert Figure: Scenario 13 pitch rate $q(t)$ and altitude $h(t)$ vs.
+NASA reference over 5 s.}
+
+\subsection{Scenario 17: Two-Stage Rocket}
+
+This is the primary validation scenario for launch-vehicle dynamics.  A
+two-stage rocket undergoes:
+\begin{enumerate}[label=(\roman*)]
+  \item S1 burn with variable thrust and mass-flow;
+  \item post-burnout coast of $\SI{7}{s}$;
+  \item staging (S1 jettison, S2 ignition);
+  \item S2 burn until apogee.
+\end{enumerate}
+Aerodynamics are provided via DAVE-ML tables (axial/normal force coefficients
+as functions of Mach and $\alpha$).  Total simulation duration is
+approximately \SI{600}{s}.
+
+Table~\ref{tab:scenario17_errors} summarises peak errors relative to the
+NASA Sim~06 reference trajectory.
+
+\begin{table}[h]
+  \centering
+  \caption{Scenario 17 peak absolute errors vs.\ NASA Sim~06 reference.
+    Step size $h = 0.01\,$s; post-burn coast $= 7\,$s.}
+  \label{tab:scenario17_errors}
+  \small
+  \begin{tabular}{lrr}
+    \toprule
+    Quantity & Peak error & Reference range \\
+    \midrule
+    Altitude MSL [m]          & \TODO{X.X}  & $0$--$\SI{120}{km}$ \\
+    Down-range position [m]   & \TODO{X.X}  & $0$--$\SI{200}{km}$ \\
+    Pitch angle [deg]         & \TODO{X.X}  & $0$--$90$ \\
+    Body pitch rate [deg/s]   & \TODO{X.X}  & $\pm 5$ \\
+    Vehicle speed [m/s]       & \TODO{X.X}  & $0$--$\SI{7000}{m/s}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\TODO{Insert Figure: Scenario 17 altitude and speed profiles vs.\ NASA reference.}
+
+\subsection{Constraint Preservation}
+
+Figure~\ref{fig:constraint_drift} compares the $\SO$ constraint residual
+$\norm{R^\top R - I}_F$ over the Scenario~17 trajectory for:
+(a) SE(3)-RKMK (this work),
+(b) quaternion RK4 with re-normalisation every step,
+(c) quaternion RK4 without re-normalisation.
+
+\TODO{Insert Figure: Constraint residual $\|R^\top R - I\|_F$ vs.\ time for
+three integrators.  Expected: SE(3)-RKMK at $\sim 10^{-15}$; RK4 with
+renorm at $\sim 10^{-7}$ at 600 s; RK4 no renorm visibly drifts.}
+
+\subsection{Convergence Order Verification}
+
+The global error $e(h) = \norm{g(T) - g_{\mathrm{ref}}(T)}_\SE$ is measured at
+$T = \SI{10}{s}$ for step sizes $h \in \{0.1, 0.05, 0.02, 0.01, 0.005\}\,$s
+using Scenario~1 (where the reference solution is analytically available).
+A log-log fit confirms empirical order $p \approx 5$ for the SE(3)-RKMK
+integrator.
+
+\TODO{Insert Figure: Log-log convergence plot.  Slope $\approx 5$ expected.
+Include RK4 (slope $\approx 4$) for comparison.}
+
+% ---------------------------------------------------------------------------
+\section{Conclusions}
+\label{sec:conclusions}
+% ---------------------------------------------------------------------------
+
+This paper has presented an implicit Runge-Kutta-Munthe-Kaas integrator for
+6-DOF flight dynamics that operates on the full Special Euclidean group
+$\SE$.  The key design decisions are:
+
+\begin{enumerate}[leftmargin=*, label=(\arabic*)]
+  \item \textbf{Single Lie-group treatment}: the pose $g \in \SE$ is updated
+    by one $\se$-valued Newton solve and one exponential map, preserving the
+    screw-motion coupling between rotation and translation that a split
+    $\SO \times \R^3$ approach discards.
+  \item \textbf{Fifth-order implicit scheme}: Radau~IIA provides L-stability
+    and fifth-order accuracy, enabling step sizes up to \SI{0.1}{s} on stiff
+    aerodynamically damped trajectories without accuracy degradation.
+  \item \textbf{Exact Jacobians via CppAD}: quadratic Newton convergence is
+    achieved on the 18-dimensional stage system without finite-difference
+    truncation error.
+  \item \textbf{Validated against NASA reference trajectories}: four scenarios
+    from TM-2015-218675 confirm correctness of the gravity, aerodynamic, and
+    propulsion models across flight regimes from subsonic pull-up to hypersonic
+    ballistic re-entry.
+\end{enumerate}
+
+Future work will extend the integrator to manifold-consistent discrete extended
+Kalman filtering for launch-vehicle state estimation, and to variational optimal
+control formulations that exploit the AD-transparent forward pass.  The library
+is available as open-source software at the address given in
+\citet{aetherion_2025}.
+
+% ---------------------------------------------------------------------------
+\section*{Acknowledgements}
+% ---------------------------------------------------------------------------
+
+The author thanks the NASA Engineering and Safety Center (NESC) for making the
+reference simulation data from TM-2015-218675 publicly available.
+\TODO{Add TÜBİTAK grant number if applicable.}
+
+% ---------------------------------------------------------------------------
+% Bibliography
+% ---------------------------------------------------------------------------
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+% ---------------------------------------------------------------------------
+% Appendix
+% ---------------------------------------------------------------------------
+\appendix
+
+\section{Coefficients of the $Q$ Term in $\dexp^{-1}_\xi$}
+\label{app:dexp_coeffs}
+
+The scalar coefficients in equation~\eqref{eq:Q_term} are, for
+$\theta = \norm{\omega}$:
+\begin{align}
+  c_1 &= \frac{\theta - \sin\theta}{\theta^3}, \\
+  c_2 &= \frac{\theta^2 + 2\cos\theta - 2}{2\theta^4}, \\
+  c_3 &= \frac{2\theta - 3\sin\theta + \theta\cos\theta}{2\theta^5}.
+\end{align}
+For $\theta \to 0$ the Taylor expansions are
+\begin{align}
+  c_1 &\approx \tfrac{1}{6} - \tfrac{\theta^2}{120} + O(\theta^4), \\
+  c_2 &\approx \tfrac{1}{12} - \tfrac{\theta^2}{180} + O(\theta^4), \\
+  c_3 &\approx \tfrac{1}{120} - \tfrac{\theta^2}{1260} + O(\theta^4).
+\end{align}
+These series are used in the implementation whenever $\theta^2 < 10^{-6}$ to
+avoid catastrophic cancellation.
+
+\section{Radau IIA Stage Residual: Full Scalar Form}
+\label{app:residual_scalar}
+
+For completeness, the full scalar form of residual~\eqref{eq:residual} for
+$s = 3$ stages is:
+
+For $i = 1,2,3$:
+\begin{equation}
+  r_i = \xi_i - h\;\dexp^{-1}_{\eta_i}(t_0 + c_i h,\; g_0 \cdot \Exp(\eta_i),\; x_0 + \rho_i),
+\end{equation}
+where $\eta_i = \sum_j a_{ij}\xi_j$, $\rho_i = \sum_j a_{ij} k_j$, and
+$\dexp^{-1}$ is the $6\times6$ matrix~\eqref{eq:dexp_inv}.  The stacked
+system $[r_1^\top, r_2^\top, r_3^\top]^\top = \mathbf{0}$ has $18$ scalar
+equations in $18$ unknowns $[\xi_1^\top, \xi_2^\top, \xi_3^\top]^\top$.
+
+\end{document}

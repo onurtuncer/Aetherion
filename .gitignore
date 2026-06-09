@@ -4,6 +4,8 @@ out/*
 .vs/*
 .vs/
 
+*.csv
+
 # Repo dump file (via Python script under /scripts)
 output.txt
 out.txt

@@ -11,7 +11,8 @@ add_executable(
   test_SixDofStepper.cpp
   test_SE3StateInit.cpp
   test_Config.cpp
-  test_SpatialInertiaSignConvention.cpp)
+  test_SpatialInertiaSignConvention.cpp
+  test_ConvergenceOrder.cpp)
 
 target_compile_features(test_rigidBody PRIVATE cxx_std_23)
 
@@ -25,6 +26,8 @@ target_link_libraries(
           Eigen3::Eigen)
 
 target_include_directories(test_rigidBody PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+
+target_compile_definitions(test_rigidBody PRIVATE AETHERION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
 include(Catch)
 catch_discover_tests(test_rigidBody)
