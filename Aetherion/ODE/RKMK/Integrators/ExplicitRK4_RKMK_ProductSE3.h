@@ -82,7 +82,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
             const Vec6 eta2 = (h * 0.5) * K1;
             const SE3d g2   = g0 * SE3d::Exp(eta2);
             const VecE x2   = x0 + (h * 0.5) * k1;
-            const Vec6 K2   = SE3d::dexp_inv(eta2, xi_field_(t0 + h * 0.5, g2, x2.template head<6>()));
+            const Vec6 K2   = SE3d::dexp_inv(eta2, xi_field_(t0 + h * 0.5, g2, x2.template head<6>().eval()));
             const VecE k2   = f_field_(t0 + h * 0.5, g2, x2);
 
             // ------------------------------------------------------------------
@@ -91,7 +91,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
             const Vec6 eta3 = (h * 0.5) * K2;
             const SE3d g3   = g0 * SE3d::Exp(eta3);
             const VecE x3   = x0 + (h * 0.5) * k2;
-            const Vec6 K3   = SE3d::dexp_inv(eta3, xi_field_(t0 + h * 0.5, g3, x3.template head<6>()));
+            const Vec6 K3   = SE3d::dexp_inv(eta3, xi_field_(t0 + h * 0.5, g3, x3.template head<6>().eval()));
             const VecE k3   = f_field_(t0 + h * 0.5, g3, x3);
 
             // ------------------------------------------------------------------
@@ -100,7 +100,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
             const Vec6 eta4 = h * K3;
             const SE3d g4   = g0 * SE3d::Exp(eta4);
             const VecE x4   = x0 + h * k3;
-            const Vec6 K4   = SE3d::dexp_inv(eta4, xi_field_(t0 + h, g4, x4.template head<6>()));
+            const Vec6 K4   = SE3d::dexp_inv(eta4, xi_field_(t0 + h, g4, x4.template head<6>().eval()));
             const VecE k4   = f_field_(t0 + h, g4, x4);
 
             // ------------------------------------------------------------------

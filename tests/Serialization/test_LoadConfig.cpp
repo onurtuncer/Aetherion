@@ -81,7 +81,7 @@ int main(int argc, char* argv[])
 TEST_CASE("LoadConfig(filename): throws for non-existent file", "[config][LoadConfig]")
 {
     REQUIRE_THROWS_AS(
-        Aetherion::Serialization::LoadConfig("_nonexistent_file_xyz.json"),
+        Aetherion::Serialization::LoadConfig(std::string{"_nonexistent_file_xyz.json"}),
         std::runtime_error);
 }
 
