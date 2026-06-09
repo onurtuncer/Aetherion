@@ -10,3 +10,5 @@ generatefmu(
   fmi2
   SOURCES
   FeedThrough/FeedThrough.cpp)
+
+add_subdirectory(F16Plant)
