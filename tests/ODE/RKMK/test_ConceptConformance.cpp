@@ -287,6 +287,6 @@ TEST_CASE("SixDoFStepper: default Integrator alias is RadauIIA_RKMK_ProductSE3",
 TEST_CASE("SixDoFStepper: custom IntegratorPolicy is accepted when it satisfies IntegratorFor",
           "[concepts][stepper]")
 {
-    using CustomStepper = RigidBody::SixDoFStepper<CVFd, GoodIntegratorFor>;
+    using CustomStepper = RigidBody::SixDoFStepper<CVFd, 7, GoodIntegratorFor>;
     STATIC_REQUIRE(std::is_same_v<CustomStepper::Integrator, GoodIntegratorFor>);
 }

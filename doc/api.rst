@@ -85,9 +85,9 @@ component of the integration stack:
           fillcolor="#DBEAFE" color="#1D4ED8"]
      IF  [label="«concept»\nIntegratorFor\<I, XiField, FField, N, Scalar\>"
           fillcolor="#EDE9FE" color="#7C3AED"]
-     SP  [label="SixDoFStepper\<VectorField, IntegratorPolicy\>"
+     SP  [label="SixDoFStepper\<VF, EuclidDim, IntegratorPolicy\>"
           fillcolor="#F0FDF4" color="#15803D" shape=component]
-     IS  [label="ISimulator\<VF, Snapshot, IntegratorPolicy\>"
+     IS  [label="ISimulator\<VF, Snapshot, EuclidDim, IntegratorPolicy\>"
           fillcolor="#F0FDF4" color="#15803D" shape=component]
 
      RI -> IF  [label="subsumed by" style=dashed]
@@ -121,7 +121,7 @@ The four concepts, in dependency order:
        and ``ISimulator``.
 
 **Plugging in a custom integrator** — any type that satisfies
-``IntegratorFor<I, KinematicsXiField, VF, 7>`` can replace the default
+``IntegratorFor<I, KinematicsXiField, VF, N>`` can replace the default
 Radau IIA scheme without changing any other part of the stack:
 
 .. code-block:: cpp
@@ -147,11 +147,16 @@ Radau IIA scheme without changing any other part of the stack:
    static_assert(ODE::RKMK::IntegratorFor<MyIntg, KFd, MyVF, 7>);
 
    // 3. Drop it into the stepper or simulator.
-   using MyStepper   = RigidBody::SixDoFStepper<MyVF, MyIntg>;
-   using MySimulator = Simulation::ISimulator<MyVF, Snapshot1, MyIntg>;
+   //    EuclidDim (second parameter) defaults to 7 and can be increased for
+   //    augmented-state use cases such as Kalman-filter bias estimation.
+   using MyStepper   = RigidBody::SixDoFStepper<MyVF, 7, MyIntg>;
+   using MySimulator = Simulation::ISimulator<MyVF, Snapshot1, 7, MyIntg>;
 
-   // The default (Radau IIA RKMK) is still used when the second/third
-   // parameter is omitted:
+   // Extended Euclidean dimension (e.g. for KF augmented states):
+   // using KFStepper = RigidBody::SixDoFStepper<MyVF, 10, MyExtendedIntg>;
+
+   // The default (Radau IIA RKMK, EuclidDim = 7) is used when all extra
+   // parameters are omitted:
    using DefaultStepper   = RigidBody::SixDoFStepper<MyVF>;
    using DefaultSimulator = Simulation::ISimulator<MyVF, Snapshot1>;
 
@@ -297,16 +302,20 @@ Key types:
 * :cpp:struct:`Aetherion::RigidBody::State` — full state on :math:`SE(3) \times \mathbb{R}^7`.
 * :cpp:struct:`Aetherion::RigidBody::InertialParameters` — mass, inertia tensor about CoG, CoG offset (all in body frame).
 * :cpp:class:`Aetherion::RigidBody::VectorField` — Newton-Euler ODE right-hand side, templated on physics policies.
-* :cpp:class:`Aetherion::RigidBody::SixDoFStepper` — high-level facade that accepts an optional ``IntegratorPolicy``
-  template parameter (defaulting to Radau IIA RKMK) constrained by ``IntegratorFor``.
+* :cpp:class:`Aetherion::RigidBody::SixDoFStepper` — high-level facade with three template parameters:
+  ``VectorField``, ``EuclidDim`` (default 7), and ``IntegratorPolicy`` (default Radau IIA RKMK),
+  all constrained by ``IntegratorFor``.
 * :cpp:struct:`Aetherion::RigidBody::StateLayout` — flat 14-element index map for serialised state vectors.
 
 .. note::
 
    ``SixDoFStepper<VF>`` is a shorthand for
-   ``SixDoFStepper<VF, RadauIIA_RKMK_ProductSE3<KinematicsXiField, VF, 7>>``.
-   Pass an explicit second argument to swap in any integrator that satisfies
-   ``IntegratorFor<I, KinematicsXiField, VF, 7>`` — see the
+   ``SixDoFStepper<VF, 7, RadauIIA_RKMK_ProductSE3<KinematicsXiField, VF, 7>>``.
+   Pass an explicit ``EuclidDim`` (≥ 7) to extend the Euclidean state for augmented-state
+   applications (e.g. Kalman-filter bias states occupy slots 7…EuclidDim−1;
+   ``pack()`` zero-initialises them and ``unpack()`` ignores them).
+   Pass an explicit ``IntegratorPolicy`` to swap in any integrator satisfying
+   ``IntegratorFor<I, KinematicsXiField, VF, EuclidDim>`` — see the
    :ref:`Lie-Group ODE Solvers <api>` section for a worked example.
 
 **State vector representations**
@@ -464,12 +473,13 @@ Application base class, argument parser, simulator interface, and telemetry type
 **Simulator class hierarchy** — all concrete simulators inherit from
 :cpp:class:`Aetherion::Simulation::ISimulator`:
 
-The full signature is ``ISimulator<VF, Snapshot, IntegratorPolicy>`` where
-``IntegratorPolicy`` defaults to ``RadauIIA_RKMK_ProductSE3``.  Existing
-two-parameter instantiations are unchanged.  Pass a custom third argument to
-use an alternative integrator throughout the entire simulator hierarchy.
+The full signature is ``ISimulator<VF, Snapshot, EuclidDim, IntegratorPolicy>`` where
+``EuclidDim`` defaults to 7 and ``IntegratorPolicy`` defaults to ``RadauIIA_RKMK_ProductSE3``.
+Existing two-parameter instantiations ``ISimulator<VF, Snapshot>`` are unchanged.
+Increase ``EuclidDim`` to extend the Euclidean state (e.g. for Kalman-filter augmentation).
+Pass a custom ``IntegratorPolicy`` to use an alternative integrator.
 
-``TwoStageRocketSimulator<IntegratorPolicy>`` uses the same policy mechanism
+``TwoStageRocketSimulator<EuclidDim, IntegratorPolicy>`` uses the same parameters
 directly (without inheriting ``ISimulator``) because it requires mutable access
 to the state for the discontinuous staging mass drop.
 
@@ -481,7 +491,7 @@ to the state for the discontinuous staging mass drop.
      node  [shape=box style="filled,rounded" fontname="sans-serif" fontsize=9]
      edge  [arrowhead=empty color="#555"]
 
-     IS [label="ISimulator\<VF, Snapshot, IntegratorPolicy\>"
+     IS [label="ISimulator\<VF, Snapshot, EuclidDim, IntegratorPolicy\>"
          fillcolor="#DBEAFE" color="#1D4ED8" shape=box]
 
      DS  [label="DraglessSphereSimulator\n(Scenarios 1, 9, 10)"

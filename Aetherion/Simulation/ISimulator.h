@@ -50,12 +50,13 @@
 namespace Aetherion::Simulation {
 
     template<class VectorField, class SnapshotType,
+             int EuclidDim = RigidBody::RigidBody6DoFEuclidDim,
              class IntegratorPolicy = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
-                 RigidBody::KinematicsXiField, VectorField, RigidBody::RigidBody6DoFEuclidDim>>
+                 RigidBody::KinematicsXiField, VectorField, EuclidDim>>
     class ISimulator
     {
     public:
-        using Stepper    = RigidBody::SixDoFStepper<VectorField, IntegratorPolicy>;
+        using Stepper    = RigidBody::SixDoFStepper<VectorField, EuclidDim, IntegratorPolicy>;
         using StepResult = typename Stepper::StepResult;
         using Snapshot   = SnapshotType;
 

@@ -207,7 +207,7 @@ void TwoStageRocketApplication::prepareSimulation() const
 
     // ── 5. Construct simulator ────────────────────────────────────────────────
     AE_CORE_INFO("Constructing TwoStageRocketSimulator...");
-    m_Simulator = std::make_unique<TwoStageRocketSimulator>(
+    m_Simulator = std::make_unique<TwoStageRocketSimulator<>>(
         ip, x0, theta0,
         std::move(inertiaDml),
         std::move(propDml),

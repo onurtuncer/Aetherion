@@ -19,12 +19,11 @@
 #include <Aetherion/Simulation/Snapshot2.h>
 #include <Aetherion/Simulation/SnapshotTraits.h>
 
+#include <Aetherion/Examples/TwoStageRocket/TwoStageRocketSimulator.h>
+
 #include <fstream>
 #include <memory>
 #include <stdexcept>
-
-// Forward declarations
-namespace Aetherion::Examples::TwoStageRocket { class TwoStageRocketSimulator; }
 
 namespace Aetherion::Examples::TwoStageRocket {
 
@@ -43,7 +42,7 @@ protected:
     void logFinalSummary()                                                 const override;
 
 private:
-    mutable std::unique_ptr<TwoStageRocketSimulator> m_Simulator;
+    mutable std::unique_ptr<TwoStageRocketSimulator<>> m_Simulator;
 };
 
 } // namespace Aetherion::Examples::TwoStageRocket

@@ -80,21 +80,22 @@ using TwoStageRocketVF = RigidBody::VectorField<
 
 // ── TwoStageRocketSimulator<IntegratorPolicy> ─────────────────────────────────
 
-template<class IntegratorPolicy =
-    ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
-        RigidBody::KinematicsXiField,
-        TwoStageRocketVF,
-        RigidBody::RigidBody6DoFEuclidDim>>
+template<int EuclidDim = RigidBody::RigidBody6DoFEuclidDim,
+         class IntegratorPolicy =
+             ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
+                 RigidBody::KinematicsXiField,
+                 TwoStageRocketVF,
+                 EuclidDim>>
     requires ODE::RKMK::IntegratorFor<IntegratorPolicy,
                                        RigidBody::KinematicsXiField,
                                        TwoStageRocketVF,
-                                       RigidBody::RigidBody6DoFEuclidDim>
+                                       EuclidDim>
 class TwoStageRocketSimulator {
 public:
     // ── Type aliases ──────────────────────────────────────────────────────────
     using VF         = TwoStageRocketVF;
     using Integrator = IntegratorPolicy;
-    using Stepper    = RigidBody::SixDoFStepper<VF, Integrator>;
+    using Stepper    = RigidBody::SixDoFStepper<VF, EuclidDim, Integrator>;
     using StepResult = typename Stepper::StepResult;
 
     // ── Step observation ──────────────────────────────────────────────────────
