@@ -49,13 +49,15 @@
 
 namespace Aetherion::Simulation {
 
-    template<class VectorField, class SnapshotType>
+    template<class VectorField, class SnapshotType,
+             class IntegratorPolicy = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
+                 RigidBody::KinematicsXiField, VectorField, RigidBody::RigidBody6DoFEuclidDim>>
     class ISimulator
     {
     public:
-        using Stepper = RigidBody::SixDoFStepper<VectorField>;
+        using Stepper    = RigidBody::SixDoFStepper<VectorField, IntegratorPolicy>;
         using StepResult = typename Stepper::StepResult;
-        using Snapshot = SnapshotType;
+        using Snapshot   = SnapshotType;
 
         // -----------------------------------------------------------------------
         // Construction

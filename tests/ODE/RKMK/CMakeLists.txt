@@ -6,7 +6,7 @@
 
 add_executable(test_rkmk_concepts test_ConceptConformance.cpp)
 
-target_compile_options(test_rkmk_concepts PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+target_compile_options(test_rkmk_concepts PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8 /bigobj>)
 
 target_link_libraries(
   test_rkmk_concepts

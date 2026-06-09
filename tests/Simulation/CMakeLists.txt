@@ -17,7 +17,7 @@ target_link_libraries(
           # CppAD::cppad
           Catch2::Catch2WithMain)
 
-target_compile_options(test_simulation PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+target_compile_options(test_simulation PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8 /bigobj>)
 # target_include_directories(test_simulation PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)

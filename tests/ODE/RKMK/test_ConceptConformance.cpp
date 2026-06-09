@@ -13,10 +13,12 @@
 #include <Aetherion/ODE/RKMK/Concepts.h>
 #include <Aetherion/ODE/RKMK/Integrators/RadauIIA_RKMK_ProductSE3.h>
 #include <Aetherion/RigidBody/KinematicsXiField.h>
+#include <Aetherion/RigidBody/SixDofStepper.h>
 #include <Aetherion/RigidBody/VectorField.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
 
 #include <Eigen/Core>
+#include <type_traits>
 
 using namespace Aetherion;
 using namespace Aetherion::ODE::RKMK;
@@ -163,6 +165,31 @@ namespace {
         }
     };
 
+    // --- IntegratorFor doubles ---
+
+    // Satisfies both RKMKIntegratorOnProductSE3<I,7> and
+    // constructible_from<I, KFd, CVFd>.  Models a drop-in replacement integrator.
+    struct GoodIntegratorFor {
+        using VecE = Eigen::Matrix<double, 7, 1>;
+        using StepResult = GoodStepResult;
+
+        GoodIntegratorFor(const KFd&, const CVFd&) {}
+
+        StepResult step(
+            const double&,
+            const SE3d&,
+            const VecE&,
+            const double&,
+            const Core::NewtonOptions&) const
+        {
+            return {};
+        }
+    };
+
+    // Satisfies RKMKIntegratorOnProductSE3 but has no (KFd, CVFd) constructor.
+    // Used as the negative case for IntegratorFor.
+    // (GoodIntegrator, defined above, already plays this role.)
+
 } // namespace
 
 // ------------------------------------------------------------------------------
@@ -220,4 +247,46 @@ TEST_CASE("ConstructibleFromInertialParameters", "[concepts][construction]")
 {
     STATIC_REQUIRE(ConstructibleFromInertialParameters<CVFd>);
     STATIC_REQUIRE_FALSE(ConstructibleFromInertialParameters<NoBareCtorVF>);
+}
+
+// ------------------------------------------------------------------------------
+// IntegratorFor
+// ------------------------------------------------------------------------------
+TEST_CASE("IntegratorFor - positive: RadauIIA satisfies the concept", "[concepts][integrator_for]")
+{
+    // Itgd = RadauIIA_RKMK_ProductSE3<KFd, CVFd, 7>:
+    //   - satisfies RKMKIntegratorOnProductSE3<Itgd, 7>
+    //   - is constructible from (KFd, CVFd)
+    STATIC_REQUIRE(IntegratorFor<Itgd, KFd, CVFd, 7>);
+    STATIC_REQUIRE(IntegratorFor<GoodIntegratorFor, KFd, CVFd, 7>);
+}
+
+TEST_CASE("IntegratorFor - negative: not constructible from (XiField, FField)", "[concepts][integrator_for]")
+{
+    // GoodIntegrator satisfies RKMKIntegratorOnProductSE3 but has no (KFd, CVFd) ctor.
+    STATIC_REQUIRE_FALSE(IntegratorFor<GoodIntegrator, KFd, CVFd, 7>);
+    STATIC_REQUIRE_FALSE(IntegratorFor<int, KFd, CVFd, 7>);
+}
+
+TEST_CASE("IntegratorFor - negative: wrong Euclidean dimension", "[concepts][integrator_for]")
+{
+    // Itgd::VecE is R^7; checking against N=6 must fail.
+    STATIC_REQUIRE_FALSE(IntegratorFor<Itgd, KFd, CVFd, 6>);
+}
+
+// ------------------------------------------------------------------------------
+// SixDoFStepper: default IntegratorPolicy matches RadauIIA
+// ------------------------------------------------------------------------------
+TEST_CASE("SixDoFStepper: default Integrator alias is RadauIIA_RKMK_ProductSE3",
+          "[concepts][stepper]")
+{
+    using DefaultStepper = RigidBody::SixDoFStepper<CVFd>;
+    STATIC_REQUIRE(std::is_same_v<DefaultStepper::Integrator, Itgd>);
+}
+
+TEST_CASE("SixDoFStepper: custom IntegratorPolicy is accepted when it satisfies IntegratorFor",
+          "[concepts][stepper]")
+{
+    using CustomStepper = RigidBody::SixDoFStepper<CVFd, GoodIntegratorFor>;
+    STATIC_REQUIRE(std::is_same_v<CustomStepper::Integrator, GoodIntegratorFor>);
 }

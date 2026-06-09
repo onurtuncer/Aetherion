@@ -66,6 +66,95 @@ Sub-modules:
 * ``Aetherion::ODE::RKMK::Integrators`` — concrete Radau IIA integrators on
   :math:`SE(3)` and the product manifold :math:`SE(3) \times \mathbb{R}^n`.
 
+**Integrator concept hierarchy** — four C++20 concepts constrain every
+component of the integration stack:
+
+.. graphviz::
+   :caption: Concept hierarchy for the Aetherion RKMK integration stack
+
+   digraph Concepts {
+     graph [rankdir=TB fontname="sans-serif" fontsize=11 splines=ortho]
+     node  [shape=box style="filled,rounded" fontname="sans-serif" fontsize=9]
+     edge  [fontname="sans-serif" fontsize=9]
+
+     KF  [label="«concept»\nKinematicsFieldOnSE3\<KF, Scalar\>"
+          fillcolor="#D1FAE5" color="#059669"]
+     VF  [label="«concept»\nVectorFieldOnProductSE3\<VF, N, Scalar\>"
+          fillcolor="#FEF3C7" color="#D97706"]
+     RI  [label="«concept»\nRKMKIntegratorOnProductSE3\<I, N, Scalar\>"
+          fillcolor="#DBEAFE" color="#1D4ED8"]
+     IF  [label="«concept»\nIntegratorFor\<I, XiField, FField, N, Scalar\>"
+          fillcolor="#EDE9FE" color="#7C3AED"]
+     SP  [label="SixDoFStepper\<VectorField, IntegratorPolicy\>"
+          fillcolor="#F0FDF4" color="#15803D" shape=component]
+     IS  [label="ISimulator\<VF, Snapshot, IntegratorPolicy\>"
+          fillcolor="#F0FDF4" color="#15803D" shape=component]
+
+     RI -> IF  [label="subsumed by" style=dashed]
+     KF -> IF  [label="XiField ctor" style=dashed]
+     VF -> IF  [label="FField ctor" style=dashed]
+     IF -> SP  [label="requires" color="#7C3AED"]
+     SP -> IS  [label="wraps"]
+   }
+
+The four concepts, in dependency order:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 35 65
+
+   * - Concept
+     - Contract
+   * - ``KinematicsFieldOnSE3<KF, Scalar>``
+     - ``kf(t, g, xi) → Matrix<Scalar,6,1>`` — maps body-frame twist to :math:`\mathfrak{se}(3)`
+       velocity.
+   * - ``VectorFieldOnProductSE3<VF, N, Scalar>``
+     - ``vf(t, g, x) → Matrix<Scalar,N,1>`` — Newton-Euler right-hand side on
+       :math:`SE(3) \times \mathbb{R}^N`.
+   * - ``RKMKIntegratorOnProductSE3<I, N, Scalar>``
+     - ``I::step(t0, g0, x0, h, opt) → StepResult``; ``StepResult`` exposes
+       ``{g1, x1, converged}``.
+   * - ``IntegratorFor<I, XiField, FField, N, Scalar>``
+     - Combines ``RKMKIntegratorOnProductSE3`` **and**
+       ``std::constructible_from<I, XiField, FField>``. This is the concept that
+       gates the ``IntegratorPolicy`` template parameter of ``SixDoFStepper``
+       and ``ISimulator``.
+
+**Plugging in a custom integrator** — any type that satisfies
+``IntegratorFor<I, KinematicsXiField, VF, 7>`` can replace the default
+Radau IIA scheme without changing any other part of the stack:
+
+.. code-block:: cpp
+
+   // 1. Define your integrator (must be constructible from (XiField, FField)).
+   template<class XiField, class FField, int N>
+   class MyExplicitRKMK4 {
+   public:
+       using VecE      = Eigen::Matrix<double, N, 1>;
+       using StepResult = /* ... */;
+
+       MyExplicitRKMK4(XiField xi, FField f);
+       StepResult step(double t0, const SE3<double>& g0,
+                       const VecE& x0, double h,
+                       const NewtonOptions& opt) const;
+   };
+
+   // 2. Verify the concept at compile time (optional but recommended).
+   using KFd     = RigidBody::KinematicsXiField;
+   using MyVF    = RigidBody::VectorField<CentralGravityPolicy>;
+   using MyIntg  = MyExplicitRKMK4<KFd, MyVF, 7>;
+
+   static_assert(ODE::RKMK::IntegratorFor<MyIntg, KFd, MyVF, 7>);
+
+   // 3. Drop it into the stepper or simulator.
+   using MyStepper   = RigidBody::SixDoFStepper<MyVF, MyIntg>;
+   using MySimulator = Simulation::ISimulator<MyVF, Snapshot1, MyIntg>;
+
+   // The default (Radau IIA RKMK) is still used when the second/third
+   // parameter is omitted:
+   using DefaultStepper   = RigidBody::SixDoFStepper<MyVF>;
+   using DefaultSimulator = Simulation::ISimulator<MyVF, Snapshot1>;
+
 .. doxygennamespace:: Aetherion::ODE::RKMK::Lie
    :content-only:
 
@@ -208,8 +297,17 @@ Key types:
 * :cpp:struct:`Aetherion::RigidBody::State` — full state on :math:`SE(3) \times \mathbb{R}^7`.
 * :cpp:struct:`Aetherion::RigidBody::InertialParameters` — mass, inertia tensor about CoG, CoG offset (all in body frame).
 * :cpp:class:`Aetherion::RigidBody::VectorField` — Newton-Euler ODE right-hand side, templated on physics policies.
-* :cpp:class:`Aetherion::RigidBody::SixDoFStepper` — high-level facade combining kinematics and dynamics into a single ``step()`` call via Radau IIA RKMK.
+* :cpp:class:`Aetherion::RigidBody::SixDoFStepper` — high-level facade that accepts an optional ``IntegratorPolicy``
+  template parameter (defaulting to Radau IIA RKMK) constrained by ``IntegratorFor``.
 * :cpp:struct:`Aetherion::RigidBody::StateLayout` — flat 14-element index map for serialised state vectors.
+
+.. note::
+
+   ``SixDoFStepper<VF>`` is a shorthand for
+   ``SixDoFStepper<VF, RadauIIA_RKMK_ProductSE3<KinematicsXiField, VF, 7>>``.
+   Pass an explicit second argument to swap in any integrator that satisfies
+   ``IntegratorFor<I, KinematicsXiField, VF, 7>`` — see the
+   :ref:`Lie-Group ODE Solvers <api>` section for a worked example.
 
 **State vector representations**
 
@@ -366,6 +464,15 @@ Application base class, argument parser, simulator interface, and telemetry type
 **Simulator class hierarchy** — all concrete simulators inherit from
 :cpp:class:`Aetherion::Simulation::ISimulator`:
 
+The full signature is ``ISimulator<VF, Snapshot, IntegratorPolicy>`` where
+``IntegratorPolicy`` defaults to ``RadauIIA_RKMK_ProductSE3``.  Existing
+two-parameter instantiations are unchanged.  Pass a custom third argument to
+use an alternative integrator throughout the entire simulator hierarchy.
+
+``TwoStageRocketSimulator<IntegratorPolicy>`` uses the same policy mechanism
+directly (without inheriting ``ISimulator``) because it requires mutable access
+to the state for the discontinuous staging mass drop.
+
 .. graphviz::
    :caption: ISimulator inheritance — one concrete class per NASA scenario group
 
@@ -374,7 +481,7 @@ Application base class, argument parser, simulator interface, and telemetry type
      node  [shape=box style="filled,rounded" fontname="sans-serif" fontsize=9]
      edge  [arrowhead=empty color="#555"]
 
-     IS [label="ISimulator\<VF, Snapshot\>"
+     IS [label="ISimulator\<VF, Snapshot, IntegratorPolicy\>"
          fillcolor="#DBEAFE" color="#1D4ED8" shape=box]
 
      DS  [label="DraglessSphereSimulator\n(Scenarios 1, 9, 10)"

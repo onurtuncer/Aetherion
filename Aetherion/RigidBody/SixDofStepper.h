@@ -72,12 +72,15 @@ namespace Aetherion::RigidBody {
 /// if (res.converged)
 ///     state = SixDoFStepper<VF>::unpack(res);
 /// @endcode
-    template<class VectorField>
+    template<class VectorField,
+             class IntegratorPolicy = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
+                 KinematicsXiField, VectorField, RigidBody6DoFEuclidDim>>
         requires
-    ODE::RKMK::KinematicsFieldOnSE3
-        <KinematicsXiField, double >&&
-        ODE::RKMK::VectorFieldOnProductSE3<VectorField, 7, double>
-        class SixDoFStepper
+            ODE::RKMK::KinematicsFieldOnSE3<KinematicsXiField, double> &&
+            ODE::RKMK::VectorFieldOnProductSE3<VectorField, 7, double> &&
+            ODE::RKMK::IntegratorFor<IntegratorPolicy, KinematicsXiField, VectorField,
+                                     RigidBody6DoFEuclidDim>
+    class SixDoFStepper
     {
     public:
         // ------------------------------------------------------------------
@@ -86,20 +89,10 @@ namespace Aetherion::RigidBody {
         static constexpr int EuclidDim = RigidBody6DoFEuclidDim;
 
         using KinematicsField = KinematicsXiField;
-        using SE3d = ODE::RKMK::Lie::SE3<double>;
-        using VecE = Eigen::Matrix<double, EuclidDim, 1>;
-
-        using Integrator = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3
-            <KinematicsField, VectorField, EuclidDim>;
-
-        using StepResult = typename Integrator::StepResult;
-
-        // Fires at instantiation time -- before any method is called.
-        static_assert(
-            ODE::RKMK::RKMKIntegratorOnProductSE3<Integrator, EuclidDim>,
-            "RadauIIA_RKMK_ProductSE3 does not satisfy RKMKIntegratorOnProductSE3 "
-            "-- check that StepResult exposes { g1, x1, converged } and that "
-            "VecE::RowsAtCompileTime == EuclidDim.");
+        using SE3d            = ODE::RKMK::Lie::SE3<double>;
+        using VecE            = Eigen::Matrix<double, EuclidDim, 1>;
+        using Integrator      = IntegratorPolicy;
+        using StepResult      = typename Integrator::StepResult;
 
         // ------------------------------------------------------------------
         // Constructors
