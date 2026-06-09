@@ -6,6 +6,7 @@
 [![codecov](https://codecov.io/gh/onurtuncer/Aetherion/branch/main/graph/badge.svg)](https://codecov.io/gh/onurtuncer/Aetherion)
 [![Clang-Format](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_format.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_format.yml)
 [![CMake-Format](https://github.com/onurtuncer/Aetherion/actions/workflows/cmake_format.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/cmake_format.yml)
+[![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://onurtuncer.github.io/Aetherion/)
 
 <p align="center">
   <img src="assets/logo.svg" width="180" alt="AETHERION Monogram"/>
