@@ -31,6 +31,8 @@
 //
 #pragma once
 
+#include <concepts>
+
 #include <Eigen/Dense>
 
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
@@ -82,18 +84,18 @@ namespace Aetherion::RigidBody {
         Thrust    thrust;      ///< Propulsion wrench policy instance.
         MassMdot  mass_model;  ///< Mass-rate model policy instance.
 
-        /// @brief Construct from inertial parameters and optional policy instances.
+        /// @brief Construct from inertial parameters and all policy instances.
         /// @param ip  Inertial parameters (mass, inertia tensor, CoG offset).
-        /// @param g   Gravity policy (default-constructed if omitted).
-        /// @param a   Aerodynamic policy (default-constructed if omitted).
-        /// @param th  Propulsion policy (default-constructed if omitted).
-        /// @param mm  Mass-rate policy (default-constructed if omitted).
+        /// @param g   Gravity policy instance.
+        /// @param a   Aerodynamic policy instance.
+        /// @param th  Propulsion policy instance.
+        /// @param mm  Mass-rate policy instance.
         explicit VectorField(
             const InertialParameters& ip,
-            Gravity   g = {},
-            Aero      a = {},
-            Thrust    th = {},
-            MassMdot  mm = {})
+            Gravity   g,
+            Aero      a,
+            Thrust    th,
+            MassMdot  mm)
             : gravity(std::move(g))
             , aero(std::move(a))
             , thrust(std::move(th))
@@ -125,6 +127,33 @@ namespace Aetherion::RigidBody {
 
             M_inv = M.inverse();
         }
+
+        // Convenience constructors for the common case where trailing policy types are
+        // default-constructible.  Guarded by requires so that concept checks (e.g.
+        // ConstructibleFromInertialParameters) yield a soft SFINAE failure rather than
+        // a hard error when a policy (such as F16AeroPolicy) has no default constructor.
+
+        explicit VectorField(
+            const InertialParameters& ip,
+            Gravity   g,
+            Aero      a,
+            Thrust    th)
+            requires std::default_initializable<MassMdot>
+            : VectorField(ip, std::move(g), std::move(a), std::move(th), MassMdot{}) {}
+
+        explicit VectorField(
+            const InertialParameters& ip,
+            Gravity   g,
+            Aero      a)
+            requires std::default_initializable<Thrust> && std::default_initializable<MassMdot>
+            : VectorField(ip, std::move(g), std::move(a), Thrust{}, MassMdot{}) {}
+
+        explicit VectorField(const InertialParameters& ip)
+            requires std::default_initializable<Gravity>
+                  && std::default_initializable<Aero>
+                  && std::default_initializable<Thrust>
+                  && std::default_initializable<MassMdot>
+            : VectorField(ip, Gravity{}, Aero{}, Thrust{}, MassMdot{}) {}
 
         /// @brief Evaluate the ODE right-hand side @f$\dot{\mathbf{x}}@f$.
         ///
