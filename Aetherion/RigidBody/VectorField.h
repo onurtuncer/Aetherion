@@ -148,6 +148,14 @@ namespace Aetherion::RigidBody {
             requires std::default_initializable<Thrust> && std::default_initializable<MassMdot>
             : VectorField(ip, std::move(g), std::move(a), Thrust{}, MassMdot{}) {}
 
+        explicit VectorField(
+            const InertialParameters& ip,
+            Gravity   g)
+            requires std::default_initializable<Aero>
+                  && std::default_initializable<Thrust>
+                  && std::default_initializable<MassMdot>
+            : VectorField(ip, std::move(g), Aero{}, Thrust{}, MassMdot{}) {}
+
         explicit VectorField(const InertialParameters& ip)
             requires std::default_initializable<Gravity>
                   && std::default_initializable<Aero>
