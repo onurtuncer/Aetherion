@@ -1,0 +1,6 @@
+# UBSan ignorelist — suppress findings in third-party code that we do not control.
+# Syntax: https://clang.llvm.org/docs/SanitizerSpecialCaseList.html
+# GCC also honours this format via -fsanitize-ignorelist=.
+
+src:*/vendor/*
+src:*/_deps/*

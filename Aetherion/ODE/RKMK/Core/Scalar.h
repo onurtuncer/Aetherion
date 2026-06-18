@@ -113,17 +113,22 @@ namespace Aetherion::ODE::RKMK::Core {
 
         const S theta = sqrt_s(theta2);
 
-        // A is ok as sin(theta)/theta
-        const S A_trig = sin_s(theta) / theta;
+        // Safe surrogate denominators: when theta2 < eps2 the trig branches are
+        // discarded by condexp anyway, so substitute 1 to avoid dividing by zero
+        // while still being AD-graph-compatible (no if-branch on the AD type).
+        const S theta_safe  = condexp_lt(theta2, eps2, S(1), theta);
+        const S theta2_safe = condexp_lt(theta2, eps2, S(1), theta2);
+
+        const S A_trig = sin_s(theta) / theta_safe;
 
         // B: use stable half-angle identity to avoid cancellation:
         // 1 - cos(theta) = 2 sin^2(theta/2)
         const S half = theta / S(2);
         const S sh = sin_s(half);
-        const S B_trig = (S(2) * sh * sh) / theta2;
+        const S B_trig = (S(2) * sh * sh) / theta2_safe;
 
         // C: use C = (1 - A)/theta^2 (works well once theta is not tiny)
-        const S C_trig = (S(1) - A_trig) / theta2;
+        const S C_trig = (S(1) - A_trig) / theta2_safe;
 
         A = condexp_lt(theta2, eps2, A_ser, A_trig);
         B = condexp_lt(theta2, eps2, B_ser, B_trig);

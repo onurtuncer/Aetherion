@@ -112,7 +112,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_CXX_COMPILER": "g++",
-        "CMAKE_CXX_FLAGS": "--coverage -ggdb3 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=undefined -fno-sanitize-recover=all",
+        "CMAKE_CXX_FLAGS": "--coverage -ggdb3 -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=undefined -fno-sanitize-recover=all -fsanitize-ignorelist=${sourceDir}/cmake/ubsan_ignorelist.txt",
         "CMAKE_EXE_LINKER_FLAGS": "--coverage -fsanitize=undefined",
         "CMAKE_SHARED_LINKER_FLAGS": "--coverage -fsanitize=undefined"
       }
@@ -186,7 +186,7 @@
       "description": "Enable UndefinedBehaviorSanitizer",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "UndefinedBehaviorSanitizer",
-        "CMAKE_CXX_FLAGS": "-g3 -fsanitize=alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound -fno-sanitize-recover=all",
+        "CMAKE_CXX_FLAGS": "-g3 -fsanitize=alignment,bool,bounds,enum,float-cast-overflow,float-divide-by-zero,integer-divide-by-zero,nonnull-attribute,null,object-size,return,returns-nonnull-attribute,shift,signed-integer-overflow,unreachable,vla-bound -fno-sanitize-recover=all -fsanitize-ignorelist=${sourceDir}/cmake/ubsan_ignorelist.txt",
         "CMAKE_EXE_LINKER_FLAGS": "-fsanitize=undefined",
         "CMAKE_SHARED_LINKER_FLAGS": "-fsanitize=undefined",
         "CMAKE_MODULE_LINKER_FLAGS": "-fsanitize=undefined"
