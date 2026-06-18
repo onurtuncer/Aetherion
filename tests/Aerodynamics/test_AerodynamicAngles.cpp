@@ -94,11 +94,13 @@ TEST_CASE("CppAD: alpha and beta derivatives wrt velocity components (analytic c
 
     const double eps = 1e-12;
 
-    // Independent variables: [u, v, w]
+    // Independent variables: [u, v, w] — record at the test point to avoid
+    // atan2(0,0) during tape construction, which CppAD internally evaluates
+    // as 0/(0+0) (division by zero) when building its composite formula.
     std::vector<AD> x(3);
-    x[0] = 0.0;
-    x[1] = 0.0;
-    x[2] = 0.0;
+    x[0] = 10.0;
+    x[1] = 2.0;
+    x[2] = 3.0;
 
     CppAD::Independent(x);
 

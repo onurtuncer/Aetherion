@@ -111,11 +111,14 @@ namespace Aetherion::ODE::RKMK::Core {
         const S B_ser = S(1) / S(2) - t2 / S(24) + t4 / S(720) - t6 / S(40320) + t8 / S(3628800);
         const S C_ser = S(1) / S(6) - t2 / S(120) + t4 / S(5040) - t6 / S(362880) + t8 / S(39916800);
 
-        const S theta = sqrt_s(theta2);
+        // Pass a safe surrogate into sqrt so that CppAD never evaluates
+        // d/dx[sqrt(x)] = 1/(2*sqrt(x)) at x=0 during reverse mode.
+        // The false branch (theta2 >= eps2) uses the real value; the true branch
+        // uses 1, whose derivative is zero, so no chain-rule division by zero.
+        const S theta2_for_sqrt = condexp_lt(theta2, eps2, S(1), theta2);
+        const S theta = sqrt_s(theta2_for_sqrt);
 
-        // Safe surrogate denominators: when theta2 < eps2 the trig branches are
-        // discarded by condexp anyway, so substitute 1 to avoid dividing by zero
-        // while still being AD-graph-compatible (no if-branch on the AD type).
+        // Further protect the explicit denominator divisions in the trig branch.
         const S theta_safe  = condexp_lt(theta2, eps2, S(1), theta);
         const S theta2_safe = condexp_lt(theta2, eps2, S(1), theta2);
 
