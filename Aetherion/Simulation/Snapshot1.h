@@ -39,9 +39,9 @@ struct Snapshot1
 
     /// @name Kinematics
     ///@{
-    Eigen::Vector3d gePosition_m{};          ///< ECI (geocentric) position [m].
-    Eigen::Vector3d feVelocity_m_s{};        ///< Earth-relative (NED) velocity [m/s].
-    Eigen::Vector3d v_eci{};                 ///< ECI inertial velocity [m/s] (used internally).
+    Eigen::Vector3d gePosition_m  = Eigen::Vector3d::Zero(); ///< ECI (geocentric) position [m].
+    Eigen::Vector3d feVelocity_m_s = Eigen::Vector3d::Zero(); ///< Earth-relative (NED) velocity [m/s].
+    Eigen::Vector3d v_eci          = Eigen::Vector3d::Zero(); ///< ECI inertial velocity [m/s] (used internally).
 
     double altitudeMsl_m{ 0.0 };             ///< Geometric altitude above mean sea level [m].
     double longitude_rad{ 0.0 };             ///< Geodetic longitude [rad].
