@@ -1,0 +1,53 @@
+name: IWYU
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - '.github/workflows/iwyu.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  iwyu:
+    name: include-what-you-use (informational)
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build clang iwyu
+
+      - name: Configure (Clang, export compile commands)
+        run: cmake --preset=clang-debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Build
+        run: cmake --build --preset=clang-debug
+
+      # Informational only: surfaces IWYU suggestions without failing the build.
+      # The codebase is not yet IWYU-clean; this produces a diff for review.
+      - name: Run include-what-you-use
+        continue-on-error: true
+        run: |
+          iwyu_tool -p build/clang-debug src tests \
+            -- -Xiwyu --cxx17ns -Xiwyu --no_fwd_decls \
+            | tee iwyu-report.txt
+
+      - name: Upload IWYU report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iwyu-report
+          path: iwyu-report.txt

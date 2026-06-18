@@ -7,6 +7,7 @@
 [![Clang-Format](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_format.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_format.yml)
 [![CMake-Format](https://github.com/onurtuncer/Aetherion/actions/workflows/cmake_format.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/cmake_format.yml)
 [![CMake-Lint](https://github.com/onurtuncer/Aetherion/actions/workflows/cmake_lint.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/cmake_lint.yml)
+[![IWYU](https://github.com/onurtuncer/Aetherion/actions/workflows/iwyu.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/iwyu.yml)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://onurtuncer.github.io/Aetherion/)
 
 <p align="center">
