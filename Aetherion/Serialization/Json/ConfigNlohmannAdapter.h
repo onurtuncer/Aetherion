@@ -57,7 +57,7 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
         }
 
         const nlohmann::json& j() const {
-            if (!node) throw ConfigError("Json adapter: null Json node.");
+            if (node == nullptr) throw ConfigError("Json adapter: null Json node.");
             return *node;
         }
     };
@@ -81,7 +81,7 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
     // ============================================================================
     // Helpers
     // ============================================================================
-    inline std::string to_string(std::string_view sv) { return std::string(sv.begin(), sv.end()); }
+    inline std::string to_string(std::string_view sv) { return {sv.begin(), sv.end()}; }
 
     inline void ensure_object(const Json& j, std::string_view what) {
         if (!j.j().is_object()) {
@@ -164,8 +164,8 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
 
         std::vector<Json> out;
         out.reserve(arr.size());
-        for (std::size_t i = 0; i < arr.size(); ++i) {
-            out.emplace_back(&arr.at(i), j.owner);
+        for (const auto& elem : arr) {
+            out.emplace_back(&elem, j.owner);
         }
         return out;
     }

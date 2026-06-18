@@ -83,7 +83,7 @@ WarningsAsErrors: >
     -readability-use-anyofallof,
     -readability-identifier-length,
     -readability-suspicious-call-argument
-HeaderFilterRegex: '.*'
+HeaderFilterRegex: '.*/Aetherion/(Aerodynamics|Coordinate|Environment|Estimation|Examples|FMU|FlightDynamics|IO|ODE|RigidBody|Serialization|Simulation|Spatial)/.*'
 FormatStyle:     none
 CheckOptions:
   - key:             modernize-use-override.AllowOverrideAndFinal
