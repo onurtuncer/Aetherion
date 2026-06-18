@@ -16,31 +16,16 @@
 
 #pragma once
 
-#include <cmath>
-#include <filesystem>
 #include <stdexcept>
 #include <string>
-#include <string_view>
-#include <utility>
 
 #include "Aetherion/Serialization/Json/Adapter.h"
 
 namespace Aetherion::FlightDynamics::Serialization::Json {
 
-    // ============================================================================
-    // Errors
-    // ============================================================================
     class ConfigError final : public std::runtime_error {
     public:
         using std::runtime_error::runtime_error;
     };
-
-    inline bool is_finite(double x) noexcept { return std::isfinite(x); }
-
-    template <class T, class Fn>
-    T json_get_or(const Json& parent, std::string_view key, T default_value, Fn getter) {
-        if (!json_has(parent, key)) return default_value;
-        return getter(json_at(parent, key));
-    }
 
 } // namespace Aetherion::FlightDynamics::Serialization::Json
