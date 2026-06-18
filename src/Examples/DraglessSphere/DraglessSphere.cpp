@@ -31,6 +31,7 @@
 #include <Aetherion/RigidBody/StateLayout.h>
 
 #include <cmath>
+#include <numbers>
 #include <stdexcept>
 
 namespace Aetherion::Examples::DraglessSphere {
@@ -79,7 +80,7 @@ namespace Aetherion::Examples::DraglessSphere {
         if (doWrite)
             Simulation::Snapshot1_WriteCsvRow(csv, snap);
 
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
 
         AE_CORE_TRACE("  t={:.6f} s  alt={:.4f} m  v={:.6f} m/s  Mach={:.6f}",
             snap.time, snap.altitudeMsl_m,
@@ -99,7 +100,7 @@ namespace Aetherion::Examples::DraglessSphere {
     void DraglessSphereApplication::logFinalSummary() const
     {
         const auto snap = m_Simulator->snapshot();
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
 
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Simulation complete.");
@@ -147,7 +148,7 @@ namespace Aetherion::Examples::DraglessSphere {
     {
         const double theta0 = DraglessSphereSimulator::kOmegaEarth_rad_s * t0;
         AE_CORE_TRACE("Initial ERA theta0 = {:.10f} rad  ({:.6f} deg)",
-            theta0, theta0 * (180.0 / 3.14159265358979323846));
+            theta0, theta0 * (180.0 / std::numbers::pi));
         return theta0;
     }
 
@@ -197,7 +198,7 @@ namespace Aetherion::Examples::DraglessSphere {
 // -----------------------------------------------------------------------------
 namespace Aetherion::Simulation {
 
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::DraglessSphere::DraglessSphereApplication(argc, argv);
     }

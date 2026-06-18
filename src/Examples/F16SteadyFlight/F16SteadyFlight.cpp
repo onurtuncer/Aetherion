@@ -276,8 +276,8 @@ std::unique_ptr<F16SteadyFlightSimulator>
 F16SteadyFlightApplication::constructSimulator(
     const RigidBody::InertialParameters&                  ip,
     const FlightDynamics::TrimPoint&                      trim,
-    std::shared_ptr<const Serialization::DAVEMLAeroModel> aero,
-    std::shared_ptr<const Serialization::DAVEMLPropModel> prop,
+    const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aero,
+    const std::shared_ptr<const Serialization::DAVEMLPropModel>& prop,
     const RigidBody::StateD& x0,
     double theta0,
     double xcg_from_ac_m)
@@ -293,7 +293,7 @@ F16SteadyFlightApplication::constructSimulator(
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 namespace Aetherion::Simulation {
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::F16SteadyFlight::F16SteadyFlightApplication(argc, argv);
     }

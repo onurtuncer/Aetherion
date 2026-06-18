@@ -227,7 +227,7 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
 // -----------------------------------------------------------------------------
 namespace Aetherion::Simulation {
 
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::TumblingBrickNoDamping::TumblingBrickNoDampingApplication(argc, argv);
     }

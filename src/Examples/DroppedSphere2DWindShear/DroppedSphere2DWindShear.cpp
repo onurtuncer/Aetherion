@@ -19,6 +19,7 @@
 #include <Aetherion/RigidBody/StateLayout.h>
 
 #include <cmath>
+#include <numbers>
 #include <stdexcept>
 
 namespace Aetherion::Examples::DroppedSphere2DWindShear {
@@ -84,7 +85,7 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
     void DroppedSphere2DWindShearApplication::logFinalSummary() const
     {
         const auto snap = m_Simulator->snapshot();
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
 
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Simulation complete.");
@@ -146,7 +147,7 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
             const RigidBody::StateD& x0,
             double                   theta0)
     {
-        constexpr double kDeg = 3.14159265358979323846 / 180.0;
+        constexpr double kDeg = std::numbers::pi / 180.0;
         const double lat0 = rb_cfg.pose.lat_deg * kDeg;
         const double lon0 = rb_cfg.pose.lon_deg * kDeg;
 
@@ -162,7 +163,7 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
 } // namespace Aetherion::Examples::DroppedSphere2DWindShear
 
 namespace Aetherion::Simulation {
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::DroppedSphere2DWindShear::DroppedSphere2DWindShearApplication(argc, argv);
     }

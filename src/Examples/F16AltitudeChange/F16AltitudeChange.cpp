@@ -173,7 +173,7 @@ void F16AltitudeChangeApplication::prepareSimulation() const
     const auto atm_trim = Environment::US1976Atmosphere(kAlt_m);
     constexpr double kRhoSL_kg_m3 = 1.225;
     constexpr double kKt_mps      = 0.5144444;
-    const double tas_mps = kVelocity_mps * std::sqrt(2.0);  // |[vN, vE, 0]|
+    const double tas_mps = kVelocity_mps * std::numbers::sqrt2;  // |[vN, vE, 0]|
     const double keas_kt = (tas_mps / kKt_mps) * std::sqrt(atm_trim.rho / kRhoSL_kg_m3);
 
     F16AltitudeChangeSimulator::AutopilotCmds cmds;
@@ -292,9 +292,9 @@ std::unique_ptr<F16AltitudeChangeSimulator>
 F16AltitudeChangeApplication::constructSimulator(
     const RigidBody::InertialParameters&                      ip,
     const FlightDynamics::TrimPoint&                          trim,
-    std::shared_ptr<const Serialization::DAVEMLAeroModel>     aero,
-    std::shared_ptr<const Serialization::DAVEMLPropModel>     prop,
-    std::shared_ptr<const Serialization::DAVEMLControlModel>  ctrl,
+    const std::shared_ptr<const Serialization::DAVEMLAeroModel>&     aero,
+    const std::shared_ptr<const Serialization::DAVEMLPropModel>&     prop,
+    const std::shared_ptr<const Serialization::DAVEMLControlModel>&  ctrl,
     const RigidBody::StateD& x0,
     double theta0,
     const F16AltitudeChangeSimulator::AutopilotCmds& cmds,
@@ -311,7 +311,7 @@ F16AltitudeChangeApplication::constructSimulator(
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 namespace Aetherion::Simulation {
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::F16AltitudeChange::F16AltitudeChangeApplication(argc, argv);
     }

@@ -123,7 +123,7 @@ public:
         double                                                theta0,
         std::shared_ptr<Serialization::DAVEMLAeroModel>       inertiaDml,
         std::shared_ptr<Serialization::DAVEMLAeroModel>       propDml,
-        std::shared_ptr<const Serialization::DAVEMLAeroModel> aeroDml,
+        const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aeroDml,
         double                                                stg2IgnitionTime_s = 0.0)
         : m_stepper   (VF{ ip, RocketGravityPolicy{}, RocketAeroPolicy{std::move(aeroDml)} })
         , m_state     (x0)

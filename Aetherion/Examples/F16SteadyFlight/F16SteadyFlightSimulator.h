@@ -48,8 +48,8 @@ public:
     explicit F16SteadyFlightSimulator(
         const RigidBody::InertialParameters&                      ip,
         const FlightDynamics::TrimPoint&                          trim,
-        std::shared_ptr<const Serialization::DAVEMLAeroModel>     aero_model,
-        std::shared_ptr<const Serialization::DAVEMLPropModel>     prop_model,
+        const std::shared_ptr<const Serialization::DAVEMLAeroModel>&     aero_model,
+        const std::shared_ptr<const Serialization::DAVEMLPropModel>&     prop_model,
         RigidBody::StateD                                         x0,
         double                                                    theta0,
         double                                                    xcg_from_ac_m = 0.0,

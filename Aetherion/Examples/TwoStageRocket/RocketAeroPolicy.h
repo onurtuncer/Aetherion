@@ -74,7 +74,7 @@ public:
     RocketAeroPolicy() = default;
 
     explicit RocketAeroPolicy(
-        std::shared_ptr<const Serialization::DAVEMLAeroModel> model)
+        const std::shared_ptr<const Serialization::DAVEMLAeroModel>& model)
         : m_model(std::move(model))
     {}
 

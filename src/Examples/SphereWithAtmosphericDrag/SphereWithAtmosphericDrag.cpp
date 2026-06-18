@@ -207,7 +207,7 @@ namespace Aetherion::Examples::SphereWithAtmosphericDrag {
 // -----------------------------------------------------------------------------
 namespace Aetherion::Simulation {
 
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::SphereWithAtmosphericDrag::SphereWithAtmosphericDragApplication(argc, argv);
     }

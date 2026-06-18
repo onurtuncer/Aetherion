@@ -30,6 +30,7 @@
 #include <Aetherion/RigidBody/StateLayout.h>
 
 #include <cmath>
+#include <numbers>
 #include <stdexcept>
 
 namespace Aetherion::Examples::NorthwardCannonball {
@@ -97,7 +98,7 @@ namespace Aetherion::Examples::NorthwardCannonball {
     void NorthwardCannonballApplication::logFinalSummary() const
     {
         const auto snap = m_Simulator->snapshot();
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
 
         AE_CORE_INFO("========================================================");
         AE_CORE_INFO("Simulation complete.");
@@ -178,7 +179,7 @@ namespace Aetherion::Examples::NorthwardCannonball {
 } // namespace Aetherion::Examples::NorthwardCannonball
 
 namespace Aetherion::Simulation {
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::NorthwardCannonball::NorthwardCannonballApplication(argc, argv);
     }

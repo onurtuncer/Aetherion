@@ -285,7 +285,7 @@ void TwoStageRocketApplication::logFinalSummary() const
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 namespace Aetherion::Simulation {
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::TwoStageRocket::TwoStageRocketApplication(argc, argv);
     }

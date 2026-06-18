@@ -21,9 +21,6 @@ using Catch::Approx;
 
 using Aetherion::Coordinate::Vec3;
 using Aetherion::Coordinate::Quat;
-namespace detail = Aetherion::Coordinate::detail;
-
-using Aetherion::Coordinate::GeodeticToECEF;
 using Aetherion::Coordinate::DirectionNEDFromAzimuthZenith;
 using Aetherion::Coordinate::NEDToECEF;
 using Aetherion::Coordinate::ECEFToECI;

@@ -57,9 +57,9 @@ private:
         constructSimulator(
             const RigidBody::InertialParameters&                      ip,
             const FlightDynamics::TrimPoint&                          trim,
-            std::shared_ptr<const Serialization::DAVEMLAeroModel>     aero,
-            std::shared_ptr<const Serialization::DAVEMLPropModel>     prop,
-            std::shared_ptr<const Serialization::DAVEMLControlModel>  ctrl,
+            const std::shared_ptr<const Serialization::DAVEMLAeroModel>&     aero,
+            const std::shared_ptr<const Serialization::DAVEMLPropModel>&     prop,
+            const std::shared_ptr<const Serialization::DAVEMLControlModel>&  ctrl,
             const RigidBody::StateD& x0,
             double theta0,
             const F16AltitudeChange::F16AltitudeChangeSimulator::AutopilotCmds& cmds,

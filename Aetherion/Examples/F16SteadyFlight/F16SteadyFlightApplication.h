@@ -72,8 +72,8 @@ private:
     [[nodiscard]] static std::unique_ptr<F16SteadyFlightSimulator>
         constructSimulator(const RigidBody::InertialParameters& ip,
                            const FlightDynamics::TrimPoint&     trim,
-                           std::shared_ptr<const Serialization::DAVEMLAeroModel> aero,
-                           std::shared_ptr<const Serialization::DAVEMLPropModel> prop,
+                           const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aero,
+                           const std::shared_ptr<const Serialization::DAVEMLPropModel>& prop,
                            const RigidBody::StateD& x0,
                            double theta0,
                            double xcg_from_ac_m = 0.0);

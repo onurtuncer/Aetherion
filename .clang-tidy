@@ -20,6 +20,8 @@ Checks: >
     -cppcoreguidelines-pro-bounds-constant-array-index,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-non-private-member-variables-in-classes,
+    -cppcoreguidelines-avoid-do-while,
+    -cppcoreguidelines-owning-memory,
     misc-*,
     -misc-non-private-member-variables-in-classes,
     -misc-no-recursion,
@@ -40,7 +42,11 @@ Checks: >
     -readability-function-cognitive-complexity,
     -readability-use-anyofallof,
     -readability-identifier-length,
-    -readability-suspicious-call-argument
+    -readability-suspicious-call-argument,
+    bugprone-*,
+    -bugprone-easily-swappable-parameters,
+    -bugprone-exception-escape,
+    -bugprone-chained-comparison
 WarningsAsErrors: >
     -*,
     clang-diagnostic-*,
@@ -52,6 +58,7 @@ WarningsAsErrors: >
     bugprone-*,
     -bugprone-easily-swappable-parameters,
     -bugprone-exception-escape,
+    -bugprone-chained-comparison,
     cppcoreguidelines-*,
     -cppcoreguidelines-macro-usage,
     -cppcoreguidelines-pro-type-static-cast-downcast,
@@ -62,6 +69,8 @@ WarningsAsErrors: >
     -cppcoreguidelines-pro-bounds-constant-array-index,
     -cppcoreguidelines-avoid-magic-numbers,
     -cppcoreguidelines-non-private-member-variables-in-classes,
+    -cppcoreguidelines-avoid-do-while,
+    -cppcoreguidelines-owning-memory,
     misc-*,
     -misc-non-private-member-variables-in-classes,
     -misc-no-recursion,

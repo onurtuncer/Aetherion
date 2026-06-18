@@ -108,9 +108,9 @@ public:
     explicit F16AltitudeChangeSimulator(
         const RigidBody::InertialParameters&                      ip,
         const FlightDynamics::TrimPoint&                          trim,
-        std::shared_ptr<const Serialization::DAVEMLAeroModel>     aero_model,
-        std::shared_ptr<const Serialization::DAVEMLPropModel>     prop_model,
-        std::shared_ptr<const Serialization::DAVEMLControlModel>  ctrl_model,
+        const std::shared_ptr<const Serialization::DAVEMLAeroModel>&     aero_model,
+        const std::shared_ptr<const Serialization::DAVEMLPropModel>&     prop_model,
+        const std::shared_ptr<const Serialization::DAVEMLControlModel>&  ctrl_model,
         RigidBody::StateD                                         x0,
         double                                                    theta0,
         AutopilotCmds                                             cmds = {},

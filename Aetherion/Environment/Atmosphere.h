@@ -43,12 +43,12 @@ namespace Aetherion::Environment {
         using detail::SquareRoot;
 
         // ---- Physical constants (US1976) ---------------------------------------
-        const Scalar g0 = Scalar(9.80665);    // [m/s^2]
-        const Scalar R = Scalar(287.05287);  // [J/(kg·K)] specific gas constant for air
-        const Scalar gamma = Scalar(1.4);       // ratio of specific heats
+        const auto g0 = Scalar(9.80665);    // [m/s^2]
+        const auto R = Scalar(287.05287);  // [J/(kg·K)] specific gas constant for air
+        const auto gamma = Scalar(1.4);       // ratio of specific heats
 
         // Geopotential reference Earth radius (USSA-76) [m]
-        const Scalar Re = Scalar(6356766.0);
+        const auto Re = Scalar(6356766.0);
 
         // ---- Clamp / extend altitude ────────────────────────────────────────────
         // Below 0: clamp to sea level.
@@ -61,11 +61,11 @@ namespace Aetherion::Environment {
         if (h < Scalar(0)) {
             h = Scalar(0);
         }
-        const Scalar h_max = Scalar(84852.0); // 84.852 km — top of US1976 homosphere
-        Scalar above_decay = Scalar(1.0);     // multiplier applied to p and rho
+        const auto h_max = Scalar(84852.0); // 84.852 km — top of US1976 homosphere
+        auto above_decay = Scalar(1.0);     // multiplier applied to p and rho
         if (h > h_max) {
             // Isothermal scale height at T_top = 186.946 K
-            const Scalar H_scale = Scalar(287.05287 * 186.946 / 9.80665); // ≈5 480 m
+            const auto H_scale = Scalar(287.05287 * 186.946 / 9.80665); // ≈5 480 m
             above_decay = Exponential(-(h - h_max) / H_scale);
             h = h_max;
         }
@@ -77,7 +77,7 @@ namespace Aetherion::Environment {
 
         // ---- US1976 base values per layer (0..7) -------------------------------
         // Geopotential base heights [km]
-        static constexpr double Hb_km_arr[8] = {
+        static constexpr std::array<double, 8> Hb_km_arr = {
             0.0,    // 0: 0 km
             11.0,   // 1: 11 km
             20.0,   // 2: 20 km
@@ -89,7 +89,7 @@ namespace Aetherion::Environment {
         };
 
         // Base temperatures [K]
-        static constexpr double Tb_arr[8] = {
+        static constexpr std::array<double, 8> Tb_arr = {
             288.15,   // 0
             216.65,   // 1
             216.65,   // 2
@@ -101,7 +101,7 @@ namespace Aetherion::Environment {
         };
 
         // Base pressures [Pa]
-        static constexpr double Pb_arr[8] = {
+        static constexpr std::array<double, 8> Pb_arr = {
             101325.0,   // 0
             22632.1,    // 1
             5474.89,    // 2
@@ -113,7 +113,7 @@ namespace Aetherion::Environment {
         };
 
         // Temperature lapse rates Lb = dT/dH [K/km]
-        static constexpr double Lb_K_per_km_arr[8] = {
+        static constexpr std::array<double, 8> Lb_K_per_km_arr = {
             -6.5,   // 0: 0-11 km
             0.0,    // 1: 11-20 km (isothermal)
             1.0,    // 2: 20-32 km

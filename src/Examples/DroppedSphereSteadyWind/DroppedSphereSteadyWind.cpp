@@ -19,6 +19,7 @@
 #include <Aetherion/RigidBody/StateLayout.h>
 
 #include <cmath>
+#include <numbers>
 #include <stdexcept>
 
 namespace Aetherion::Examples::DroppedSphereSteadyWind {
@@ -83,7 +84,7 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
     void DroppedSphereSteadyWindApplication::logFinalSummary() const
     {
         const auto snap = m_Simulator->snapshot();
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
 
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Simulation complete.");
@@ -145,7 +146,7 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
             const RigidBody::StateD& x0,
             double                   theta0)
     {
-        constexpr double kDeg = 3.14159265358979323846 / 180.0;
+        constexpr double kDeg = std::numbers::pi / 180.0;
         const double lat0 = rb_cfg.pose.lat_deg * kDeg;
         const double lon0 = rb_cfg.pose.lon_deg * kDeg;
 
@@ -161,7 +162,7 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
 } // namespace Aetherion::Examples::DroppedSphereSteadyWind
 
 namespace Aetherion::Simulation {
-    Application* CreateApplication(int argc, char* argv[])
+    Application* CreateApplication(int argc, char** argv)
     {
         return new Examples::DroppedSphereSteadyWind::DroppedSphereSteadyWindApplication(argc, argv);
     }
