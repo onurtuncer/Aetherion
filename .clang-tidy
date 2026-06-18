@@ -99,4 +99,3 @@ CheckOptions:
     value:           'Eigen/src/.*|yaml-cpp/.*|bits/.*|external/.*'
 ExtraArgs:
   - '-std=c++23'
-...
