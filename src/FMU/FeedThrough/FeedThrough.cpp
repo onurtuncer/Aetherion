@@ -12,6 +12,8 @@
 // ------------------------------------------------------------------------------
 
 #include <fmu4cpp/fmu_base.hpp>
+#include <fmu4cpp/fmu_variable.hpp>
+#include <fmu4cpp/model_info.hpp>
 #include <string>
 
 using namespace fmu4cpp;

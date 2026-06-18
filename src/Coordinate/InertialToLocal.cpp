@@ -7,6 +7,8 @@
 // ------------------------------------------------------------------------------
 
 #include <Aetherion/Coordinate/InertialToLocal.h>
+#include <Aetherion/Coordinate/Math.h>
+#include <Aetherion/Environment/WGS84.h>
 
 namespace Aetherion::Coordinate {
 

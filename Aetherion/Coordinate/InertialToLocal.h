@@ -10,7 +10,6 @@
 
 #include <Aetherion/Coordinate/Math.h>
 #include <Aetherion/Coordinate/LocalToInertial.h>
-#include <Aetherion/Environment/WGS84.h>   // single source of WGS-84 constants
 
 namespace Aetherion::Coordinate {
 

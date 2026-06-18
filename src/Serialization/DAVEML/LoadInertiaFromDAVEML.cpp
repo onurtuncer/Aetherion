@@ -8,6 +8,8 @@
 
 #include <Aetherion/Serialization/DAVEML/LoadInertiaFromDAVEML.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLReader.h>
+#include <Aetherion/RigidBody/InertialParameters.h>
+#include <utility>
 
 namespace Aetherion::Serialization {
 

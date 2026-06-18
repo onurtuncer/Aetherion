@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <cstddef>
 #include <string>
 
 namespace Aetherion::Simulation {
