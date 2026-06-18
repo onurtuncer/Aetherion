@@ -1,0 +1,59 @@
+name: Sanitizers
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  asan:
+    name: AddressSanitizer
+    runs-on: ubuntu-latest
+    env:
+      ASAN_OPTIONS: check_initialization_order=1:detect_stack_use_after_return=1
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: sudo apt update && sudo apt install -y gcc-13 g++-13
+
+    - name: Configure compiler alternatives
+      run: |
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+    - name: Configure
+      run: cmake --preset=gcc-asan
+
+    - name: Build
+      run: cmake --build --preset=gcc-asan
+
+    - name: Run tests
+      run: ctest --preset=gcc-asan
+
+  ubsan:
+    name: UndefinedBehaviorSanitizer
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: sudo apt update && sudo apt install -y gcc-13 g++-13
+
+    - name: Configure compiler alternatives
+      run: |
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+        sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+    - name: Configure
+      run: cmake --preset=gcc-ubsan
+
+    - name: Build
+      run: cmake --build --preset=gcc-ubsan
+
+    - name: Run tests
+      run: ctest --preset=gcc-ubsan
