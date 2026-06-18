@@ -63,7 +63,7 @@ TEST_CASE("CrossMotion matrix form matches operator form", "[spatial][crossmotio
         0.3, -0.8, 2.0;
 
     auto matrix_form =
-        Aetherion::Spatial::CrossMotionMatrix(v) * u.v;
+        (Aetherion::Spatial::CrossMotionMatrix(v) * u.v).eval();
 
     auto operator_form =
         Aetherion::Spatial::CrossMotion(v, u).v;

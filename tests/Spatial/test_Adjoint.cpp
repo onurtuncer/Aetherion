@@ -76,7 +76,7 @@ TEST_CASE("Adjoint: ad(xi) matches analytical motion cross formula", "[spatial][
     const Vec3<Scalar> v2(0.8, -1.1, 0.4);
     const auto u = MakeTwist(w2, v2);
 
-    const auto res_vec = Aetherion::Spatial::ad(xi) * u.v;
+    const auto res_vec = (Aetherion::Spatial::ad(xi) * u.v).eval();
 
     // Analytical:
     // [ w1x w2
@@ -101,7 +101,7 @@ TEST_CASE("Adjoint: ad_star_times(xi,y) equals ad_star(xi)*y", "[spatial][adjoin
         4.0, 1.0, -2.0;
 
     const auto fast = Aetherion::Spatial::ad_star_times(xi, y);
-    const auto mat = Aetherion::Spatial::ad_star(xi) * y;
+    const auto mat = (Aetherion::Spatial::ad_star(xi) * y).eval();
 
     CHECK(fast.isApprox(mat));
 }
@@ -118,7 +118,7 @@ TEST_CASE("Adjoint: ad_star(xi) matches analytical force cross formula", "[spati
     const Vec3<Scalar> F(3.0, 4.0, -2.0);
     const auto f = MakeWrench(M, F);
 
-    const auto res_vec = Aetherion::Spatial::ad_star(xi) * f.f;
+    const auto res_vec = (Aetherion::Spatial::ad_star(xi) * f.f).eval();
 
     // Analytical:
     // [ wx M + vx F
