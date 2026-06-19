@@ -104,12 +104,17 @@ TEST_CASE("DAVEMLControlModel: autopilot altitude error drives elevator",
     DAVEMLControlModel ctrl(kControlFile);
 
     DAVEMLControlModel::Inputs base;
-    base.sasOn      = 1.0;
-    base.apOn       = 1.0;
-    base.altMsl_ft  = 10013.0;
-    base.Vequiv_kt  = 300.0;
-    base.keasCmd_kt = 300.0;   // match current airspeed — zero out KEAS error
-    base.alpha_deg  =   2.65;
+    base.sasOn         = 1.0;
+    base.apOn          = 1.0;
+    // Place the aircraft at the NASA reference trim point to avoid any
+    // pilot-stick bias saturating the elevator before the AP term takes effect:
+    base.altMsl_ft     = 10013.0;
+    base.Vequiv_kt     = 300.0;
+    base.keasCmd_kt    = 300.0;    // zero airspeed error
+    base.alpha_deg     =   2.65;
+    base.theta_deg     =   2.65;   // pitch ≈ AoA in level flight
+    base.longStk_frac  = base.longStkTrim;  // pilot stick at trim — zero stick bias
+    base.throttle_frac = base.throttleTrim; // throttle at trim
 
     auto hold    = base; hold.altCmd_ft    = 10013.0;  // on-altitude, zero error
     auto climb   = base; climb.altCmd_ft   = 10513.0;  // +500 ft command
