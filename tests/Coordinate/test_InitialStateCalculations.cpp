@@ -21,13 +21,8 @@ using Catch::Approx;
 
 using Aetherion::Coordinate::Vec3;
 using Aetherion::Coordinate::Quat;
-namespace detail = Aetherion::Coordinate::detail;
-
 using Aetherion::Coordinate::GeodeticToECEF;
-using Aetherion::Coordinate::DirectionNEDFromAzimuthZenith;
-using Aetherion::Coordinate::NEDToECEF;
 using Aetherion::Coordinate::ECEFToECI;
-using Aetherion::Coordinate::LaunchStateECI;
 using Aetherion::Coordinate::MakeLaunchStateECI;
 
 // Norm of Vec3<double>
@@ -242,7 +237,7 @@ TEST_CASE("MakeLaunchStateECI - CppAD derivatives of dir0_eci w.r.t azimuth, zen
     x0[0] = az0;
     x0[1] = zen0;
     std::vector<double> J_ad = f.Jacobian(x0);
-    REQUIRE(J_ad.size() == 3 * 2);
+    REQUIRE(J_ad.size() == static_cast<std::size_t>(3) * 2);
 
     // Finite-difference reference
     const double dh = 1e-4; // small angle step in radians

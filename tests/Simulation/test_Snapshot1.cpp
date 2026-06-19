@@ -131,7 +131,7 @@ TEST_CASE("Traits: last column is 'trueAirspeed_m_s'", "[traits]")
 TEST_CASE("Traits: quaternion columns appear W-first and are contiguous", "[traits]")
 {
     const auto& n = Snapshot1CsvTraits::kColumnNames;
-    auto it_w = std::find(n.begin(), n.end(), std::string_view{ "q_body_to_eci_W" });
+    const auto it_w = std::find(n.begin(), n.end(), std::string_view{ "q_body_to_eci_W" });
     REQUIRE(it_w != n.end());
     REQUIRE(*(it_w + 1) == "q_body_to_eci_X");
     REQUIRE(*(it_w + 2) == "q_body_to_eci_Y");
@@ -144,7 +144,7 @@ TEST_CASE("Traits: Vector3d columns are contiguous in X/Y/Z order", "[traits]")
     for (const char* base : { "gePosition_m_", "feVelocity_m_s_", "v_eci_" })
     {
         std::string sx = std::string(base) + "X";
-        auto it = std::find(n.begin(), n.end(), std::string_view{ sx });
+        const auto it = std::find(n.begin(), n.end(), std::string_view{ sx });
         REQUIRE(it != n.end());
         REQUIRE(*(it + 1) == std::string(base) + "Y");
         REQUIRE(*(it + 2) == std::string(base) + "Z");

@@ -21,7 +21,7 @@ namespace {
     namespace SO3 = Aetherion::ODE::RKMK::Lie::SO3;
     using Catch::Matchers::WithinAbs;
 
-    static constexpr double kPi = std::numbers::pi;
+    constexpr double kPi = std::numbers::pi;
 
     void check_rotation_matrix(const Mat3d& R, double tol = 1e-11)
     {

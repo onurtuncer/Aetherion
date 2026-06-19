@@ -37,7 +37,7 @@ target_include_directories(
          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/eigen>
          $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/CppAD/include>
          # During install (if AETHERION_INSTALL=ON):
-         $<INSTALL_INTERFACE:Aetherion>)
+         $<INSTALL_INTERFACE:include>)
 
 target_link_libraries(Aetherion PUBLIC Eigen3::Eigen CppAD::cppad)
 

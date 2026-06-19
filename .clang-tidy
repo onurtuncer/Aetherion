@@ -10,6 +10,7 @@ Checks: >
     bugprone-*,
     -bugprone-easily-swappable-parameters,
     -bugprone-exception-escape,
+    -bugprone-chained-comparison,
     cppcoreguidelines-*,
     -cppcoreguidelines-macro-usage,
     -cppcoreguidelines-pro-type-static-cast-downcast,
@@ -43,10 +44,7 @@ Checks: >
     -readability-use-anyofallof,
     -readability-identifier-length,
     -readability-suspicious-call-argument,
-    bugprone-*,
-    -bugprone-easily-swappable-parameters,
-    -bugprone-exception-escape,
-    -bugprone-chained-comparison
+    -readability-implicit-bool-conversion
 WarningsAsErrors: >
     -*,
     clang-diagnostic-*,
@@ -91,7 +89,8 @@ WarningsAsErrors: >
     -readability-function-cognitive-complexity,
     -readability-use-anyofallof,
     -readability-identifier-length,
-    -readability-suspicious-call-argument
+    -readability-suspicious-call-argument,
+    -readability-implicit-bool-conversion
 HeaderFilterRegex: '.*/Aetherion/(Aerodynamics|Coordinate|Environment|Estimation|Examples|FMU|FlightDynamics|IO|ODE|RigidBody|Serialization|Simulation|Spatial)/.*'
 FormatStyle:     none
 CheckOptions:

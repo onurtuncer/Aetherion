@@ -176,7 +176,9 @@ TEST_CASE("US1976Atmosphere - pressure/density monotonic and fields positive",
     REQUIRE(s_prev.T > 0.0);
     REQUIRE(s_prev.a > 0.0);
 
-    for (double h = h_min + dh; h <= h_max; h += dh) {
+    const int n_steps = static_cast<int>((h_max - h_min) / dh);
+    for (int i = 1; i <= n_steps; ++i) {
+        const double h = h_min + static_cast<double>(i) * dh;
         auto s = Environment::US1976Atmosphere(h);
 
         // Positivity checks

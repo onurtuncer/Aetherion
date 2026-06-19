@@ -20,8 +20,6 @@ using Catch::Approx;
 
 using Aetherion::Coordinate::Vec3;
 
-namespace detail = Aetherion::Coordinate::detail;
-
 // We are NED now:
 using Aetherion::Coordinate::ECIToNED;
 

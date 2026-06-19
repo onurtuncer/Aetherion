@@ -237,7 +237,7 @@ TEST_CASE("J2GravityPolicy: zero moment regardless of position",
 
     J2GravityPolicy p;
 
-    for (auto pos : {Vec3d(kRe, 0, 0), Vec3d(0, kRe, 0), Vec3d(0, 0, kRe)}) {
+    for (const auto& pos : {Vec3d(kRe, 0, 0), Vec3d(0, kRe, 0), Vec3d(0, 0, kRe)}) {
         SE3d g(Mat3d::Identity(), pos);
         auto w = p(g, 1.0);
         CHECK_THAT(w.f(0), WithinAbs(0.0, 1e-12));

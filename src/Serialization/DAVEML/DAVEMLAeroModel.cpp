@@ -45,7 +45,7 @@ static std::vector<double> parseDoubles(const std::string& text)
 {
     std::vector<double> v;
     std::istringstream iss(text);
-    double d;
+    double d{};
     while (iss >> d) {
         v.push_back(d);
         char c = 0;
@@ -153,18 +153,19 @@ static S evalNode(const pugi::xml_node& node,
             S rhs = evalNode<S>(operandNodes[1], vars);
             // Evaluate condition using double (AD-safe: only affects branching,
             // not the value being differentiated).
-            double lhsD, rhsD;
+            double lhsD{}; double rhsD{};
             if constexpr (std::is_same_v<S, double>) {
                 lhsD = lhs; rhsD = rhs;
             } else {
                 lhsD = CppAD::Value(CppAD::Var2Par(lhs));
                 rhsD = CppAD::Value(CppAD::Var2Par(rhs));
             }
-            bool cond = (opName == "lt")  ? lhsD <  rhsD :
-                        (opName == "gt")  ? lhsD >  rhsD :
-                        (opName == "leq") ? lhsD <= rhsD :
-                        (opName == "geq") ? lhsD >= rhsD :
-                                            lhsD == rhsD;
+            bool cond = false;
+            if      (opName == "lt")  cond = lhsD <  rhsD;
+            else if (opName == "gt")  cond = lhsD >  rhsD;
+            else if (opName == "leq") cond = lhsD <= rhsD;
+            else if (opName == "geq") cond = lhsD >= rhsD;
+            else                      cond = lhsD == rhsD;
             return cond ? S(1.0) : S(0.0);
         }
 
@@ -186,7 +187,7 @@ static S evalNode(const pugi::xml_node& node,
                 auto val  = child.first_child();            // expression
                 auto cond = val.next_sibling();             // condition
                 S condVal = evalNode<S>(cond, vars);
-                double condD;
+                double condD{};
                 if constexpr (std::is_same_v<S, double>) condD = condVal;
                 else condD = CppAD::Value(CppAD::Var2Par(condVal));
                 if (condD != 0.0 && !matched) {
@@ -224,7 +225,7 @@ static S ndInterp(const std::vector<double>& data,
 
     for (std::size_t d = 0; d < ndim; ++d) {
         const auto& bp = *bps[d];
-        double xd;
+        double xd{};
         if constexpr (std::is_same_v<S, double>) xd = inputs[d];
         else xd = CppAD::Value(CppAD::Var2Par(inputs[d]));
 
@@ -245,7 +246,7 @@ static S ndInterp(const std::vector<double>& data,
 
     // N-D bilinear interpolation: iterate over 2^ndim vertices
     S result = S(0.0);
-    std::size_t nvert = 1u << ndim;
+    std::size_t nvert = 1U << ndim;
     for (std::size_t v = 0; v < nvert; ++v)
     {
         // Linear index into the data table for this vertex
@@ -253,7 +254,7 @@ static S ndInterp(const std::vector<double>& data,
         S weight = S(1.0);
         std::size_t stride = 1;
         for (int d = (int)ndim - 1; d >= 0; --d) {
-            std::size_t corner = (v >> d) & 1u;
+            std::size_t corner = (v >> d) & 1U;
             linearIdx += (idx[d] + corner) * stride;
             weight *= corner ? wt[d] : (S(1.0) - wt[d]);
             stride *= dims[d];
@@ -277,11 +278,11 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
 
     // ── Step 1a: parse top-level griddedTableDef by gtID (for griddedTableRef) ─
     std::unordered_map<std::string, pugi::xml_node> topLevelTableDefs;
-    for (auto& xn : doc.select_nodes("/DAVEfunc/griddedTableDef"))
+    for (const auto& xn : doc.select_nodes("/DAVEfunc/griddedTableDef"))
         topLevelTableDefs[xn.node().attribute("gtID").as_string()] = xn.node();
 
     // ── Step 1b: parse breakpointDef ────────────────────────────────────────
-    for (auto& xn : doc.select_nodes("//breakpointDef")) {
+    for (const auto& xn : doc.select_nodes("//breakpointDef")) {
         auto node = xn.node();
         std::string bpID = node.attribute("bpID").as_string();
         if (bpID.empty()) continue;
@@ -309,11 +310,11 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
 
     auto collectCiDeps = [&](const pugi::xml_node& mathNode,
                               std::set<std::string>& deps) {
-        for (auto& ci : mathNode.select_nodes(".//ci"))
+        for (const auto& ci : mathNode.select_nodes(".//ci"))
             deps.insert(trimWS(ci.node().child_value()));
     };
 
-    for (auto& xn : doc.select_nodes("//variableDef")) {
+    for (const auto& xn : doc.select_nodes("//variableDef")) {
         auto node = xn.node();
         std::string varID = node.attribute("varID").as_string();
         if (varID.empty()) continue;
@@ -349,12 +350,12 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
     }
 
     // ── Step 3: parse function tables ──────────────────────────────────────
-    for (auto& xn : doc.select_nodes("//function")) {
+    for (const auto& xn : doc.select_nodes("//function")) {
         auto fnode = xn.node();
 
         // Collect input var IDs and their order
         std::vector<std::string> inputVarIDs;
-        for (auto& ivr : fnode.select_nodes("independentVarRef"))
+        for (const auto& ivr : fnode.select_nodes("independentVarRef"))
             inputVarIDs.push_back(ivr.node().attribute("varID").as_string());
 
         // Dependent var ID = the output of this function
@@ -376,14 +377,14 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         GridTable gt;
         gt.inputVarIDs = inputVarIDs;
 
-        for (auto& bpref : gdef.select_nodes("breakpointRefs/bpRef"))
-            gt.bpIDs.push_back(bpref.node().attribute("bpID").as_string());
+        for (const auto& bpref : gdef.select_nodes("breakpointRefs/bpRef"))
+            gt.bpIDs.emplace_back(bpref.node().attribute("bpID").as_string());
 
         auto dtNode = gdef.child("dataTable");
         if (dtNode) gt.data = parseDoubles(dtNode.child_value());
 
         // Compute dims from breakpoints
-        for (auto& bpID : gt.bpIDs) {
+        for (const auto& bpID : gt.bpIDs) {
             auto it = m_bps.find(bpID);
             if (it != m_bps.end())
                 gt.dims.push_back(it->second.size());
@@ -394,52 +395,52 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         m_tables[depVarID] = std::move(gt);
 
         // Register this var in info if not already there
-        if (!info.count(depVarID)) info[depVarID] = {};
+        if (!info.contains(depVarID)) info[depVarID] = {};
         // Add dependencies on input vars
-        for (auto& iv : inputVarIDs)
+        for (const auto& iv : inputVarIDs)
             info[depVarID].deps.insert(iv);
     }
 
     // ── Step 4: topological sort (Kahn's algorithm) ─────────────────────────
     // in-degree count
     std::unordered_map<std::string, int> inDeg;
-    for (auto& [id, vi] : info) {
-        if (!inDeg.count(id)) inDeg[id] = 0;
-        for (auto& dep : vi.deps)
-            if (info.count(dep)) inDeg[dep]; // ensure dep exists
+    for (const auto& [id, vi] : info) {
+        if (!inDeg.contains(id)) inDeg[id] = 0;
+        for (const auto& dep : vi.deps)
+            if (info.contains(dep)) inDeg[dep]; // ensure dep exists
     }
     // Build reverse adj: dep → set of vars that need dep
     std::unordered_map<std::string, std::vector<std::string>> rdeps;
-    for (auto& [id, vi] : info) {
-        for (auto& dep : vi.deps) {
+    for (const auto& [id, vi] : info) {
+        for (const auto& dep : vi.deps) {
             rdeps[dep].push_back(id);
             inDeg[id]; // ensure exists
         }
     }
     // Count real in-degrees
     for (auto& [id, vi] : info) inDeg[id] = 0;
-    for (auto& [id, vi] : info)
-        for (auto& dep : vi.deps)
-            if (info.count(dep)) inDeg[id]++;
+    for (const auto& [id, vi] : info)
+        for (const auto& dep : vi.deps)
+            if (info.contains(dep)) inDeg[id]++;
 
     std::queue<std::string> ready;
-    for (auto& [id, deg] : inDeg)
-        if (deg == 0 && info.count(id)) ready.push(id);
+    for (const auto& [id, deg] : inDeg)
+        if (deg == 0 && info.contains(id)) ready.push(id);
 
     std::vector<std::string> sorted;
     while (!ready.empty()) {
         auto id = ready.front(); ready.pop();
         sorted.push_back(id);
-        for (auto& rdep : rdeps[id]) {
-            if (!--inDeg[rdep]) ready.push(rdep);
+        for (const auto& rdep : rdeps[id]) {
+            if (--inDeg[rdep] == 0) ready.push(rdep);
         }
     }
     // Any remaining (cycle or unreachable) — append in arbitrary order
-    for (auto& [id, vi] : info)
-        if (inDeg.count(id) && inDeg[id] > 0) sorted.push_back(id);
+    for (const auto& [id, vi] : info)
+        if (inDeg.contains(id) && inDeg[id] > 0) sorted.push_back(id);
 
     // ── Step 5: build evaluation steps ─────────────────────────────────────
-    for (auto& id : sorted) {
+    for (const auto& id : sorted) {
         auto it = info.find(id);
         if (it == info.end()) continue;
         const auto& vi = it->second;
@@ -448,12 +449,12 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         step.isInput    = vi.isInput;
         step.isConst    = vi.isConst;
         step.constVal   = vi.constVal;
-        step.isTable    = m_tables.count(id) > 0;
+        step.isTable    = m_tables.contains(id);
         step.mathmlXml  = vi.mathmlXml;
         step.hasMinMax  = vi.hasMinMax;
         step.minVal     = vi.minVal;
         step.maxVal     = vi.maxVal;
-        m_steps.push_back(step);
+        m_steps.emplace_back(std::move(step));
     }
 }
 
@@ -482,13 +483,13 @@ DAVEMLAeroModel::evaluate(const Inputs<S>& in) const
     // Evaluate each step in topological order
     for (const auto& step : m_steps) {
         const auto& id = step.varID;
-        if (step.isInput && vars.count(id)) continue;  // keep DML-input values, recompute everything else
+        if (step.isInput && vars.contains(id)) continue;  // keep DML-input values, recompute everything else
 
         // Table > MathML calc > const initialValue (table overrides default)
         if (step.isTable)                    vars[id] = interpolate<S>(m_tables.at(id), vars);
         else if (!step.mathmlXml.empty())    vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
         else if (step.isConst)               vars[id] = S(step.constVal);
-        if (!vars.count(id))                 vars[id] = S(0.0);
+        if (!vars.contains(id))              vars[id] = S(0.0);
 
         if (step.hasMinMax) {
             if constexpr (std::is_same_v<S, double>) {
@@ -526,12 +527,12 @@ S DAVEMLAeroModel::interpolate(
 {
     std::vector<S> inputs;
     inputs.reserve(fn.inputVarIDs.size());
-    for (auto& id : fn.inputVarIDs) {
+    for (const auto& id : fn.inputVarIDs) {
         auto it = vars.find(id);
         inputs.push_back(it != vars.end() ? it->second : S(0.0));
     }
     std::vector<const BpVec*> bps;
-    for (auto& bpID : fn.bpIDs) {
+    for (const auto& bpID : fn.bpIDs) {
         auto it = m_bps.find(bpID);
         if (it == m_bps.end())
             throw std::runtime_error(
@@ -561,12 +562,12 @@ DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, S> vars) const
 {
     for (const auto& step : m_steps) {
         const auto& id = step.varID;
-        if (step.isInput && vars.count(id)) continue;  // keep DML-input values, recompute everything else
+        if (step.isInput && vars.contains(id)) continue;  // keep DML-input values, recompute everything else
         // Table takes priority over initialValue (initialValue is just a default)
         if (step.isTable)                    vars[id] = interpolate<S>(m_tables.at(id), vars);
         else if (!step.mathmlXml.empty())    vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
         else if (step.isConst)               vars[id] = S(step.constVal);
-        if (!vars.count(id))                 vars[id] = S(0.0);
+        if (!vars.contains(id))              vars[id] = S(0.0);
 
         // Apply variableDef minValue / maxValue clamping
         if (step.hasMinMax) {

@@ -31,7 +31,6 @@ using Aetherion::Coordinate::LaunchStateECI;
 using Aetherion::Coordinate::DirectionNEDFromAzimuthZenith;
 
 // NED versions (must exist in your updated InertialToLocal.h)
-using Aetherion::Coordinate::ECIToNED;
 using Aetherion::Coordinate::LocalStateNED;
 using Aetherion::Coordinate::InvertLaunchStateToLocalNED;
 
@@ -90,10 +89,10 @@ static void CheckOrthonormalFrame(
 TEST_CASE("LaunchStateECI <-> LocalStateNED random round-trip",
     "[coordinate][inverse][launch][random][ned]")
 {
-    std::mt19937 rng(1019407378u); // fixed seed
+    std::mt19937 rng(1019407378U); // fixed seed
 
     // Avoid poles and the exact zenith singularities
-    std::uniform_real_distribution<double> lat_dist(-1.2, 1.2); // ~[-69°, 69°]
+    std::uniform_real_distribution<double> lat_dist(-1.2, 1.2); // ~[-69ï¿½, 69ï¿½]
     std::uniform_real_distribution<double> lon_dist(-std::numbers::pi, std::numbers::pi);
     std::uniform_real_distribution<double> h_dist(0.0, 100000.0); // 0..100 km
     std::uniform_real_distribution<double> az_dist(0.0, 2.0 * std::numbers::pi);

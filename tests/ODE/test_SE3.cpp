@@ -33,7 +33,7 @@ namespace {
     using SE3d = Lie::SE3<double>;
 
     // 8-point Gauss–Legendre nodes/weights on [-1,1]
-    static constexpr std::array<double, 8> gl_x = {
+    constexpr std::array<double, 8> gl_x = {
         -0.9602898564975363,
         -0.7966664774136267,
         -0.5255324099163290,
@@ -44,7 +44,7 @@ namespace {
          0.9602898564975363
     };
 
-    static constexpr std::array<double, 8> gl_w = {
+    constexpr std::array<double, 8> gl_w = {
         0.1012285362903763,
         0.2223810344533745,
         0.3137066458778873,

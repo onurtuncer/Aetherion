@@ -21,10 +21,7 @@
 #include <Aetherion/Coordinate/LocalToInertial.h>
 #include <Aetherion/Coordinate/InertialToLocal.h>
 
-using Catch::Approx;
-
 using Aetherion::Coordinate::Vec3;
-namespace detail = Aetherion::Coordinate::detail;
 
 using Aetherion::Coordinate::ECIToECEF;
 using Aetherion::Coordinate::ECEFToECI;

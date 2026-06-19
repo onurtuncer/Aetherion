@@ -24,12 +24,12 @@
 
 #include <Eigen/Dense>
 #include <cmath>
+#include <numbers>
 
 using Catch::Matchers::WithinAbs;
-using Catch::Matchers::WithinRel;
 namespace detail = Aetherion::Environment::detail;
 
-constexpr double kPi = 3.14159265358979323846;
+constexpr double kPi = std::numbers::pi;
 constexpr double kA  = Aetherion::Environment::WGS84::kSemiMajorAxis_m;
 constexpr double kF  = Aetherion::Environment::WGS84::kFlattening;
 
@@ -82,7 +82,7 @@ TEST_CASE("LinearWindShear::from_ned: NED-to-ECEF rotation at equator lon=0",
     //   North ECEF: (-sin(0)*cos(0), -sin(0)*sin(0),  cos(0)) = (0, 0, 1)
     //   East  ECEF: (-sin(0),         cos(0),          0)      = (0, 1, 0)
     const auto w = Aetherion::Environment::LinearWindShear::from_ned(
-        0.0, 0.0, 0.0, 0.0, /*lat=*/0.0, /*lon=*/0.0);
+        0.0, 0.0, 0.0, 0.0, /*lat0_rad=*/0.0, /*lon0_rad=*/0.0);
 
     CHECK_THAT(w.Nx, WithinAbs( 0.0, 1e-12));
     CHECK_THAT(w.Ny, WithinAbs( 0.0, 1e-12));

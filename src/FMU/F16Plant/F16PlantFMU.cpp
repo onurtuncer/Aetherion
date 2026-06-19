@@ -91,6 +91,7 @@
 
 // Standard library
 #include <algorithm>      // std::clamp
+#include <array>
 #include <cmath>
 #include <memory>
 #include <numbers>
@@ -160,9 +161,9 @@ namespace {
 // re-derives the Eigen types needed by the stepper.
 struct F16PlantState {
     // ── Integration state ─────────────────────────────────────────────────────
-    double R[9]    {};   // SO(3) rotation matrix, row-major (body → ECI)
-    double r_I[3]  {};   // ECI position [m]
-    double nu_B[6] {};   // body twist: [wx, wy, wz (rad/s), vx, vy, vz (m/s)]
+    std::array<double, 9> R   {};   // SO(3) rotation matrix, row-major (body → ECI)
+    std::array<double, 3> r_I {};   // ECI position [m]
+    std::array<double, 6> nu_B{};   // body twist: [wx, wy, wz (rad/s), vx, vy, vz (m/s)]
     double mass_kg {};   // vehicle mass [kg]
 
     // ── Control surface state (preserved across save/restore) ─────────────────
@@ -562,6 +563,7 @@ private:
         m_state.m = state_.mass_kg;
 
         // Re-sync control surface state into VF (also restored from POD)
+        if (!m_stepper.has_value()) return;
         auto& vf = m_stepper->vectorField();
         vf.aero.el_deg    = state_.el_deg;
         vf.aero.ail_deg   = state_.ail_deg;

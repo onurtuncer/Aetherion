@@ -106,12 +106,12 @@ namespace {
         using VecE = Eigen::Matrix<double, 7, 1>;
         using StepResult = GoodStepResult;
 
-        StepResult step(
+        static StepResult step(
             const double&,
             const SE3d&,
             const VecE&,
             const double&,
-            const Core::NewtonOptions&) const
+            const Core::NewtonOptions&)
         {
             return {};
         }
@@ -127,12 +127,12 @@ namespace {
         using VecE = Eigen::Matrix<double, 7, 1>;
         using StepResult = BadStepResult_NoConverged;
 
-        StepResult step(
+        static StepResult step(
             const double&,
             const SE3d&,
             const VecE&,
             const double&,
-            const Core::NewtonOptions&) const
+            const Core::NewtonOptions&)
         {
             return {};
         }
@@ -143,12 +143,12 @@ namespace {
         using VecE = Eigen::Matrix<double, 6, 1>;   // 6 != 7
         using StepResult = GoodStepResult;
 
-        StepResult step(
+        static StepResult step(
             const double&,
             const SE3d&,
             const VecE&,
             const double&,
-            const Core::NewtonOptions&) const
+            const Core::NewtonOptions&)
         {
             return {};
         }
@@ -175,12 +175,12 @@ namespace {
 
         GoodIntegratorFor(const KFd&, const CVFd&) {}
 
-        StepResult step(
+        static StepResult step(
             const double&,
             const SE3d&,
             const VecE&,
             const double&,
-            const Core::NewtonOptions&) const
+            const Core::NewtonOptions&)
         {
             return {};
         }

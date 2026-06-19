@@ -27,7 +27,6 @@
 using namespace Aetherion::FlightDynamics;
 using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinAbs;
-using Catch::Matchers::WithinRel;
 
 // Injected at CMake configure time (see CMakeLists.txt)
 #ifndef DAVEML_F16_AERO_FILE

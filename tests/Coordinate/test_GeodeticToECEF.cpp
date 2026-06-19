@@ -24,8 +24,6 @@ using Aetherion::Coordinate::Quat;
 //namespace detail = Aetherion::Coordinate::detail;
 
 using Aetherion::Coordinate::GeodeticToECEF;
-using Aetherion::Coordinate::DirectionNEDFromAzimuthZenith;
-using Aetherion::Coordinate::NEDToECEF;
 
 // ============================================================================
 // 1. GeodeticToECEF basic WGS-84 sanity

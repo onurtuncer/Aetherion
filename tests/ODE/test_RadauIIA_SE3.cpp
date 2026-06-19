@@ -66,32 +66,32 @@ namespace {
     [[nodiscard]] Eigen::Quaterniond get_q(const G& g) {
         if constexpr (requires { g.q(); }) {
             const auto q = g.q();
-            return Eigen::Quaterniond((double)q.w(), (double)q.x(), (double)q.y(), (double)q.z());
+            return {(double)q.w(), (double)q.x(), (double)q.y(), (double)q.z()};
         }
         if constexpr (requires { g.rotation(); }) {
             const auto q = g.rotation();
-            return Eigen::Quaterniond((double)q.w(), (double)q.x(), (double)q.y(), (double)q.z());
+            return {(double)q.w(), (double)q.x(), (double)q.y(), (double)q.z()};
         }
         if constexpr (requires { g.q; }) {
             const auto q = g.q;
-            return Eigen::Quaterniond((double)q.w(), (double)q.x(), (double)q.y(), (double)q.z());
+            return {(double)q.w(), (double)q.x(), (double)q.y(), (double)q.z()};
         }
         static_assert(always_false_v<G>, "Cannot extract quaternion.");
-    } 
+    }
 
     template<class G>
     [[nodiscard]] Eigen::Vector3d get_p(const G& g) {
         if constexpr (requires { g.p(); }) {
             const auto p = g.p();
-            return Eigen::Vector3d((double)p(0), (double)p(1), (double)p(2));
+            return {(double)p(0), (double)p(1), (double)p(2)};
         }
         if constexpr (requires { g.translation(); }) {
             const auto p = g.translation();
-            return Eigen::Vector3d((double)p(0), (double)p(1), (double)p(2));
+            return {(double)p(0), (double)p(1), (double)p(2)};
         }
         if constexpr (requires { g.p; }) {
             const auto p = g.p;
-            return Eigen::Vector3d((double)p(0), (double)p(1), (double)p(2));
+            return {(double)p(0), (double)p(1), (double)p(2)};
         }
         static_assert(always_false_v<G>, "Cannot extract translation (need p()/translation() or member p).");
     }

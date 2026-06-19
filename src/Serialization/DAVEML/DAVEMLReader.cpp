@@ -135,7 +135,7 @@ DAVEMLReader::DAVEMLReader(const std::string& path)
         throw std::runtime_error(
             "DAVEMLReader: cannot open '" + path + "': " + res.description());
 
-    for (auto& xn : doc.select_nodes("//variableDef"))
+    for (const auto& xn : doc.select_nodes("//variableDef"))
     {
         auto node  = xn.node();
         std::string varID = node.attribute("varID").as_string();
@@ -192,7 +192,7 @@ void DAVEMLReader::setInput(const std::string& varID, double value)
 
 bool DAVEMLReader::hasVar(const std::string& varID) const
 {
-    return m_vars.count(varID) > 0;
+    return m_vars.contains(varID);
 }
 
 double DAVEMLReader::evalMathML(const std::string& xml) const

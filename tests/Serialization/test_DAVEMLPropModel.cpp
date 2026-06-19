@@ -20,7 +20,6 @@
 
 using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinAbs;
-using Catch::Matchers::WithinRel;
 
 #ifndef DAVEML_PROP_FILE
 #  define DAVEML_PROP_FILE ""

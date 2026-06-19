@@ -26,7 +26,7 @@ void ArgumentParser::addArgument(const std::string& flag,
     order_.push_back(flag);   // keep insertion order for help text
 }
 
-void ArgumentParser::parse(int argc, char* argv[]) {
+void ArgumentParser::parse(int argc, char** argv) {
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
 

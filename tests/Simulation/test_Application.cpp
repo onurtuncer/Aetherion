@@ -37,10 +37,19 @@ protected:
 // Helpers
 // ─────────────────────────────────────────────────────────────
 struct FakeArgv {
-    std::vector<const char*> data;
-    explicit FakeArgv(std::initializer_list<const char*> args) : data(args) {}
-    int    argc() { return static_cast<int>(data.size()); }
-    char** argv() { return const_cast<char**>(data.data()); }
+    std::vector<std::string>  strings;
+    std::vector<char*>        ptrs;
+    explicit FakeArgv(std::initializer_list<const char*> args)
+    {
+        for (const char* s : args) {
+            strings.emplace_back(s);
+        }
+        for (auto& s : strings) {
+            ptrs.push_back(s.data());
+        }
+    }
+    int    argc() const { return static_cast<int>(ptrs.size()); }
+    char** argv()       { return ptrs.data(); }
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -160,13 +169,13 @@ TEST_CASE("Application parses --outputFileName correctly", "[Application]") {
 TEST_CASE("Application default writeInterval is 1", "[Application]") {
     FakeArgv args{ "test_program" };
     StubApplication app(args.argc(), args.argv());
-    REQUIRE(app.getConfig().writeInterval == 1u);
+    REQUIRE(app.getConfig().writeInterval == 1U);
 }
 
 TEST_CASE("Application parses --writeInterval correctly", "[Application]") {
     FakeArgv args{ "test_program", "--writeInterval", "10" };
     StubApplication app(args.argc(), args.argv());
-    REQUIRE(app.getConfig().writeInterval == 10u);
+    REQUIRE(app.getConfig().writeInterval == 10U);
 }
 
 TEST_CASE("Application rejects --writeInterval of zero", "[Application]") {
@@ -210,9 +219,8 @@ TEST_CASE("ArgumentParser --help prints usage and triggers exit", "[ArgumentPars
     auto* old = std::cerr.rdbuf(buf.rdbuf());
     bool exited = false;
     try {
-        std::vector<const char*> argv{ "my_prog", "--help" };
-        parser.parse(static_cast<int>(argv.size()),
-                     const_cast<char**>(argv.data()));
+        FakeArgv fakeArgv{ "my_prog", "--help" };
+        parser.parse(fakeArgv.argc(), fakeArgv.argv());
     }
     catch (const HelpExitCalled&) { exited = true; }
     std::cerr.rdbuf(old);
@@ -227,10 +235,9 @@ TEST_CASE("ArgumentParser -h is an alias for --help", "[ArgumentParser][help]") 
     ArgumentParser parser("my_prog",
         [](int) { throw HelpExitCalled{}; });
 
-    std::vector<const char*> argv{ "my_prog", "-h" };
+    FakeArgv fakeArgv{ "my_prog", "-h" };
     REQUIRE_THROWS_AS(
-        parser.parse(static_cast<int>(argv.size()),
-                     const_cast<char**>(argv.data())),
+        parser.parse(fakeArgv.argc(), fakeArgv.argv()),
         HelpExitCalled);
 }
 
@@ -264,8 +271,8 @@ public:
     explicit RunableStub(FakeArgv& args, int failOnStep = -1)
         : Application(args.argc(), args.argv())
         , failOnStep_(failOnStep)
+        , time_(getConfig().startTime)
     {
-        time_ = getConfig().startTime;
     }
 
     int stepsCalled() const { return stepsCalled_; }

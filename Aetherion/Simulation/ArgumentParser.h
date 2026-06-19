@@ -55,7 +55,7 @@ public:
     /// @param argc Argument count as received by main().
     /// @param argv Argument vector as received by main().
     /// @throws std::invalid_argument if an unrecognised flag is encountered or a value token is missing.
-    void parse(int argc, char* argv[]);
+    void parse(int argc, char** argv);
 
     /// @brief Prints a formatted usage message listing all registered flags and their descriptions to stdout.
     void printUsage() const;

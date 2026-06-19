@@ -45,8 +45,8 @@ TEST_CASE("GravitationalWrenchAtCG: central gravity at equator gives expected fo
 {
     using Scalar = double;
 
-    const Scalar m = Scalar(2.0); // [kg]
-    const Scalar g = Scalar(g_surface_from_mu_r());
+    const auto m = Scalar(2.0); // [kg]
+    const auto g = Scalar(g_surface_from_mu_r());
 
     // Position at equator on +x axis (frame W)
     const Arr3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) };
@@ -71,7 +71,7 @@ TEST_CASE("GravitationalWrenchJ2AtCG: J2 perturbs equatorial gravity and keeps z
 {
     using Scalar = double;
 
-    const Scalar m = Scalar(1.0); // [kg]
+    const auto m = Scalar(1.0); // [kg]
     const Arr3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) }; // equator => z=0
 
     const auto w_c = Aetherion::RigidBody::GravitationalWrenchAtCG(
@@ -99,8 +99,8 @@ TEST_CASE("GravitationalWrenchWithOffset: moment equals r x F", "[gravity][wrenc
 {
     using Scalar = double;
 
-    const Scalar m = Scalar(3.0); // [kg]
-    const Scalar g = Scalar(g_surface_from_mu_r());
+    const auto m = Scalar(3.0); // [kg]
+    const auto g = Scalar(g_surface_from_mu_r());
 
     const Arr3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) };
 

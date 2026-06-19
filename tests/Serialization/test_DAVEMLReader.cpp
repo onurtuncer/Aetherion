@@ -43,7 +43,7 @@ static const std::string kFile = DAVEML_TEST_FILE;
 // ── Minimal self-contained DML used for unit-factor and evalMathML tests ─────
 namespace {
 
-const char* kMinDML = R"(<?xml version="1.0" encoding="UTF-8"?>
+const char* const kMinDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 <DAVEfunc>
   <variableDef varID="x_pct"   units="pct" initialValue="50.0"/>
   <variableDef varID="x_plain" units="nd"  initialValue="7.0"/>

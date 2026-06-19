@@ -37,7 +37,7 @@ public:
     /// @param argc Argument count from main().
     /// @param argv Argument vector from main(); must remain valid for the lifetime of this object.
     /// @throws std::invalid_argument if unrecognised flags are present or required values are missing.
-    explicit Application(int argc, char* argv[]);
+    explicit Application(int argc, char** argv);
 
     virtual ~Application() = default;
 

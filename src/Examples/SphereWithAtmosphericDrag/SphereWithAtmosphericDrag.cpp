@@ -29,6 +29,7 @@
 #include <Aetherion/RigidBody/StateLayout.h>
 
 #include <cmath>
+#include <numbers>
 #include <stdexcept>
 
 namespace Aetherion::Examples::SphereWithAtmosphericDrag {
@@ -103,7 +104,7 @@ namespace Aetherion::Examples::SphereWithAtmosphericDrag {
     void SphereWithAtmosphericDragApplication::logFinalSummary() const
     {
         const auto snap = m_Simulator->snapshot();
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
 
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Simulation complete.");
@@ -155,7 +156,7 @@ namespace Aetherion::Examples::SphereWithAtmosphericDrag {
     {
         const double theta0 = SphereWithAtmosphericDragSimulator::kOmegaEarth_rad_s * t0;
         AE_CORE_TRACE("Initial ERA theta0 = {:.10f} rad  ({:.6f} deg)",
-            theta0, theta0 * (180.0 / 3.14159265358979323846));
+            theta0, theta0 * (180.0 / std::numbers::pi));
         return theta0;
     }
 

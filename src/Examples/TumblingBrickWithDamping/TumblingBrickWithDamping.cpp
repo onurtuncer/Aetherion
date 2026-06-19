@@ -30,6 +30,7 @@
 #include <Aetherion/RigidBody/StateLayout.h>
 
 #include <cmath>
+#include <numbers>
 #include <stdexcept>
 
 namespace Aetherion::Examples::TumblingBrickWithDamping {
@@ -54,7 +55,7 @@ namespace Aetherion::Examples::TumblingBrickWithDamping {
         const double            theta0 = computeInitialERA(cfg.startTime);
         const RigidBody::StateD x0     = buildInitialState(rb_cfg, theta0);
 
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
         AE_CORE_INFO("Initial ECI position  = [{:.3f}, {:.3f}, {:.3f}] m",
             x0.g.p.x(), x0.g.p.y(), x0.g.p.z());
         AE_CORE_INFO("Initial body angular rates (ECI) = [{:.4f}, {:.4f}, {:.4f}] deg/s",
@@ -79,7 +80,7 @@ namespace Aetherion::Examples::TumblingBrickWithDamping {
     {
         const auto snap = m_Simulator->snapshot();
         Simulation::Snapshot1_WriteCsvRow(csv, snap);
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
         AE_CORE_INFO("t={:.6f} s  alt={:.3f} m  |v_NED|={:.6f} m/s  "
                      "ω=[{:.4f},{:.4f},{:.4f}] deg/s",
             snap.time, snap.altitudeMsl_m, snap.feVelocity_m_s.norm(),
@@ -96,7 +97,7 @@ namespace Aetherion::Examples::TumblingBrickWithDamping {
         if (doWrite)
             Simulation::Snapshot1_WriteCsvRow(csv, snap);
 
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
         AE_CORE_TRACE("  t={:.6f} s  alt={:.4f} m  v={:.6f} m/s  "
                       "ω=[{:.4f},{:.4f},{:.4f}] deg/s",
             snap.time, snap.altitudeMsl_m, snap.feVelocity_m_s.norm(),
@@ -118,7 +119,7 @@ namespace Aetherion::Examples::TumblingBrickWithDamping {
     void TumblingBrickWithDampingApplication::logFinalSummary() const
     {
         const auto snap = m_Simulator->snapshot();
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
 
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Simulation complete.");
@@ -153,7 +154,7 @@ namespace Aetherion::Examples::TumblingBrickWithDamping {
         AE_CORE_INFO("Loading vehicle config from '{}'", fname);
         const RigidBody::Config cfg = Serialization::LoadConfig(fname);
 
-        constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+        constexpr double kToDeg = 180.0 / std::numbers::pi;
         AE_CORE_TRACE("Vehicle config loaded:");
         AE_CORE_TRACE("  lat={:.4f} deg  lon={:.4f} deg  alt={:.2f} m",
             cfg.pose.lat_deg, cfg.pose.lon_deg, cfg.pose.alt_m);

@@ -14,7 +14,6 @@
 #include "Aetherion/RigidBody/VelocityNED.h"
 #include "Aetherion/Serialization/Json/VelocityNED.h"
 
-namespace RigidBody =  Aetherion::RigidBody;
 namespace Ser = Aetherion::Serialization::Json;
 
 using namespace Catch::Matchers;

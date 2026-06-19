@@ -81,8 +81,8 @@ TEMPLATE_TEST_CASE("Spatial::skew returns the correct skew-symmetric matrix",
         v(2), Scalar(0), -v(0),
         -v(1), v(0), Scalar(0);
 
-    const Scalar abs_tol = abs_tol_for_linear_algebra<Scalar>();
-    const Scalar rel_tol = rel_tol_for_linear_algebra<Scalar>();
+    const auto abs_tol = abs_tol_for_linear_algebra<Scalar>();
+    const auto rel_tol = rel_tol_for_linear_algebra<Scalar>();
 
     require_matrix_near_relabs(S, expected, abs_tol, rel_tol);
 
@@ -106,8 +106,8 @@ TEMPLATE_TEST_CASE("Spatial::skew implements the cross product: skew(a) * b == a
     const Vec3 lhs = A * b;         // skew(a) b
     const Vec3 rhs = a.cross(b);    // a x b
 
-    const Scalar abs_tol = abs_tol_for_linear_algebra<Scalar>();
-    const Scalar rel_tol = rel_tol_for_linear_algebra<Scalar>();
+    const auto abs_tol = abs_tol_for_linear_algebra<Scalar>();
+    const auto rel_tol = rel_tol_for_linear_algebra<Scalar>();
 
     require_matrix_near_relabs(lhs, rhs, abs_tol, rel_tol);
 }
@@ -123,8 +123,8 @@ TEMPLATE_TEST_CASE("Spatial::skew(0) returns zero matrix",
     const Vec3 z = Vec3::Zero();
     const Mat3 S = Aetherion::Spatial::skew<Scalar>(z);
 
-    const Scalar abs_tol = abs_tol_for_linear_algebra<Scalar>();
-    const Scalar rel_tol = rel_tol_for_linear_algebra<Scalar>();
+    const auto abs_tol = abs_tol_for_linear_algebra<Scalar>();
+    const auto rel_tol = rel_tol_for_linear_algebra<Scalar>();
 
     require_matrix_near_relabs(S, Mat3::Zero(), abs_tol, rel_tol);
 }

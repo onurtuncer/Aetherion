@@ -21,7 +21,6 @@
 #include <cmath>
 
 using namespace Aetherion::Serialization;
-using Catch::Matchers::WithinAbs;
 
 #ifndef DAVEML_CONTROL_FILE
 #  define DAVEML_CONTROL_FILE ""

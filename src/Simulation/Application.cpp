@@ -11,6 +11,7 @@
 #include <Aetherion/Simulation/Log.h>
 #include <Aetherion/Simulation/SnapshotTraits.h>
 
+#include <numbers>
 #include <stdexcept>
 #include <cstdlib>
 #include <fstream>
@@ -24,7 +25,7 @@ namespace Aetherion::Simulation {
     }
 
     // ── Constructor ───────────────────────────────────────────────────────────
-    Application::Application(int argc, char* argv[])
+    Application::Application(int argc, char** argv)
         : parser_(argv[0])
     {
         registerArguments();
@@ -199,7 +200,7 @@ namespace Aetherion::Simulation {
 
             if (step_count % 10 == 0 || t_current >= t_end - 1e-12)
             {
-                constexpr double kToDeg = 180.0 / 3.14159265358979323846;
+                constexpr double kToDeg = 180.0 / std::numbers::pi;
                 AE_CORE_INFO(
                     "  t={:.4f} s  alt={:.3f} m  |v_NED|={:.4f} m/s  "
                     "lat={:.6f} deg  lon={:.6f} deg",

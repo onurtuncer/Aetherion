@@ -16,10 +16,7 @@
 
 #include "Aetherion/Coordinate/QuaternionToLocalNED.h"  
 
-using Catch::Approx;
-
 using Aetherion::Coordinate::Quat;
-using Aetherion::Coordinate::LocalOrientationNED;
 using Aetherion::Coordinate::QuaternionToAzZenRollNED;
 
 namespace {
