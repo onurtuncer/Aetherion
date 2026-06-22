@@ -135,12 +135,13 @@ TEST_CASE("LoadConfig(j, source): schema mismatch throws runtime_error", "[confi
 
 TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][external_file]")
 {
-    if (!configFile().has_value()) {
+    const auto& file = configFile();
+    if (!file.has_value()) {
         FAIL("No --config file path provided to test");
         return;
     }
 
-    auto cfg = Aetherion::Serialization::LoadConfig(configFile().value());
+    auto cfg = Aetherion::Serialization::LoadConfig(file.value());
 
     // Example sanity checks
     REQUIRE(cfg.inertialParameters.mass_kg > 0.0);
