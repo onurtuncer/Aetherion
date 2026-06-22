@@ -1,0 +1,57 @@
+name: Windows Installer
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-msi:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository (with submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Set up Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v6
+
+      - name: Install WiX Toolset v3
+        run: choco install wixtoolset -y --no-progress
+
+      - name: Add WiX to PATH
+        shell: pwsh
+        run: |
+          $wixBin = Get-ChildItem "C:\Program Files (x86)\WiX Toolset v3*\bin" -Directory |
+            Select-Object -First 1 -ExpandProperty FullName
+          Add-Content -Path $env:GITHUB_PATH -Value $wixBin
+
+      - name: Configure
+        run: cmake --preset release -DAETHERION_INSTALL=ON
+
+      - name: Build
+        run: cmake --build --preset release
+
+      - name: Build MSI installer (CPack + WiX)
+        working-directory: out/build/windows-release
+        run: cpack -G WIX
+
+      - name: Upload MSI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Aetherion-installer-${{ github.ref_name }}
+          path: out/build/windows-release/*.msi
+
+      - name: Attach MSI to GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: out/build/windows-release/*.msi

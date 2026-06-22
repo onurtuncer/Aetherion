@@ -56,6 +56,7 @@ if(BUILD_DOCS)
 endif()
 
 include("cmake/generate_fmu.cmake")
+include(GNUInstallDirs)
 
 # ------------------------------------------------------------------------------
 # Vendored dependencies
@@ -100,15 +101,94 @@ if(AETHERION_BUILD_EXAMPLES)
 endif()
 
 # ------------------------------------------------------------------------------
-# Install rules (optional, guarded)
+# Install rules (optional, guarded by AETHERION_INSTALL=ON)
 # ------------------------------------------------------------------------------
-# if(AETHERION_INSTALL) include(GNUInstallDirs)
-#
-# install(TARGETS Aetherion EXPORT  AetherionTargets ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR} LIBRARY DESTINATION
-# ${CMAKE_INSTALL_LIBDIR} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} )
-#
-# install(DIRECTORY src/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Aetherion FILES_MATCHING PATTERN "*.hpp" PATTERN "*.h"
-# )
-#
-# install(EXPORT AetherionTargets FILE        AetherionTargets.cmake NAMESPACE   Aetherion:: DESTINATION
-# ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion ) endif()
+if(AETHERION_INSTALL)
+  include(CMakePackageConfigHelpers)
+
+  # fmu4cpp OBJECT libraries cannot be installed/exported directly. Wrap them in thin static libraries that can be
+  # exported as targets.
+  add_library(aetherion_fmu4cpp_base STATIC)
+  target_sources(aetherion_fmu4cpp_base PRIVATE $<TARGET_OBJECTS:fmu4cpp_base>)
+  target_include_directories(
+    aetherion_fmu4cpp_base PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/include>
+                                  $<INSTALL_INTERFACE:include>)
+  set_target_properties(aetherion_fmu4cpp_base PROPERTIES EXPORT_NAME fmu4cpp_base)
+
+  add_library(aetherion_fmu4cpp_fmi2 STATIC)
+  target_sources(aetherion_fmu4cpp_fmi2 PRIVATE $<TARGET_OBJECTS:fmu4cpp_fmi2>)
+  target_compile_definitions(aetherion_fmu4cpp_fmi2 PUBLIC FMI2)
+  target_include_directories(
+    aetherion_fmu4cpp_fmi2 PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/include>
+                                  $<INSTALL_INTERFACE:include>)
+  set_target_properties(aetherion_fmu4cpp_fmi2 PROPERTIES EXPORT_NAME fmu4cpp_fmi2)
+
+  # ── Library targets ──────────────────────────────────────────────────────────
+  install(
+    TARGETS Aetherion aetherion_fmu4cpp_base aetherion_fmu4cpp_fmi2
+    EXPORT AetherionTargets
+    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+  # descriptionGenerator tool (needed by generateFMU() at SWIL build time)
+  install(TARGETS descriptionGenerator RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+
+  # ── Headers ────────────────────────────────────────────────────────────────── Aetherion public headers →
+  # include/Aetherion/
+  install(
+    DIRECTORY Aetherion/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/Aetherion
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.hpp")
+
+  # fmu4cpp public headers → include/fmu4cpp/ and include/fmi2/ etc.
+  install(
+    DIRECTORY vendor/fmu4cpp/export/include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.hpp")
+
+  # Eigen3 headers → include/Eigen/
+  install(DIRECTORY vendor/eigen/Eigen DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+  # CppAD headers
+  if(WIN32)
+    install(
+      DIRECTORY vendor/cppad/x64-Release/include/
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+      FILES_MATCHING
+      PATTERN "*.h"
+      PATTERN "*.hpp")
+    install(FILES vendor/cppad/x64-Release/lib/cppad_lib.lib DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    install(FILES vendor/cppad/x64-Debug/lib/cppad_lib.lib DESTINATION ${CMAKE_INSTALL_LIBDIR}/debug)
+  endif()
+
+  # ── CMake integration ───────────────────────────────────────────────────────── fmu4cpp source template —
+  # generate_fmu.cmake needs this to configure FMU stubs
+  install(FILES vendor/fmu4cpp/export/src/fmu4cpp/model_identifier.cpp.in
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion/fmu4cpp/export/src/fmu4cpp)
+
+  install(FILES cmake/generate_fmu.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion)
+
+  write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/AetherionConfigVersion.cmake" VERSION ${PROJECT_VERSION}
+                                   COMPATIBILITY SameMajorVersion)
+
+  configure_package_config_file(cmake/AetherionConfig.cmake.in "${CMAKE_CURRENT_BINARY_DIR}/AetherionConfig.cmake"
+                                INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion)
+
+  install(FILES "${CMAKE_CURRENT_BINARY_DIR}/AetherionConfig.cmake"
+                "${CMAKE_CURRENT_BINARY_DIR}/AetherionConfigVersion.cmake"
+          DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion)
+
+  install(
+    EXPORT AetherionTargets
+    FILE AetherionTargets.cmake
+    NAMESPACE Aetherion::
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion)
+
+  # ── Packaging (CPack / WiX MSI on Windows) ──────────────────────────────────
+  include(cmake/Packaging.cmake)
+endif()
