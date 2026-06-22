@@ -21,7 +21,11 @@
 
 namespace {
 
-    std::optional<std::string> g_configFile;
+    std::optional<std::string>& configFile()
+    {
+        static std::optional<std::string> file;
+        return file;
+    }
 
     // Minimal valid JSON satisfying from_json(j, RigidBody::Config)
     const std::string kValidJson = R"({
@@ -69,7 +73,7 @@ int main(int argc, char* argv[])
         return returnCode;
 
     if (!filename.empty())
-        g_configFile = filename;
+        configFile() = filename;
 
     return session.run();
 }
@@ -131,9 +135,12 @@ TEST_CASE("LoadConfig(j, source): schema mismatch throws runtime_error", "[confi
 
 TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][external_file]")
 {
-    REQUIRE(g_configFile.has_value());
+    if (!configFile().has_value()) {
+        FAIL("No --config file path provided to test");
+        return;
+    }
 
-    auto cfg = Aetherion::Serialization::LoadConfig(g_configFile.value());
+    auto cfg = Aetherion::Serialization::LoadConfig(configFile().value());
 
     // Example sanity checks
     REQUIRE(cfg.inertialParameters.mass_kg > 0.0);

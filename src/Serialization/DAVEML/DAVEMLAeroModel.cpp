@@ -356,7 +356,7 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         // Collect input var IDs and their order
         std::vector<std::string> inputVarIDs;
         for (const auto& ivr : fnode.select_nodes("independentVarRef"))
-            inputVarIDs.push_back(ivr.node().attribute("varID").as_string());
+            inputVarIDs.emplace_back(ivr.node().attribute("varID").as_string());
 
         // Dependent var ID = the output of this function
         auto dvr = fnode.child("dependentVarRef");

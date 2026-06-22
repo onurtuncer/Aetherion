@@ -131,7 +131,7 @@ TEST_CASE("Traits: last column is 'trueAirspeed_m_s'", "[traits]")
 TEST_CASE("Traits: quaternion columns appear W-first and are contiguous", "[traits]")
 {
     const auto& n = Snapshot1CsvTraits::kColumnNames;
-    const auto it_w = std::find(n.begin(), n.end(), std::string_view{ "q_body_to_eci_W" });
+    const auto* const it_w = std::find(n.begin(), n.end(), std::string_view{ "q_body_to_eci_W" });
     REQUIRE(it_w != n.end());
     REQUIRE(*(it_w + 1) == "q_body_to_eci_X");
     REQUIRE(*(it_w + 2) == "q_body_to_eci_Y");
@@ -144,7 +144,7 @@ TEST_CASE("Traits: Vector3d columns are contiguous in X/Y/Z order", "[traits]")
     for (const char* base : { "gePosition_m_", "feVelocity_m_s_", "v_eci_" })
     {
         std::string sx = std::string(base) + "X";
-        const auto it = std::find(n.begin(), n.end(), std::string_view{ sx });
+        const auto* const it = std::find(n.begin(), n.end(), std::string_view{ sx });
         REQUIRE(it != n.end());
         REQUIRE(*(it + 1) == std::string(base) + "Y");
         REQUIRE(*(it + 2) == std::string(base) + "Z");
@@ -251,7 +251,7 @@ TEST_CASE("Row: each sentinel value lands in the correct column", "[row][values]
     for (std::size_t i = 0; i < row.size(); ++i)
     {
         double parsed = std::stod(row[i]);
-        double expected = static_cast<double>(i + 1);
+        auto expected = static_cast<double>(i + 1);
         CAPTURE(header[i], i, parsed, expected);
         REQUIRE(parsed == Catch::Approx(expected).epsilon(1e-12));
     }
