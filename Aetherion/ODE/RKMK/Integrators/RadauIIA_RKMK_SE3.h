@@ -95,7 +95,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
           // not done here: every degree of freedom advances under the same Radau
           // IIA tableau and the same group operation.
         struct StepResult final {
-            SE3d   g1{};
+            SE3d   g1;
             VecX   stage_xi{ VecX::Zero() };  // fixed-size: no heap allocation
             bool   converged{ false };
             int    iters{ 0 };

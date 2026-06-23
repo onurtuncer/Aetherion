@@ -50,8 +50,8 @@ struct Snapshot2
 
     /// @name Kinematics
     ///@{
-    Eigen::Vector3d gePosition_m{};      ///< ECEF position [m].
-    Eigen::Vector3d feVelocity_m_s{};    ///< Earth-relative (NED) velocity [m/s].
+    Eigen::Vector3d gePosition_m;      ///< ECEF position [m].
+    Eigen::Vector3d feVelocity_m_s;    ///< Earth-relative (NED) velocity [m/s].
 
     double altitudeMsl_m  { 0.0 };       ///< Geodetic altitude [m].
     double longitude_rad  { 0.0 };       ///< Geodetic longitude [rad].

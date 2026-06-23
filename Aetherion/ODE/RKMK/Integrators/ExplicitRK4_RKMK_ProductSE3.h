@@ -47,7 +47,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
         using VecE = Eigen::Matrix<Scalar, EuclidDim, 1>;
 
         struct StepResult {
-            SE3d g1{};
+            SE3d g1;
             VecE x1{ VecE::Zero() };
             bool converged{ true };  // explicit: always "converged"
         };

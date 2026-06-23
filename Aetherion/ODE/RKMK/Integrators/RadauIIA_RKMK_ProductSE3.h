@@ -52,7 +52,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
         static constexpr int NewtonDim = Stages * BlockDim;
 
         struct StepResult {
-            SE3d   g1{};
+            SE3d   g1;
             VecE   x1{ VecE::Zero() };
             bool   converged{ false };
             int    iters{ 0 };

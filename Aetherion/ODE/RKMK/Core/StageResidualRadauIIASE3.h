@@ -62,7 +62,7 @@ namespace Aetherion::ODE::RKMK::Core {
                 static_cast<S>(qd.x()),
                 static_cast<S>(qd.y()),
                 static_cast<S>(qd.z()));
-            const Eigen::Matrix<S, 3, 1> p = pd.template cast<S>();
+            const auto& p = pd.template cast<S>();
 
             if constexpr (requires { G{ q, p }; }) {
                 return G{ q, p };

@@ -55,7 +55,7 @@ struct Snapshot1
     double eulerAngle_rad_Pitch{ 0.0 };      ///< ZYX Euler pitch angle [rad].
     double eulerAngle_rad_Roll{ 0.0 };       ///< ZYX Euler roll angle [rad].
 
-    Eigen::Quaterniond q_body_to_eci{};      ///< Unit quaternion representing the body → ECI rotation.
+    Eigen::Quaterniond q_body_to_eci;        ///< Unit quaternion representing the body → ECI rotation.
     ///@}
 
     /// @name Angular rates

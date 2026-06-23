@@ -33,8 +33,8 @@ namespace Aetherion::Simulation {
 struct Snapshot6
 {
     double time{ 0.0 };
-    Eigen::Vector3d gePosition_m{};
-    Eigen::Vector3d feVelocity_m_s{};
+    Eigen::Vector3d gePosition_m;
+    Eigen::Vector3d feVelocity_m_s;
     double altitudeMsl_m          { 0.0 };
     double longitude_rad          { 0.0 };
     double latitude_rad           { 0.0 };

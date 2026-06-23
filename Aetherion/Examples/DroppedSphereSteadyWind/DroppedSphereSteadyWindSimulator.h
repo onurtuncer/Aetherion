@@ -39,7 +39,7 @@ public:
             DroppedSphereSteadyWindVF(
                 ip,
                 FlightDynamics::J2GravityPolicy{},
-                makeDragPolicy(aero, wind, lat0_rad, lon0_rad, theta0_rad)),
+                makeDragPolicy(aero, wind, lat0_rad, lon0_rad)),
             std::move(initialState), opt)
         , m_Theta0(theta0_rad)
         , m_WindNED(wind.north_mps, wind.east_mps, wind.down_mps)
@@ -82,8 +82,7 @@ private:
     static FlightDynamics::SteadyWindDragPolicy
         makeDragPolicy(const RigidBody::AerodynamicParameters& aero,
                        const Environment::ConstantWind&        wind,
-                       double lat0_rad, double lon0_rad,
-                       double theta0_rad)
+                       double lat0_rad, double lon0_rad)
     {
         // NED-to-ECEF at (lat0, lon0):
         //   N_ecef = (-sin(lat)*cos(lon), -sin(lat)*sin(lon),  cos(lat))
