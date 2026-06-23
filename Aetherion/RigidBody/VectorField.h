@@ -74,8 +74,7 @@ namespace Aetherion::RigidBody {
         FD::PropulsionPolicy Thrust = FD::ZeroPropulsionPolicy,
         FD::MassPolicy       MassMdot = FD::ConstantMassPolicy
     >
-    class VectorField {
-    public:
+    struct VectorField {
         Eigen::Matrix<double, 6, 6> M;     ///< 6×6 spatial inertia matrix (body frame).
         Eigen::Matrix<double, 6, 6> M_inv; ///< Inverse of @c M (precomputed at construction).
 

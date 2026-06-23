@@ -59,18 +59,6 @@ public:
     static constexpr double kLbf_N          = 4.448221615260751;
     static constexpr double kFtLbf_Nm       = 1.355817948329279;
 
-    // ── Control-surface state (public for easy update) ────────────────────────
-    double el_deg  { 0.0 };  ///< Elevator deflection [deg]
-    double ail_deg { 0.0 };  ///< Aileron  deflection [deg]
-    double rdr_deg { 0.0 };  ///< Rudder   deflection [deg]
-
-    /// Distance from the aerodynamic moment reference centre (AC) to the CG,
-    /// positive aft [m].  The DAVE-ML aero model computes CM about the AC;
-    /// this offset transfers that moment to the CG:
-    ///   My_CG = CM × qS × c̄ + xcg_from_ac × FZ_aero
-    /// For the F-16 standard loading: (35%−25%) × 11.32 ft × 0.3048 = 0.345 m.
-    double xcg_from_ac_m { 0.0 };
-
     // ── Construction ──────────────────────────────────────────────────────────
 
     /// @param model        Shared, parsed DAVE-ML aero model.
@@ -82,9 +70,22 @@ public:
                            double el = 0.0, double ail = 0.0, double rdr = 0.0,
                            double xcg_ac_m = 0.0)
         : m_model(std::move(model))
-        , el_deg(el), ail_deg(ail), rdr_deg(rdr)
-        , xcg_from_ac_m(xcg_ac_m)
+        , m_elDeg(el), m_ailDeg(ail), m_rdrDeg(rdr)
+        , m_xcgFromAcM(xcg_ac_m)
     {}
+
+    // ── Control-surface update (closed-loop flight-control layer) ─────────────
+
+    /// @brief Update the fixed control-surface deflections between integration steps.
+    void setControls(double el_deg, double ail_deg, double rdr_deg) noexcept
+    {
+        m_elDeg  = el_deg;
+        m_ailDeg = ail_deg;
+        m_rdrDeg = rdr_deg;
+    }
+
+    /// @brief CG-aft-of-AC offset [m] used for the AC→CG moment transfer.
+    [[nodiscard]] double xcgFromAcM() const noexcept { return m_xcgFromAcM; }
 
     // ── AeroPolicy interface ──────────────────────────────────────────────────
 
@@ -135,15 +136,15 @@ public:
         in.p_rps     = omega_B(0);
         in.q_rps     = omega_B(1);
         in.r_rps     = omega_B(2);
-        in.el_deg    = S(el_deg);
-        in.ail_deg   = S(ail_deg);
-        in.rdr_deg   = S(rdr_deg);
+        in.el_deg    = S(m_elDeg);
+        in.ail_deg   = S(m_ailDeg);
+        in.rdr_deg   = S(m_rdrDeg);
         const auto c = m_model->evaluate<S>(in);
 
         // ── Reference geometry ────────────────────────────────────────────────
-        const double Sref  = m_model->sref_ft2;
-        const double cbar  = m_model->cbar_ft;
-        const double bspan = m_model->bspan_ft;
+        const double Sref  = m_model->srefFt2();
+        const double cbar  = m_model->cbarFt();
+        const double bspan = m_model->bspanFt();
 
         const S qS = qbar_psf * S(Sref);  // [lbf]
 
@@ -156,12 +157,22 @@ public:
         wrench.f(5) = c.cz * qS            * S(kLbf_N);      // body Z force [N]
         // Pitch moment about the CG:  My_CG = CM×qS×c̄  +  x_cg_ac × FZ
         wrench.f(1) = c.cm * qS * S(cbar)  * S(kFtLbf_Nm)   // CM×qS×c̄  [N·m]
-                    + S(xcg_from_ac_m) * wrench.f(5);         // x_cg_ac × FZ [N·m]
+                    + S(m_xcgFromAcM) * wrench.f(5);          // x_cg_ac × FZ [N·m]
         return wrench;
     }
 
 private:
     std::shared_ptr<const Serialization::DAVEMLAeroModel> m_model;
+    double m_elDeg;        ///< Elevator deflection [deg]
+    double m_ailDeg;       ///< Aileron  deflection [deg]
+    double m_rdrDeg;       ///< Rudder   deflection [deg]
+
+    /// Distance from the aerodynamic moment reference centre (AC) to the CG,
+    /// positive aft [m].  The DAVE-ML aero model computes CM about the AC;
+    /// this offset transfers that moment to the CG:
+    ///   My_CG = CM × qS × c̄ + xcg_from_ac × FZ_aero
+    /// For the F-16 standard loading: (35%−25%) × 11.32 ft × 0.3048 = 0.345 m.
+    double m_xcgFromAcM;
 };
 
 static_assert(AeroPolicy<F16AeroPolicy>);

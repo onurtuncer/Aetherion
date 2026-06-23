@@ -47,9 +47,9 @@ TEST_CASE("DAVEMLAeroModel: reference geometry", "[daveml_aero][smoke]")
 {
     if (kAeroFile.empty()) return;
     DAVEMLAeroModel m(kAeroFile);
-    CHECK_THAT(m.sref_ft2, WithinAbs(300.0,  1e-9));
-    CHECK_THAT(m.cbar_ft,  WithinAbs(11.32,  1e-9));
-    CHECK_THAT(m.bspan_ft, WithinAbs(30.0,   1e-9));
+    CHECK_THAT(m.srefFt2(),  WithinAbs(300.0,  1e-9));
+    CHECK_THAT(m.cbarFt(),   WithinAbs(11.32,  1e-9));
+    CHECK_THAT(m.bspanFt(),  WithinAbs(30.0,   1e-9));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

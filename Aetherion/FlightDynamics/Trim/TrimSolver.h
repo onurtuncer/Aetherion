@@ -155,8 +155,8 @@ TrimSolver::longi_residual(const TrimInputs& in,
 {
     using std::cos;
 
-    const double Sref = m_aero->sref_ft2;
-    const double cbar = m_aero->cbar_ft;
+    const double Sref = m_aero->srefFt2();
+    const double cbar = m_aero->cbarFt();
 
     Serialization::DAVEMLAeroModel::Inputs<S> ai{};
     ai.vt_fps    = S(in.vt_fps);
@@ -188,7 +188,7 @@ TrimSolver::requiredThrust_lbf(const TrimInputs& in,
                                 double alpha_deg, double el_deg,
                                 double qbar_psf) const
 {
-    const double Sref = m_aero->sref_ft2;
+    const double Sref = m_aero->srefFt2();
 
     Serialization::DAVEMLAeroModel::Inputs<double> ai{};
     ai.vt_fps    = in.vt_fps;
@@ -294,8 +294,8 @@ TrimSolver::residual(const TrimInputs& in,
     const double a_fps    = atm.a   / kFt_m;
     const double qbar_psf = 0.5 * rho_slug * in.vt_fps * in.vt_fps;
     const double mach     = in.vt_fps / a_fps;
-    const double Sref     = m_aero->sref_ft2;
-    const double cbar     = m_aero->cbar_ft;
+    const double Sref     = m_aero->srefFt2();
+    const double cbar     = m_aero->cbarFt();
 
     Serialization::DAVEMLAeroModel::Inputs<double> ai{};
     ai.vt_fps    = in.vt_fps;

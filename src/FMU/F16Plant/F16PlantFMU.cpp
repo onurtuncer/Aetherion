@@ -476,9 +476,7 @@ public:
 
         // Push the latest control inputs from state_ into the VectorField policies
         auto& vf = m_stepper->vectorField();
-        vf.aero.el_deg    = state_.el_deg;
-        vf.aero.ail_deg   = state_.ail_deg;
-        vf.aero.rdr_deg   = state_.rdr_deg;
+        vf.aero.setControls(state_.el_deg, state_.ail_deg, state_.rdr_deg);
         vf.thrust.pwr_pct = state_.pwr_pct;
 
         // Advance one step with the Radau IIA RKMK integrator
@@ -565,9 +563,7 @@ private:
         // Re-sync control surface state into VF (also restored from POD)
         if (!m_stepper.has_value()) return;
         auto& vf = m_stepper->vectorField();
-        vf.aero.el_deg    = state_.el_deg;
-        vf.aero.ail_deg   = state_.ail_deg;
-        vf.aero.rdr_deg   = state_.rdr_deg;
+        vf.aero.setControls(state_.el_deg, state_.ail_deg, state_.rdr_deg);
         vf.thrust.pwr_pct = state_.pwr_pct;
     }
 

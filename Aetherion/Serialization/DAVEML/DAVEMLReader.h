@@ -74,6 +74,9 @@ public:
     /// @brief Returns @c true if the given @p varID exists in the file.
     bool hasVar(const std::string& varID) const;
 
+    /// @brief Evaluate a simple MathML \<apply\> tree; returns the result.
+    double evalMathML(const std::string& xml) const;
+
     /// @brief Internal per-variable record — public for .cpp helper access.
     struct VarEntry {
         double        value      { 0.0 };
@@ -82,10 +85,8 @@ public:
         std::string   mathmlXml;   ///< serialised MathML for re-evaluation
     };
 
+private:
     std::unordered_map<std::string, VarEntry> m_vars;
-
-    /// @brief Evaluate a simple MathML \<apply\> tree; returns the result.
-    double evalMathML(const std::string& xml) const;
 };
 
 } // namespace Aetherion::Serialization

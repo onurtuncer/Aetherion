@@ -334,9 +334,9 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         }
 
         // Reference geometry constants
-        if (varID == "sref") sref_ft2 = vi.constVal;
-        if (varID == "cbar") cbar_ft  = vi.constVal;
-        if (varID == "bspan") bspan_ft = vi.constVal;
+        if (varID == "sref") m_srefFt2 = vi.constVal;
+        if (varID == "cbar") m_cbarFt  = vi.constVal;
+        if (varID == "bspan") m_bspanFt = vi.constVal;
 
         auto calc = node.child("calculation");
         if (calc) {

@@ -77,16 +77,16 @@ public:
         S cn{};  ///< Yawing-moment   coefficient  (+ ANR)
     };
 
-    // ── Reference geometry (read from file) ───────────────────────────────────
-    double sref_ft2{ 300.0 };  ///< Reference wing area [ft²]
-    double cbar_ft { 11.32 };  ///< Mean aerodynamic chord [ft]
-    double bspan_ft{ 30.0  };  ///< Wing span [ft]
-
     // ── Construction ──────────────────────────────────────────────────────────
 
     /// @brief Parse the DAVE-ML aero file and build the evaluation graph.
     /// @throws std::runtime_error  on XML parse failure or missing data.
     explicit DAVEMLAeroModel(const std::string& path);
+
+    // ── Reference geometry (read from file) ───────────────────────────────────
+    [[nodiscard]] double srefFt2()  const noexcept { return m_srefFt2; }  ///< Reference wing area [ft²]
+    [[nodiscard]] double cbarFt()   const noexcept { return m_cbarFt; }   ///< Mean aerodynamic chord [ft]
+    [[nodiscard]] double bspanFt()  const noexcept { return m_bspanFt; }  ///< Wing span [ft]
 
     // ── Evaluation ────────────────────────────────────────────────────────────
 
@@ -132,10 +132,6 @@ public:
         double maxVal{   std::numeric_limits<double>::infinity() };
     };
 
-    std::unordered_map<std::string, BpVec>     m_bps;     ///< bpID → breakpoints
-    std::unordered_map<std::string, GridTable> m_tables;  ///< varID → table
-    std::vector<EvalStep>                      m_steps;   ///< topo-sorted graph
-
     // ── Internal helpers ──────────────────────────────────────────────────────
 
     /// @brief N-D linear interpolation (AD-safe).
@@ -151,6 +147,15 @@ public:
     template<class S>
     S evalMathMLStr(const std::string& xml,
                     const std::unordered_map<std::string, S>& vars) const;
+
+private:
+    double m_srefFt2{ 300.0 };  ///< Reference wing area [ft²]
+    double m_cbarFt { 11.32 };  ///< Mean aerodynamic chord [ft]
+    double m_bspanFt{ 30.0  };  ///< Wing span [ft]
+
+    std::unordered_map<std::string, BpVec>     m_bps;     ///< bpID → breakpoints
+    std::unordered_map<std::string, GridTable> m_tables;  ///< varID → table
+    std::vector<EvalStep>                      m_steps;   ///< topo-sorted graph
 };
 
 } // namespace Aetherion::Serialization

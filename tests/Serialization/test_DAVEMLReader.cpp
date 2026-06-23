@@ -27,7 +27,7 @@
 
 #include <string>
 #include <fstream>
-#include <cstdio>
+#include <filesystem>
 
 using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinRel;
@@ -226,7 +226,7 @@ TEST_CASE("DAVEMLReader: evalMathML plus", "[daveml][evalMathML]")
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
         "<math><apply><plus/><cn>3</cn><cn>4</cn></apply></math>"),
@@ -237,7 +237,7 @@ TEST_CASE("DAVEMLReader: evalMathML unary minus", "[daveml][evalMathML]")
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
         "<math><apply><minus/><cn>5</cn></apply></math>"),
@@ -248,7 +248,7 @@ TEST_CASE("DAVEMLReader: evalMathML divide", "[daveml][evalMathML]")
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
         "<math><apply><divide/><cn>10</cn><cn>4</cn></apply></math>"),
@@ -259,7 +259,7 @@ TEST_CASE("DAVEMLReader: evalMathML power", "[daveml][evalMathML]")
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
         "<math><apply><power/><cn>2</cn><cn>10</cn></apply></math>"),
@@ -270,7 +270,7 @@ TEST_CASE("DAVEMLReader: evalMathML unsupported operator throws", "[daveml][eval
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     REQUIRE_THROWS_AS(r.evalMathML(
         "<math><apply><modulo/><cn>7</cn><cn>3</cn></apply></math>"),
@@ -281,7 +281,7 @@ TEST_CASE("DAVEMLReader: evalMathML unexpected element throws", "[daveml][evalMa
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     REQUIRE_THROWS_AS(r.evalMathML("<math><bogus_elem/></math>"),
         std::runtime_error);
@@ -291,7 +291,7 @@ TEST_CASE("DAVEMLReader: evalMathML ci with unknown varID throws", "[daveml][eva
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     REQUIRE_THROWS_AS(r.evalMathML(
         "<math><apply><plus/><ci>NONEXISTENT</ci><cn>1</cn></apply></math>"),
@@ -306,7 +306,7 @@ TEST_CASE("DAVEMLReader: getValueSI applies pct factor", "[daveml][units]")
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     // x_pct = 50.0, units="pct" → factor 0.01 → SI = 0.5
     CHECK_THAT(r.getValueSI("x_pct"), WithinAbs(0.5, 1e-12));
@@ -316,7 +316,7 @@ TEST_CASE("DAVEMLReader: getValueSI uses factor 1.0 for unrecognised unit", "[da
 {
     const auto path = writeMinDML();
     DAVEMLReader r(path);
-    std::remove(path.c_str());
+    std::filesystem::remove(path);
 
     // x_plain = 7.0, units="nd" (not recognised) → factor 1.0 → SI = 7.0
     CHECK_THAT(r.getValueSI("x_plain"), WithinAbs(7.0, 1e-12));

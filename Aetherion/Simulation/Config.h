@@ -18,8 +18,7 @@ namespace Aetherion::Simulation {
 /// Populated from JSON via Aetherion::Serialization::LoadConfig() and passed to
 /// the Application before the integration loop starts. All fields have sensible
 /// defaults so a minimal JSON file need only override what differs.
-class Config {
-public:
+struct Config {
     double      timeStep = 0.01;            ///< Integration time step [s].
     double      startTime = 0.0;            ///< Simulation start time [s].
     double      endTime = 1.0;              ///< Simulation end time [s]; must be > startTime.

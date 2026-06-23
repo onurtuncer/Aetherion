@@ -180,9 +180,7 @@ private:
     void applyControls(const Serialization::DAVEMLControlModel::Outputs& out) noexcept
     {
         auto& vf = mutableVectorField();
-        vf.aero.el_deg    = out.el_deg;
-        vf.aero.ail_deg   = out.ail_deg;
-        vf.aero.rdr_deg   = out.rdr_deg;
+        vf.aero.setControls(out.el_deg, out.ail_deg, out.rdr_deg);
         vf.thrust.pwr_pct = out.pwr_pct;
     }
 

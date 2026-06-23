@@ -145,8 +145,8 @@ Snapshot2 MakeSnapshot2(
     // so that it matches the NASA DML-model output convention.
     // The wrench already carries M_CG = M_AC + xcg_from_ac * Fz for the EOM;
     // here we undo the transfer term to recover M_AC for reporting.
-    if constexpr (requires { aero.xcg_from_ac_m; })
-        snap.aero_bodyMoment_Nm_M = wrench.f(1) - aero.xcg_from_ac_m * wrench.f(5);
+    if constexpr (requires { aero.xcgFromAcM(); })
+        snap.aero_bodyMoment_Nm_M = wrench.f(1) - aero.xcgFromAcM() * wrench.f(5);
     else
         snap.aero_bodyMoment_Nm_M = wrench.f(1);
     snap.aero_bodyMoment_Nm_N = wrench.f(2);

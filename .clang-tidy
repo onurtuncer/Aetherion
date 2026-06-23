@@ -105,5 +105,11 @@ CheckOptions:
     # ignore Eigen, yaml-cpp, until added to IWYU and also ignore internal GCC headers (bits/)
   - key:             misc-include-cleaner.IgnoreHeaders
     value:           'Eigen/src/.*|yaml-cpp/.*|bits/.*|external/.*'
+    # AV Rule 1: functions shall not exceed 200 LSLOC.
+  - key:             readability-function-size.LineThreshold
+    value:           '200'
+    # AV Rule 3: cyclomatic complexity of any function shall be 20 or less.
+  - key:             readability-function-size.CyclomaticComplexityThreshold
+    value:           '20'
 ExtraArgs:
   - '-std=c++23'

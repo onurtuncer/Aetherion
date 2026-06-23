@@ -13,7 +13,7 @@
 #include <string>
 #include <optional>
 #include <fstream>
-#include <cstdio>
+#include <filesystem>
 
 #include "Aetherion/Serialization/LoadConfig.h"
 #include "Aetherion/RigidBody/Config.h"
@@ -96,7 +96,7 @@ TEST_CASE("LoadConfig(filename): throws for malformed JSON", "[config][LoadConfi
     REQUIRE_THROWS_AS(
         Aetherion::Serialization::LoadConfig(tmp),
         std::runtime_error);
-    std::remove(tmp.c_str());
+    std::filesystem::remove(tmp);
 }
 
 TEST_CASE("LoadConfig(filename): throws for schema mismatch", "[config][LoadConfig]")
@@ -106,7 +106,7 @@ TEST_CASE("LoadConfig(filename): throws for schema mismatch", "[config][LoadConf
     REQUIRE_THROWS_AS(
         Aetherion::Serialization::LoadConfig(tmp),
         std::runtime_error);
-    std::remove(tmp.c_str());
+    std::filesystem::remove(tmp);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

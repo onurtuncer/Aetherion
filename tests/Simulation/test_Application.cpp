@@ -8,7 +8,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_approx.hpp>
 
-#include <cstdio>
+#include <filesystem>
 #include <iostream>
 #include <sstream>
 
@@ -316,7 +316,7 @@ TEST_CASE("Application::run completes a short simulation", "[Application][run]")
     REQUIRE_NOTHROW(app.run());
     CHECK(app.stepsCalled() == 3);
 
-    std::remove(outFile.c_str());
+    std::filesystem::remove(outFile);
 }
 
 TEST_CASE("Application::run continues past a non-converging step", "[Application][run]") {
@@ -330,7 +330,7 @@ TEST_CASE("Application::run continues past a non-converging step", "[Application
     REQUIRE_NOTHROW(app.run());
     CHECK(app.stepsCalled() == 3);
 
-    std::remove(outFile.c_str());
+    std::filesystem::remove(outFile);
 }
 
 TEST_CASE("Application::run exercises per-10-step progress logging", "[Application][run]") {
@@ -344,7 +344,7 @@ TEST_CASE("Application::run exercises per-10-step progress logging", "[Applicati
     REQUIRE_NOTHROW(app.run());
     CHECK(app.stepsCalled() == 20);
 
-    std::remove(outFile.c_str());
+    std::filesystem::remove(outFile);
 }
 
 TEST_CASE("Application::run throws std::runtime_error for unwritable output path",
