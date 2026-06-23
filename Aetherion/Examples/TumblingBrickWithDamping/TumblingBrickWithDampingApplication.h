@@ -40,7 +40,7 @@ namespace Aetherion::Examples::TumblingBrickWithDamping {
 class TumblingBrickWithDampingApplication : public Simulation::Application
 {
 public:
-    explicit TumblingBrickWithDampingApplication(int argc, char* argv[])
+    explicit TumblingBrickWithDampingApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

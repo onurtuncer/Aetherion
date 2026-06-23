@@ -33,8 +33,8 @@ namespace Aetherion::Coordinate {
         using detail::SquareRoot;
 
         // WGS-84 constants — from the single authoritative header
-        const Scalar a = Scalar(Environment::WGS84::kSemiMajorAxis_m);
-        const Scalar f = Scalar(Environment::WGS84::kFlattening);
+        const auto a = Scalar(Environment::WGS84::kSemiMajorAxis_m);
+        const auto f = Scalar(Environment::WGS84::kFlattening);
         const Scalar e2 = f * (Scalar(2) - f);     // = kEccentricitySq
 
         const Scalar sLat = Sine(lat_rad);
@@ -42,7 +42,7 @@ namespace Aetherion::Coordinate {
         const Scalar sLon = Sine(lon_rad);
         const Scalar cLon = Cosine(lon_rad);
 
-        const Scalar one = Scalar(1);
+        const auto one = Scalar(1);
         const Scalar N = a / SquareRoot(one - e2 * sLat * sLat); // prime vertical radius
 
         const Scalar cosLatN_plus_h = (N + h_m) * cLat;
@@ -111,9 +111,9 @@ namespace Aetherion::Coordinate {
         const Vec3<Scalar> E{ -sLon,         cLon,         Scalar(0) };
         const Vec3<Scalar> D{ -cLat * cLon, -cLat * sLon, -sLat };
 
-        const Scalar vN = v_ned[0];
-        const Scalar vE = v_ned[1];
-        const Scalar vD = v_ned[2];
+        const Scalar& vN = v_ned[0];
+        const Scalar& vE = v_ned[1];
+        const Scalar& vD = v_ned[2];
 
         return Vec3<Scalar>{
             vN* N[0] + vE * E[0] + vD * D[0],
@@ -227,12 +227,12 @@ namespace Aetherion::Coordinate {
         const Vec3<Scalar> up_body0_ned = Normalize(Cross(forward_ned, side_ned));
         const Vec3<Scalar> x_b0_ned = forward_ned;
         const Vec3<Scalar> y_b0_ned = side_ned;
-        const Vec3<Scalar> z_b0_ned = up_body0_ned;
+        const Vec3<Scalar>& z_b0_ned = up_body0_ned;
 
         const Scalar cR = Cosine(roll_rad);
         const Scalar sR = Sine(roll_rad);
 
-        const Vec3<Scalar> x_b_ned = x_b0_ned;
+        const Vec3<Scalar>& x_b_ned = x_b0_ned;
         const Vec3<Scalar> y_b_ned{
             cR * y_b0_ned[0] + sR * z_b0_ned[0],
             cR * y_b0_ned[1] + sR * z_b0_ned[1],

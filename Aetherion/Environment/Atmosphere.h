@@ -127,7 +127,7 @@ namespace Aetherion::Environment {
         // ---- Find the layer index b such that Hb <= H < H_{b+1} ----------------
         std::size_t b = 0;
         for (; b + 1 < 8; ++b) {
-            const Scalar Hb_next = Scalar(Hb_km_arr[b + 1]);
+            const auto Hb_next = Scalar(Hb_km_arr[b + 1]);
             if (H_km < Hb_next) {
                 break;
             }
@@ -136,10 +136,10 @@ namespace Aetherion::Environment {
             b = 7; // Just in case, clamp
         }
 
-        const Scalar Hb_km = Scalar(Hb_km_arr[b]);
+        const auto Hb_km = Scalar(Hb_km_arr[b]);
         const Scalar Hb = Hb_km * Scalar(1000.0);   // [m]
-        const Scalar Tb = Scalar(Tb_arr[b]);        // [K]
-        const Scalar Pb = Scalar(Pb_arr[b]);        // [Pa]
+        const auto Tb = Scalar(Tb_arr[b]);        // [K]
+        const auto Pb = Scalar(Pb_arr[b]);        // [Pa]
         const Scalar Lb = Scalar(Lb_K_per_km_arr[b]) * Scalar(1.0e-3); // [K/m]
 
         // ---- Compute temperature and pressure at altitude H --------------------

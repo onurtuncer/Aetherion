@@ -32,6 +32,8 @@
 
 #pragma once
 
+#include <cstdint>
+
 #include <Aetherion/Simulation/Snapshot1.h>
 #include <Aetherion/Simulation/Snapshot2.h>
 #include <Aetherion/Simulation/Snapshot3.h>
@@ -42,7 +44,7 @@
 namespace Aetherion::Simulation {
 
 /// @brief Selects the output column schema for simulation CSV files.
-enum class SnapshotFormat : int {
+enum class SnapshotFormat : std::uint8_t {
     One   = 1, ///< 38 cols — Aetherion-extended (Snapshot1).
     Two   = 2, ///< 31 cols — NASA reference (Snapshot2).
     Three = 3, ///< Placeholder — extend Snapshot3 for the assigned scenario.

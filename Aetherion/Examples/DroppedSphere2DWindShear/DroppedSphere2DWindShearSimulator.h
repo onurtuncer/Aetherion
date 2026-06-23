@@ -91,7 +91,7 @@ private:
             ws.gradient_N_mps_m, ws.gradient_E_mps_m,
             ws.intercept_N_mps,  ws.intercept_E_mps,
             lat0_rad, lon0_rad);
-        return ShearWindPolicy{ aero.CD, aero.S, std::move(lws) };
+        return ShearWindPolicy{ aero.CD, aero.S, lws };
     }
 };
 

@@ -7,22 +7,22 @@
 
 #pragma once
 
-#include <Aetherion/Spatial/Skew.h> 
+#include <Aetherion/Spatial/Skew.h>
+
+#include <utility>
 
 namespace Aetherion::ODE::RKMK::Lie {
 
     template<class Scalar>
-    SE3<Scalar>::SE3(const Mat3& R_in, const Vec3& p_in)
-        : q(Eigen::Quaternion<Scalar>(R_in).normalized()), R(R_in), p(p_in)
+    SE3<Scalar>::SE3(const Mat3& R_in, Vec3 p_in)
+        : q(Eigen::Quaternion<Scalar>(R_in).normalized()), R(q.toRotationMatrix()), p(std::move(p_in))
     {
-        R = q.toRotationMatrix();
     }
 
     template<class Scalar>
-    SE3<Scalar>::SE3(const Eigen::Quaternion<Scalar>& q_in, const Vec3& p_in)
-        : q(q_in.normalized()), R(Mat3::Identity()), p(p_in)
+    SE3<Scalar>::SE3(const Eigen::Quaternion<Scalar>& q_in, Vec3 p_in)
+        : q(q_in.normalized()), R(q.toRotationMatrix()), p(std::move(p_in))
     {
-        R = q.toRotationMatrix();
     }
 
     template<class Scalar>

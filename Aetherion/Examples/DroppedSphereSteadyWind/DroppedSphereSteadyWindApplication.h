@@ -33,7 +33,7 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
 class DroppedSphereSteadyWindApplication : public Simulation::Application
 {
 public:
-    explicit DroppedSphereSteadyWindApplication(int argc, char* argv[])
+    explicit DroppedSphereSteadyWindApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

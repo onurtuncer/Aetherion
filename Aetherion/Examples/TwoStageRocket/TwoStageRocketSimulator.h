@@ -119,15 +119,14 @@ public:
     ///                           NASA TM reference coast-then-fire sequencing.
     explicit TwoStageRocketSimulator(
         const RigidBody::InertialParameters&                  ip,
-        const RigidBody::StateD&                              x0,
+        RigidBody::StateD                                     x0,
         double                                                theta0,
         std::shared_ptr<Serialization::DAVEMLAeroModel>       inertiaDml,
         std::shared_ptr<Serialization::DAVEMLAeroModel>       propDml,
         const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aeroDml,
         double                                                stg2IgnitionTime_s = 0.0)
-        : m_stepper   (VF{ ip, RocketGravityPolicy{}, RocketAeroPolicy{std::move(aeroDml)} })
-        , m_state     (x0)
-        , m_time      (0.0)
+        : m_stepper   (VF{ ip, RocketGravityPolicy{}, RocketAeroPolicy{aeroDml} })
+        , m_state     (std::move(x0))
         , m_theta0    (theta0)
         , m_stageModel(std::move(inertiaDml), std::move(propDml))
     {

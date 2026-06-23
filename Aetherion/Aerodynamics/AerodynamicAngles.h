@@ -60,9 +60,9 @@ inline AeroAngles<Scalar> AnglesFromVelocityBody(
     const Vec3<Scalar>& v_body_m_s,
     const Scalar& eps = Scalar(1e-12))
 {
-    const Scalar u = v_body_m_s[0];
-    const Scalar v = v_body_m_s[1];
-    const Scalar w = v_body_m_s[2];
+    const Scalar& u = v_body_m_s[0];
+    const Scalar& v = v_body_m_s[1];
+    const Scalar& w = v_body_m_s[2];
 
     const Scalar speed = SpeedFromVelocity(v_body_m_s, eps);
 

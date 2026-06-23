@@ -46,7 +46,7 @@ using SWADSim = SphereWithAtmosphericDrag::SphereWithAtmosphericDragSimulator;
 class NorthwardCannonballApplication : public Simulation::Application
 {
 public:
-    explicit NorthwardCannonballApplication(int argc, char* argv[])
+    explicit NorthwardCannonballApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

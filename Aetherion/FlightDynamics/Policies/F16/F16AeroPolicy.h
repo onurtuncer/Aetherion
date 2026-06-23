@@ -106,9 +106,9 @@ public:
         const Eigen::Matrix<S, 3, 1> v_rel = v_B - v_surface;
 
         // ── Aerodynamic angles and TAS ────────────────────────────────────────
-        const S u       = v_rel(0);
-        const S v       = v_rel(1);
-        const S w       = v_rel(2);
+        const S& u      = v_rel(0);
+        const S& v      = v_rel(1);
+        const S& w      = v_rel(2);
         const S vt_mps  = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
         const S vt_fps  = vt_mps / S(kFt_m);
 

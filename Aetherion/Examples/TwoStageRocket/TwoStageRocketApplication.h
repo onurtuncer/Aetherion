@@ -30,7 +30,7 @@ namespace Aetherion::Examples::TwoStageRocket {
 class TwoStageRocketApplication : public Simulation::Application
 {
 public:
-    explicit TwoStageRocketApplication(int argc, char* argv[])
+    explicit TwoStageRocketApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

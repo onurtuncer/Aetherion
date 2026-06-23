@@ -107,7 +107,7 @@ public:
     TrimSolver(const Serialization::DAVEMLAeroModel& aero,
                const Serialization::DAVEMLPropModel& prop,
                double xcg_from_ac_ft = 0.0)
-        : m_aero(aero), m_prop(prop), m_xcg_ft(xcg_from_ac_ft) {}
+        : m_aero(&aero), m_prop(&prop), m_xcg_ft(xcg_from_ac_ft) {}
 
     // ── Main interface ────────────────────────────────────────────────────────
 
@@ -140,8 +140,8 @@ private:
     double solveThrottle(double FEX_required_lbf,
                          double alt_ft, double mach) const;
 
-    const Serialization::DAVEMLAeroModel& m_aero;
-    const Serialization::DAVEMLPropModel& m_prop;
+    const Serialization::DAVEMLAeroModel* m_aero;
+    const Serialization::DAVEMLPropModel* m_prop;
     double                                m_xcg_ft;  ///< CG aft of AC [ft]
 };
 
@@ -155,8 +155,8 @@ TrimSolver::longi_residual(const TrimInputs& in,
 {
     using std::cos;
 
-    const double Sref = m_aero.sref_ft2;
-    const double cbar = m_aero.cbar_ft;
+    const double Sref = m_aero->sref_ft2;
+    const double cbar = m_aero->cbar_ft;
 
     Serialization::DAVEMLAeroModel::Inputs<S> ai{};
     ai.vt_fps    = S(in.vt_fps);
@@ -165,7 +165,7 @@ TrimSolver::longi_residual(const TrimInputs& in,
     ai.p_rps = ai.q_rps = ai.r_rps = S(0.0);
     ai.el_deg  = el_deg;
     ai.ail_deg = ai.rdr_deg = S(0.0);
-    const auto c = m_aero.evaluate<S>(ai);
+    const auto c = m_aero->evaluate<S>(ai);
 
     const S qS      = S(qbar_psf * Sref);
     const S FZ_aero = c.cz * qS;
@@ -188,7 +188,7 @@ TrimSolver::requiredThrust_lbf(const TrimInputs& in,
                                 double alpha_deg, double el_deg,
                                 double qbar_psf) const
 {
-    const double Sref = m_aero.sref_ft2;
+    const double Sref = m_aero->sref_ft2;
 
     Serialization::DAVEMLAeroModel::Inputs<double> ai{};
     ai.vt_fps    = in.vt_fps;
@@ -197,7 +197,7 @@ TrimSolver::requiredThrust_lbf(const TrimInputs& in,
     ai.p_rps = ai.q_rps = ai.r_rps = 0.0;
     ai.el_deg = el_deg;
     ai.ail_deg = ai.rdr_deg = 0.0;
-    const auto c = m_aero.evaluate<double>(ai);
+    const auto c = m_aero->evaluate<double>(ai);
 
     const double FX_aero = c.cx * qbar_psf * Sref;
     const double alpha_rad = alpha_deg * kDegRad;
@@ -205,22 +205,22 @@ TrimSolver::requiredThrust_lbf(const TrimInputs& in,
 }
 
 inline double
-TrimSolver::solveThrottle(double FEX_req_lbf, double alt_ft, double mach) const
+TrimSolver::solveThrottle(double FEX_required_lbf, double alt_ft, double mach) const
 {
     // Bisection on pwr_pct ∈ [0, 100] — thrust is monotone in power.
     double lo = 0.0, hi = 100.0;
 
-    const double thrust_lo = m_prop.thrustX_lbf(lo, alt_ft, mach);
-    const double thrust_hi = m_prop.thrustX_lbf(hi, alt_ft, mach);
+    const double thrust_lo = m_prop->thrustX_lbf(lo, alt_ft, mach);
+    const double thrust_hi = m_prop->thrustX_lbf(hi, alt_ft, mach);
 
-    if (FEX_req_lbf <= thrust_lo) return lo;
-    if (FEX_req_lbf >= thrust_hi) return hi;
+    if (FEX_required_lbf <= thrust_lo) return lo;
+    if (FEX_required_lbf >= thrust_hi) return hi;
 
     for (int i = 0; i < 60; ++i) {
         const double mid   = 0.5 * (lo + hi);
-        const double t_mid = m_prop.thrustX_lbf(mid, alt_ft, mach);
-        if (std::abs(t_mid - FEX_req_lbf) < kTolThrust) return mid;
-        (t_mid < FEX_req_lbf ? lo : hi) = mid;
+        const double t_mid = m_prop->thrustX_lbf(mid, alt_ft, mach);
+        if (std::abs(t_mid - FEX_required_lbf) < kTolThrust) return mid;
+        (t_mid < FEX_required_lbf ? lo : hi) = mid;
     }
     return 0.5 * (lo + hi);
 }
@@ -261,7 +261,7 @@ TrimSolver::solve(const TrimInputs& in, double alpha0, double el0) const
         Eigen::Matrix2d J;
         for (int i = 0; i < 2; ++i)
             for (int j = 0; j < 2; ++j)
-                J(i, j) = jvec[static_cast<std::size_t>(i * 2 + j)];
+                J(i, j) = jvec[static_cast<std::size_t>(i) * 2 + static_cast<std::size_t>(j)];
 
         const Eigen::Vector2d dx = J.fullPivLu().solve(-r);
         x[0] = std::clamp(x[0] + dx(0), -10.0, 30.0);  // alpha
@@ -294,8 +294,8 @@ TrimSolver::residual(const TrimInputs& in,
     const double a_fps    = atm.a   / kFt_m;
     const double qbar_psf = 0.5 * rho_slug * in.vt_fps * in.vt_fps;
     const double mach     = in.vt_fps / a_fps;
-    const double Sref     = m_aero.sref_ft2;
-    const double cbar     = m_aero.cbar_ft;
+    const double Sref     = m_aero->sref_ft2;
+    const double cbar     = m_aero->cbar_ft;
 
     Serialization::DAVEMLAeroModel::Inputs<double> ai{};
     ai.vt_fps    = in.vt_fps;
@@ -304,13 +304,13 @@ TrimSolver::residual(const TrimInputs& in,
     ai.p_rps = ai.q_rps = ai.r_rps = 0.0;
     ai.el_deg = el_deg;
     ai.ail_deg = ai.rdr_deg = 0.0;
-    const auto c = m_aero.evaluate<double>(ai);
+    const auto c = m_aero->evaluate<double>(ai);
 
     const double qS      = qbar_psf * Sref;
     const double FX_aero = c.cx * qS;
     const double FZ_aero = c.cz * qS;
     const double MY_cg   = c.cm * qS * cbar + m_xcg_ft * FZ_aero;
-    const double FEX_lbf = m_prop.thrustX_lbf(pwr_pct, in.alt_ft, mach);
+    const double FEX_lbf = m_prop->thrustX_lbf(pwr_pct, in.alt_ft, mach);
 
     const double alpha_rad = alpha_deg * kDegRad;
     const double phi_rad   = in.phi_deg * kDegRad;

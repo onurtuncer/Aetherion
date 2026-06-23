@@ -37,9 +37,9 @@ inline Vec3<Scalar> CentralGravity(
 {
     using detail::SquareRoot;
 
-    const Scalar x = r_W[0];
-    const Scalar y = r_W[1];
-    const Scalar z = r_W[2];
+    const Scalar& x = r_W[0];
+    const Scalar& y = r_W[1];
+    const Scalar& z = r_W[2];
 
     const Scalar r2 = x * x + y * y + z * z;
     const Scalar r = SquareRoot(r2);
@@ -81,9 +81,9 @@ inline Vec3<Scalar> J2(
     Vec3<Scalar> g = CentralGravity(r_W, mu);
 
     // J2 perturbation delta
-    const Scalar x = r_W[0];
-    const Scalar y = r_W[1];
-    const Scalar z = r_W[2];
+    const Scalar& x = r_W[0];
+    const Scalar& y = r_W[1];
+    const Scalar& z = r_W[2];
 
     const Scalar r2 = x * x + y * y + z * z;
     const Scalar r = SquareRoot(r2);

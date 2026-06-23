@@ -41,7 +41,7 @@ namespace Aetherion::Examples::F16LateralSideStep {
 class F16LateralSideStepApplication : public Simulation::Application
 {
 public:
-    explicit F16LateralSideStepApplication(int argc, char* argv[])
+    explicit F16LateralSideStepApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

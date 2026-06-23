@@ -41,12 +41,12 @@ struct SE3 {
     /// @brief Constructs an SE3 element from a rotation matrix and a translation vector.
     /// @param R_in 3×3 rotation matrix; must be a valid SO(3) element.
     /// @param p_in Translation vector.
-    SE3(const Mat3& R_in, const Vec3& p_in);
+    SE3(const Mat3& R_in, Vec3 p_in);
 
     /// @brief Constructs an SE3 element from a unit quaternion and a translation vector.
     /// @param q_in Unit quaternion representing the rotation; will be normalised internally.
     /// @param p_in Translation vector.
-    SE3(const Eigen::Quaternion<Scalar>& q_in, const Vec3& p_in);
+    SE3(const Eigen::Quaternion<Scalar>& q_in, Vec3 p_in);
 
     /// @brief Returns the identity element of SE(3): zero rotation, zero translation.
     /// @return Identity SE3 element.

@@ -103,15 +103,9 @@ private:
         double wy_ecef = vN*Ny + vE*Ey + vD*Dy;
         double wz_ecef = vN*Nz + vE*Ez + vD*Dz;
 
-        // ECEF → ECI at theta0 (rotate by +theta0 around z)
-        const double ct = std::cos(theta0_rad), st = std::sin(theta0_rad);
-        const double wx_eci = ct*wx_ecef - st*wy_ecef;
-        const double wy_eci = st*wx_ecef + ct*wy_ecef;
-        const double wz_eci = wz_ecef;
-
         // Store as ECEF (the policy rotates back to ECI at runtime using ERA)
-        return FlightDynamics::SteadyWindDragPolicy(
-            aero.CD, aero.S, wx_ecef, wy_ecef, wz_ecef);
+        return FlightDynamics::SteadyWindDragPolicy{
+            aero.CD, aero.S, wx_ecef, wy_ecef, wz_ecef };
     }
 };
 

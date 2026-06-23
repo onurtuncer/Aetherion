@@ -61,7 +61,7 @@ namespace Aetherion::Examples::SphereWithAtmosphericDrag {
 class SphereWithAtmosphericDragApplication : public Simulation::Application
 {
 public:
-    explicit SphereWithAtmosphericDragApplication(int argc, char* argv[])
+    explicit SphereWithAtmosphericDragApplication(int argc, char** argv)
         : Application(argc, argv)
     {
     }

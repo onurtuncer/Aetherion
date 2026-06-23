@@ -32,7 +32,7 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
 class DroppedSphere2DWindShearApplication : public Simulation::Application
 {
 public:
-    explicit DroppedSphere2DWindShearApplication(int argc, char* argv[])
+    explicit DroppedSphere2DWindShearApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

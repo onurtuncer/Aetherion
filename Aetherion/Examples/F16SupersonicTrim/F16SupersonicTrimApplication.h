@@ -46,7 +46,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
 class F16SupersonicTrimApplication : public Simulation::Application
 {
 public:
-    explicit F16SupersonicTrimApplication(int argc, char* argv[])
+    explicit F16SupersonicTrimApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

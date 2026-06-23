@@ -134,9 +134,6 @@ namespace Aetherion::ODE::RKMK::Core {
                 // Build full R^(6+EuclidDim) state for field calls
                 Eigen::Matrix<S, 6 + EuclidDim, 1> state_i;
                 state_i.template head<6>() = xi_i;   // not used by xi_field, but x_i
-                // xi_field only needs x_i (the Euclidean state)
-                Eigen::Matrix<S, EuclidDim, 1> xe_i = x_i;
-
                 // Kinematics:  v_i = xi_field(t_i, g_i, [nu_B=...; m=...])
                 // We pack x_i (size EuclidDim) into a vector for the field.
                 Eigen::Matrix<S, EuclidDim, 1> x_full = x_i;

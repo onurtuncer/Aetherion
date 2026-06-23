@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <utility>
+
 #include <Eigen/Dense>
 
 #include "Aetherion/Spatial/Skew.h"
@@ -49,9 +51,9 @@ namespace Aetherion::Spatial {
         /// @param c_C  CoM position w.r.t. body-frame origin in body frame [m].
         Inertia(
             Scalar m,
-            const Mat3& I_C,
-            const Vec3& c_C)
-            : mass(m), I_com(I_C), c(c_C)
+            Mat3 I_C,
+            Vec3 c_C)
+            : mass(m), I_com(std::move(I_C)), c(std::move(c_C))
         {
             build();
         }

@@ -31,7 +31,7 @@ namespace Aetherion::Examples::F16AltitudeChange {
 class F16AltitudeChangeApplication : public Simulation::Application
 {
 public:
-    explicit F16AltitudeChangeApplication(int argc, char* argv[])
+    explicit F16AltitudeChangeApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

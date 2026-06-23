@@ -43,6 +43,8 @@ public:
 
     Application(const Application&)            = delete;
     Application& operator=(const Application&) = delete;
+    Application(Application&&)                 = default;
+    Application& operator=(Application&&)      = default;
 
     /// @brief Runs the full simulation lifecycle.
     ///

@@ -103,7 +103,7 @@ public:
     ///        Used by PropModel and other specialisations.
     template<class S>
     std::unordered_map<std::string, S>
-    evaluateRaw(std::unordered_map<std::string, S> inputs) const;
+    evaluateRaw(std::unordered_map<std::string, S> vars) const;
 
     // ── Internal data (public for the .cpp template helpers) ─────────────────
 

@@ -15,6 +15,7 @@
 #pragma once
 
 #include <type_traits>
+#include <utility>
 
 #include <Eigen/Dense>
 
@@ -39,8 +40,8 @@ namespace Aetherion::ODE::RKMK::Core {
 
         constexpr ButcherTableau() = default;
 
-        constexpr ButcherTableau(const MatA& A_in, const Vec& b_in, const Vec& c_in)
-            : A(A_in), b(b_in), c(c_in) {
+        constexpr ButcherTableau(MatA A_in, Vec b_in, Vec c_in)
+            : A(std::move(A_in)), b(std::move(b_in)), c(std::move(c_in)) {
         }
 
         [[nodiscard]] constexpr int stages() const noexcept { return s; }

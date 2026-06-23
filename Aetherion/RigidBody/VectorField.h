@@ -176,7 +176,7 @@ namespace Aetherion::RigidBody {
                 const Eigen::Matrix<S, 7, 1>& x) const
         {
             const Eigen::Matrix<S, 6, 1> nu_B = x.template head<6>();
-            const S                      m = x(6);
+            const S&                     m = x(6);
 
             // 1. External wrenches
             Spatial::Wrench<S> W_ext{};

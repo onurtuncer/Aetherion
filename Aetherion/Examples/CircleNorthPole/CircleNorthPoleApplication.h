@@ -38,7 +38,7 @@ namespace Aetherion::Examples::CircleNorthPole {
 class CircleNorthPoleApplication : public Simulation::Application
 {
 public:
-    explicit CircleNorthPoleApplication(int argc, char* argv[])
+    explicit CircleNorthPoleApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

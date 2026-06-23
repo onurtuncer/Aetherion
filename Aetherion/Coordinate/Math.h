@@ -118,9 +118,9 @@ namespace Aetherion::Coordinate {
         {
             using detail::SquareRoot;
 
-            const S m00 = x_b[0], m01 = y_b[0], m02 = z_b[0];
-            const S m10 = x_b[1], m11 = y_b[1], m12 = z_b[1];
-            const S m20 = x_b[2], m21 = y_b[2], m22 = z_b[2];
+            const S& m00 = x_b[0]; const S& m01 = y_b[0]; const S& m02 = z_b[0];
+            const S& m10 = x_b[1]; const S& m11 = y_b[1]; const S& m12 = z_b[1];
+            const S& m20 = x_b[2]; const S& m21 = y_b[2]; const S& m22 = z_b[2];
 
             const S one = S(1);
 

@@ -15,7 +15,6 @@
 //  The .cpp can include this header and then include Eigen and iomanip itself.
 
 #include <Eigen/Core>
-#include <Eigen/Geometry>
 #include <iomanip>
 #include <limits>
 #include <ostream>
@@ -174,7 +173,7 @@ struct Snapshot1CsvTraits
 /// @param os Output stream to write to (e.g. an open std::ofstream).
 inline void Snapshot1_WriteCsvHeader(std::ostream& os)
 {
-    constexpr auto& cols = Snapshot1CsvTraits::kColumnNames;
+    constexpr const auto& cols = Snapshot1CsvTraits::kColumnNames;
     for (std::size_t i = 0; i < cols.size(); ++i)
     {
         if (i > 0) os << ',';

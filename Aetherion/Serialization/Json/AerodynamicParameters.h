@@ -16,7 +16,7 @@ namespace Aetherion::RigidBody {
 
 namespace Aetherion::Serialization::Json {
 
-    void from_json(const nlohmann::json& j, RigidBody::AerodynamicParameters& ap);
-    void to_json(nlohmann::json& j, const RigidBody::AerodynamicParameters& ap);
+    void from_json(const nlohmann::json& j, RigidBody::AerodynamicParameters& aero);
+    void to_json(nlohmann::json& j, const RigidBody::AerodynamicParameters& aero);
 
 } // namespace Aetherion::Serialization::Json

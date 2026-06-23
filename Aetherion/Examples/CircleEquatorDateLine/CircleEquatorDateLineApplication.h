@@ -41,7 +41,7 @@ namespace Aetherion::Examples::CircleEquatorDateLine {
 class CircleEquatorDateLineApplication : public Simulation::Application
 {
 public:
-    explicit CircleEquatorDateLineApplication(int argc, char* argv[])
+    explicit CircleEquatorDateLineApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

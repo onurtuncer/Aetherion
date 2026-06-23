@@ -149,7 +149,7 @@ struct Snapshot2CsvTraits
 
 inline void Snapshot2_WriteCsvHeader(std::ostream& os)
 {
-    constexpr auto& cols = Snapshot2CsvTraits::kColumnNames;
+    constexpr const auto& cols = Snapshot2CsvTraits::kColumnNames;
     for (std::size_t i = 0; i < cols.size(); ++i) {
         if (i > 0) os << ',';
         os << cols[i];

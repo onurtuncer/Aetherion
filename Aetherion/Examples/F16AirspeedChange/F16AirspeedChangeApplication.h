@@ -36,7 +36,7 @@ namespace Aetherion::Examples::F16AirspeedChange {
 class F16AirspeedChangeApplication : public Simulation::Application
 {
 public:
-    explicit F16AirspeedChangeApplication(int argc, char* argv[])
+    explicit F16AirspeedChangeApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

@@ -102,7 +102,7 @@ namespace Aetherion::ODE::RKMK::Core {
         // theta2 < 1e-8  <=> theta < 1e-4  -> series is excellent there.
         const S eps2 = S(1e-8);
 
-        const S t2 = theta2;
+        const S& t2 = theta2;
         const S t4 = t2 * t2;
         const S t6 = t4 * t2;
         const S t8 = t4 * t4;

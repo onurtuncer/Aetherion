@@ -93,7 +93,7 @@ namespace Aetherion::ODE::RKMK::Core {
             VecT r = make_vec(n);
             MatT J(n, n);
 
-            eval(x, r, J);
+            std::forward<EvalT>(eval)(x, r, J);
             res.r0_norm = r.norm();
             res.r_norm = res.r0_norm;
 
@@ -103,7 +103,7 @@ namespace Aetherion::ODE::RKMK::Core {
             }
 
             for (int k = 0; k < opt.max_iters; ++k) {
-                eval(x, r, J);
+                std::forward<EvalT>(eval)(x, r, J);
                 const double r_norm = r.norm();
                 const double x_norm = x.norm();
                 const VecT   dx = J.colPivHouseholderQr().solve(-r);
@@ -134,7 +134,7 @@ namespace Aetherion::ODE::RKMK::Core {
 
                 for (int ls = 0; ls < opt.max_line_search_iters; ++ls) {
                     x_trial = x + lambda * dx;
-                    eval(x_trial, r_trial, J_trial);
+                    std::forward<EvalT>(eval)(x_trial, r_trial, J_trial);
 
                     if (r_trial.norm() <= opt.sufficient_decrease * r_norm) {
                         x = x_trial;
@@ -195,8 +195,8 @@ namespace Aetherion::ODE::RKMK::Core {
         using VecN = Eigen::Matrix<double, N, 1>;
         using MatN = Eigen::Matrix<double, N, N>;
         auto eval = [&](const VecN& xin, VecN& r, MatN& J) {
-            residual(xin, r);
-            jacobian(xin, J);
+            std::forward<Residual>(residual)(xin, r);
+            std::forward<Jacobian>(jacobian)(xin, J);
             };
         return NewtonSolve<N>(eval, x, opt);
     }
@@ -220,9 +220,8 @@ namespace Aetherion::ODE::RKMK::Core {
         using MatN = Eigen::Matrix<double, N, N>;
 
         explicit FixedCppADResidualJacobian(Functor f)
-            : functor_(std::move(f)) {
+            : functor_(std::move(f)), tape_(build_tape_()) {
             static_assert(N > 0, "FixedCppADResidualJacobian requires N > 0");
-            tape_ = build_tape_();
         }
 
         void operator()(const VecN& x, VecN& r, MatN& J) const {
@@ -232,7 +231,7 @@ namespace Aetherion::ODE::RKMK::Core {
             const std::vector<double> jd = tape_.Jacobian(xd);
             for (int rr = 0; rr < N; ++rr)
                 for (int cc = 0; cc < N; ++cc)
-                    J(rr, cc) = jd[(std::size_t)(rr * N + cc)];
+                    J(rr, cc) = jd[(std::size_t)rr * N + (std::size_t)cc];
         }
 
     private:
@@ -302,8 +301,8 @@ namespace Aetherion::ODE::RKMK::Core {
         auto eval = [&](const Eigen::VectorXd& xin,
             Eigen::VectorXd& r,
             Eigen::MatrixXd& J) {
-                residual(xin, r);
-                jacobian(xin, J);
+                std::forward<Residual>(residual)(xin, r);
+                std::forward<Jacobian>(jacobian)(xin, J);
             };
         return NewtonSolve(eval, x, opt);
     }
@@ -342,7 +341,7 @@ namespace Aetherion::ODE::RKMK::Core {
             J.resize(n_, n_);
             for (int rr = 0; rr < n_; ++rr)
                 for (int cc = 0; cc < n_; ++cc)
-                    J(rr, cc) = jd[(std::size_t)(rr * n_ + cc)];
+                    J(rr, cc) = jd[(std::size_t)rr * n_ + (std::size_t)cc];
         }
 
         [[nodiscard]] int size() const noexcept { return n_; }

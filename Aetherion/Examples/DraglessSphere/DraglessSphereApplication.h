@@ -70,7 +70,7 @@ public:
     /// The simulator is not created here; it is allocated lazily by prepareSimulation().
     /// @param argc Argument count from main().
     /// @param argv Argument vector from main().
-    explicit DraglessSphereApplication(int argc, char* argv[])
+    explicit DraglessSphereApplication(int argc, char** argv)
         : Application(argc, argv)
     {
     }

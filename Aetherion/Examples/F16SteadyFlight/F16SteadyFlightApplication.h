@@ -52,7 +52,7 @@ namespace Aetherion::Examples::F16SteadyFlight {
 class F16SteadyFlightApplication : public Simulation::Application
 {
 public:
-    explicit F16SteadyFlightApplication(int argc, char* argv[])
+    explicit F16SteadyFlightApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

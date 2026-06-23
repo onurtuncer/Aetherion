@@ -125,7 +125,7 @@ public:
                 FlightDynamics::F16PropPolicy(prop_model, trim.pwr_pct)),
             std::move(x0), opt)
         , m_theta0(theta0)
-        , m_ctrl(std::move(ctrl_model))
+        , m_ctrl(ctrl_model)
         , m_cmds(cmds)
         , m_trimPwr(trim.pwr_pct)
         , m_trimEl(trim.el_deg)

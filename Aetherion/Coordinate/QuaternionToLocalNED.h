@@ -64,7 +64,7 @@ namespace Aetherion::Coordinate {
 
         for (int r = 0; r < 3; ++r) {
             for (int c = 0; c < 3; ++c) {
-                Scalar sum = Scalar(0);
+                auto sum = Scalar(0);
                 for (int k = 0; k < 3; ++k) {
                     // R_IN^T(r,k) = R_IN(k,r)
                     sum += R_IN[3 * k + r] * R_IB[3 * k + c];

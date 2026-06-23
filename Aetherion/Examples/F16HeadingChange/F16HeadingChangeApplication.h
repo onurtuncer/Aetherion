@@ -37,7 +37,7 @@ namespace Aetherion::Examples::F16HeadingChange {
 class F16HeadingChangeApplication : public Simulation::Application
 {
 public:
-    explicit F16HeadingChangeApplication(int argc, char* argv[])
+    explicit F16HeadingChangeApplication(int argc, char** argv)
         : Application(argc, argv) {}
 
 protected:

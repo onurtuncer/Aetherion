@@ -24,7 +24,7 @@ namespace Aetherion::Simulation {
 /// @param argv Argument vector forwarded from the process entry point.
 /// @return Heap-allocated Application (or subclass) instance. Ownership is transferred to the entry point.
 /// @throws std::invalid_argument if command-line arguments are invalid (caught by EntryPoint before run()).
-Application* CreateApplication(int argc, char* argv[]);
+Application* CreateApplication(int argc, char** argv);
 
 } // namespace Aetherion::Simulation
 
