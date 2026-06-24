@@ -34,6 +34,8 @@ using Catch::Matchers::WithinRel;
 using Catch::Matchers::WithinAbs;
 
 // Path injected by CMake via -DDAVEML_TEST_FILE=...
+// AV Rule 30 deviation (#define for constants): CMake-injected path constant via
+// target_compile_definitions; see CODING_STANDARDS.md, Pre-Processing Directives.
 #ifndef DAVEML_TEST_FILE
 #  define DAVEML_TEST_FILE ""
 #endif

@@ -35,6 +35,8 @@
 #include <stdexcept>
 
 // ── DML file paths — injected by CMake ───────────────────────────────────────
+// AV Rule 30 deviation (#define for constants): see CODING_STANDARDS.md,
+// Pre-Processing Directives.
 #ifndef F16_INERTIA_FILE
 #  define F16_INERTIA_FILE ""
 #endif

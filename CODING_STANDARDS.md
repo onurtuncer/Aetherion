@@ -12,11 +12,39 @@ explicitly waived below, with rationale, rather than silently ignored.
 Rule numbers refer to the JSF AV C++ Coding Standards document
 (stroustrup.com/JSF-AV-rules.pdf).
 
+## Rule-Breaking Process
+
+JSF AV Rules 4-7 govern how deviations from the *other* 217 rules get approved
+and recorded. Rules 4 and 5 assume a multi-role organization (engineering lead,
+product manager) that doesn't exist for a single-maintainer research library;
+the practical equivalent adopted here is: a deviation is "approved" by having a
+reasoned, written entry in this document, authored by the maintainer. There is
+no separate sign-off step beyond that.
+
+- **Rule 6** ("each deviation from a `shall` rule shall be documented in the
+  source file") is applied selectively rather than literally. Pervasive,
+  architecture-wide waivers (exceptions, STL, dynamic allocation, `auto`,
+  naming convention) are documented centrally in this file only — annotating
+  every one of, say, the 130+ `auto` usages would be noise, not signal. The
+  handful of *contained, non-obvious* deviations get an inline comment plus a
+  pointer back here, so a future contributor doesn't mistake a deliberate
+  choice for an oversight and "fix" it: `ArgumentParser.h`'s `std::exit`
+  default, `Log.h`'s logging macros, `SE3.h`'s `.inl` include, and the
+  CMake-injected `#define` path-constant pattern in the ~14 example/test files
+  listed under Rule 30 below. Self-evidently standard idioms (`__has_include`,
+  `NDEBUG`, `NOMINMAX`, `CATCH_CONFIG_MAIN`) are left uncommented since they
+  need no extra explanation to any C++ engineer.
+- **Rule 7** (no approval needed for deviations already covered by an explicit
+  exception) is exactly how this document is meant to be used going forward:
+  once a pattern is listed below as waived, continuing it doesn't require
+  re-litigating the decision per call site.
+
 ## Functions / Complexity
 
 | Rule | Summary | Status |
 |---|---|---|
 | 1 | Functions shall not exceed 200 LSLOC | **Enforced** — `.clang-tidy`: `readability-function-size.LineThreshold=200` (hard CI gate via `clang_tidy.yml`). `metrixpp.yml` reports LOC informationally. |
+| 2 | No self-modifying code | **Compliant** — grepped for `VirtualProtect`/`mprotect`/`PROT_EXEC`/`dlopen`/JIT-codegen patterns project-wide; zero hits. |
 | 3 | Cyclomatic complexity ≤ 20 | **Enforced** — `.clang-tidy`: `readability-function-size.CyclomaticComplexityThreshold=20` (hard CI gate). `metrixpp.yml` cross-checks at the same threshold, informationally. |
 | 105/129 | No recursion | **Compliant by audit** — codebase uses iteration/templates throughout; not mechanically enforced (`misc-no-recursion` is disabled in `.clang-tidy` to avoid flagging template metaprogramming false positives). |
 | 110 | ≤ 7 parameters per function | **Compliant by audit** — no functions found exceeding 7 params; no direct clang-tidy check exists for this, not tooled. |
@@ -32,6 +60,33 @@ Rule numbers refer to the JSF AV C++ Coding Standards document
 | 131 | File header comment (purpose/author/date/version) | **Compliant by convention** — every file carries a `Project/Copyright/SPDX-License-Identifier` banner. |
 | 132 | Function header comment (purpose/inputs/outputs) | **Compliant by convention** — Doxygen `///`/`@brief`/`@param` comments are used project-wide; not exhaustively audited per-function, not mechanically enforced. |
 | 133 | Comments in English | **Compliant** — verified by spot-check. |
+
+## Style
+
+| Rule | Summary | Status |
+|---|---|---|
+| 40 | Implementation files shall include the headers for everything they use | **Compliant via existing mechanism** — same as Rules 36/37: `iwyu.yml` (include-what-you-use) flags missing includes, not just unnecessary ones, informationally. |
+| 41 | Lines ≤ 120 characters | **Enforced** — `.clang-format`: `ColumnLimit: 120`, hard CI gate via `clang_format.yml`. |
+| 42 | Each expression-statement on a separate line | **Not separately tooled** — clang-format doesn't reformat semicolon-separated statements already packed onto one source line; not observed in spot checks, but not exhaustively audited. |
+| 43 | Avoid tabs | **Enforced** — `.clang-format`: `UseTab: Never`. |
+| 44 | Indentation ≥2 spaces, consistent within a file | **Enforced** — `.clang-format`: `IndentWidth: 2`, applied uniformly by the formatter. |
+| 45 | Words in an identifier separated by `_` | **Waived** — same naming-convention waiver as Rule 51/52 (camelCase methods, `k`-prefixed constants); see Identifiers/Naming below. |
+| 53 / 53.1 / 54 | `.h` for headers (no `'`/`\`/`/*`/`//`/`"` in the name), `.cpp` for implementation | **Compliant** — one documented `.inl` exception (Rule 32); all filenames are plain alphanumeric. |
+| 55/56 | File name reflects the logical entity it declares/defines | **Compliant by convention** — e.g. `F16AeroPolicy.h` declares `F16AeroPolicy`, `DAVEMLReader.cpp` defines `DAVEMLReader`'s members. |
+| 57 | Class sections ordered public, protected, private | **Compliant, verified** — checked every `public:`/`protected:`/`private:` access-specifier across all of `Aetherion/`; every class follows public→protected→private, no exceptions found. |
+| 58 | Multi-parameter functions: first arg on the same line, rest one per line | **Enforced** — `.clang-format`: `BinPackArguments: false`, `BinPackParameters: false`, `AllowAllParametersOfDeclarationOnNextLine: false` produce exactly this layout when wrapping is needed. |
+| 59 | Braces always present on `if`/`else`/`while`/`do`/`for` bodies | **Not enforced, and not followed everywhere** — `readability-braces-around-statements` was already disabled in `.clang-tidy` before this audit, and brace-less single-statement bodies are in active use (e.g. `TrimSolver.h:216-217`, `if (cond) return x;`). Documented honestly rather than claiming compliance; not changed in this pass. |
+| 60/61 | Braces on their own line, same column, nothing else on the brace line | **Enforced** — `.clang-format`: `BreakBeforeBraces: Custom` + the `BraceWrapping` block (`AfterClass`/`AfterFunction`/`AfterControlStatement`/etc. all `true`) is Allman-style brace placement, matching this exactly. |
+| 62 | `*`/`&` directly connected to the type-specifier | **Enforced** — `.clang-format`: `PointerBindsToType: true`. |
+| 63 | No spaces around `.`/`->`, or between unary operators and operands | **Enforced** — default behavior of the Google-based clang-format style; it never inserts such spaces. |
+
+## Namespaces
+
+| Rule | Summary | Status |
+|---|---|---|
+| 98 | Every non-local name except `main()` in a namespace | **Compliant by consistent practice** — every header read during this and prior audits wraps its declarations in `namespace Aetherion::...`; the only exceptions are `main()` itself (`EntryPoint.h`, explicitly exempted by the rule) and the `Log.h` macros (preprocessor text substitution, not language-level names, so the namespace rule doesn't apply to them — see Rule 29). |
+| 99 | Namespaces nested no more than 2 levels deep | **Waived** — the project's namespace hierarchy mirrors its directory structure for navigability in a large numerical library (e.g. `Aetherion::ODE::RKMK::Core`, `Aetherion::FlightDynamics::Policies::F16` are 3-4 levels deep), the same pattern used by Eigen, Boost, and other large C++ libraries. Flattening it would be a sweeping, purely cosmetic rename touching virtually every file, for no correctness benefit. |
+| 100 | Explicit qualification/using-declaration for few names; using-directive for many | **Compliant by convention** — namespace aliases (`namespace FD = Aetherion::FlightDynamics;`) and selective `using X::Y;` imports are used for a handful of names (e.g. `F16AeroPolicy.h`'s `using Environment::detail::SquareRoot;`), while broader `using namespace X;` appears only where many names from one module are needed (test files exercising a module's full public API). |
 
 ## Classes
 
@@ -56,6 +111,15 @@ Rule numbers refer to the JSF AV C++ Coding Standards document
 | 50 | Types (`class`/`struct`/`namespace`/`enum`/`typedef`) start uppercase | **Compliant** — this is exactly the project's existing `PascalCase` type-naming convention. |
 | 51 | Function and variable names entirely lowercase | **Waived** — the project uses an internally consistent, different convention instead: `camelCase` for methods/members (`setControls`, `getConfig`, `m_xcgFromAcM`), and `snake_case` with physical-unit suffixes for plain-data fields that mirror flight-dynamics literature (`el_deg`, `vt_fps`, `alpha_deg`). Rewriting this project-wide convention to bare lowercase would touch effectively every identifier in ~250 files for no readability or correctness benefit. |
 | 52 | Constants and enumerators lowercase | **Waived** — the project uses `k`-prefixed `PascalCase` constants (`kFt_m`, `kMaxIter`, `kTol`), a long-established, unambiguous C++ convention already universal in this codebase; same rationale as Rule 51. |
+
+## Templates
+
+| Rule | Summary | Status |
+|---|---|---|
+| 101 | Templates reviewed both in isolation and for all actual instantiations | **Compliant by process** — a review/process rule rather than something a tool checks; the concept-constrained design (Rule 103) makes most actual instantiations type-check or fail to compile at the instantiation site, which substantially narrows what "review for all instantiations" needs to additionally cover. |
+| 102 | Tests shall cover all actual template instantiations | **Compliant by extensive existing practice** — the dual-scalar pattern (`S = double` and `S = CppAD::AD<double>`, used everywhere CppAD-differentiable code is needed) is systematically exercised for both instantiations across dozens of test files (`test_gravity.cpp`, `test_atmosphere.cpp`, `test_MachNumber.cpp`, `test_AerodynamicMoments.cpp`, `test_AerodynamicAngles.cpp`, `test_AerodynamicForces.cpp`, `test_GravityPolicies.cpp`, `test_WindModels.cpp`, `test_TrimSolver.cpp`, and more). Not exhaustively audited instantiation-by-instantiation against every template in the codebase. |
+| 103 | Constraint checks should be applied to template arguments | **Compliant by extensive existing practice** — the codebase has a deliberate, layered C++20 concepts infrastructure: `Aetherion/ODE/RKMK/Core/Concepts.h` (`ValueSemantics`, `ScalarLike`, `ADCompatibleScalar`, `EigenVectorLike`, `LieGroup`, `XiField`/`EuclidField`/`ProductDynamics`), `Aetherion/ODE/RKMK/Concepts.h` (`KinematicsFieldOnSE3`, `VectorFieldOnProductSE3`, `RKMKIntegratorOnProductSE3`, `IntegratorFor`), and `Aetherion/FlightDynamics/Policies/PolicyConcepts.h` (`GravityPolicy`/`AeroPolicy`/`PropulsionPolicy`/`MassPolicy`) — e.g. `VectorField`'s template parameters are concept-constrained (`FD::GravityPolicy Gravity, FD::AeroPolicy Aero = ...`). Many lower-level `template<class S>` member-function templates are left unconstrained where the constraint is already implied by the enclosing concept-constrained class or policy type, rather than redundantly repeated per method. |
+| 104 | Template specialization declared before its use | **Compliant, verified** — checked the two explicit-specialization sites: `SnapshotTraits<SnapshotFormat::F>` (`Aetherion/Simulation/SnapshotTraits.h`) declares the primary template as intentionally-undefined before all 6 specializations follow in the same file; `is_wind_model<W>` (`Aetherion/Environment/WindModels.h`) declares its primary template before its own in-file specializations, and the out-of-file specialization in `GeodesicCallbackWind.h:100` correctly `#include`s `WindModels.h` first — its only use site (`AeroPolicies.h`'s `static_assert(is_wind_model_v<Wind>, ...)`) is itself a template not instantiated until a concrete `Wind` type is supplied by calling code, by which point the relevant specialization header is already included. |
 
 ## Language / Character Set
 
@@ -93,7 +157,7 @@ Rule numbers refer to the JSF AV C++ Coding Standards document
 | 29 | No inline macros; use inline functions | **Audited, one known exception left as-is** — `Aetherion/Simulation/Log.h` defines 10 variadic logging macros (`AE_CORE_TRACE`/`AE_INFO`/etc.) forwarding to `spdlog::logger`. These are called unqualified from many different namespaces (`Aetherion::Simulation`, every `Aetherion::Examples::*`), relying on the macro's hardcoded fully-qualified expansion — a literal function wouldn't be found unqualified from unrelated namespaces without `using`-declarations everywhere. A global-scope forwarding-template fix is possible but its interaction with fmt/spdlog's compile-time format-string validation is version-sensitive; not changed blind without a compiler available to verify it. |
 | 30 | No `#define` for constants; use `const` instead | **One justified exception** — `#ifndef F16_AERO_FILE / #define F16_AERO_FILE "" / #endif` (and similarly named) in ~13 example/test files are CMake `-D`-injected path constants (set via `target_compile_definitions` in the corresponding `CMakeLists.txt`) with a fallback default. Command-line/build-time string injection into C++ source has no non-preprocessor mechanism. |
 | — | (supporting evidence) | Other non-guard preprocessor use, all inherent to their purpose: `#if __has_include(<cppad/cppad.hpp>)` (optional-dependency detection, `State.h`/`Math.h`/`SE3.cpp`), `#ifdef NDEBUG` (debug/release branch, `Log.cpp`), `#if defined(__cpp_lib_to_chars)` (standard-library feature-test, `tests/Utility/parse_utils.h`), `#define CATCH_CONFIG_MAIN` (mandated by the Catch2 framework contract), `#define NOMINMAX` / `#undef max`/`min` (standard Windows.h macro-pollution workaround, `test_Skew.cpp`). None of these have a non-preprocessor equivalent. |
-| 32 | `#include` shall only include `.h` files | **Compliant for project code** — every file under `Aetherion/` is `.h` (zero `.hpp`); the only non-`.h` includes are third-party headers with their own conventions (`<Eigen/Dense>`), which aren't ours to change. |
+| 32 | `#include` shall only include `.h` files | **One justified exception** — `Aetherion/ODE/RKMK/Lie/SE3.h` `#include`s `SE3.inl`, the standard declaration/`.inl`-implementation split used for heavily-templated headers (the same role a `.cpp` plays for non-template code, here separated because the implementation is itself templated and must stay header-visible). Otherwise every project file is `.h`; third-party headers with their own conventions (`<Eigen/Dense>`) aren't ours to change. |
 
 ## Header Files
 

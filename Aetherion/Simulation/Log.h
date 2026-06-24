@@ -43,6 +43,11 @@ private:
 
 } // namespace Aetherion::Simulation
 
+// AV Rule 29 deviation (no inline macros): these forward to spdlog and must stay
+// macros so they're callable unqualified from any namespace (a free function in
+// Aetherion::Simulation wouldn't be found unqualified from Aetherion::Examples::*
+// etc. without a using-declaration everywhere). See CODING_STANDARDS.md,
+// Pre-Processing Directives.
 /// @defgroup CoreLogMacros Core logging macros (engine-internal)
 /// @{
 #define AE_CORE_TRACE(...)    ::Aetherion::Simulation::Log::GetCoreLogger()->trace(__VA_ARGS__)    ///< Log a TRACE-level message on the core logger.

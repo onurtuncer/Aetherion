@@ -36,6 +36,9 @@ public:
 
     /// @brief Callable invoked instead of std::exit when --help/-h is parsed.
     ///        The default is std::exit; tests may supply a throwing stub.
+    // AV Rule 24 deviation (no abort/exit/getenv/system): std::exit is the default
+    // --help/-h handler, but it is injected via ExitFn specifically so it can be
+    // overridden. See CODING_STANDARDS.md, Libraries.
     using ExitFn = std::function<void(int)>;
 
     /// @brief Constructs the parser with the executable name shown in usage output.

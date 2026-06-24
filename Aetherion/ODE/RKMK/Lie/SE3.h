@@ -110,4 +110,7 @@ struct SE3 {
 
 } // namespace Aetherion::ODE::RKMK::Lie
 
+// AV Rule 32 deviation (#include shall only include .h files): SE3.inl holds the
+// templated implementation that must stay header-visible; see CODING_STANDARDS.md,
+// Pre-Processing Directives.
 #include <Aetherion/ODE/RKMK/Lie/SE3.inl>

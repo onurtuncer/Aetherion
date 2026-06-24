@@ -29,6 +29,8 @@ using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinAbs;
 
 // Injected at CMake configure time (see CMakeLists.txt)
+// AV Rule 30 deviation (#define for constants): see CODING_STANDARDS.md,
+// Pre-Processing Directives.
 #ifndef DAVEML_F16_AERO_FILE
 #  define DAVEML_F16_AERO_FILE ""
 #endif

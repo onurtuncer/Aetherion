@@ -25,6 +25,8 @@
 using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinAbs;
 
+// AV Rule 30 deviation (#define for constants): CMake-injected path constant via
+// target_compile_definitions; see CODING_STANDARDS.md, Pre-Processing Directives.
 #ifndef DAVEML_AERO_FILE
 #  define DAVEML_AERO_FILE ""
 #endif

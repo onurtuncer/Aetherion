@@ -22,6 +22,8 @@
 
 using namespace Aetherion::Serialization;
 
+// AV Rule 30 deviation (#define for constants): CMake-injected path constant via
+// target_compile_definitions; see CODING_STANDARDS.md, Pre-Processing Directives.
 #ifndef DAVEML_CONTROL_FILE
 #  define DAVEML_CONTROL_FILE ""
 #endif
