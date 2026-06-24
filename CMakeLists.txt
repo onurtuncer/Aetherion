@@ -189,6 +189,17 @@ if(AETHERION_INSTALL)
     NAMESPACE Aetherion::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion)
 
+  # ── Bundled documentation ──────────────────────────────────────────────────── AETHERION_DOCS_HTML_DIR points at a
+  # pre-built Sphinx HTML tree (the doc/ target is not built here -- it requires Doxygen/Sphinx and early-returns from
+  # this CMakeLists.txt). Same layout as doc/CMakeLists.txt's own install rule, so docs always land at
+  # <prefix>/<docdir>/sphinx/index.html.
+  if(AETHERION_DOCS_HTML_DIR)
+    if(NOT EXISTS "${AETHERION_DOCS_HTML_DIR}/index.html")
+      message(FATAL_ERROR "AETHERION_DOCS_HTML_DIR='${AETHERION_DOCS_HTML_DIR}' has no index.html")
+    endif()
+    install(DIRECTORY "${AETHERION_DOCS_HTML_DIR}/" DESTINATION ${CMAKE_INSTALL_DOCDIR}/sphinx)
+  endif()
+
   # ── Packaging (CPack / WiX MSI on Windows) ──────────────────────────────────
   include(cmake/Packaging.cmake)
 endif()

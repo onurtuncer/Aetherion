@@ -9,7 +9,72 @@ permissions:
   contents: write
 
 jobs:
+  build-docs:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r doc/requirements.txt
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq doxygen graphviz \
+            texlive-latex-extra texlive-pictures texlive-fonts-recommended \
+            poppler-utils
+
+      - name: Build TikZ figures to PNG
+        run: |
+          REPO="$(pwd)"
+          TIKZ_SRC="${REPO}/doc/tikz"
+          TIKZ_BUILD="${REPO}/build/tikz"
+          STATIC_OUT="${REPO}/doc/_static"
+          mkdir -p "${TIKZ_BUILD}"
+          for tex in "${TIKZ_SRC}"/*.tex; do
+            fig=$(basename "${tex}" .tex)
+            pdflatex -interaction=nonstopmode -halt-on-error \
+                     -output-directory "${TIKZ_BUILD}" "${tex}"
+            pdftoppm -r 200 -png -singlefile \
+                     "${TIKZ_BUILD}/${fig}.pdf" "${STATIC_OUT}/${fig}"
+          done
+
+      - name: Generate Doxyfile and build XML
+        run: |
+          REPO="$(pwd)"
+          OUT="${REPO}/build/doxygen"
+          mkdir -p "${OUT}"
+          sed \
+            -e "s|@CMAKE_PROJECT_NAME@|Aetherion|g" \
+            -e "s|@CMAKE_SOURCE_DIR@|${REPO}|g" \
+            -e "s|@CMAKE_BINARY_DIR@|${REPO}/build|g" \
+            -e "s|@DOXYGEN_OUTPUT_DIR@|${OUT}|g" \
+            doc/Doxyfile.in > "${REPO}/build/Doxyfile"
+          doxygen "${REPO}/build/Doxyfile"
+
+      - name: Build Sphinx HTML
+        run: |
+          sphinx-build -T -b html \
+            -Dbreathe_projects.Aetherion="$(pwd)/build/doxygen/xml" \
+            doc/ build/sphinx
+
+      - name: Upload Sphinx HTML artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: aetherion-docs-html
+          path: build/sphinx
+
   build-msi:
+    needs: build-docs
     runs-on: windows-latest
 
     steps:
@@ -34,8 +99,14 @@ jobs:
             Select-Object -First 1 -ExpandProperty FullName
           Add-Content -Path $env:GITHUB_PATH -Value $wixBin
 
+      - name: Download Sphinx HTML docs
+        uses: actions/download-artifact@v4
+        with:
+          name: aetherion-docs-html
+          path: build/sphinx-docs
+
       - name: Configure
-        run: cmake --preset release -DAETHERION_INSTALL=ON
+        run: cmake --preset release -DAETHERION_INSTALL=ON -DAETHERION_DOCS_HTML_DIR="${{ github.workspace }}/build/sphinx-docs"
 
       - name: Build
         run: cmake --build --preset release

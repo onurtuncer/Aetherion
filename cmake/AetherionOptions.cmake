@@ -36,6 +36,11 @@ option(AETHERION_BUILD_SHARED "Build Aetherion as a shared library instead of a 
 
 option(AETHERION_INSTALL "Generate install rules for the Aetherion library and headers" OFF)
 
+# Path to a pre-built Sphinx HTML tree (containing index.html) to bundle into the install/ package output, e.g. produced
+# by a separate `doc/` build. Empty means no docs are installed.
+set(AETHERION_DOCS_HTML_DIR ""
+    CACHE PATH "Pre-built Sphinx HTML documentation to install alongside the library (see AETHERION_INSTALL)")
+
 # ==============================================================================
 # FMU / fmu4cpp Integration
 # ==============================================================================
@@ -100,6 +105,7 @@ message(STATUS "    Tests                  : ${AETHERION_BUILD_TESTS}")
 message(STATUS "    Examples               : ${AETHERION_BUILD_EXAMPLES}")
 message(STATUS "    Documentation          : ${BUILD_DOCS}")
 message(STATUS "    Install rules          : ${AETHERION_INSTALL}")
+message(STATUS "    Bundled HTML docs      : ${AETHERION_DOCS_HTML_DIR}")
 message(STATUS "")
 message(STATUS "  Developer options")
 message(STATUS "    Static analysis        : ${ENABLE_STATIC_ANALYSIS}")
