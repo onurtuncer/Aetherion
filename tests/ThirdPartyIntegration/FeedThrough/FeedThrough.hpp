@@ -93,7 +93,7 @@ private:
     std::string stringOut_;
 };
 
-inline model_info fmu4cpp::get_model_info()
+model_info fmu4cpp::get_model_info()
 {
     model_info info;
     info.modelName   = "FeedThrough";
