@@ -276,6 +276,18 @@
       ]
     },
     {
+      "name": "gcc-release",
+      "configurePreset": "gcc-release",
+      "inherits": ["test-base"],
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": false
+      }
+    },
+    {
       "name": "gcc-test",
       "configurePreset": "gcc-debug",
       "output": {
