@@ -4,6 +4,8 @@
 # SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
+include(Catch)
+
 # ── FeedThrough FMU (smoke-tests the fmu4cpp FMI 2.0 integration) ────────────
 #
 # Two targets:
@@ -14,23 +16,26 @@
 # generateFMU() is available because cmake/generate_fmu.cmake is include()d
 # unconditionally from the root CMakeLists.txt.
 
-generateFMU(
+generatefmu(
   FeedThrough
-  FMI_VERSIONS fmi2
-  SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/FeedThrough/FeedThrough.cpp")
+  FMI_VERSIONS
+  fmi2
+  SOURCES
+  "${CMAKE_CURRENT_SOURCE_DIR}/FeedThrough/FeedThrough.cpp")
 
-add_executable(test_feedthrough_fmi2
-    FeedThrough/test_feedthrough.cpp
-    $<TARGET_OBJECTS:fmu4cpp_base>
-    $<TARGET_OBJECTS:fmu4cpp_fmi2>)
+add_executable(
+  test_feedthrough_fmi2
+  FeedThrough/test_feedthrough.cpp
+  $<TARGET_OBJECTS:fmu4cpp_base>
+  $<TARGET_OBJECTS:fmu4cpp_fmi2>)
 
 target_compile_definitions(test_feedthrough_fmi2 PRIVATE FMI2)
 
-target_include_directories(test_feedthrough_fmi2
-    PRIVATE
-    "${CMAKE_CURRENT_SOURCE_DIR}/FeedThrough"
-    "${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/include"
-    "${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/src")
+target_include_directories(
+  test_feedthrough_fmi2
+  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/FeedThrough"
+          "${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/include"
+          "${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/src")
 
 target_link_libraries(test_feedthrough_fmi2 PRIVATE Catch2::Catch2WithMain)
 
@@ -43,7 +48,6 @@ target_link_libraries(test_eigen PRIVATE Catch2::Catch2WithMain Eigen3::Eigen)
 
 target_include_directories(test_eigen PRIVATE "${CMAKE_SOURCE_DIR}/vendor/eigen")
 
-include(Catch)
 catch_discover_tests(test_eigen)
 
 # add_test(NAME eigen_basic_test COMMAND test_eigen)
