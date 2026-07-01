@@ -1,4 +1,4 @@
-﻿# ΑETHERION — Flight Dynamics Library
+# ΑETHERION — Flight Dynamics Library
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Linux Build](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml)
@@ -17,142 +17,211 @@
   <img src="assets/logo.svg" width="180" alt="AETHERION Monogram"/>
 </p>
 
-**AETHERION** is a high-precision, research-grade C++ library for  
-**rocket and aerospace flight dynamics**, built on:
+**AETHERION** is a high-precision, research-grade C++ library for **rocket and aerospace flight dynamics**, built on:
 
 - **Featherstone 6-D Spatial Vector Algebra (SVA)**
-- **ECI/WGS84 frame transformations**
+- **ECI / WGS84 frame transformations**
 - **Algorithmic Differentiation (AD-friendly)**
 - **Clean ODE formulations for high-fidelity simulation**
 
-The name *ΑΙΘΕΡΙΟΝ* (Aetherion) is inspired by the Greek word **Αιθήρ**,  
-referring to the upper atmosphere — the pristine realm of celestial motion.
+The name *ΑΙΘΕΡΙΟΝ* (Aetherion) is inspired by the Greek word **Αιθήρ**, referring to the upper atmosphere — the pristine realm of celestial motion.
 
 ---
 
-## ✨ Features
+## Two-Stage Rocket to Orbit — NASA Validation
 
-- **Full 6-DOF rigid-body dynamics** using Spatial Vector Algebra formalism 
-- **Inertial-frame (ECI) equations of motion** with no pseudo-forces  
-- **Rotating atmosphere support** via air-relative velocity only  
-- **AD-friendly equations** for CppAD, dual numbers, and other libraries 
-- **US1976 Standard Atmosphere** and clean gravity models  
-- **Lie structure preserving Runge-Kutta-Munthe-Kaas integrator** (with a fully implicit RADAU-IIA solver implementation)  
-- **Discrete extended Kalman filter on a product manifold containing Lie groups** for state estimation
-- **Post-modern C++23 design**
+The flagship simulation is a full 6-DOF two-stage rocket gravity-turn ascent from the equator, validated against **NASA TM-2015-218675 Atmospheric Scenario 17**. The trajectory below was produced entirely by Aetherion using Featherstone SVA dynamics, the US1976 atmosphere, WGS84 gravity, and an implicit RADAU-IIA integrator.
+
+<p align="center">
+  <img src="doc/_static/atmos17/trajectory_3d.png" width="680" alt="Two-Stage Rocket 3D Trajectory — Aetherion vs. NASA Sim 06"/>
+</p>
+
+Stage separation, coast phases, and second-stage ignition are all captured with sub-percent error versus the NASA reference. Final altitude error: **0.87 %** · Final speed error: **0.001 %**.
 
 ---
 
-## 📐 Mathematical Foundations
+## Features
 
-ΑETHERION implements all major constructs from Featherstone's Rigid Body Dynamics Algorithms:
+### Dynamics Core
+- **Full 6-DOF rigid-body dynamics** using Featherstone Spatial Vector Algebra
+- **ECI equations of motion** — no pseudo-forces, no approximations
+- **Air-relative velocity** for aerodynamics; rotating atmosphere handled correctly
+- **Variable-mass bodies** — propellant burn, staging events, CG travel
 
-- Spatial velocity `v`
-- Spatial acceleration `a`
-- Spatial inertia `I`
-- Motion  `v×` and its adjoint force `v×*` cross operators
+### Numerical Methods
+- **Lie-structure-preserving Runge-Kutta-Munthe-Kaas (RKMK) integrator** on SE(3)
+- **Fully implicit RADAU-IIA solver** for stiff ascent phases
+- **Discrete Extended Kalman Filter on a product manifold** containing Lie groups
+
+### Algorithmic Differentiation
+- **AD-friendly formulations** throughout — compatible with CppAD, dual numbers, and similar libraries
+- Auto-Jacobians fed directly into the EKF/UKF linearisation pipeline
+
+### Environment Models
+- **US1976 Standard Atmosphere** (temperature, pressure, density, speed of sound)
+- **WGS84 gravity model** with ECI/ECEF/geodetic coordinate conversions
+- **Branch-free formulations** designed for AD and Kalman filtering
+
+### Aerodynamics & Propulsion
+- **DAVE-ML (DML) aerodynamic model loader** — table-driven aero/inertia/propulsion data
+- Multi-axis force and moment models; CG-offset spatial inertia
+- Stage-aware propellant tracking with automatic separation logic
+
+### Interoperability
+- **FMI/FMU export** via fmu4cpp — drop Aetherion plants into any FMI-compliant simulator
+- JSON configuration files for initial conditions and simulation parameters
+- CSV output compatible with NASA reference data formats
+
+### Code Quality
+- **Post-modern C++23** design throughout
+- Enforces a **practical subset of the JSF AV C++ coding standard**
+- CI gates: Clang-Format · CMake-Format · CMake-Lint · IWYU · Clang-Tidy · Metrix++ cyclomatic complexity · AddressSanitizer / UBSan
+
+---
+
+## SVA → AD → EKF Pipeline
+
+<p align="center">
+  <img src="doc/_static/sva_gnc_pipeline.png" width="720" alt="SVA / AD / EKF pipeline"/>
+</p>
+
+The library is architected so that the same smooth `ẋ = f(x, u)` used for simulation feeds auto-Jacobians into the EKF linearisation, producing a single consistent GNC pipeline from plant model to state estimator.
+
+---
+
+## Mathematical Foundations
+
+ΑETHERION implements the full suite of Featherstone spatial constructs:
+
+| Symbol | Meaning |
+|--------|---------|
+| `v` | Spatial velocity (twist) |
+| `a` | Spatial acceleration |
+| `I` | Spatial inertia |
+| `v×` | Motion cross-product operator |
+| `v×*` | Force cross-product operator (adjoint) |
 
 Equation of motion:
 
 <p align="center">
-  <img src="assets/equation_of_motion.svg" width="180" alt="Equation of Motion"/>
+  <img src="assets/equation_of_motion.svg" width="200" alt="Equation of Motion: I·ȧ + v×*·I·v = f"/>
 </p>
 
-Control surfaces can be modeled as rigidly attached bodies.
+Control surfaces and payload stages can be modelled as rigidly attached bodies within the same spatial algebra.
 
 ---
 
-# 📌 Frames & Conventions
+## Frames & Conventions
 
-ΑETHERION uses:
+| Label | Frame |
+|-------|-------|
+| **W** | Inertial (ECI) |
+| **E** | Earth-fixed (ECEF) |
+| **B** | Rocket/aircraft body |
 
-- **W — Inertial frame (ECI)**
-- **E — Earth-fixed frame (ECEF)**
-- **B — Rocket body frame**
-
-All transformations follow:
+All transforms follow:
 
 <p align="center">
-  <img src="assets/equation_of_motion.svg" width="180" alt="Transform equation"/>
+  <img src="assets/transform_equation.svg" width="200" alt="Spatial transform notation"/>
 </p>
 
-notation for transforms and spatial transforms.
-
-This keeps the frame algebra clean, explicit, and AD-friendly.
+notation for spatial transforms, keeping the frame algebra explicit and AD-friendly.
 
 ---
 
-# 📊 Atmosphere & Gravity
+## Validated Examples
 
-ΑETHERION provides:
-
-- **US1976 Standard Atmosphere**  
-  - temperature  
-  - pressure  
-  - density  
-  - speed of sound  
-- **Gravity models**  
-- **Branch-free formulations** ideal for AD and Kalman filtering  
+| Example | Vehicle | Reference |
+|---------|---------|-----------|
+| `TwoStageRocket` | Two-stage launch vehicle | NASA TM-2015-218675 Scenario 17 |
+| `F16SteadyFlight` | F-16 at trim | NASA TN D-8532 Section 13.1 |
+| `F16AirspeedChange` | F-16 speed step | NASA TN D-8532 Section 13.2 |
+| `F16AltitudeChange` | F-16 altitude step | NASA TN D-8532 Section 13.3 |
+| `F16HeadingChange` | F-16 heading change | NASA TN D-8532 Section 13.4 |
+| `F16LateralSideStep` | F-16 lateral manoeuvre | NASA TN D-8532 Appendix |
+| `F16SupersonicTrim` | F-16 supersonic trim | NASA TN D-8532 |
+| `EastwardCannonball` | Point mass projectile | Analytic (Coriolis) |
+| `NorthwardCannonball` | Point mass projectile | Analytic (Coriolis) |
+| `SphereWithAtmosphericDrag` | Sphere + drag | Analytical reference |
+| `DroppedSphereSteadyWind` | Sphere in steady crosswind | Analytical reference |
+| `DroppedSphere2DWindShear` | Sphere in wind-shear field | Analytical reference |
+| `TumblingBrickNoDamping` | Free tumbling rigid body | Angular momentum conservation |
+| `TumblingBrickWithDamping` | Damped tumbling body | Energy dissipation |
+| `CircleEquatorDateLine` | Orbital-like equatorial loop | Geometric consistency |
+| `CircleNorthPole` | Polar orbital loop | Geometric consistency |
 
 ---
 
-# 🧪 Testing
+## Testing
 
-The library includes a complete test suite:
+- **Catch2 unit tests** covering every module
+- **Numerical validation** against NASA technical reports (sub-percent agreement)
+- **AddressSanitizer + UBSanitizer** run on every CI push
+- **Clang-Tidy static analysis** and **IWYU** include hygiene enforced on every PR
 
-- **Catch2 unit tests**
-- **Numerical validation** against NASA technical reports
-
-
-This ensures consistency across symbolic, AD, and numeric implementations.
+---
 
 ## Dependencies
 
-- Eigen for linear algebra.
-- fmu4cpp for FMI building.
-- ecos for simulation.
-- cppad for algorithmic differentiation.
-- Catch2 v3 is required for testing. 
+| Library | Purpose |
+|---------|---------|
+| [Eigen](https://eigen.tuxfamily.org) | Linear algebra |
+| [CppAD](https://coin-or.github.io/CppAD/) | Algorithmic differentiation |
+| [fmu4cpp](https://github.com/markaren/fmu4cpp) | FMI/FMU export |
+| [ECOS](https://github.com/embotech/ecos) | Embedded conic solver (simulation) |
+| [Catch2 v3](https://github.com/catchorg/Catch2) | Unit testing |
 
-## 📚 Documentation
+---
+
+## Documentation
+
+Full API reference and simulation guides are hosted on GitHub Pages:
 
 - [Detailed Documentation](https://onurtuncer.github.io/Aetherion/)
 
-## Development
+---
 
-### Bug Tracker
+## Build & Installation
 
-- [Github Issues](https://github.com/onurtuncer/Aetherion/issues)
+Clone the repository and initialise submodules:
 
+```bash
+git clone https://github.com/onurtuncer/Aetherion.git
+cd Aetherion
+git submodule update --init --recursive
+```
 
-### Forums and Discussions
-
-- [Github Discussions](https://github.com/onurtuncer/Aetherion/discussions/)
-
-
-# Build & Installation
-
-First you need to dowload the files or clone the repository, then initialize and update the submodules.
-
-
-## Windows Build Using Visual Studio
+### Windows — Visual Studio
 
 1. Open **Visual Studio**
-2. Click **Open Folder…**
-3. Select the **Aetherion** directory
-4. Let Visual Studio configure CMake automatically
-5. Choose a configuration (e.g. **x64-Release**)
-6. Build the project via **Build > Build All**
-7. Run the executable
+2. **File → Open Folder…** → select the `Aetherion` directory
+3. Let Visual Studio configure CMake automatically
+4. Choose a configuration (e.g. `x64-Release`)
+5. **Build → Build All**
 
-## 👤 Author
+### Linux / macOS — CMake
 
-**Prof.Dr. Onur Tuncer**  
+```bash
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+ctest --test-dir build
+```
+
+---
+
+## Community
+
+- **Bug Tracker**: [GitHub Issues](https://github.com/onurtuncer/Aetherion/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/onurtuncer/Aetherion/discussions/)
+
+---
+
+## Author
+
+**Prof. Dr. Onur Tuncer**  
 Aerospace Engineer, Researcher & C++ Systems Developer  
-Email: **onur.tuncer@itu.edu.tr**
+Istanbul Technical University · [onur.tuncer@itu.edu.tr](mailto:onur.tuncer@itu.edu.tr)
 
 <p align="left">
   <img src="assets/itu_logo.png" width="180" alt="Istanbul Technical University"/>
 </p>
-
-
