@@ -5,14 +5,16 @@
 // SPDX-License-Identifier: MIT
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
-
+// FeedThrough.hpp
+//
+// Simple pass-through FMU: each output equals the corresponding input.
+// Used as a smoke test for the fmu4cpp FMI 2.0 Co-Simulation integration.
+// Header-only so the same translation unit can be shared by the FMU shared
+// library build and the Catch2 in-process integration test.
 // ------------------------------------------------------------------------------
-// Project: Aetherion
-// Feed-through FMU example using fmu4cpp
-// ------------------------------------------------------------------------------
+#pragma once
 
 #include <fmu4cpp/fmu_base.hpp>
-#include <fmu4cpp/fmu_variable.hpp>
 #include <fmu4cpp/model_info.hpp>
 #include <string>
 
@@ -20,10 +22,8 @@ using namespace fmu4cpp;
 
 class FeedThrough : public fmu_base {
 public:
-    // Let the macro handle constructor signature + base-class wiring
     FMU4CPP_CTOR(FeedThrough)
     {
-        // Inputs
         register_integer("integerIn", &integerIn_)
             .setCausality(causality_t::INPUT)
             .setVariability(variability_t::DISCRETE);
@@ -40,7 +40,6 @@ public:
             .setCausality(causality_t::INPUT)
             .setVariability(variability_t::DISCRETE);
 
-        // Outputs – simple feed-through of the inputs
         register_integer("integerOut", &integerOut_)
             .setCausality(causality_t::OUTPUT)
             .setVariability(variability_t::DISCRETE);
@@ -60,58 +59,46 @@ public:
         FeedThrough::reset();
     }
 
-    // New API: do_step takes only dt
-    bool do_step(double dt) override
+    bool do_step(double /*dt*/) override
     {
-        (void)dt; // unused for pure feed-through model
-
-        // Feed-through: copy inputs to outputs
         integerOut_ = integerIn_;
-        realOut_ = realIn_;
+        realOut_    = realIn_;
         booleanOut_ = booleanIn_;
-        stringOut_ = stringIn_;
-
-        // Optional logging
-       // debugLog(fmi2OK, "FeedThrough::do_step called");
-
+        stringOut_  = stringIn_;
         return true;
     }
 
     void reset() override
     {
-        integerIn_ = 0;
-        realIn_ = 0.0;
-        booleanIn_ = false;
-        stringIn_ = "empty";
+        integerIn_  = 0;
+        realIn_     = 0.0;
+        booleanIn_  = false;
+        stringIn_   = "empty";
 
         integerOut_ = 0;
-        realOut_ = 0.0;
+        realOut_    = 0.0;
         booleanOut_ = false;
-        stringOut_ = "empty";
+        stringOut_  = "empty";
     }
 
 private:
-    // Inputs
     int         integerIn_{};
     double      realIn_{};
     bool        booleanIn_{};
     std::string stringIn_;
 
-    // Outputs
     int         integerOut_{};
     double      realOut_{};
     bool        booleanOut_{};
     std::string stringOut_;
 };
 
-// Model metadata (FMI modelDescription.xml content)
-model_info fmu4cpp::get_model_info()
+inline model_info fmu4cpp::get_model_info()
 {
     model_info info;
-    info.modelName = "FeedThrough";
-    info.description = "A simple feed-through FMU (in = out)";
+    info.modelName   = "FeedThrough";
+    info.description = "Simple pass-through FMU (output = input) for fmu4cpp integration testing";
     return info;
 }
 
-// Boilerplate to expose the model to fmu4cpp runtime
 FMU4CPP_INSTANTIATE(FeedThrough);

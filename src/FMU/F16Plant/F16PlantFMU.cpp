@@ -28,6 +28,9 @@
 //    heading0_deg     Heading (azimuth from North, NED)  [deg]    def  45.0
 //    roll0_deg        Initial pose roll angle            [deg]    def  -0.172
 //    xcg_from_ac_ft   CG offset aft of AC (10%×c̄)      [ft]     def   1.132
+//    solver.abs_tol   Newton absolute residual tolerance [-]      def 1e-12
+//    solver.rel_tol   Newton relative residual tolerance [-]      def 1e-10
+//    solver.max_step_s Max internal integrator step      [s]      def 0.0 (= comm. step)
 //
 //  INPUTS  (may be set between fmi2DoStep calls)
 //    ctrl.el_deg      Elevator deflection                [deg]
@@ -120,8 +123,10 @@
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
 #include <Aetherion/Serialization/DAVEML/LoadInertiaFromDAVEML.h>
 
-// Earth rotation rate
+// Earth rotation rate + J2 gravity for trim-point weight calculation
 #include <Aetherion/Environment/WGS84.h>
+#include <Aetherion/Environment/Gravity.h>
+#include <Aetherion/Coordinate/LocalToInertial.h>
 
 using namespace fmu4cpp;
 
@@ -131,6 +136,8 @@ namespace AE_FD  = Aetherion::FlightDynamics;
 namespace AE_SR  = Aetherion::Serialization;
 namespace AE_SIM = Aetherion::Simulation;
 namespace AE_EX  = Aetherion::Examples::F16SteadyFlight;
+namespace AE_CO  = Aetherion::Coordinate;
+namespace AE_ENV = Aetherion::Environment;
 
 // ── Type aliases ──────────────────────────────────────────────────────────────
 using F16VF      = AE_EX::F16VF;       // VectorField<J2Gravity, F16Aero, F16Prop, ConstMass>
@@ -141,7 +148,6 @@ namespace {
     constexpr double kOmegaEarth_rad_s = Aetherion::Environment::WGS84::kRotationRate_rad_s;
     constexpr double kFt_m             = 0.3048;
     constexpr double kLbf_N            = 4.448221615260751;
-    constexpr double kG_mps2           = 9.80665;
     constexpr double kDeg              = std::numbers::pi / 180.0;
 
     // Default initial conditions — NASA TM-2015-218675 Scenario 11 (Kitty Hawk, NC).
@@ -153,6 +159,12 @@ namespace {
     constexpr double kDefault_heading0_deg   =   45.0;
     constexpr double kDefault_roll0_deg      =   -0.172;
     constexpr double kDefault_xcg_from_ac_ft =    1.132;   // (35%−25%) × 11.32 ft
+
+    // Default solver tuning — match NewtonOptions defaults so behaviour is
+    // unchanged unless the FMI master overrides these parameters.
+    constexpr double kDefault_newton_abs_tol = 1.0e-12;
+    constexpr double kDefault_newton_rel_tol = 1.0e-10;
+    constexpr double kDefault_max_step_s     = 0.0;  // 0 → use the communication step directly
 }
 
 // ── FMU state (trivially copyable POD) ───────────────────────────────────────
@@ -249,6 +261,21 @@ public:
             .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("CG offset aft of aerodynamic reference centre [ft]");
+
+        register_real("solver.abs_tol", &p_newton_abs_tol_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Radau IIA Newton absolute residual tolerance [-]");
+
+        register_real("solver.rel_tol", &p_newton_rel_tol_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Radau IIA Newton relative residual tolerance [-]");
+
+        register_real("solver.max_step_s", &p_max_step_s_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Maximum internal integrator sub-step size [s] (0 = use communication step)");
 
         // ── Control inputs ────────────────────────────────────────────────────
         register_real("ctrl.el_deg",  &state_.el_deg)
@@ -400,8 +427,25 @@ public:
         m_aeroModel = std::make_shared<const AE_SR::DAVEMLAeroModel>(aeroPath);
         m_propModel = std::make_shared<const AE_SR::DAVEMLPropModel>(propPath);
 
-        // 3. Solve trim: find (alpha, elevator, throttle) for the given flight condition
-        const double weight_lbf = m_ip.mass_kg * kG_mps2 / kLbf_N;
+        // 3. Earth Rotation Angle at fmi2EnterInitializationMode time — needed
+        //    both for the trim-point gravity calculation and the ECI state below.
+        m_theta0 = kOmegaEarth_rad_s * currentTime();
+
+        // 4. Compute J2 gravitational acceleration at the trim geodetic position so
+        //    that weight_lbf fed to the trim solver is consistent with the integrator.
+        const double lat_rad = p_lat0_deg_ * kDeg;
+        const double lon_rad = p_lon0_deg_ * kDeg;
+        const double alt_m   = p_alt0_ft_  * kFt_m;
+        const auto r_ecef  = AE_CO::GeodeticToECEF(lat_rad, lon_rad, alt_m);
+        const auto r_eci0  = AE_CO::ECEFToECI(r_ecef, m_theta0);
+        const AE_ENV::Vec3<double> r_arr{ r_eci0[0], r_eci0[1], r_eci0[2] };
+        const auto g_eci_vec = AE_ENV::J2(r_arr);
+        const double g_local = std::sqrt(g_eci_vec[0]*g_eci_vec[0]
+                                       + g_eci_vec[1]*g_eci_vec[1]
+                                       + g_eci_vec[2]*g_eci_vec[2]);
+
+        // 5. Solve trim: find (alpha, elevator, throttle) for the given flight condition
+        const double weight_lbf = m_ip.mass_kg * g_local / kLbf_N;
         AE_FD::TrimInputs tin{};
         tin.vt_fps     = p_vt0_fps_;
         tin.alt_ft     = p_alt0_ft_;
@@ -411,10 +455,6 @@ public:
         const AE_FD::TrimPoint trim = solver.solve(tin);
         if (!trim.converged)
             throw std::runtime_error("F16PlantFMU: trim solver did not converge.");
-
-        // 4. Build initial ECI state from the geodetic initial conditions
-        // theta0 = Earth Rotation Angle at fmi2EnterInitializationMode time
-        m_theta0 = kOmegaEarth_rad_s * currentTime();
 
         AE_RB::Config cfg{};
         cfg.pose.lat_deg     = p_lat0_deg_;
@@ -446,47 +486,65 @@ public:
                         x0vec[L::IDX_V],   x0vec[L::IDX_V+1], x0vec[L::IDX_V+2];
         m_state.m = x0vec[L::IDX_M];
 
-        // 5. Construct the stepper with a VectorField initialised at trim values
+        // 6. Build Newton options from the FMI solver parameters.
+        Aetherion::ODE::RKMK::Core::NewtonOptions newton_opts{};
+        newton_opts.abs_tol = p_newton_abs_tol_;
+        newton_opts.rel_tol = p_newton_rel_tol_;
+
+        // 7. Construct the stepper with a VectorField initialised at trim values
         const double xcg_m = p_xcg_from_ac_ft_ * kFt_m;
         m_stepper.emplace(
             F16VF(m_ip,
                   AE_FD::J2GravityPolicy{},
                   AE_FD::F16AeroPolicy(m_aeroModel, trim.el_deg, 0.0, 0.0, xcg_m),
-                  AE_FD::F16PropPolicy(m_propModel, trim.pwr_pct))
+                  AE_FD::F16PropPolicy(m_propModel, trim.pwr_pct)),
+            newton_opts
         );
 
-        // 6. Seed control state from trim (written to state_ for fmu4cpp variable tracking)
+        // 8. Seed control state from trim (written to state_ for fmu4cpp variable tracking)
         state_.el_deg  = trim.el_deg;
         state_.ail_deg = 0.0;
         state_.rdr_deg = 0.0;
         state_.pwr_pct = trim.pwr_pct;
 
-        // 7. Sync POD integration state and populate initial outputs
+        // 9. Sync POD integration state and populate initial outputs
         packState();
         populateOutputCache(currentTime());
     }
 
     // ── do_step ───────────────────────────────────────────────────────────────
-    // Advances the simulation by dt seconds.
+    // Advances the simulation by dt seconds, optionally subdividing into
+    // sub-steps of at most solver.max_step_s (0 = single step = communication dt).
     // The FMI master has already written any updated ctrl.* inputs before this call.
     bool do_step(double dt) override
     {
         if (!m_stepper.has_value())
             return false;
 
-        // Push the latest control inputs from state_ into the VectorField policies
-        auto& vf = m_stepper->vectorField();
-        vf.aero.setControls(state_.el_deg, state_.ail_deg, state_.rdr_deg);
-        vf.thrust.pwr_pct = state_.pwr_pct;
-
-        // Advance one step with the Radau IIA RKMK integrator
         const double t0 = currentTime();
-        const auto res = m_stepper->step(t0, m_state, dt);
-        if (!res.converged) {
-            debugLog(fmiWarning, "F16PlantFMU: Radau IIA Newton did not converge.");
-            return false;
+        const double h  = (p_max_step_s_ > 0.0 && p_max_step_s_ < dt)
+                          ? p_max_step_s_ : dt;
+
+        double t_local   = t0;
+        double remaining = dt;
+
+        while (remaining > 1.0e-15) {
+            const double step = std::min(remaining, h);
+
+            // Push the latest control inputs into the VectorField policies
+            auto& vf = m_stepper->vectorField();
+            vf.aero.setControls(state_.el_deg, state_.ail_deg, state_.rdr_deg);
+            vf.thrust.pwr_pct = state_.pwr_pct;
+
+            const auto res = m_stepper->step(t_local, m_state, step);
+            if (!res.converged) {
+                debugLog(fmiWarning, "F16PlantFMU: Radau IIA Newton did not converge.");
+                return false;
+            }
+            m_state   = F16Stepper::unpack(res);
+            t_local  += step;
+            remaining -= step;
         }
-        m_state = F16Stepper::unpack(res);
 
         // Sync integration state back into POD and update output variables.
         // Pass t0+dt because fmu_base advances time_ only after do_step returns.
@@ -522,6 +580,10 @@ public:
         p_heading0_deg_   = kDefault_heading0_deg;
         p_roll0_deg_      = kDefault_roll0_deg;
         p_xcg_from_ac_ft_ = kDefault_xcg_from_ac_ft;
+
+        p_newton_abs_tol_ = kDefault_newton_abs_tol;
+        p_newton_rel_tol_ = kDefault_newton_rel_tol;
+        p_max_step_s_     = kDefault_max_step_s;
     }
 
 private:
@@ -641,6 +703,10 @@ private:
     double p_heading0_deg_   { kDefault_heading0_deg   };
     double p_roll0_deg_      { kDefault_roll0_deg      };
     double p_xcg_from_ac_ft_ { kDefault_xcg_from_ac_ft };
+
+    double p_newton_abs_tol_ { kDefault_newton_abs_tol };
+    double p_newton_rel_tol_ { kDefault_newton_rel_tol };
+    double p_max_step_s_     { kDefault_max_step_s     };
 
     // ── Runtime objects ───────────────────────────────────────────────────────
     // Models kept alive after exit_initialisation_mode so that setFmuState /

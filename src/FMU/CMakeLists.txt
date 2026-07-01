@@ -4,11 +4,4 @@
 # SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-generatefmu(
-  FeedThrough
-  FMI_VERSIONS
-  fmi2
-  SOURCES
-  FeedThrough/FeedThrough.cpp)
-
 add_subdirectory(F16Plant)

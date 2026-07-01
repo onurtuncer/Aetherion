@@ -13,6 +13,15 @@
 
 set(F16_DATA_DIR "${CMAKE_SOURCE_DIR}/data/F16_S119_source")
 
+# Stage only the three DAVE-ML files actually loaded at runtime.
+# The source directory also contains control, gnc, and other files that are
+# not used by F16PlantFMU and must not bloat the FMU archive.
+set(F16_STAGED_RES "${CMAKE_BINARY_DIR}/f16plant_resources")
+file(MAKE_DIRECTORY "${F16_STAGED_RES}")
+foreach(_dml IN ITEMS F16_aero.dml F16_prop.dml F16_inertia.dml)
+  file(COPY "${F16_DATA_DIR}/${_dml}" DESTINATION "${F16_STAGED_RES}")
+endforeach()
+
 generatefmu(
   F16Plant
   FMI_VERSIONS
@@ -28,7 +37,7 @@ generatefmu(
   Aetherion::Aetherion
   CppAD::cppad
   RESOURCE_FOLDER
-  "${F16_DATA_DIR}"
+  "${F16_STAGED_RES}"
   COMPILE_DEFINITIONS
   $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 
@@ -36,4 +45,13 @@ generatefmu(
 # <modelIdentifier>_<fmiVersion>.
 if(MSVC)
   target_compile_options(F16Plant_fmi2 PRIVATE /utf-8 /bigobj)
+endif()
+
+# Install the packaged FMU so it ends up in the WiX MSI and can be found
+# by downstream co-simulation frameworks after cmake --install.
+if(AETHERION_INSTALL)
+  install(
+    FILES "${CMAKE_BINARY_DIR}/models/fmi2/F16Plant/F16Plant.fmu"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/Aetherion/fmu"
+    COMPONENT Runtime)
 endif()
