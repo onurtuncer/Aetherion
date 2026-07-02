@@ -12,9 +12,10 @@
 // ecos, rather than linking the fmu4cpp model objects in-process. This is the
 // only test in the suite that exercises the actual FMU packaging pipeline.
 //
-// Two test cases:
-//   1. feed_through_values_ecos  -- set typed inputs, step, verify outputs match
-//   2. reset_to_defaults_ecos    -- confirm all outputs revert to 0/false/"empty"
+// Three test cases:
+//   1. feed_through_values_ecos       -- positive/non-zero/true/non-empty inputs pass through
+//   2. feed_through_zero_values_ecos  -- negative/zero/false/empty inputs pass through
+//   3. reset_to_defaults_ecos         -- confirm all outputs revert to 0/false/"empty"
 // ------------------------------------------------------------------------------
 
 #include <catch2/catch_approx.hpp>
@@ -45,13 +46,12 @@ std::unique_ptr<ecos::simulation> boot()
 } // namespace
 
 // ---------------------------------------------------------------------------
-// Test 1 -- Feed-through correctness
+// Test 1a -- Feed-through: positive integer, non-zero real, true, non-empty string
 // ---------------------------------------------------------------------------
 TEST_CASE("feed_through_values_ecos", "[FeedThrough][ecos]")
 {
     auto sim = boot();
 
-    // -- Case 1: positive integer, non-zero real, true, non-empty string ----
     sim->get_int_property("feedthrough::integerIn")->set_value(42);
     sim->get_real_property("feedthrough::realIn")->set_value(3.14159);
     sim->get_bool_property("feedthrough::booleanIn")->set_value(true);
@@ -64,7 +64,16 @@ TEST_CASE("feed_through_values_ecos", "[FeedThrough][ecos]")
     CHECK(sim->get_bool_property("feedthrough::booleanOut")->get_value() == true);
     CHECK(sim->get_string_property("feedthrough::stringOut")->get_value() == "aetherion");
 
-    // -- Case 2: negative integer, zero real, false, empty string -----------
+    sim->terminate();
+}
+
+// ---------------------------------------------------------------------------
+// Test 1b -- Feed-through: negative integer, zero real, false, empty string
+// ---------------------------------------------------------------------------
+TEST_CASE("feed_through_zero_values_ecos", "[FeedThrough][ecos]")
+{
+    auto sim = boot();
+
     sim->get_int_property("feedthrough::integerIn")->set_value(-7);
     sim->get_real_property("feedthrough::realIn")->set_value(0.0);
     sim->get_bool_property("feedthrough::booleanIn")->set_value(false);
