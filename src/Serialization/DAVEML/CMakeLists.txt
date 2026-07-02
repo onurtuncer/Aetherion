@@ -15,6 +15,5 @@ target_sources(
 )
 
 target_include_directories(
-  Aetherion PUBLIC ${CMAKE_SOURCE_DIR}/Aetherion
-  PRIVATE ${PUGIXML_DIR} ${CMAKE_SOURCE_DIR}/vendor/CppAD/include # for CppAD::Value / CondExp
+  Aetherion PRIVATE ${PUGIXML_DIR} ${CMAKE_SOURCE_DIR}/vendor/CppAD/include # for CppAD::Value / CondExp
 )

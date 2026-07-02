@@ -144,7 +144,11 @@ set(EIGEN3_VENDOR_DIR "${CMAKE_SOURCE_DIR}/vendor/eigen")
 if(EXISTS "${EIGEN3_VENDOR_DIR}/Eigen/Dense")
   message(STATUS "Using vendored Eigen headers in ${EIGEN3_VENDOR_DIR}")
 
-  add_library(eigen3_vendor INTERFACE)
+  # IMPORTED GLOBAL (matching CppAD::cppad above): a plain, non-imported target here would need to be
+  # added to AetherionTargets' export set and would fail install(EXPORT) with "requires target
+  # eigen3_vendor that is not in any export set", since Aetherion links it PUBLIC. IMPORTED GLOBAL targets
+  # are exempt from that requirement.
+  add_library(eigen3_vendor INTERFACE IMPORTED GLOBAL)
   target_include_directories(eigen3_vendor INTERFACE "${EIGEN3_VENDOR_DIR}")
 
   add_library(Eigen3::Eigen ALIAS eigen3_vendor)
