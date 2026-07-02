@@ -20,6 +20,7 @@
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
+#include <array>
 #include <cstdarg>
 #include <iostream>
 #include <string>
@@ -52,8 +53,8 @@ static void fmiLogger(fmi2Component,
     }
     va_list args;
     va_start(args, message);
-    char buf[512];
-    std::vsnprintf(buf, sizeof(buf), message, args);
+    std::array<char, 512> buf{};
+    std::vsnprintf(buf.data(), buf.size(), message, args);
     va_end(args);
     std::cerr << sstr << ": [" << (instanceName ? instanceName : "") << "] " << buf << '\n';
 }
@@ -64,7 +65,7 @@ static void fmiLogger(fmi2Component,
 static fmi2Component boot(const std::string& guid,
                            const fmi2CallbackFunctions& cb)
 {
-    const auto c = fmi2Instantiate(
+    auto *const c = fmi2Instantiate(
         "FeedThrough_test", fmi2CoSimulation,
         guid.c_str(), "", &cb, fmi2False, fmi2True);
     REQUIRE(c != nullptr);
@@ -83,20 +84,20 @@ TEST_CASE("feed_through_values", "[FeedThrough][fmu4cpp]")
     FeedThrough probe({});
     const std::string guid = probe.guid();
 
-    const fmi2ValueReference vrIntIn  = probe.get_int_variable("integerIn")->value_reference();
-    const fmi2ValueReference vrRealIn = probe.get_real_variable("realIn")->value_reference();
-    const fmi2ValueReference vrBoolIn = probe.get_bool_variable("booleanIn")->value_reference();
-    const fmi2ValueReference vrStrIn  = probe.get_string_variable("stringIn")->value_reference();
+    const fmi2ValueReference vrIntIn  = probe.get_int_variable("integerIn").value().value_reference();
+    const fmi2ValueReference vrRealIn = probe.get_real_variable("realIn").value().value_reference();
+    const fmi2ValueReference vrBoolIn = probe.get_bool_variable("booleanIn").value().value_reference();
+    const fmi2ValueReference vrStrIn  = probe.get_string_variable("stringIn").value().value_reference();
 
-    const fmi2ValueReference vrIntOut  = probe.get_int_variable("integerOut")->value_reference();
-    const fmi2ValueReference vrRealOut = probe.get_real_variable("realOut")->value_reference();
-    const fmi2ValueReference vrBoolOut = probe.get_bool_variable("booleanOut")->value_reference();
-    const fmi2ValueReference vrStrOut  = probe.get_string_variable("stringOut")->value_reference();
+    const fmi2ValueReference vrIntOut  = probe.get_int_variable("integerOut").value().value_reference();
+    const fmi2ValueReference vrRealOut = probe.get_real_variable("realOut").value().value_reference();
+    const fmi2ValueReference vrBoolOut = probe.get_bool_variable("booleanOut").value().value_reference();
+    const fmi2ValueReference vrStrOut  = probe.get_string_variable("stringOut").value().value_reference();
 
     fmi2CallbackFunctions cb{};
     cb.logger = &fmiLogger;
 
-    const auto c = boot(guid, cb);
+    auto *const c = boot(guid, cb);
 
     // ── Case 1: positive integer, non-zero real, true, non-empty string ──────
     {
@@ -155,7 +156,7 @@ TEST_CASE("feed_through_values", "[FeedThrough][fmu4cpp]")
         CHECK(intOut  == -7);
         CHECK(realOut == Catch::Approx(0.0));
         CHECK(boolOut == fmi2False);
-        CHECK(std::string(strOut) == "");
+        CHECK(std::string(strOut).empty());
     }
 
     REQUIRE(fmi2Terminate(c) == fmi2OK);
@@ -170,20 +171,20 @@ TEST_CASE("reset_to_defaults", "[FeedThrough][fmu4cpp]")
     FeedThrough probe({});
     const std::string guid = probe.guid();
 
-    const fmi2ValueReference vrIntIn  = probe.get_int_variable("integerIn")->value_reference();
-    const fmi2ValueReference vrRealIn = probe.get_real_variable("realIn")->value_reference();
-    const fmi2ValueReference vrBoolIn = probe.get_bool_variable("booleanIn")->value_reference();
-    const fmi2ValueReference vrStrIn  = probe.get_string_variable("stringIn")->value_reference();
+    const fmi2ValueReference vrIntIn  = probe.get_int_variable("integerIn").value().value_reference();
+    const fmi2ValueReference vrRealIn = probe.get_real_variable("realIn").value().value_reference();
+    const fmi2ValueReference vrBoolIn = probe.get_bool_variable("booleanIn").value().value_reference();
+    const fmi2ValueReference vrStrIn  = probe.get_string_variable("stringIn").value().value_reference();
 
-    const fmi2ValueReference vrIntOut  = probe.get_int_variable("integerOut")->value_reference();
-    const fmi2ValueReference vrRealOut = probe.get_real_variable("realOut")->value_reference();
-    const fmi2ValueReference vrBoolOut = probe.get_bool_variable("booleanOut")->value_reference();
-    const fmi2ValueReference vrStrOut  = probe.get_string_variable("stringOut")->value_reference();
+    const fmi2ValueReference vrIntOut  = probe.get_int_variable("integerOut").value().value_reference();
+    const fmi2ValueReference vrRealOut = probe.get_real_variable("realOut").value().value_reference();
+    const fmi2ValueReference vrBoolOut = probe.get_bool_variable("booleanOut").value().value_reference();
+    const fmi2ValueReference vrStrOut  = probe.get_string_variable("stringOut").value().value_reference();
 
     fmi2CallbackFunctions cb{};
     cb.logger = &fmiLogger;
 
-    const auto c = boot(guid, cb);
+    auto *const c = boot(guid, cb);
 
     // Drive non-default values through
     fmi2Integer intVal  = 99;
