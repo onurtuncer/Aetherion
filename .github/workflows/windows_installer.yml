@@ -14,10 +14,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.x'
 
@@ -68,7 +68,7 @@ jobs:
             doc/ build/sphinx
 
       - name: Upload Sphinx HTML artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: aetherion-docs-html
           path: build/sphinx
@@ -79,7 +79,7 @@ jobs:
 
     steps:
       - name: Checkout repository (with submodules)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -100,7 +100,7 @@ jobs:
           Add-Content -Path $env:GITHUB_PATH -Value $wixBin
 
       - name: Download Sphinx HTML docs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: aetherion-docs-html
           path: build/sphinx-docs
@@ -116,7 +116,7 @@ jobs:
         run: cpack -G WIX
 
       - name: Upload MSI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: Aetherion-installer-${{ github.ref_name }}
           path: out/build/windows-release/*.msi
