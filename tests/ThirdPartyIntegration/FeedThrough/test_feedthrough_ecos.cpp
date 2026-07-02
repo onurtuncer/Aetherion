@@ -27,6 +27,7 @@
 
 #include <filesystem>
 #include <memory>
+#include <numbers>
 
 namespace
 {
@@ -53,14 +54,14 @@ TEST_CASE("feed_through_values_ecos", "[FeedThrough][ecos]")
     auto sim = boot();
 
     sim->get_int_property("feedthrough::integerIn")->set_value(42);
-    sim->get_real_property("feedthrough::realIn")->set_value(3.14159);
+    sim->get_real_property("feedthrough::realIn")->set_value(std::numbers::pi);
     sim->get_bool_property("feedthrough::booleanIn")->set_value(true);
     sim->get_string_property("feedthrough::stringIn")->set_value("aetherion");
 
     sim->step_for(kStepSize);
 
     CHECK(sim->get_int_property("feedthrough::integerOut")->get_value() == 42);
-    CHECK(sim->get_real_property("feedthrough::realOut")->get_value() == Catch::Approx(3.14159));
+    CHECK(sim->get_real_property("feedthrough::realOut")->get_value() == Catch::Approx(std::numbers::pi));
     CHECK(sim->get_bool_property("feedthrough::booleanOut")->get_value() == true);
     CHECK(sim->get_string_property("feedthrough::stringOut")->get_value() == "aetherion");
 
@@ -98,7 +99,7 @@ TEST_CASE("reset_to_defaults_ecos", "[FeedThrough][ecos]")
 
     // Drive non-default values through
     sim->get_int_property("feedthrough::integerIn")->set_value(99);
-    sim->get_real_property("feedthrough::realIn")->set_value(2.718);
+    sim->get_real_property("feedthrough::realIn")->set_value(std::numbers::e);
     sim->get_bool_property("feedthrough::booleanIn")->set_value(true);
     sim->get_string_property("feedthrough::stringIn")->set_value("before_reset");
     sim->step_for(kStepSize);
