@@ -116,7 +116,7 @@ TEST_CASE("DAVEMLReader: native values match Stevens & Lewis table", "[daveml][s
 // SI conversion
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST_CASE("DAVEMLReader: getValueSI converts slugft2 to kg·m²", "[daveml][smoke]")
+TEST_CASE("DAVEMLReader: getValueSI converts slugft2 to kgm2", "[daveml][smoke]")
 {
     if (kFile.empty()) return;
     DAVEMLReader r(kFile);
