@@ -30,7 +30,7 @@ jobs:
         run: |
           sudo apt-get update -q
           sudo apt-get install -y --no-install-recommends \
-            ninja-build clang-18 clang-tidy-18
+            ninja-build clang-18 clang-tidy-18 libtbb-dev unzip
 
       # Direct cmake call (no preset) to avoid -Rpass=.* from clang-debug
       # which floods the log with thousands of inlining notes.

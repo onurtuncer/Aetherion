@@ -168,7 +168,7 @@ notation for spatial transforms, keeping the frame algebra explicit and AD-frien
 | [Eigen](https://eigen.tuxfamily.org) | Linear algebra |
 | [CppAD](https://coin-or.github.io/CppAD/) | Algorithmic differentiation |
 | [fmu4cpp](https://github.com/markaren/fmu4cpp) | FMI/FMU export |
-| [ECOS](https://github.com/embotech/ecos) | Embedded conic solver (simulation) |
+| [ecos](https://github.com/Ecos-platform/ecos) | FMI co-simulation engine (FMU smoke testing) |
 | [Catch2 v3](https://github.com/catchorg/Catch2) | Unit testing |
 
 ---

@@ -6,10 +6,12 @@
 
 include(Catch)
 
-# ── FeedThrough FMU (smoke-tests the fmu4cpp FMI 2.0 integration) ────────────
+# ── FeedThrough FMU (smoke-tests the packaged .fmu via ecos) ─────────────────
 #
-# Two targets: FeedThrough_fmi2         — shared library (.fmu artifact), built by generateFMU() test_feedthrough_fmi2 —
-# Catch2 in-process test: same model linked directly against fmu4cpp objects so no DLL loading is needed.
+# generateFMU() builds and packages the FeedThrough.fmu archive (FeedThrough_fmi2 target).
+# test_feedthrough_ecos loads that real .fmu archive through ecos's simulation_structure/simulation
+# API -- unlike an in-process fmu4cpp test, this exercises the full FMU packaging pipeline (unzip,
+# modelDescription.xml parsing, shared-library load).
 #
 # generateFMU() is available because cmake/generate_fmu.cmake is include()d unconditionally from the root
 # CMakeLists.txt.
@@ -21,19 +23,17 @@ generatefmu(
   SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/FeedThrough/FeedThrough.cpp")
 
-add_executable(test_feedthrough_fmi2 FeedThrough/test_feedthrough.cpp $<TARGET_OBJECTS:fmu4cpp_base>
-                                     $<TARGET_OBJECTS:fmu4cpp_fmi2>)
+add_executable(test_feedthrough_ecos FeedThrough/test_feedthrough_ecos.cpp)
 
-target_compile_definitions(test_feedthrough_fmi2 PRIVATE FMI2)
+target_link_libraries(test_feedthrough_ecos PRIVATE Catch2::Catch2WithMain libecos)
 
-target_include_directories(
-  test_feedthrough_fmi2
-  PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/FeedThrough" "${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/include"
-          "${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/src")
+target_compile_definitions(
+  test_feedthrough_ecos
+  PRIVATE FEEDTHROUGH_FMU_PATH="${CMAKE_BINARY_DIR}/models/fmi2/FeedThrough/FeedThrough.fmu")
 
-target_link_libraries(test_feedthrough_fmi2 PRIVATE Catch2::Catch2WithMain)
+add_dependencies(test_feedthrough_ecos FeedThrough_fmi2)
 
-catch_discover_tests(test_feedthrough_fmi2 TEST_SUFFIX "_fmu4cpp")
+catch_discover_tests(test_feedthrough_ecos TEST_SUFFIX "_ecos")
 
 # ── Eigen ─────────────────────────────────────────────────────────────────────
 add_executable(test_eigen test_eigen.cpp)
