@@ -266,7 +266,14 @@
       "configurePreset": "release",
       "inherits": [
         "test-base"
-      ]
+      ],
+      "output": {
+        "outputOnFailure": true
+      },
+      "execution": {
+        "noTestsAction": "error",
+        "stopOnFailure": false
+      }
     },
     {
       "name": "debug-with-relinfo",

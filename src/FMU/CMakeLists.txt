@@ -5,3 +5,4 @@
 # ------------------------------------------------------------------------------
 
 add_subdirectory(F16Plant)
+add_subdirectory(F16Autopilot)

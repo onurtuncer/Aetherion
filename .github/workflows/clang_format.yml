@@ -6,8 +6,8 @@ on:
       - main
   pull_request:
     paths:
-      - 'Aetherion/**'
       - 'src/**'
+      - 'tests/**'
       - '.github/workflows/clang_format.yml'
       - '**/.clang-format'
       - '.run-clang-format'
