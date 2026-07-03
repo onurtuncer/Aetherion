@@ -88,12 +88,12 @@ p = @(x,y,w,h) [x, y, x+w, y+h];  % position helper
 
 % ── F16Plant FMU block ──────────────────────────────────────────────────────
 PLANT = [MDL '/F16Plant'];
-add_block('FMIKit/FMU', PLANT, 'Position', p(480, 80, 160, 360));
+add_block('FMIKit_blocks/FMU', PLANT, 'Position', p(480, 80, 160, 360));
 FMIKit.loadFMU(PLANT, plantFmu);
 
 % ── F16Autopilot FMU block ──────────────────────────────────────────────────
 AP = [MDL '/F16Autopilot'];
-add_block('FMIKit/FMU', AP, 'Position', p(130, 80, 160, 310));
+add_block('FMIKit_blocks/FMU', AP, 'Position', p(130, 80, 160, 310));
 FMIKit.loadFMU(AP, apFmu);
 
 % ── Autopilot command constants ─────────────────────────────────────────────

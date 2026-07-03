@@ -140,6 +140,10 @@ public:
 
     [[nodiscard]] const RocketFuelState& fuelState() const noexcept { return m_fuel; }
 
+    /// @brief Mutable accessor — used by callers (e.g. an FMU wrapper) that need
+    /// to restore a previously-saved fuel/staging checkpoint.
+    [[nodiscard]] RocketFuelState& fuelState() noexcept { return m_fuel; }
+
 private:
     std::shared_ptr<Serialization::DAVEMLAeroModel> m_inertiaDml;
     std::shared_ptr<Serialization::DAVEMLAeroModel> m_propDml;
