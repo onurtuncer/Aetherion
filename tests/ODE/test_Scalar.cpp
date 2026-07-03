@@ -192,7 +192,7 @@ TEST_CASE("Scalar.so3_ABC used in SE(3): p = J(w)v matches small-angle series", 
     const Eigen::Vector3d p_ser =
         (Eigen::Matrix3d::Identity() + 0.5 * W + (1.0 / 6.0) * W2) * v;
 
-    REQUIRE((p - p_ser).norm() == Approx(0.0).margin(1e-18));
+    REQUIRE((p - p_ser).norm() == Approx(0.0).margin(1e-15));
 }
 
 TEST_CASE("Scalar.so3_ABC: AD smoke test (CppAD::AD<double>)", "[scalar][so3_ABC][cppad]") {

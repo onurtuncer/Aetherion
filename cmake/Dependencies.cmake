@@ -144,7 +144,14 @@ set(EIGEN3_VENDOR_DIR "${CMAKE_SOURCE_DIR}/vendor/eigen")
 if(EXISTS "${EIGEN3_VENDOR_DIR}/Eigen/Dense")
   message(STATUS "Using vendored Eigen headers in ${EIGEN3_VENDOR_DIR}")
 
-  add_library(eigen3_vendor INTERFACE)
+  # IMPORTED GLOBAL (matching CppAD::cppad above): a plain, non-imported target here would need to be added to
+  # AetherionTargets' export set and would fail install(EXPORT) with "requires target eigen3_vendor that is not in any
+  # export set", since Aetherion links it PUBLIC. IMPORTED GLOBAL targets are exempt from that requirement.
+  add_library(
+    eigen3_vendor
+    INTERFACE
+    IMPORTED
+    GLOBAL)
   target_include_directories(eigen3_vendor INTERFACE "${EIGEN3_VENDOR_DIR}")
 
   add_library(Eigen3::Eigen ALIAS eigen3_vendor)
@@ -160,3 +167,13 @@ add_library(nlohmann_json INTERFACE)
 target_include_directories(nlohmann_json INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/vendor)
 
 target_compile_definitions(nlohmann_json INTERFACE NLOHMANN_JSON_HEADER_ONLY)
+
+# ------------------------------------------------------------------------------
+# ecos (vendored submodule) -- FMI co-simulation engine, used for FMU smoke tests
+# ------------------------------------------------------------------------------
+set(ECOS_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(ECOS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(ECOS_BUILD_CLI OFF CACHE BOOL "" FORCE)
+set(ECOS_BUILD_CLIB OFF CACHE BOOL "" FORCE)
+set(ECOS_WITH_PROXYFMU OFF CACHE BOOL "" FORCE)
+add_subdirectory("${CMAKE_SOURCE_DIR}/vendor/ecos" EXCLUDE_FROM_ALL)

@@ -10,12 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
-      - name: Install system deps
-        run: sudo apt-get update
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y gcc-13 g++-13 libtbb-dev unzip
+
+      - name: Configure compiler alternatives
+        run: |
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
 
       - name: Configure (GCC Release)
         run: cmake --preset=gcc-release
 
       - name: Build
         run: cmake --build --preset=gcc-release
+
+      - name: Run tests
+        run: ctest --preset=gcc-release
