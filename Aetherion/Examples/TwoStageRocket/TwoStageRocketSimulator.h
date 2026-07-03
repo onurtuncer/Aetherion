@@ -181,6 +181,23 @@ public:
     [[nodiscard]] const RigidBody::StateD&   state()      const noexcept { return m_state; }
     [[nodiscard]] const RocketStageModel&    stageModel() const noexcept { return m_stageModel; }
 
+    /// @brief Mutable accessor — used by callers (e.g. an FMU wrapper) that need
+    /// to mutate stage-model tuning (e.g. @c stg2IgnitionTime_s) or restore a
+    /// previously-saved fuel/staging checkpoint.
+    [[nodiscard]] RocketStageModel& stageModel() noexcept { return m_stageModel; }
+
+    /// @brief Directly overwrite the integration state and elapsed time.
+    ///
+    /// Used by an FMU wrapper's @c setFmuState to restore a checkpoint. Bypasses
+    /// the normal @c step() ZOH sequence entirely -- callers are responsible for
+    /// also restoring @c stageModel().fuelState() so that propulsion/inertia
+    /// queries remain consistent with @p x.
+    void setState(const RigidBody::StateD& x, double t) noexcept
+    {
+        m_state = x;
+        m_time  = t;
+    }
+
 private:
     void updateVectorField()
     {
