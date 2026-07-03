@@ -8,6 +8,11 @@ cmake_minimum_required(VERSION 3.26)
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" projectVersion)
 
+# version.txt may carry a leading "v"/"V" (e.g. "v0.11.3", matching the git tag
+# convention) -- project(VERSION ...) requires a plain numeric MAJOR.MINOR.PATCH,
+# so strip it before use.
+string(REGEX REPLACE "^[vV]" "" projectVersion "${projectVersion}")
+
 project(
   Aetherion
   VERSION ${projectVersion}
