@@ -59,147 +59,184 @@ static std::vector<double> parseDoubles(const std::string& text)
 // MathML node evaluator (templated, AD-safe)
 // =============================================================================
 
+template<class S> static S evalNode(const pugi::xml_node& node,
+                                    const std::unordered_map<std::string, S>& vars);
+
+// Reduce an AD-typed value to its plain-double value for branching decisions
+// (index selection, piecewise conditions, comparisons). Non-differentiable by
+// design — only the *value* being carried forward stays in S.
+template<class S>
+static double toDouble(const S& v)
+{
+    if constexpr (std::is_same_v<S, double>) return v;
+    else return CppAD::Value(CppAD::Var2Par(v));
+}
+
+// ── Arithmetic: times / plus / minus / divide / power ──────────────────────
+template<class S>
+static S evalArithmeticOp(const std::string& opName,
+                          const std::vector<pugi::xml_node>& operands,
+                          const std::unordered_map<std::string, S>& vars)
+{
+    if (opName == "times") {
+        S r = S(1.0);
+        for (auto& n : operands) r *= evalNode<S>(n, vars);
+        return r;
+    }
+    if (opName == "plus") {
+        S r = S(0.0);
+        for (auto& n : operands) r += evalNode<S>(n, vars);
+        return r;
+    }
+    if (opName == "minus" && operands.size() == 1)
+        return -evalNode<S>(operands[0], vars);
+    if (opName == "minus" && operands.size() == 2)
+        return evalNode<S>(operands[0], vars) - evalNode<S>(operands[1], vars);
+    if (opName == "divide" && operands.size() == 2)
+        return evalNode<S>(operands[0], vars) / evalNode<S>(operands[1], vars);
+    if (opName == "power" && operands.size() == 2) {
+        using std::pow;
+        return pow(evalNode<S>(operands[0], vars), evalNode<S>(operands[1], vars));
+    }
+    throw std::runtime_error(
+        "DAVEMLAeroModel MathML: unsupported operator <" + opName + ">");
+}
+
+// ── Unary math functions: abs / cos / sin / tan / sqrt ──────────────────────
+template<class S>
+static S evalUnaryMathOp(const std::string& opName,
+                         const std::vector<pugi::xml_node>& operands,
+                         const std::unordered_map<std::string, S>& vars)
+{
+    S x = evalNode<S>(operands[0], vars);
+    using std::abs; using std::cos; using std::sin; using std::tan; using std::sqrt;
+    if (opName == "abs")  return abs(x);
+    if (opName == "cos")  return cos(x);
+    if (opName == "sin")  return sin(x);
+    if (opName == "tan")  return tan(x);
+    return sqrt(x);  // opName == "sqrt"
+}
+
+static bool isUnaryMathOp(const std::string& opName)
+{
+    return opName == "abs" || opName == "cos" || opName == "sin"
+        || opName == "tan" || opName == "sqrt";
+}
+
+// ── csymbol — DAVE-ML named functions (e.g. atan2) ──────────────────────────
+// Syntax: <apply><csymbol ...>atan2</csymbol><ci>y</ci><ci>x</ci></apply>
+template<class S>
+static S evalCsymbolOp(const pugi::xml_node& op,
+                       const std::vector<pugi::xml_node>& operands,
+                       const std::unordered_map<std::string, S>& vars)
+{
+    const std::string fnName = trimWS(op.child_value());
+    if (fnName == "atan2" && operands.size() == 2) {
+        using std::atan2;
+        return atan2(evalNode<S>(operands[0], vars), evalNode<S>(operands[1], vars));
+    }
+    throw std::runtime_error(
+        "DAVEMLAeroModel MathML: unsupported csymbol '" + fnName + "'");
+}
+
+// ── Comparisons (return S(1) for true, S(0) for false) ──────────────────────
+// Used as piecewise conditions; branching itself is resolved in plain double.
+template<class S>
+static S evalComparisonOp(const std::string& opName,
+                          const std::vector<pugi::xml_node>& operands,
+                          const std::unordered_map<std::string, S>& vars)
+{
+    double lhsD = toDouble(evalNode<S>(operands[0], vars));
+    double rhsD = toDouble(evalNode<S>(operands[1], vars));
+    bool cond = false;
+    if      (opName == "lt")  cond = lhsD <  rhsD;
+    else if (opName == "gt")  cond = lhsD >  rhsD;
+    else if (opName == "leq") cond = lhsD <= rhsD;
+    else if (opName == "geq") cond = lhsD >= rhsD;
+    else                      cond = lhsD == rhsD;  // "eq"
+    return cond ? S(1.0) : S(0.0);
+}
+
+static bool isComparisonOp(const std::string& opName)
+{
+    return opName == "lt" || opName == "gt" || opName == "leq"
+        || opName == "geq" || opName == "eq";
+}
+
+template<class S>
+static S evalApplyNode(const pugi::xml_node& node,
+                       const std::unordered_map<std::string, S>& vars)
+{
+    auto op = node.first_child();
+    std::string opName = op.name();
+
+    // Collect operand subtrees (skip operator element)
+    std::vector<pugi::xml_node> operands;
+    for (auto c = op.next_sibling(); c; c = c.next_sibling())
+        operands.push_back(c);
+
+    if (opName == "times" || opName == "plus" || opName == "minus"
+        || opName == "divide" || opName == "power")
+        return evalArithmeticOp<S>(opName, operands, vars);
+
+    if (isUnaryMathOp(opName) && operands.size() == 1)
+        return evalUnaryMathOp<S>(opName, operands, vars);
+
+    if (opName == "csymbol")
+        return evalCsymbolOp<S>(op, operands, vars);
+
+    if (isComparisonOp(opName) && operands.size() == 2)
+        return evalComparisonOp<S>(opName, operands, vars);
+
+    // <apply><piecewise>...</piecewise></apply> — piecewise is the whole apply
+    if (opName == "piecewise")
+        return evalNode<S>(op, vars);
+
+    throw std::runtime_error(
+        "DAVEMLAeroModel MathML: unsupported operator <" + opName + ">");
+}
+
+template<class S>
+static S evalPiecewiseNode(const pugi::xml_node& node,
+                           const std::unordered_map<std::string, S>& vars)
+{
+    S result = S(0.0);
+    bool matched = false;
+    for (auto child = node.first_child(); child; child = child.next_sibling()) {
+        std::string cn = child.name();
+        if (cn == "piece") {
+            auto val  = child.first_child();            // expression
+            auto cond = val.next_sibling();              // condition
+            bool condTrue = toDouble(evalNode<S>(cond, vars)) != 0.0;
+            if (condTrue && !matched) {
+                result = evalNode<S>(val, vars);
+                matched = true;
+            }
+        } else if (cn == "otherwise" && !matched) {
+            result = evalNode<S>(child.first_child(), vars);
+            matched = true;
+        }
+    }
+    return result;
+}
+
 template<class S>
 static S evalNode(const pugi::xml_node& node,
                   const std::unordered_map<std::string, S>& vars)
 {
     std::string tag = node.name();
 
-    if (tag == "math")   return evalNode<S>(node.first_child(), vars);
-    if (tag == "cn")     return S(std::stod(node.child_value()));
+    if (tag == "math")      return evalNode<S>(node.first_child(), vars);
+    if (tag == "cn")        return S(std::stod(node.child_value()));
+    if (tag == "apply")     return evalApplyNode<S>(node, vars);
+    if (tag == "piecewise") return evalPiecewiseNode<S>(node, vars);
+
     if (tag == "ci") {
         const std::string id = trimWS(node.child_value());
         auto it = vars.find(id);
         if (it == vars.end())
             throw std::runtime_error("DAVEMLAeroModel MathML: unknown var '" + id + "'");
         return it->second;
-    }
-
-    if (tag == "apply") {
-        auto op = node.first_child();
-        std::string opName = op.name();
-
-        // Collect operand subtrees (skip operator element)
-        std::vector<pugi::xml_node> operandNodes;
-        for (auto c = op.next_sibling(); c; c = c.next_sibling())
-            operandNodes.push_back(c);
-
-        // ── Arithmetic ─────────────────────────────────────────────────────
-        if (opName == "times") {
-            S r = S(1.0);
-            for (auto& n : operandNodes) r *= evalNode<S>(n, vars);
-            return r;
-        }
-        if (opName == "plus") {
-            S r = S(0.0);
-            for (auto& n : operandNodes) r += evalNode<S>(n, vars);
-            return r;
-        }
-        if (opName == "minus") {
-            if (operandNodes.size() == 1) return -evalNode<S>(operandNodes[0], vars);
-            if (operandNodes.size() == 2)
-                return evalNode<S>(operandNodes[0], vars)
-                     - evalNode<S>(operandNodes[1], vars);
-        }
-        if (opName == "divide" && operandNodes.size() == 2)
-            return evalNode<S>(operandNodes[0], vars)
-                 / evalNode<S>(operandNodes[1], vars);
-        if (opName == "power" && operandNodes.size() == 2) {
-            using std::pow;
-            return pow(evalNode<S>(operandNodes[0], vars),
-                       evalNode<S>(operandNodes[1], vars));
-        }
-        // ── Unary abs ──────────────────────────────────────────────────────
-        if (opName == "abs" && operandNodes.size() == 1) {
-            using std::abs;
-            return abs(evalNode<S>(operandNodes[0], vars));
-        }
-        // ── Trigonometric / sqrt ────────────────────────────────────────────
-        if (opName == "cos" && operandNodes.size() == 1) {
-            using std::cos;
-            return cos(evalNode<S>(operandNodes[0], vars));
-        }
-        if (opName == "sin" && operandNodes.size() == 1) {
-            using std::sin;
-            return sin(evalNode<S>(operandNodes[0], vars));
-        }
-        if (opName == "tan" && operandNodes.size() == 1) {
-            using std::tan;
-            return tan(evalNode<S>(operandNodes[0], vars));
-        }
-        if (opName == "sqrt" && operandNodes.size() == 1) {
-            using std::sqrt;
-            return sqrt(evalNode<S>(operandNodes[0], vars));
-        }
-        // ── csymbol — DAVE-ML named functions (e.g. atan2) ─────────────────
-        // Syntax: <apply><csymbol ...>atan2</csymbol><ci>y</ci><ci>x</ci></apply>
-        if (opName == "csymbol") {
-            const std::string fnName = trimWS(op.child_value());
-            if (fnName == "atan2" && operandNodes.size() == 2) {
-                using std::atan2;
-                return atan2(evalNode<S>(operandNodes[0], vars),
-                             evalNode<S>(operandNodes[1], vars));
-            }
-            throw std::runtime_error(
-                "DAVEMLAeroModel MathML: unsupported csymbol '" + fnName + "'");
-        }
-        // ── Comparisons (return S(1) for true, S(0) for false) ─────────────
-        // Used as piecewise conditions; AD path uses CondExp.
-        if ((opName == "lt" || opName == "gt" ||
-             opName == "leq" || opName == "geq" || opName == "eq")
-            && operandNodes.size() == 2)
-        {
-            S lhs = evalNode<S>(operandNodes[0], vars);
-            S rhs = evalNode<S>(operandNodes[1], vars);
-            // Evaluate condition using double (AD-safe: only affects branching,
-            // not the value being differentiated).
-            double lhsD{}; double rhsD{};
-            if constexpr (std::is_same_v<S, double>) {
-                lhsD = lhs; rhsD = rhs;
-            } else {
-                lhsD = CppAD::Value(CppAD::Var2Par(lhs));
-                rhsD = CppAD::Value(CppAD::Var2Par(rhs));
-            }
-            bool cond = false;
-            if      (opName == "lt")  cond = lhsD <  rhsD;
-            else if (opName == "gt")  cond = lhsD >  rhsD;
-            else if (opName == "leq") cond = lhsD <= rhsD;
-            else if (opName == "geq") cond = lhsD >= rhsD;
-            else                      cond = lhsD == rhsD;
-            return cond ? S(1.0) : S(0.0);
-        }
-
-        // <apply><piecewise>...</piecewise></apply> — piecewise is the whole apply
-        if (opName == "piecewise")
-            return evalNode<S>(op, vars);
-
-        throw std::runtime_error(
-            "DAVEMLAeroModel MathML: unsupported operator <" + opName + ">");
-    }
-
-    // ── Piecewise ──────────────────────────────────────────────────────────
-    if (tag == "piecewise") {
-        S result = S(0.0);
-        bool matched = false;
-        for (auto child = node.first_child(); child; child = child.next_sibling()) {
-            std::string cn = child.name();
-            if (cn == "piece") {
-                auto val  = child.first_child();            // expression
-                auto cond = val.next_sibling();             // condition
-                S condVal = evalNode<S>(cond, vars);
-                double condD{};
-                if constexpr (std::is_same_v<S, double>) condD = condVal;
-                else condD = CppAD::Value(CppAD::Var2Par(condVal));
-                if (condD != 0.0 && !matched) {
-                    result = evalNode<S>(val, vars);
-                    matched = true;
-                }
-            } else if (cn == "otherwise" && !matched) {
-                result = evalNode<S>(child.first_child(), vars);
-                matched = true;
-            }
-        }
-        return result;
     }
 
     throw std::runtime_error(
@@ -265,55 +302,62 @@ static S ndInterp(const std::vector<double>& data,
 }
 
 // =============================================================================
-// DAVEMLAeroModel — construction
+// DAVEMLAeroModel — construction helpers
 // =============================================================================
 
-DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
+namespace {
+
+// Per-variable metadata collected while walking the DAVE-ML XML tree, prior
+// to topological sorting and EvalStep construction.
+struct VarInfo {
+    bool isInput{ false };
+    bool isConst{ false };
+    double constVal{ 0.0 };
+    std::string mathmlXml;   // non-empty if calculated
+    std::set<std::string> deps;
+    bool   hasMinMax{ false };
+    double minVal{ -std::numeric_limits<double>::infinity() };
+    double maxVal{  std::numeric_limits<double>::infinity() };
+};
+using VarInfoMap = std::unordered_map<std::string, VarInfo>;
+
+} // namespace
+
+// Top-level griddedTableDef by gtID (resolves <griddedTableRef gtID="...">).
+static std::unordered_map<std::string, pugi::xml_node>
+collectTopLevelTableDefs(const pugi::xml_document& doc)
 {
-    pugi::xml_document doc;
-    auto res = doc.load_file(path.c_str());
-    if (!res)
-        throw std::runtime_error(
-            "DAVEMLAeroModel: cannot open '" + path + "': " + res.description());
-
-    // ── Step 1a: parse top-level griddedTableDef by gtID (for griddedTableRef) ─
-    std::unordered_map<std::string, pugi::xml_node> topLevelTableDefs;
+    std::unordered_map<std::string, pugi::xml_node> defs;
     for (const auto& xn : doc.select_nodes("/DAVEfunc/griddedTableDef"))
-        topLevelTableDefs[xn.node().attribute("gtID").as_string()] = xn.node();
+        defs[xn.node().attribute("gtID").as_string()] = xn.node();
+    return defs;
+}
 
-    // ── Step 1b: parse breakpointDef ────────────────────────────────────────
+static void parseBreakpointDefs(
+    const pugi::xml_document& doc,
+    std::unordered_map<std::string, DAVEMLAeroModel::BpVec>& bps)
+{
     for (const auto& xn : doc.select_nodes("//breakpointDef")) {
         auto node = xn.node();
         std::string bpID = node.attribute("bpID").as_string();
         if (bpID.empty()) continue;
         auto bpVals = node.child("bpVals");
         if (bpVals)
-            m_bps[bpID] = parseDoubles(bpVals.child_value());
+            bps[bpID] = parseDoubles(bpVals.child_value());
     }
+}
 
-    // ── Step 2: collect variableDef entries and their deps ──────────────────
-    // We store: varID → {isInput, isConst, constVal, mathmlXml}
-    // We also build a dep graph: varID → set of varIDs it reads
+static void collectCiDeps(const pugi::xml_node& mathNode, std::set<std::string>& deps)
+{
+    for (const auto& ci : mathNode.select_nodes(".//ci"))
+        deps.insert(trimWS(ci.node().child_value()));
+}
 
-    struct VarInfo {
-        bool isInput{ false };
-        bool isConst{ false };
-        double constVal{ 0.0 };
-        std::string mathmlXml;   // non-empty if calculated
-        std::string tableOutputID;  // if this var is a function output
-        std::set<std::string> deps;
-        bool   hasMinMax{ false };
-        double minVal{ -std::numeric_limits<double>::infinity() };
-        double maxVal{  std::numeric_limits<double>::infinity() };
-    };
-    std::unordered_map<std::string, VarInfo> info;
-
-    auto collectCiDeps = [&](const pugi::xml_node& mathNode,
-                              std::set<std::string>& deps) {
-        for (const auto& ci : mathNode.select_nodes(".//ci"))
-            deps.insert(trimWS(ci.node().child_value()));
-    };
-
+// Collect variableDef entries (input/const/calculated) and their MathML
+// dependency graph; also captures the sref/cbar/bspan geometry constants.
+static void parseVariableDefs(const pugi::xml_document& doc, VarInfoMap& info,
+                              double& srefFt2, double& cbarFt, double& bspanFt)
+{
     for (const auto& xn : doc.select_nodes("//variableDef")) {
         auto node = xn.node();
         std::string varID = node.attribute("varID").as_string();
@@ -334,9 +378,9 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         }
 
         // Reference geometry constants
-        if (varID == "sref") m_srefFt2 = vi.constVal;
-        if (varID == "cbar") m_cbarFt  = vi.constVal;
-        if (varID == "bspan") m_bspanFt = vi.constVal;
+        if (varID == "sref")  srefFt2 = vi.constVal;
+        if (varID == "cbar")  cbarFt  = vi.constVal;
+        if (varID == "bspan") bspanFt = vi.constVal;
 
         auto calc = node.child("calculation");
         if (calc) {
@@ -348,17 +392,25 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         }
         info[varID] = std::move(vi);
     }
+}
 
-    // ── Step 3: parse function tables ──────────────────────────────────────
+// Parse <function>/<griddedTableDef> (inline or via <griddedTableRef>) into
+// gridded lookup tables, and register each table's output as a variableDef
+// depending on its input vars.
+static void parseFunctionTables(
+    const pugi::xml_document& doc,
+    const std::unordered_map<std::string, pugi::xml_node>& topLevelTableDefs,
+    const std::unordered_map<std::string, DAVEMLAeroModel::BpVec>& bps,
+    std::unordered_map<std::string, DAVEMLAeroModel::GridTable>& tables,
+    VarInfoMap& info)
+{
     for (const auto& xn : doc.select_nodes("//function")) {
         auto fnode = xn.node();
 
-        // Collect input var IDs and their order
         std::vector<std::string> inputVarIDs;
         for (const auto& ivr : fnode.select_nodes("independentVarRef"))
             inputVarIDs.emplace_back(ivr.node().attribute("varID").as_string());
 
-        // Dependent var ID = the output of this function
         auto dvr = fnode.child("dependentVarRef");
         if (!dvr) continue;
         std::string depVarID = dvr.attribute("varID").as_string();
@@ -366,7 +418,6 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
         // Gridded table definition — inline or referenced
         auto gdef = fnode.select_node(".//griddedTableDef").node();
         if (!gdef) {
-            // Try <griddedTableRef gtID="..."> → resolve from top-level defs
             auto ref = fnode.select_node(".//griddedTableRef").node();
             if (!ref) continue;
             auto it = topLevelTableDefs.find(ref.attribute("gtID").as_string());
@@ -374,7 +425,7 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
             gdef = it->second;
         }
 
-        GridTable gt;
+        DAVEMLAeroModel::GridTable gt;
         gt.inputVarIDs = inputVarIDs;
 
         for (const auto& bpref : gdef.select_nodes("breakpointRefs/bpRef"))
@@ -385,24 +436,24 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
 
         // Compute dims from breakpoints
         for (const auto& bpID : gt.bpIDs) {
-            auto it = m_bps.find(bpID);
-            if (it != m_bps.end())
-                gt.dims.push_back(it->second.size());
-            else
-                gt.dims.push_back(1);
+            auto it = bps.find(bpID);
+            gt.dims.push_back(it != bps.end() ? it->second.size() : 1);
         }
 
-        m_tables[depVarID] = std::move(gt);
+        tables[depVarID] = std::move(gt);
 
-        // Register this var in info if not already there
+        // Register this var in info if not already there, with deps on inputs
         if (!info.contains(depVarID)) info[depVarID] = {};
-        // Add dependencies on input vars
         for (const auto& iv : inputVarIDs)
             info[depVarID].deps.insert(iv);
     }
+}
 
-    // ── Step 4: topological sort (Kahn's algorithm) ─────────────────────────
-    // in-degree count
+// Topological sort of the variable dependency graph (Kahn's algorithm).
+// Any remaining nodes after a cycle or unreachable state are appended in
+// arbitrary order so construction never fails outright on malformed input.
+static std::vector<std::string> topoSortVars(const VarInfoMap& info)
+{
     std::unordered_map<std::string, int> inDeg;
     for (const auto& [id, vi] : info) {
         if (!inDeg.contains(id)) inDeg[id] = 0;
@@ -439,23 +490,57 @@ DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
     for (const auto& [id, vi] : info)
         if (inDeg.contains(id) && inDeg[id] > 0) sorted.push_back(id);
 
-    // ── Step 5: build evaluation steps ─────────────────────────────────────
+    return sorted;
+}
+
+// Build the topologically-sorted EvalStep list consumed by evaluate<S>().
+static std::vector<DAVEMLAeroModel::EvalStep> buildEvalSteps(
+    const std::vector<std::string>& sorted,
+    const VarInfoMap& info,
+    const std::unordered_map<std::string, DAVEMLAeroModel::GridTable>& tables)
+{
+    std::vector<DAVEMLAeroModel::EvalStep> steps;
+    steps.reserve(sorted.size());
     for (const auto& id : sorted) {
         auto it = info.find(id);
         if (it == info.end()) continue;
         const auto& vi = it->second;
-        EvalStep step;
+        DAVEMLAeroModel::EvalStep step;
         step.varID      = id;
         step.isInput    = vi.isInput;
         step.isConst    = vi.isConst;
         step.constVal   = vi.constVal;
-        step.isTable    = m_tables.contains(id);
+        step.isTable    = tables.contains(id);
         step.mathmlXml  = vi.mathmlXml;
         step.hasMinMax  = vi.hasMinMax;
         step.minVal     = vi.minVal;
         step.maxVal     = vi.maxVal;
-        m_steps.emplace_back(std::move(step));
+        steps.emplace_back(std::move(step));
     }
+    return steps;
+}
+
+// =============================================================================
+// DAVEMLAeroModel — construction
+// =============================================================================
+
+DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
+{
+    pugi::xml_document doc;
+    auto res = doc.load_file(path.c_str());
+    if (!res)
+        throw std::runtime_error(
+            "DAVEMLAeroModel: cannot open '" + path + "': " + res.description());
+
+    auto topLevelTableDefs = collectTopLevelTableDefs(doc);
+    parseBreakpointDefs(doc, m_bps);
+
+    VarInfoMap info;
+    parseVariableDefs(doc, info, m_srefFt2, m_cbarFt, m_bspanFt);
+    parseFunctionTables(doc, topLevelTableDefs, m_bps, m_tables, info);
+
+    auto sorted = topoSortVars(info);
+    m_steps = buildEvalSteps(sorted, info, m_tables);
 }
 
 // =============================================================================
