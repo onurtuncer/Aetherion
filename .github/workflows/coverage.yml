@@ -12,9 +12,11 @@ jobs:
     steps:
     - name: Checkout repo
       uses: actions/checkout@v4
+      with:
+        submodules: recursive
 
     - name: Install dependencies
-      run: sudo apt update && sudo apt install -y lcov gcovr gcc-13 g++-13
+      run: sudo apt update && sudo apt install -y lcov gcovr gcc-13 g++-13 libtbb-dev unzip
 
     - name: Configure compiler alternatives
       run: |

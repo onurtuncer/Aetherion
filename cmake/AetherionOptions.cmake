@@ -45,8 +45,8 @@ set(AETHERION_DOCS_HTML_DIR ""
 # FMU / fmu4cpp Integration
 # ==============================================================================
 
-option(AETHERION_BUILD_FMUS "Build the FMU targets under src/FMU (DraglessSphere, FeedThrough, \
-TabulatedSignal)" ON)
+option(AETHERION_BUILD_FMUS "Build the FMU targets under src/FMU (F16Plant, DraglessSphere). \
+The FeedThrough smoke-test FMU is built as part of AETHERION_BUILD_TESTS." ON)
 
 # Passed through to the fmu4cpp vendor subdirectory.
 option(FMU4CPP_BUILD_TESTS "Build fmu4cpp's own internal tests (vendored; should normally be OFF)" OFF)

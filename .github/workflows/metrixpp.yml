@@ -49,6 +49,21 @@ jobs:
           metrix++ limit --db-file=metrixpp.db \
             --max-limit=std.code.complexity:cyclomatic:20
 
+      - name: Generate HTML report and step summary
+        if: always()
+        env:
+          PAGES_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+        run: |
+          python scripts/metrixpp_report.py \
+            --db-file=metrixpp.db \
+            --output=metrixpp-report.html \
+            --markdown=/tmp/metrics-summary.md \
+            --commit="${GITHUB_SHA:0:7}" \
+            --repo-url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          cat /tmp/metrics-summary.md >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "> Full interactive report is published to [GitHub Pages](${PAGES_URL}/metrics/) on every push to \`main\`." >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload Metrix++ report
         if: always()
         uses: actions/upload-artifact@v4
@@ -57,3 +72,4 @@ jobs:
           path: |
             metrixpp.db
             metrixpp-report.txt
+            metrixpp-report.html
