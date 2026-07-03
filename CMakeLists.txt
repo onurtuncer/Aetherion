@@ -8,10 +8,14 @@ cmake_minimum_required(VERSION 3.26)
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" projectVersion)
 
-# version.txt may carry a leading "v"/"V" (e.g. "v0.11.3", matching the git tag
-# convention) -- project(VERSION ...) requires a plain numeric MAJOR.MINOR.PATCH,
-# so strip it before use.
-string(REGEX REPLACE "^[vV]" "" projectVersion "${projectVersion}")
+# version.txt may carry a leading "v"/"V" (e.g. "v0.11.3", matching the git tag convention) -- project(VERSION ...)
+# requires a plain numeric MAJOR.MINOR.PATCH, so strip it before use.
+string(
+  REGEX
+  REPLACE "^[vV]"
+          ""
+          projectVersion
+          "${projectVersion}")
 
 project(
   Aetherion
@@ -193,6 +197,11 @@ if(AETHERION_INSTALL)
     FILE AetherionTargets.cmake
     NAMESPACE Aetherion::
     DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion)
+
+  # ── Bundled MATLAB/Simulink assets ────────────────────────────────────────── Ships the co-simulation build script
+  # (matlab/build_f16_simulink.m) and any other matlab/ content so users can regenerate F16_Autopilot.slx locally with
+  # MATLAB + Simulink + FMI Kit; the .slx itself is a CI artifact and is not checked into the repo.
+  install(DIRECTORY matlab/ DESTINATION ${CMAKE_INSTALL_DATADIR}/Aetherion/matlab COMPONENT Runtime)
 
   # ── Bundled documentation ──────────────────────────────────────────────────── AETHERION_DOCS_HTML_DIR points at a
   # pre-built Sphinx HTML tree (the doc/ target is not built here -- it requires Doxygen/Sphinx and early-returns from
