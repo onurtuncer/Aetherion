@@ -12,6 +12,7 @@
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/RigidBody/State.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
+#include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
 
 #include <stdexcept>
 
@@ -136,6 +137,72 @@ TEST_CASE("ISimulator: snapshot time matches simulator time after a step", "[ISi
 }
 
 // ---------------------------------------------------------------------------
+// ISimulator — snapshot2() default conversion (Snapshot1 -> Snapshot2)
+//
+// DraglessSphereSimulator does not override snapshot2(), so calling it
+// exercises ISimulator's default field-by-field conversion.
+// ---------------------------------------------------------------------------
+
+TEST_CASE("ISimulator: snapshot2 time matches snapshot time", "[ISimulator][snapshot2]")
+{
+    DraglessSphereSimulator sim(makeIP(), makeState());
+    auto snap1 = sim.snapshot();
+    auto snap2 = sim.snapshot2();
+    REQUIRE(snap2.time == Catch::Approx(snap1.time));
+}
+
+TEST_CASE("ISimulator: snapshot2 copies the shared kinematic/atmospheric fields from snapshot", "[ISimulator][snapshot2]")
+{
+    DraglessSphereSimulator sim(makeIP(), makeState());
+    auto snap1 = sim.snapshot();
+    auto snap2 = sim.snapshot2();
+
+    REQUIRE(snap2.gePosition_m.x() == Catch::Approx(snap1.gePosition_m.x()));
+    REQUIRE(snap2.gePosition_m.y() == Catch::Approx(snap1.gePosition_m.y()));
+    REQUIRE(snap2.gePosition_m.z() == Catch::Approx(snap1.gePosition_m.z()));
+    REQUIRE(snap2.altitudeMsl_m == Catch::Approx(snap1.altitudeMsl_m));
+    REQUIRE(snap2.longitude_rad == Catch::Approx(snap1.longitude_rad));
+    REQUIRE(snap2.latitude_rad == Catch::Approx(snap1.latitude_rad));
+    REQUIRE(snap2.localGravity_m_s2 == Catch::Approx(snap1.localGravity_m_s2));
+    REQUIRE(snap2.eulerAngle_rad_Yaw == Catch::Approx(snap1.eulerAngle_rad_Yaw));
+    REQUIRE(snap2.eulerAngle_rad_Pitch == Catch::Approx(snap1.eulerAngle_rad_Pitch));
+    REQUIRE(snap2.eulerAngle_rad_Roll == Catch::Approx(snap1.eulerAngle_rad_Roll));
+    REQUIRE(snap2.speedOfSound_m_s == Catch::Approx(snap1.speedOfSound_m_s));
+    REQUIRE(snap2.airDensity_kg_m3 == Catch::Approx(snap1.airDensity_kg_m3));
+    REQUIRE(snap2.ambientPressure_Pa == Catch::Approx(snap1.ambientPressure_Pa));
+    REQUIRE(snap2.ambientTemperature_K == Catch::Approx(snap1.ambientTemperature_K));
+    REQUIRE(snap2.mach == Catch::Approx(snap1.mach));
+    REQUIRE(snap2.dynamicPressure_Pa == Catch::Approx(snap1.dynamicPressure_Pa));
+    REQUIRE(snap2.trueAirspeed_m_s == Catch::Approx(snap1.trueAirspeed_m_s));
+}
+
+TEST_CASE("ISimulator: snapshot2 copies zero aerodynamic fields for the dragless sphere", "[ISimulator][snapshot2]")
+{
+    // DraglessSphereSimulator::snapshot() uses the single-policy MakeSnapshot1
+    // overload, which leaves the aero fields at their zero default — the
+    // default snapshot2() conversion should carry those zeros through.
+    DraglessSphereSimulator sim(makeIP(), makeState());
+    auto snap2 = sim.snapshot2();
+    REQUIRE(snap2.aero_bodyForce_N_X == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap2.aero_bodyForce_N_Y == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap2.aero_bodyForce_N_Z == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap2.aero_bodyMoment_Nm_L == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap2.aero_bodyMoment_Nm_M == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap2.aero_bodyMoment_Nm_N == Catch::Approx(0.0).margin(1e-12));
+}
+
+TEST_CASE("ISimulator: snapshot2 time tracks simulator time after a step", "[ISimulator][snapshot2]")
+{
+    DraglessSphereSimulator sim(makeIP(), makeState());
+    const double h = 0.01;
+    auto res = sim.step(h);
+    if (res.converged) {
+        auto snap2 = sim.snapshot2();
+        REQUIRE(snap2.time == Catch::Approx(sim.time()).epsilon(1e-12));
+    }
+}
+
+// ---------------------------------------------------------------------------
 // MakeSnapshot1 — basic field correctness
 // ---------------------------------------------------------------------------
 
@@ -199,4 +266,61 @@ TEST_CASE("MakeSnapshot1: non-zero theta_gst rotates ECEF position", "[MakeSnaps
     auto snapT = Simulation::MakeSnapshot1(0.0, s, 0.5, gravity);
     // Longitude should differ when theta_gst differs (ECI→ECEF rotation changes).
     REQUIRE(snap0.longitude_rad != Catch::Approx(snapT.longitude_rad));
+}
+
+// ---------------------------------------------------------------------------
+// MakeSnapshot1 — two-policy overload (GravityPol + AeroPol)
+// ---------------------------------------------------------------------------
+
+TEST_CASE("MakeSnapshot1 (aero overload): zero aero policy gives zero aerodynamic fields", "[MakeSnapshot1]")
+{
+    auto s = makeState();
+    FlightDynamics::CentralGravityPolicy gravity{};
+    FlightDynamics::ZeroAeroPolicy aero{};
+    auto snap = Simulation::MakeSnapshot1(0.0, s, 0.0, gravity, aero);
+    REQUIRE(snap.aero_bodyForce_N_X == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap.aero_bodyForce_N_Y == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap.aero_bodyForce_N_Z == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap.aero_bodyMoment_Nm_L == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap.aero_bodyMoment_Nm_M == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap.aero_bodyMoment_Nm_N == Catch::Approx(0.0).margin(1e-12));
+}
+
+TEST_CASE("MakeSnapshot1 (aero overload): non-zero drag policy produces an opposing aerodynamic force", "[MakeSnapshot1]")
+{
+    auto s = makeState();
+    FlightDynamics::CentralGravityPolicy gravity{};
+    FlightDynamics::DragOnlyAeroPolicy aero{ 1.0, 1.0 }; // CD=1, S_ref=1 m^2
+    auto snap = Simulation::MakeSnapshot1(0.0, s, 0.0, gravity, aero);
+    // Drag opposes the body-frame velocity along the y-axis.
+    REQUIRE(snap.aero_bodyForce_N_Y < 0.0);
+}
+
+TEST_CASE("MakeSnapshot1 (aero overload): kinematic/atmospheric fields match the single-policy overload", "[MakeSnapshot1]")
+{
+    auto s = makeState();
+    FlightDynamics::J2GravityPolicy gravity{};
+    FlightDynamics::ZeroAeroPolicy aero{};
+
+    auto snapSingle = Simulation::MakeSnapshot1(3.0, s, 0.1, gravity);
+    auto snapAero    = Simulation::MakeSnapshot1(3.0, s, 0.1, gravity, aero);
+
+    REQUIRE(snapAero.time == Catch::Approx(snapSingle.time));
+    REQUIRE(snapAero.altitudeMsl_m == Catch::Approx(snapSingle.altitudeMsl_m).epsilon(1e-12));
+    REQUIRE(snapAero.localGravity_m_s2 == Catch::Approx(snapSingle.localGravity_m_s2).epsilon(1e-12));
+    REQUIRE(snapAero.mach == Catch::Approx(snapSingle.mach).epsilon(1e-12));
+}
+
+TEST_CASE("MakeSnapshot1 (aero overload): pitch moment reporting works without xcgFromAcM", "[MakeSnapshot1]")
+{
+    // DragOnlyAeroPolicy has no xcgFromAcM() member, exercising the
+    // `if constexpr` else-branch that reports the raw wrench pitch moment.
+    auto s = makeState();
+    FlightDynamics::CentralGravityPolicy gravity{};
+    FlightDynamics::BrickDampingAeroPolicy aero{ 0.5, 2.0, 1.0, 1.0, -0.1, -0.2, -0.1 };
+    auto snap = Simulation::MakeSnapshot1(0.0, s, 0.0, gravity, aero);
+    // Body angular rates are all zero in makeState(), so damping moments vanish.
+    REQUIRE(snap.aero_bodyMoment_Nm_L == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap.aero_bodyMoment_Nm_M == Catch::Approx(0.0).margin(1e-12));
+    REQUIRE(snap.aero_bodyMoment_Nm_N == Catch::Approx(0.0).margin(1e-12));
 }
