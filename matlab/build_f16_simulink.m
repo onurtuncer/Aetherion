@@ -41,7 +41,11 @@
 % ─────────────────────────────────────────────────────────────────────────────
 
 %% Paths
-repoRoot   = pwd;
+% MATLAB's run() temporarily cd's into this script's own folder while it
+% executes, so repoRoot must be derived from the script location rather
+% than pwd (which would resolve to .../matlab, not the repo root).
+scriptDir  = fileparts(mfilename('fullpath'));
+repoRoot   = fileparts(scriptDir);
 resultsDir = fullfile(repoRoot, 'matlab', 'results');
 if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
 
