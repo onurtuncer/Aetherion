@@ -47,8 +47,12 @@ namespace {
 
 const char* const kMinDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 <DAVEfunc>
-  <variableDef varID="x_pct"   units="pct" initialValue="50.0"/>
-  <variableDef varID="x_plain" units="nd"  initialValue="7.0"/>
+  <variableDef varID="x_pct"   units="pct"      initialValue="50.0"/>
+  <variableDef varID="x_plain" units="nd"        initialValue="7.0"/>
+  <variableDef varID="x_ft"    units="ft"        initialValue="10.0"/>
+  <variableDef varID="x_slug"  units="slug"      initialValue="2.0"/>
+  <variableDef varID="x_sft2"  units="slug*ft^2" initialValue="4.0"/>
+  <variableDef varID="x_sft2b" units="slug-ft2"  initialValue="5.0"/>
 </DAVEfunc>)";
 
 std::string writeMinDML()
@@ -116,7 +120,7 @@ TEST_CASE("DAVEMLReader: native values match Stevens & Lewis table", "[daveml][s
 // SI conversion
 // ─────────────────────────────────────────────────────────────────────────────
 
-TEST_CASE("DAVEMLReader: getValueSI converts slugft2 to kg·m²", "[daveml][smoke]")
+TEST_CASE("DAVEMLReader: getValueSI converts slugft2 to kgm2", "[daveml][smoke]")
 {
     if (kFile.empty()) return;
     DAVEMLReader r(kFile);
@@ -322,4 +326,94 @@ TEST_CASE("DAVEMLReader: getValueSI uses factor 1.0 for unrecognised unit", "[da
 
     // x_plain = 7.0, units="nd" (not recognised) → factor 1.0 → SI = 7.0
     CHECK_THAT(r.getValueSI("x_plain"), WithinAbs(7.0, 1e-12));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// evalMathML — missing operator coverage (times, binary minus, ci valid var)
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLReader: evalMathML times", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::filesystem::remove(path);
+
+    CHECK_THAT(r.evalMathML(
+        "<math><apply><times/><cn>3</cn><cn>7</cn></apply></math>"),
+        WithinAbs(21.0, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: evalMathML binary minus", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::filesystem::remove(path);
+
+    CHECK_THAT(r.evalMathML(
+        "<math><apply><minus/><cn>10</cn><cn>4</cn></apply></math>"),
+        WithinAbs(6.0, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: evalMathML ci references valid variable", "[daveml][evalMathML]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::filesystem::remove(path);
+
+    CHECK_THAT(r.evalMathML("<math><ci>x_plain</ci></math>"),
+        WithinAbs(7.0, 1e-12));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// getValueSI — unit-factor branches: ft, slug, slug*ft^2, slug-ft2
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLReader: getValueSI applies ft factor", "[daveml][units]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::filesystem::remove(path);
+
+    CHECK_THAT(r.getValueSI("x_ft"), WithinAbs(10.0 * kFt_to_m, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: getValueSI applies slug factor", "[daveml][units]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::filesystem::remove(path);
+
+    CHECK_THAT(r.getValueSI("x_slug"), WithinAbs(2.0 * kSlug_to_kg, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: getValueSI applies slug*ft^2 alias factor", "[daveml][units]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::filesystem::remove(path);
+
+    CHECK_THAT(r.getValueSI("x_sft2"), WithinAbs(4.0 * kSlugFt2_to_kgm2, 1e-12));
+}
+
+TEST_CASE("DAVEMLReader: getValueSI applies slug-ft2 alias factor", "[daveml][units]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::filesystem::remove(path);
+
+    CHECK_THAT(r.getValueSI("x_sft2b"), WithinAbs(5.0 * kSlugFt2_to_kgm2, 1e-12));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// setInput — no-op path when varID is not found
+// ─────────────────────────────────────────────────────────────────────────────
+
+TEST_CASE("DAVEMLReader: setInput with non-existent varID is a no-op", "[daveml]")
+{
+    const auto path = writeMinDML();
+    DAVEMLReader r(path);
+    std::filesystem::remove(path);
+
+    REQUIRE_NOTHROW(r.setInput("NONEXISTENT_VAR", 999.0));
+    CHECK_THAT(r.getValue("x_plain"), WithinAbs(7.0, 1e-12));
 }

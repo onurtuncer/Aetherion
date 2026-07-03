@@ -11,6 +11,7 @@
 [![Clang-Tidy](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_tidy.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_tidy.yml)
 [![Metrix++](https://github.com/onurtuncer/Aetherion/actions/workflows/metrixpp.yml/badge.svg)](https://onurtuncer.github.io/Aetherion/metrics/)
 [![Sanitizers](https://github.com/onurtuncer/Aetherion/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/sanitizers.yml)
+[![Simulink F16 Autopilot](https://github.com/onurtuncer/Aetherion/actions/workflows/simulink.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/simulink.yml)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://onurtuncer.github.io/Aetherion/)
 
 <p align="center">
@@ -168,7 +169,7 @@ notation for spatial transforms, keeping the frame algebra explicit and AD-frien
 | [Eigen](https://eigen.tuxfamily.org) | Linear algebra |
 | [CppAD](https://coin-or.github.io/CppAD/) | Algorithmic differentiation |
 | [fmu4cpp](https://github.com/markaren/fmu4cpp) | FMI/FMU export |
-| [ECOS](https://github.com/embotech/ecos) | Embedded conic solver (simulation) |
+| [ecos](https://github.com/Ecos-platform/ecos) | FMI co-simulation engine (FMU smoke testing) |
 | [Catch2 v3](https://github.com/catchorg/Catch2) | Unit testing |
 
 ---
