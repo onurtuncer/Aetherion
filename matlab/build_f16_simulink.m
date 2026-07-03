@@ -49,7 +49,17 @@ plantFmu  = fullfile(repoRoot, 'matlab', 'F16Plant.fmu');
 apFmu     = fullfile(repoRoot, 'matlab', 'F16Autopilot.fmu');
 
 %% FMI Kit setup
-addpath(genpath(fullfile(repoRoot, 'FMIKit-Simulink')));
+fmiKitDir = fullfile(repoRoot, 'FMIKit-Simulink');
+if ~isfolder(fullfile(fmiKitDir, '+FMIKit'))
+    entries = dir(repoRoot);
+    error('build_f16_simulink:FMIKitNotFound', ...
+        ['+FMIKit package not found at "%s".\nrepoRoot = %s\n' ...
+         'Contents of repoRoot: %s'], ...
+        fullfile(fmiKitDir, '+FMIKit'), repoRoot, ...
+        strjoin({entries.name}, ', '));
+end
+addpath(fmiKitDir);
+rehash toolboxcache;
 FMIKit.initialize();
 
 %% Trim-point commands (match F16_control.dml design point / F16PlantFMU defaults)
