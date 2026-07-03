@@ -7,9 +7,12 @@
 add_executable(
   test_simulation
   test_Snapshot1.cpp
+  test_Snapshot2.cpp
   test_Config.cpp
   test_Application.cpp
-  test_ISimulator.cpp)
+  test_ISimulator.cpp
+  test_MakeSnapshot2.cpp
+  test_SnapshotTraits.cpp)
 
 target_link_libraries(
   test_simulation
