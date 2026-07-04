@@ -79,10 +79,19 @@ jobs:
         shell: pwsh
         run: Set-Content -Path java.opts -Value '-Djava.awt.headless=false' -Encoding ascii
 
+      # matlab-actions/run-command always starts MATLAB with -batch, which does
+      # not read java.opts (needed to keep FMIKit's block-configuration dialogs
+      # from throwing java.awt.HeadlessException) and cannot be overridden via
+      # that action's inputs. Invoke MATLAB directly in -r mode instead, which
+      # does read startup files.
       - name: Build F16 Autopilot model and simulate
-        uses: matlab-actions/run-command@v2
-        with:
-          command: run('matlab/build_f16_simulink.m')
+        shell: pwsh
+        run: |
+          $mScript = "try; run('matlab/build_f16_simulink.m'); catch e; disp(getReport(e)); exit(1); end; exit(0);"
+          matlab -nosplash -nodesktop -wait -logfile matlab_build.log -r $mScript
+          $exitCode = $LASTEXITCODE
+          if (Test-Path matlab_build.log) { Get-Content matlab_build.log }
+          if ($exitCode -ne 0) { throw "MATLAB build/simulate failed with exit code $exitCode" }
 
       - name: Upload Simulink model and results
         if: always()
