@@ -80,12 +80,12 @@ static S evalArithmeticOp(const std::string& opName,
 {
     if (opName == "times") {
         S r = S(1.0);
-        for (auto& n : operands) r *= evalNode<S>(n, vars);
+        for (const auto& n : operands) r *= evalNode<S>(n, vars);
         return r;
     }
     if (opName == "plus") {
         S r = S(0.0);
-        for (auto& n : operands) r += evalNode<S>(n, vars);
+        for (const auto& n : operands) r += evalNode<S>(n, vars);
         return r;
     }
     if (opName == "minus" && operands.size() == 1)
@@ -469,7 +469,7 @@ static std::vector<std::string> topoSortVars(const VarInfoMap& info)
         }
     }
     // Count real in-degrees
-    for (auto& [id, vi] : info) inDeg[id] = 0;
+    for (const auto& [id, vi] : info) inDeg[id] = 0;
     for (const auto& [id, vi] : info)
         for (const auto& dep : vi.deps)
             if (info.contains(dep)) inDeg[id]++;
