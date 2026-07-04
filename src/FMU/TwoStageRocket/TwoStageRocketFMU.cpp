@@ -525,6 +525,8 @@ private:
     // Sync the simulator's integration + fuel state → POD fields in state_.
     void packState()
     {
+        if (!m_sim.has_value()) return;
+
         const auto& x    = m_sim->state();
         const auto& fuel = m_sim->stageModel().fuelState();
 
@@ -577,6 +579,8 @@ private:
     //              taken (ZOH), captured before the sim's internal state advanced.
     void populateOutputCache(const AE_RKT::RocketPropulsionResult& prop)
     {
+        if (!m_sim.has_value()) return;
+
         const auto snap  = m_sim->snapshot2();
         const auto& fuel = m_sim->stageModel().fuelState();
 
