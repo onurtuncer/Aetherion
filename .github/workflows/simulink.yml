@@ -75,6 +75,10 @@ jobs:
           release: R2023a
           products: Simulink
 
+      - name: Allow Java AWT (FMIKit's block dialogs need non-headless Swing)
+        shell: pwsh
+        run: Set-Content -Path java.opts -Value '-Djava.awt.headless=false' -Encoding ascii
+
       - name: Build F16 Autopilot model and simulate
         uses: matlab-actions/run-command@v2
         with:
