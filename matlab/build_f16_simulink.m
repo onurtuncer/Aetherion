@@ -92,13 +92,13 @@ p = @(x,y,w,h) [x, y, x+w, y+h];  % position helper
 
 % ── F16Plant FMU block (Simulink built-in FMU import) ───────────────────────
 PLANT = [MDL '/F16Plant'];
-add_block('simulink/User-Defined Functions/FMU', PLANT, 'Position', p(480, 80, 160, 360));
+addFMUBlock(PLANT, p(480, 80, 160, 360));
 set_param(PLANT, 'FMUName', plantFmu);
 setParamIfPresent(PLANT, 'CommunicationStepSize', CS_STEP);
 
 % ── F16Autopilot FMU block ──────────────────────────────────────────────────
 AP = [MDL '/F16Autopilot'];
-add_block('simulink/User-Defined Functions/FMU', AP, 'Position', p(130, 80, 160, 310));
+addFMUBlock(AP, p(130, 80, 160, 310));
 set_param(AP, 'FMUName', apFmu);
 setParamIfPresent(AP, 'CommunicationStepSize', CS_STEP);
 
@@ -221,6 +221,28 @@ assert(abs(final_hdg - HDG_CMD_DEG) < 10, ...
 fprintf('All CI assertions passed.\n');
 
 %% Local functions
+function addFMUBlock(dst, pos)
+% Add Simulink's built-in FMU import block.  add_block needs the source
+% library path (not the Library Browser path), which has moved between
+% releases, so try the known candidates.  The source library must be
+% loaded before add_block can copy from it.
+candidates = {'fmulib/FMU', 'simulink/User-Defined Functions/FMU'};
+for c = candidates
+    libName = strtok(c{1}, '/');
+    try %#ok<TRYNC>
+        load_system(libName);
+    end
+    try
+        add_block(c{1}, dst, 'Position', pos);
+        return
+    catch err
+        fprintf('add_block(''%s'') failed: %s\n', c{1}, err.message);
+    end
+end
+error('build_f16_simulink:noFMUBlock', ...
+    'Could not find the built-in FMU block in any known library.');
+end
+
 function setParamIfPresent(blk, name, value)
 % Set a block dialog parameter only if the block exposes it.  The FMU
 % block's parameter set varies with FMU kind (CS vs ME) and release, so
