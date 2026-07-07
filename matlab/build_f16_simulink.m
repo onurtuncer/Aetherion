@@ -222,25 +222,51 @@ fprintf('All CI assertions passed.\n');
 
 %% Local functions
 function addFMUBlock(dst, pos)
-% Add Simulink's built-in FMU import block.  add_block needs the source
-% library path (not the Library Browser path), which has moved between
-% releases, so try the known candidates.  The source library must be
-% loaded before add_block can copy from it.
-candidates = {'fmulib/FMU', 'simulink/User-Defined Functions/FMU'};
-for c = candidates
-    libName = strtok(c{1}, '/');
+% Add Simulink's built-in FMU import block.  The block's source-library
+% path is release-dependent and its display name may contain newlines,
+% so discover it by listing candidate libraries instead of hard-coding.
+persistent srcBlk
+if isempty(srcBlk)
+    srcBlk = findFMULibraryBlock();
+    fprintf('Using FMU library block: "%s"\n', strrep(srcBlk, newline, '\n'));
+end
+add_block(srcBlk, dst, 'Position', pos);
+end
+
+function blkPath = findFMULibraryBlock()
+roots = {};
+try %#ok<TRYNC>
+    load_system('simulink');
+    roots{end+1} = 'simulink/User-Defined Functions';
+end
+for lib = {'fmulib', 'slfmulib'}
     try %#ok<TRYNC>
-        load_system(libName);
-    end
-    try
-        add_block(c{1}, dst, 'Position', pos);
-        return
-    catch err
-        fprintf('add_block(''%s'') failed: %s\n', c{1}, err.message);
+        load_system(lib{1});
+        roots{end+1} = lib{1}; %#ok<AGROW>
     end
 end
-error('build_f16_simulink:noFMUBlock', ...
-    'Could not find the built-in FMU block in any known library.');
+hits = {};
+for i = 1:numel(roots)
+    try
+        blks = find_system(roots{i}, 'SearchDepth', 1);
+    catch err
+        fprintf('find_system("%s") failed: %s\n', roots{i}, err.message);
+        continue
+    end
+    blks = setdiff(blks, roots(i));  % drop the root itself
+    fprintf('Blocks under "%s":\n', roots{i});
+    for j = 1:numel(blks)
+        fprintf('  "%s"\n', strrep(blks{j}, newline, '\n'));
+    end
+    hits = [hits; blks(contains(blks, 'FMU'))]; %#ok<AGROW>
+end
+if isempty(hits)
+    error('build_f16_simulink:noFMUBlock', ...
+        'No block containing "FMU" found in: %s', strjoin(roots, ', '));
+end
+% Prefer the shortest match (plain "FMU" over "FMU Multirate" etc.)
+[~, idx] = min(cellfun(@numel, hits));
+blkPath = hits{idx};
 end
 
 function setParamIfPresent(blk, name, value)
