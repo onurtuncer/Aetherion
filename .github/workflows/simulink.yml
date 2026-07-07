@@ -4,13 +4,14 @@ on:
   workflow_run:
     workflows: ["Windows Build"]
     types: [completed]
+  workflow_dispatch:
 
 jobs:
   # ── Job 1: build both FMUs (Windows/MSVC, same toolchain as windows.yml) ──
   build-fmus:
     name: Build F16 FMUs
     runs-on: windows-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout repository (with submodules)
@@ -58,40 +59,21 @@ jobs:
           name: f16-fmus
           path: matlab
 
-      - name: Download FMI Kit for Simulink
-        shell: pwsh
-        run: |
-          $release = Invoke-RestMethod 'https://api.github.com/repos/CATIA-Systems/FMIKit-Simulink/releases/latest'
-          $asset = $release.assets | Where-Object { $_.name -like '*.zip' } | Select-Object -First 1
-          if (-not $asset) { throw 'No zip asset found in latest FMI Kit release.' }
-          $ProgressPreference = 'SilentlyContinue'
-          Invoke-WebRequest -Uri $asset.browser_download_url -OutFile FMIKit.zip
-          Expand-Archive -Path FMIKit.zip -DestinationPath FMIKit-Simulink -Force
-          Write-Host "FMI Kit downloaded: $($asset.name)"
-
       - name: Set up MATLAB with Simulink
         uses: matlab-actions/setup-matlab@v2
         with:
           release: R2023a
           products: Simulink
 
-      - name: Allow Java AWT (FMIKit's block dialogs need non-headless Swing)
-        shell: pwsh
-        run: Set-Content -Path java.opts -Value '-Djava.awt.headless=false' -Encoding ascii
-
-      # matlab-actions/run-command always starts MATLAB with -batch, which does
-      # not read java.opts (needed to keep FMIKit's block-configuration dialogs
-      # from throwing java.awt.HeadlessException) and cannot be overridden via
-      # that action's inputs. Invoke MATLAB directly in -r mode instead, which
-      # does read startup files.
+      # The model is built with Simulink's native FMU block (no FMIKit), so
+      # the headless matlab-batch session used by run-command is fine. Do NOT
+      # invoke `matlab` directly here: on GitHub-hosted runners the MATLAB
+      # from setup-matlab is only licensed through the matlab-actions run
+      # actions — a direct launch fails activation and exits immediately.
       - name: Build F16 Autopilot model and simulate
-        shell: pwsh
-        run: |
-          $mScript = "try; run('matlab/build_f16_simulink.m'); catch e; disp(getReport(e)); exit(1); end; exit(0);"
-          matlab -nosplash -nodesktop -wait -logfile matlab_build.log -r $mScript
-          $exitCode = $LASTEXITCODE
-          if (Test-Path matlab_build.log) { Get-Content matlab_build.log }
-          if ($exitCode -ne 0) { throw "MATLAB build/simulate failed with exit code $exitCode" }
+        uses: matlab-actions/run-command@v2
+        with:
+          command: run('matlab/build_f16_simulink.m')
 
       - name: Upload Simulink model and results
         if: always()

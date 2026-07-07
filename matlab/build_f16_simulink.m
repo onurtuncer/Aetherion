@@ -15,10 +15,15 @@
 % inputs.  A 30 s trim-hold simulation is run and CI assertions verify that
 % altitude, airspeed and heading remain bounded near the design trim point.
 %
+% FMUs are imported with Simulink's built-in FMU block (R2017b+), which is
+% fully scriptable and has no Java/AWT dependency, so it works under the
+% headless matlab-batch session used by matlab-actions/run-command on CI.
+% (FMIKit was abandoned: its loadFMU path constructs a Swing dialog and
+% throws java.awt.HeadlessException in batch mode.)
+%
 % Environment (set up by simulink.yml):
-%   FMIKit-Simulink/            — FMI Kit (CATIA-Systems), repo root
-%   matlab/F16Plant.fmu         — plant FMU artifact from build-fmu job
-%   matlab/F16Autopilot.fmu     — autopilot FMU artifact from build-fmu job
+%   matlab/F16Plant/F16Plant.fmu         — plant FMU artifact from build-fmu job
+%   matlab/F16Autopilot/F16Autopilot.fmu — autopilot FMU artifact from build-fmu job
 %
 % ─────────────────────────────────────────────────────────────────────────────
 % F16Plant FMU output port map (registration order in F16PlantFMU.cpp):
@@ -49,22 +54,21 @@ repoRoot   = fileparts(scriptDir);
 resultsDir = fullfile(repoRoot, 'matlab', 'results');
 if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
 
-plantFmu  = fullfile(repoRoot, 'matlab', 'F16Plant.fmu');
-apFmu     = fullfile(repoRoot, 'matlab', 'F16Autopilot.fmu');
+% The f16-fmus artifact preserves the FMUs' build-tree subfolders, so after
+% download-artifact (path: matlab) they land in matlab/<name>/<name>.fmu.
+plantFmu  = fullfile(repoRoot, 'matlab', 'F16Plant', 'F16Plant.fmu');
+apFmu     = fullfile(repoRoot, 'matlab', 'F16Autopilot', 'F16Autopilot.fmu');
 
-%% FMI Kit setup
-fmiKitDir = fullfile(repoRoot, 'FMIKit-Simulink');
-if ~isfolder(fullfile(fmiKitDir, '+FMIKit'))
-    entries = dir(repoRoot);
-    error('build_f16_simulink:FMIKitNotFound', ...
-        ['+FMIKit package not found at "%s".\nrepoRoot = %s\n' ...
-         'Contents of repoRoot: %s'], ...
-        fullfile(fmiKitDir, '+FMIKit'), repoRoot, ...
-        strjoin({entries.name}, ', '));
+for f = {plantFmu, apFmu}
+    if ~isfile(f{1})
+        error('build_f16_simulink:FMUNotFound', 'FMU not found: %s', f{1});
+    end
 end
-addpath(fmiKitDir);
-rehash toolboxcache;
-FMIKit.initialize();
+
+% Communication step size for the co-simulation master (both FMUs are
+% FMI 2.0 CS).  1 ms keeps the plant/autopilot coupling tight enough for
+% the LQR inner loop while remaining cheap (30 k steps for the 30 s run).
+CS_STEP = '0.001';
 
 %% Trim-point commands (match F16_control.dml design point / F16PlantFMU defaults)
 ALT_CMD_FT   = 10013.0;    % ft  (≈ 3051.6 m)
@@ -86,15 +90,17 @@ set_param(MDL, 'Solver','ode45', 'StopTime','30', 'RelTol','1e-4', 'AbsTol','1e-
 
 p = @(x,y,w,h) [x, y, x+w, y+h];  % position helper
 
-% ── F16Plant FMU block ──────────────────────────────────────────────────────
+% ── F16Plant FMU block (Simulink built-in FMU import) ───────────────────────
 PLANT = [MDL '/F16Plant'];
-add_block('FMIKit_blocks/FMU', PLANT, 'Position', p(480, 80, 160, 360));
-FMIKit.loadFMU(PLANT, plantFmu);
+add_block('simulink/User-Defined Functions/FMU', PLANT, 'Position', p(480, 80, 160, 360));
+set_param(PLANT, 'FMUName', plantFmu);
+setParamIfPresent(PLANT, 'CommunicationStepSize', CS_STEP);
 
 % ── F16Autopilot FMU block ──────────────────────────────────────────────────
 AP = [MDL '/F16Autopilot'];
-add_block('FMIKit_blocks/FMU', AP, 'Position', p(130, 80, 160, 310));
-FMIKit.loadFMU(AP, apFmu);
+add_block('simulink/User-Defined Functions/FMU', AP, 'Position', p(130, 80, 160, 310));
+set_param(AP, 'FMUName', apFmu);
+setParamIfPresent(AP, 'CommunicationStepSize', CS_STEP);
 
 % ── Autopilot command constants ─────────────────────────────────────────────
 add_block('simulink/Sources/Constant', [MDL '/AltCmd'], ...
@@ -213,3 +219,16 @@ assert(abs(final_hdg - HDG_CMD_DEG) < 10, ...
     'Heading hold failed: error = %.2f deg (limit 10 deg)', final_hdg - HDG_CMD_DEG);
 
 fprintf('All CI assertions passed.\n');
+
+%% Local functions
+function setParamIfPresent(blk, name, value)
+% Set a block dialog parameter only if the block exposes it.  The FMU
+% block's parameter set varies with FMU kind (CS vs ME) and release, so
+% avoid hard-coding assumptions that would error on other configurations.
+if isfield(get_param(blk, 'DialogParameters'), name)
+    set_param(blk, name, value);
+else
+    warning('build_f16_simulink:noParam', ...
+        'Block "%s" has no "%s" parameter; leaving default.', blk, name);
+end
+end
