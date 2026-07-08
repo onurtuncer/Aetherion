@@ -234,12 +234,29 @@ add_block(srcBlk, dst, 'Position', pos);
 end
 
 function blkPath = findFMULibraryBlock()
+% Simulink's built-in FMU import block ships in the "Simulink Extras"
+% library (Simulink/Ports & Subsystems > FMU Import in the Library
+% Browser), not under "User-Defined Functions" and not in the standalone
+% FMIKit libraries "fmulib"/"slfmulib".  Try the known path first, since
+% it is stable across releases (introduced R2017b), then fall back to a
+% recursive search in case a future release moves it.
+knownPath = 'simulink_extras/FMU Import/FMU';
+try
+    load_system('simulink_extras');
+    if getSimulinkBlockHandle(knownPath, true, false) ~= -1
+        blkPath = knownPath;
+        return
+    end
+catch err
+    fprintf('Known FMU block path check failed: %s\n', err.message);
+end
+
 roots = {};
 try %#ok<TRYNC>
     load_system('simulink');
     roots{end+1} = 'simulink/User-Defined Functions';
 end
-for lib = {'fmulib', 'slfmulib'}
+for lib = {'simulink_extras', 'fmulib', 'slfmulib'}
     try %#ok<TRYNC>
         load_system(lib{1});
         roots{end+1} = lib{1}; %#ok<AGROW>
@@ -248,7 +265,7 @@ end
 hits = {};
 for i = 1:numel(roots)
     try
-        blks = find_system(roots{i}, 'SearchDepth', 1);
+        blks = find_system(roots{i}, 'SearchDepth', 2);
     catch err
         fprintf('find_system("%s") failed: %s\n', roots{i}, err.message);
         continue
@@ -258,7 +275,11 @@ for i = 1:numel(roots)
     for j = 1:numel(blks)
         fprintf('  "%s"\n', strrep(blks{j}, newline, '\n'));
     end
-    hits = [hits; blks(contains(blks, 'FMU'))]; %#ok<AGROW>
+    % Only keep leaf blocks (not sub-libraries) so we don't try to
+    % add_block() a container like "simulink_extras/FMU Import".
+    isLeaf = cellfun(@(b) ~strcmp(get_param(b, 'BlockType'), 'SubSystem') ...
+        || strcmp(get_param(b, 'Mask'), 'on'), blks);
+    hits = [hits; blks(isLeaf & contains(blks, 'FMU'))]; %#ok<AGROW>
 end
 if isempty(hits)
     error('build_f16_simulink:noFMUBlock', ...
