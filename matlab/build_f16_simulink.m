@@ -98,16 +98,26 @@ set_param(MDL, 'Solver','ode45', 'StopTime','30', 'RelTol','1e-4', 'AbsTol','1e-
 p = @(x,y,w,h) [x, y, x+w, y+h];  % position helper
 
 % ── F16Plant FMU block (Simulink built-in FMU import) ───────────────────────
+% FMUInputMapping/FMUOutputMapping default to grouping all FMU variables
+% into a single bus port ("Inherit"/"Structured"); "Flat" gives one
+% signal port per variable, matching the port-index wiring below.
 PLANT = [MDL '/F16Plant'];
 addFMUBlock(PLANT, p(480, 80, 160, 360));
 set_param(PLANT, 'FMUName', plantFmu);
+setParamIfPresent(PLANT, 'FMUInputMapping', 'Flat');
+setParamIfPresent(PLANT, 'FMUOutputMapping', 'Flat');
 setParamIfPresent(PLANT, 'CommunicationStepSize', CS_STEP);
 
 % ── F16Autopilot FMU block ──────────────────────────────────────────────────
 AP = [MDL '/F16Autopilot'];
 addFMUBlock(AP, p(130, 80, 160, 310));
 set_param(AP, 'FMUName', apFmu);
+setParamIfPresent(AP, 'FMUInputMapping', 'Flat');
+setParamIfPresent(AP, 'FMUOutputMapping', 'Flat');
 setParamIfPresent(AP, 'CommunicationStepSize', CS_STEP);
+
+fprintf('F16Plant ports [in out]: %s\n', mat2str(get_param(PLANT, 'Ports')));
+fprintf('F16Autopilot ports [in out]: %s\n', mat2str(get_param(AP, 'Ports')));
 
 % ── Autopilot command constants ─────────────────────────────────────────────
 add_block('simulink/Sources/Constant', [MDL '/AltCmd'], ...
