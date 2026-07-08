@@ -308,13 +308,16 @@ blkPath = hits{idx};
 end
 
 function setParamIfPresent(blk, name, value)
-% Set a block dialog parameter only if the block exposes it.  The FMU
-% block's parameter set varies with FMU kind (CS vs ME) and release, so
-% avoid hard-coding assumptions that would error on other configurations.
-if isfield(get_param(blk, 'DialogParameters'), name)
+% Set a block parameter only if the block exposes it.  The FMU block's
+% parameter set varies with FMU kind (CS vs ME) and release, so avoid
+% hard-coding assumptions that would error on other configurations.
+% NOTE: these are mask parameters, not core DialogParameters, so
+% isfield(get_param(blk,'DialogParameters'), name) always reports false
+% for them even when set_param would succeed -- attempt-and-catch instead.
+try
     set_param(blk, name, value);
-else
+catch err
     warning('build_f16_simulink:noParam', ...
-        'Block "%s" has no "%s" parameter; leaving default.', blk, name);
+        'Could not set "%s" on block "%s": %s', name, blk, err.message);
 end
 end
