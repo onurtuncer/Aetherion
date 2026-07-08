@@ -11,7 +11,7 @@
 [![Clang-Tidy](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_tidy.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_tidy.yml)
 [![Metrix++](https://github.com/onurtuncer/Aetherion/actions/workflows/metrixpp.yml/badge.svg)](https://onurtuncer.github.io/Aetherion/metrics/)
 [![Sanitizers](https://github.com/onurtuncer/Aetherion/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/sanitizers.yml)
-[![Simulink F16 Autopilot](https://github.com/onurtuncer/Aetherion/actions/workflows/simulink.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/simulink.yml)
+[![Simulink](https://github.com/onurtuncer/Aetherion/actions/workflows/simulink.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/simulink.yml)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://onurtuncer.github.io/Aetherion/)
 
 <p align="center">
@@ -134,22 +134,22 @@ notation for spatial transforms, keeping the frame algebra explicit and AD-frien
 
 | Example | Vehicle | Reference |
 |---------|---------|-----------|
-| `TwoStageRocket` | Two-stage launch vehicle | NASA TM-2015-218675 Scenario 17 |
-| `F16SteadyFlight` | F-16 at trim | NASA TN D-8532 Section 13.1 |
-| `F16AirspeedChange` | F-16 speed step | NASA TN D-8532 Section 13.2 |
-| `F16AltitudeChange` | F-16 altitude step | NASA TN D-8532 Section 13.3 |
-| `F16HeadingChange` | F-16 heading change | NASA TN D-8532 Section 13.4 |
-| `F16LateralSideStep` | F-16 lateral manoeuvre | NASA TN D-8532 Appendix |
-| `F16SupersonicTrim` | F-16 supersonic trim | NASA TN D-8532 |
-| `EastwardCannonball` | Point mass projectile | Analytic (Coriolis) |
-| `NorthwardCannonball` | Point mass projectile | Analytic (Coriolis) |
-| `SphereWithAtmosphericDrag` | Sphere + drag | Analytical reference |
-| `DroppedSphereSteadyWind` | Sphere in steady crosswind | Analytical reference |
-| `DroppedSphere2DWindShear` | Sphere in wind-shear field | Analytical reference |
-| `TumblingBrickNoDamping` | Free tumbling rigid body | Angular momentum conservation |
-| `TumblingBrickWithDamping` | Damped tumbling body | Energy dissipation |
-| `CircleEquatorDateLine` | Orbital-like equatorial loop | Geometric consistency |
-| `CircleNorthPole` | Polar orbital loop | Geometric consistency |
+| [`TwoStageRocket`](src/Examples/TwoStageRocket/TwoStageRocket.cpp) | Two-stage launch vehicle | NASA TM-2015-218675 Scenario 17 |
+| [`F16SteadyFlight`](src/Examples/F16SteadyFlight/F16SteadyFlight.cpp) | F-16 at trim | NASA TN D-8532 Section 13.1 |
+| [`F16AirspeedChange`](src/Examples/F16AirspeedChange/F16AirspeedChange.cpp) | F-16 speed step | NASA TN D-8532 Section 13.2 |
+| [`F16AltitudeChange`](src/Examples/F16AltitudeChange/F16AltitudeChange.cpp) | F-16 altitude step | NASA TN D-8532 Section 13.3 |
+| [`F16HeadingChange`](src/Examples/F16HeadingChange/F16HeadingChange.cpp) | F-16 heading change | NASA TN D-8532 Section 13.4 |
+| [`F16LateralSideStep`](src/Examples/F16LateralSideStep/F16LateralSideStep.cpp) | F-16 lateral manoeuvre | NASA TN D-8532 Appendix |
+| [`F16SupersonicTrim`](src/Examples/F16SupersonicTrim/F16SupersonicTrim.cpp) | F-16 supersonic trim | NASA TN D-8532 |
+| [`EastwardCannonball`](src/Examples/EastwardCannonball/EastwardCannonball.cpp) | Point mass projectile | Analytic (Coriolis) |
+| [`NorthwardCannonball`](src/Examples/NorthwardCannonball/NorthwardCannonball.cpp) | Point mass projectile | Analytic (Coriolis) |
+| [`SphereWithAtmosphericDrag`](src/Examples/SphereWithAtmosphericDrag/SphereWithAtmosphericDrag.cpp) | Sphere + drag | Analytical reference |
+| [`DroppedSphereSteadyWind`](src/Examples/DroppedSphereSteadyWind/DroppedSphereSteadyWind.cpp) | Sphere in steady crosswind | Analytical reference |
+| [`DroppedSphere2DWindShear`](src/Examples/DroppedSphere2DWindShear/DroppedSphere2DWindShear.cpp) | Sphere in wind-shear field | Analytical reference |
+| [`TumblingBrickNoDamping`](src/Examples/TumblingBrickNoDamping/TumblingBrickNoDamping.cpp) | Free tumbling rigid body | Angular momentum conservation |
+| [`TumblingBrickWithDamping`](src/Examples/TumblingBrickWithDamping/TumblingBrickWithDamping.cpp) | Damped tumbling body | Energy dissipation |
+| [`CircleEquatorDateLine`](src/Examples/CircleEquatorDateLine/CircleEquatorDateLine.cpp) | Orbital-like equatorial loop | Geometric consistency |
+| [`CircleNorthPole`](src/Examples/CircleNorthPole/CircleNorthPole.cpp) | Polar orbital loop | Geometric consistency |
 
 ---
 
