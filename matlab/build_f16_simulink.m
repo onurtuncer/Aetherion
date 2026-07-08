@@ -56,14 +56,21 @@ if ~exist(resultsDir, 'dir'), mkdir(resultsDir); end
 
 % The f16-fmus artifact preserves the FMUs' build-tree subfolders, so after
 % download-artifact (path: matlab) they land in matlab/<name>/<name>.fmu.
-plantFmu  = fullfile(repoRoot, 'matlab', 'F16Plant', 'F16Plant.fmu');
-apFmu     = fullfile(repoRoot, 'matlab', 'F16Autopilot', 'F16Autopilot.fmu');
+plantFmuDir = fullfile(repoRoot, 'matlab', 'F16Plant');
+apFmuDir    = fullfile(repoRoot, 'matlab', 'F16Autopilot');
+plantFmu    = 'F16Plant.fmu';
+apFmu       = 'F16Autopilot.fmu';
 
-for f = {plantFmu, apFmu}
+for f = {fullfile(plantFmuDir, plantFmu), fullfile(apFmuDir, apFmu)}
     if ~isfile(f{1})
         error('build_f16_simulink:FMUNotFound', 'FMU not found: %s', f{1});
     end
 end
+
+% Simulink's built-in FMU block does not accept an absolute path in
+% FMUName; the FMU's folder must be on the MATLAB path and FMUName must
+% be the bare file name.
+addpath(plantFmuDir, apFmuDir);
 
 % Communication step size for the co-simulation master (both FMUs are
 % FMI 2.0 CS).  1 ms keeps the plant/autopilot coupling tight enough for
@@ -243,7 +250,7 @@ function blkPath = findFMULibraryBlock()
 knownPath = 'simulink_extras/FMU Import/FMU';
 try
     load_system('simulink_extras');
-    if getSimulinkBlockHandle(knownPath, true, false) ~= -1
+    if getSimulinkBlockHandle(knownPath, true) ~= -1
         blkPath = knownPath;
         return
     end
