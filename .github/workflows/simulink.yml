@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout repository (with submodules)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: recursive
 
@@ -35,7 +35,7 @@ jobs:
         run: cmake --build --preset release --target F16Autopilot_fmi2
 
       - name: Upload FMUs
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: f16-fmus
           retention-days: 7
@@ -51,10 +51,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download F16 FMUs
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: f16-fmus
           path: matlab
@@ -77,7 +77,7 @@ jobs:
 
       - name: Upload Simulink model and results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: f16-simulink-results
           path: |
