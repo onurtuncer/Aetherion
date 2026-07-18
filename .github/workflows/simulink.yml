@@ -60,7 +60,7 @@ jobs:
           path: matlab
 
       - name: Set up MATLAB with Simulink
-        uses: matlab-actions/setup-matlab@v2
+        uses: matlab-actions/setup-matlab@v3
         with:
           release: R2023a
           products: Simulink
@@ -71,7 +71,7 @@ jobs:
       # from setup-matlab is only licensed through the matlab-actions run
       # actions — a direct launch fails activation and exits immediately.
       - name: Build F16 Autopilot model and simulate
-        uses: matlab-actions/run-command@v2
+        uses: matlab-actions/run-command@v3
         with:
           command: run('matlab/build_f16_simulink.m')
 
