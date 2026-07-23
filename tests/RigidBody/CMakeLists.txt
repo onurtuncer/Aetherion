@@ -25,9 +25,9 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_rigidBody PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_rigidBody PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
-target_compile_definitions(test_rigidBody PRIVATE AETHERION_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+target_compile_definitions(test_rigidBody PRIVATE AETHERION_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 
 include(Catch)
 catch_discover_tests(test_rigidBody)

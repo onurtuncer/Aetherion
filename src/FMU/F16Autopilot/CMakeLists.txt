@@ -11,7 +11,7 @@
 # DAVEMLControlModel. F16_control.dml is staged into the FMU archive under resources/.
 # ------------------------------------------------------------------------------
 
-set(F16_DATA_DIR "${CMAKE_SOURCE_DIR}/data/F16_S119_source")
+set(F16_DATA_DIR "${PROJECT_SOURCE_DIR}/data/F16_S119_source")
 
 set(F16AP_STAGED_RES "${CMAKE_BINARY_DIR}/f16autopilot_resources")
 file(MAKE_DIRECTORY "${F16AP_STAGED_RES}")
@@ -24,8 +24,8 @@ generatefmu(
   SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/F16AutopilotFMU.cpp"
   INCLUDE_DIRS
-  "${CMAKE_SOURCE_DIR}" # <Aetherion/...> headers
-  "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml" # DAVEMLReader → pugixml
+  "${PROJECT_SOURCE_DIR}" # <Aetherion/...> headers
+  "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml" # DAVEMLReader → pugixml
   LINK_TARGETS
   Aetherion::Aetherion
   RESOURCE_FOLDER

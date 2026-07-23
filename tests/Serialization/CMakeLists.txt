@@ -31,7 +31,7 @@ target_link_libraries(test_load_config_from_string PRIVATE Aetherion Catch2::Cat
 catch_discover_tests(test_load_config_from_string)
 
 # DAVE-ML reader smoke tests — path to F-16 inertia file injected at configure time
-set(DAVEML_F16_INERTIA "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_inertia.dml")
+set(DAVEML_F16_INERTIA "${PROJECT_SOURCE_DIR}/data/F16_S119_source/F16_inertia.dml")
 
 add_executable(test_daveml_reader test_DAVEMLReader.cpp)
 
@@ -39,14 +39,14 @@ target_compile_definitions(test_daveml_reader PRIVATE "DAVEML_TEST_FILE=\"${DAVE
 
 target_compile_options(test_daveml_reader PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(test_daveml_reader PRIVATE "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(test_daveml_reader PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(test_daveml_reader PRIVATE Aetherion Catch2::Catch2WithMain)
 
 catch_discover_tests(test_daveml_reader)
 
 # DAVE-ML aero model smoke tests
-set(DAVEML_F16_AERO "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_aero.dml")
+set(DAVEML_F16_AERO "${PROJECT_SOURCE_DIR}/data/F16_S119_source/F16_aero.dml")
 
 add_executable(test_daveml_aero_model test_DAVEMLAeroModel.cpp)
 
@@ -54,15 +54,15 @@ target_compile_definitions(test_daveml_aero_model PRIVATE "DAVEML_AERO_FILE=\"${
 
 target_compile_options(test_daveml_aero_model PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(test_daveml_aero_model PRIVATE "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml"
-                                                          "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_daveml_aero_model PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml"
+                                                          "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 target_link_libraries(test_daveml_aero_model PRIVATE Aetherion Catch2::Catch2WithMain CppAD::cppad)
 
 catch_discover_tests(test_daveml_aero_model)
 
 # DAVE-ML control model smoke tests
-set(DAVEML_F16_CONTROL "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_control.dml")
+set(DAVEML_F16_CONTROL "${PROJECT_SOURCE_DIR}/data/F16_S119_source/F16_control.dml")
 
 add_executable(test_daveml_control_model test_DAVEMLControlModel.cpp)
 
@@ -70,14 +70,14 @@ target_compile_definitions(test_daveml_control_model PRIVATE "DAVEML_CONTROL_FIL
 
 target_compile_options(test_daveml_control_model PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(test_daveml_control_model PRIVATE "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(test_daveml_control_model PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(test_daveml_control_model PRIVATE Aetherion Catch2::Catch2WithMain)
 
 catch_discover_tests(test_daveml_control_model)
 
 # DAVE-ML propulsion model smoke tests
-set(DAVEML_F16_PROP "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_prop.dml")
+set(DAVEML_F16_PROP "${PROJECT_SOURCE_DIR}/data/F16_S119_source/F16_prop.dml")
 
 add_executable(test_daveml_prop_model test_DAVEMLPropModel.cpp)
 
@@ -85,8 +85,8 @@ target_compile_definitions(test_daveml_prop_model PRIVATE "DAVEML_PROP_FILE=\"${
 
 target_compile_options(test_daveml_prop_model PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(test_daveml_prop_model PRIVATE "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml"
-                                                          "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_daveml_prop_model PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml"
+                                                          "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 target_link_libraries(test_daveml_prop_model PRIVATE Aetherion Catch2::Catch2WithMain CppAD::cppad)
 

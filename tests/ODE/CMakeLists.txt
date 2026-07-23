@@ -15,7 +15,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_scalar PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_scalar PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_scalar)
@@ -31,7 +31,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_concepts PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_concepts PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_concepts)
@@ -49,7 +49,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_se3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_se3 PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_se3)
@@ -65,7 +65,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_newton PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_newton PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_newton)
@@ -81,7 +81,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_stage_pack PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_stage_pack PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_stage_pack)
@@ -97,7 +97,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_radauiia_se3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_radauiia_se3 PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_radauiia_se3)
@@ -113,7 +113,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_so3 PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_so3 PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_so3)

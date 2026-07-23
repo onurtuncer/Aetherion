@@ -18,7 +18,7 @@ set(CPACK_PACKAGE_CONTACT "https://github.com/onurtuncer/Aetherion")
 # WiX requires the license as plain text or RTF; the repo's LICENSE has no extension, so stage a renamed copy for CPack
 # to pick up.
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_BINARY_DIR}/LICENSE.txt")
-configure_file("${CMAKE_SOURCE_DIR}/LICENSE" "${CPACK_RESOURCE_FILE_LICENSE}" COPYONLY)
+configure_file("${PROJECT_SOURCE_DIR}/LICENSE" "${CPACK_RESOURCE_FILE_LICENSE}" COPYONLY)
 
 if(WIN32)
   set(CPACK_GENERATOR "WIX")

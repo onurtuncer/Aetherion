@@ -1,7 +1,7 @@
 # src/Examples/F16SteadyFlight/CMakeLists.txt NASA TM-2015-218675 Atmospheric Scenario 11 — F-16 Steady
 # Straight-and-Level Flight
 
-set(F16_DATA_DIR "${CMAKE_SOURCE_DIR}/data/F16_S119_source")
+set(F16_DATA_DIR "${PROJECT_SOURCE_DIR}/data/F16_S119_source")
 
 add_executable(F16SteadyFlight ${CMAKE_CURRENT_SOURCE_DIR}/F16SteadyFlight.cpp)
 
@@ -14,13 +14,13 @@ target_compile_definitions(
   PRIVATE "F16_INERTIA_FILE=\"${F16_DATA_DIR}/F16_inertia.dml\"" "F16_AERO_FILE=\"${F16_DATA_DIR}/F16_aero.dml\""
           "F16_PROP_FILE=\"${F16_DATA_DIR}/F16_prop.dml\"")
 
-target_include_directories(F16SteadyFlight PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include"
-                                                   "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(F16SteadyFlight PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
+                                                   "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(F16SteadyFlight PRIVATE Aetherion::Aetherion Aetherion::Simulation CppAD::cppad)
 
 # Copy NASA Atmos-11 reference CSVs next to the executable for comparison
-set(F16_REF_DIR "${CMAKE_SOURCE_DIR}/data/Atmos_11_TrimCheckSubsonicF16")
+set(F16_REF_DIR "${PROJECT_SOURCE_DIR}/data/Atmos_11_TrimCheckSubsonicF16")
 foreach(_csv Atmos_11_sim_02.csv Atmos_11_sim_04.csv Atmos_11_sim_05.csv)
   add_custom_command(
     TARGET F16SteadyFlight
@@ -34,6 +34,6 @@ endforeach()
 add_custom_command(
   TARGET F16SteadyFlight
   POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/scripts/plot_f16_s11_nasa02.py"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/scripts/plot_f16_s11_nasa02.py"
           "$<TARGET_FILE_DIR:F16SteadyFlight>/plot_f16_s11_nasa02.py"
   COMMENT "Copying Case-11 plot script plot_f16_s11_nasa02.py")

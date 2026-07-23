@@ -12,7 +12,7 @@ endif()
 # CppAD Windows -> prebuilt vendor binaries (vendor/cppad/x64-{Debug,Release}) Linux   -> FetchContent build from source
 # ------------------------------------------------------------------------------
 if(WIN32)
-  set(CPPAD_VENDOR_ROOT "${CMAKE_SOURCE_DIR}/vendor/cppad")
+  set(CPPAD_VENDOR_ROOT "${PROJECT_SOURCE_DIR}/vendor/cppad")
 
   add_library(
     CppAD::cppad
@@ -131,7 +131,7 @@ else()
   # CTest).  put_check_for_nan() — defined unconditionally in check_for_nan.hpp — calls temp_file() in Debug builds
   # (#ifndef NDEBUG guard in forward.hpp), so the linker needs the symbol even in header-only mode.  The stub returns an
   # empty path (NaN debug dump is a no-op).
-  add_library(cppad_headers STATIC "${CMAKE_SOURCE_DIR}/cmake/cppad_temp_file_stub.cpp")
+  add_library(cppad_headers STATIC "${PROJECT_SOURCE_DIR}/cmake/cppad_temp_file_stub.cpp")
   target_include_directories(cppad_headers INTERFACE ${cppad_SOURCE_DIR}/include)
   add_library(CppAD::cppad ALIAS cppad_headers)
 endif()
@@ -139,7 +139,7 @@ endif()
 # ------------------------------------------------------------------------------
 # Eigen3 (vendored headers)
 # ------------------------------------------------------------------------------
-set(EIGEN3_VENDOR_DIR "${CMAKE_SOURCE_DIR}/vendor/eigen")
+set(EIGEN3_VENDOR_DIR "${PROJECT_SOURCE_DIR}/vendor/eigen")
 
 if(EXISTS "${EIGEN3_VENDOR_DIR}/Eigen/Dense")
   message(STATUS "Using vendored Eigen headers in ${EIGEN3_VENDOR_DIR}")
@@ -176,4 +176,4 @@ set(ECOS_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(ECOS_BUILD_CLI OFF CACHE BOOL "" FORCE)
 set(ECOS_BUILD_CLIB OFF CACHE BOOL "" FORCE)
 set(ECOS_WITH_PROXYFMU OFF CACHE BOOL "" FORCE)
-add_subdirectory("${CMAKE_SOURCE_DIR}/vendor/ecos" EXCLUDE_FROM_ALL)
+add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/ecos" EXCLUDE_FROM_ALL)

@@ -22,6 +22,6 @@ add_custom_command(
   POST_BUILD
   COMMAND
     ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/data/Atmos_03_TumblingBrickWithDamping/nasa_2015_scenario3_tumbling_brick_with_damping.json"
+    "${PROJECT_SOURCE_DIR}/data/Atmos_03_TumblingBrickWithDamping/nasa_2015_scenario3_tumbling_brick_with_damping.json"
     "$<TARGET_FILE_DIR:TumblingBrickWithDamping>/nasa_2015_scenario3_tumbling_brick_with_damping.json"
   COMMENT "Copying NASA Atmos-03 config to build directory")

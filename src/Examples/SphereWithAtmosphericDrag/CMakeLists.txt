@@ -31,8 +31,8 @@ add_custom_command(
   POST_BUILD
   COMMAND
     ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/data/Atmos_06_SphereWithDrag/nasa_2015_scenario6_sphere_with_drag.json"
+    "${PROJECT_SOURCE_DIR}/data/Atmos_06_SphereWithDrag/nasa_2015_scenario6_sphere_with_drag.json"
     "$<TARGET_FILE_DIR:SphereWithAtmosphericDrag>/nasa_2015_scenario6_sphere_with_drag.json"
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${CMAKE_SOURCE_DIR}/scripts/compare_sim_validation.py"
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/scripts/compare_sim_validation.py"
           "$<TARGET_FILE_DIR:SphereWithAtmosphericDrag>/compare_sim_validation.py"
   COMMENT "Copying NASA Atmos-06 config and validation script to build directory")

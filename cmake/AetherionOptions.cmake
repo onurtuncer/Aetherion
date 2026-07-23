@@ -19,11 +19,16 @@ include_guard(GLOBAL)
 # Build Targets
 # ==============================================================================
 
-option(AETHERION_BUILD_TESTS "Build the Aetherion unit and integration test suite (requires CTest)" ON)
+# Default to ON only when Aetherion is the top-level project (a standalone build/CI run). When pulled in via
+# FetchContent/add_subdirectory as a dependency of another project, these default to OFF so consuming that
+# project doesn't unexpectedly pull in Aetherion's own test suite, examples, and data-driven demos. A consumer
+# can still opt in explicitly with -DAETHERION_BUILD_TESTS=ON etc.
+option(AETHERION_BUILD_TESTS "Build the Aetherion unit and integration test suite (requires CTest)"
+       ${PROJECT_IS_TOP_LEVEL})
 
-option(AETHERION_BUILD_SIMULATION "Build the Aetherion application layer" ON)
+option(AETHERION_BUILD_SIMULATION "Build the Aetherion application layer" ${PROJECT_IS_TOP_LEVEL})
 
-option(AETHERION_BUILD_EXAMPLES "Build the example executables under src/Examples" ON)
+option(AETHERION_BUILD_EXAMPLES "Build the example executables under src/Examples" ${PROJECT_IS_TOP_LEVEL})
 
 option(BUILD_DOCS "Build Sphinx/Doxygen documentation. When ON, only the doc target \
 is configured and all other targets are skipped (early return in root)." OFF)
@@ -47,7 +52,7 @@ set(AETHERION_DOCS_HTML_DIR ""
 
 option(AETHERION_BUILD_FMUS
        "Build the FMU targets under src/FMU (F16Plant, F16Autopilot, TwoStageRocket, DraglessSphere). \
-The FeedThrough smoke-test FMU is built as part of AETHERION_BUILD_TESTS." ON)
+The FeedThrough smoke-test FMU is built as part of AETHERION_BUILD_TESTS." ${PROJECT_IS_TOP_LEVEL})
 
 # Passed through to the fmu4cpp vendor subdirectory.
 option(FMU4CPP_BUILD_TESTS "Build fmu4cpp's own internal tests (vendored; should normally be OFF)" OFF)
@@ -74,9 +79,12 @@ Recommended for CI; avoid enabling in end-user builds." OFF)
 # Derived / Enforced Constraints
 # ==============================================================================
 
-# fmu4cpp vendored tests must always be suppressed from Aetherion's build. Force these regardless of what a parent
-# project or cache may have set.
-set(BUILD_TESTING OFF CACHE BOOL "Disable top-level CTest for vendors" FORCE)
+# fmu4cpp vendored tests must always be suppressed from Aetherion's build. Force these (Aetherion-namespaced
+# options only) regardless of what a parent project or cache may have set. BUILD_TESTING itself is deliberately
+# NOT forced here -- it's a global CMake convention variable shared with the consuming project's own CTest setup
+# when Aetherion is pulled in via FetchContent/add_subdirectory. It is instead shadowed locally, directory-scoped
+# and without CACHE, right around the specific vendored add_subdirectory() calls that need it suppressed (see
+# root CMakeLists.txt and cmake/Dependencies.cmake).
 set(FMU4CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(FMU4CPP_TESTS OFF CACHE BOOL "" FORCE)
 
