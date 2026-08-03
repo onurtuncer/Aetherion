@@ -6,6 +6,11 @@ Reads papers/eucass/data/convergence_order.csv (written by the
 [convergence][csv] Catch2 test) and produces a publication-quality
 log-log convergence-order figure for the EUCASS paper.
 
+The test problem is a torque-free *asymmetric* rigid body.  A symmetric body
+cannot be used: its body twist is constant, the exact flow is a one-parameter
+subgroup, and every RKMK method reproduces it exactly at every step size, so
+the log-log slope is meaningless noise.  See test_ConvergenceOrder.cpp.
+
 Output: papers/eucass/figures/convergence_order.pdf
         papers/eucass/figures/convergence_order.png  (for previews)
 
@@ -22,12 +27,26 @@ import math
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
-# Locate repo root (two levels up from this script)
+# Locate repo root (three levels up from this script)
 # ---------------------------------------------------------------------------
 SCRIPT_DIR  = Path(__file__).resolve().parent
 REPO_ROOT   = SCRIPT_DIR.parent.parent.parent   # papers/eucass/scripts -> repo root
 DATA_FILE   = REPO_ROOT / "papers" / "eucass" / "data" / "convergence_order.csv"
 FIGURES_DIR = REPO_ROOT / "papers" / "eucass" / "figures"
+
+
+def orders(hs, errs, floor=1e-13):
+    """Mean log-log slope over consecutive step-size pairs above the round-off floor."""
+    return [
+        math.log(errs[i] / errs[i + 1]) / math.log(hs[i] / hs[i + 1])
+        for i in range(len(hs) - 1)
+        if errs[i] > floor and errs[i + 1] > floor
+    ]
+
+
+def mean(xs):
+    return sum(xs) / len(xs) if xs else float("nan")
+
 
 def main():
     # -----------------------------------------------------------------------
@@ -39,35 +58,35 @@ def main():
         print("  ctest -R 'convergence.csv' --output-on-failure")
         sys.exit(1)
 
-    h_vals, err_radau, err_rk4 = [], [], []
+    cols = {k: [] for k in ("h", "rot_radau5", "pos_radau5", "rot_rk4", "pos_rk4")}
     with open(DATA_FILE, newline="") as f:
         reader = csv.DictReader(f)
+        missing = [k for k in cols if k not in (reader.fieldnames or [])]
+        if missing:
+            print(f"ERROR: {DATA_FILE} is missing columns {missing}.")
+            print(f"       Found: {reader.fieldnames}")
+            print("       Re-run the [convergence][csv] test to regenerate it.")
+            sys.exit(1)
         for row in reader:
-            h_vals.append(float(row["h"]))
-            err_radau.append(float(row["error_radau5_rkmk"]))
-            err_rk4.append(float(row["error_rk4_rkmk"]))
+            for k in cols:
+                cols[k].append(float(row[k]))
 
-    if len(h_vals) < 2:
-        print("ERROR: CSV has fewer than 2 rows — re-run the test.")
+    h = cols["h"]
+    if len(h) < 2:
+        print("ERROR: CSV has fewer than 2 rows -- re-run the test.")
         sys.exit(1)
 
     # -----------------------------------------------------------------------
-    # Compute empirical orders
+    # Empirical orders
     # -----------------------------------------------------------------------
-    def orders(hs, errs):
-        return [
-            math.log(errs[i] / errs[i+1]) / math.log(hs[i] / hs[i+1])
-            for i in range(len(hs) - 1)
-            if errs[i] > 1e-14 and errs[i+1] > 1e-14
-        ]
-
-    ord_radau = orders(h_vals, err_radau)
-    ord_rk4   = orders(h_vals, err_rk4)
-
-    print(f"Radau IIA RKMK  — empirical orders: {[f'{p:.2f}' for p in ord_radau]}")
-    print(f"                  mean = {sum(ord_radau)/len(ord_radau):.2f}")
-    print(f"Explicit RK4 RKMK — empirical orders: {[f'{p:.2f}' for p in ord_rk4]}")
-    print(f"                    mean = {sum(ord_rk4)/len(ord_rk4):.2f}")
+    summary = {}
+    for key, label in (("rot_radau5", "Radau IIA  attitude"),
+                       ("pos_radau5", "Radau IIA  position"),
+                       ("rot_rk4",    "RK4        attitude"),
+                       ("pos_rk4",    "RK4        position")):
+        p = orders(h, cols[key])
+        summary[key] = mean(p)
+        print(f"{label}: orders = {[f'{v:.2f}' for v in p]}   mean = {mean(p):.2f}")
 
     # -----------------------------------------------------------------------
     # Plot
@@ -78,58 +97,50 @@ def main():
         import matplotlib.pyplot as plt
         import numpy as np
     except ImportError:
-        print("matplotlib / numpy not available — install with: pip install matplotlib numpy")
+        print("matplotlib / numpy not available -- install with: pip install matplotlib numpy")
         sys.exit(1)
 
-    TEXTWIDTH_PT = 430.0                    # EUCASS column width (approx.)
+    TEXTWIDTH_PT  = 430.0                    # EUCASS text width (approx.)
     INCHES_PER_PT = 1.0 / 72.27
-    FIG_W = TEXTWIDTH_PT * INCHES_PER_PT    # ~5.95 in
-    FIG_H = FIG_W * 0.75
+    FIG_W = TEXTWIDTH_PT * INCHES_PER_PT     # ~5.95 in
+    FIG_H = FIG_W * 0.45
 
-    fig, ax = plt.subplots(figsize=(FIG_W, FIG_H))
+    fig, axes = plt.subplots(1, 2, figsize=(FIG_W, FIG_H))
 
-    h_arr  = np.array(h_vals)
-    er_arr = np.array(err_radau)
-    ek_arr = np.array(err_rk4)
-
-    # Data lines
-    ax.loglog(h_arr, er_arr, "o-",  color="#1f77b4", lw=1.6, ms=5,
-              label=r"Radau IIA RKMK (this work)")
-    ax.loglog(h_arr, ek_arr, "s--", color="#d62728", lw=1.4, ms=5,
-              label=r"Explicit RK4 RKMK (baseline)")
-
-    # Reference slopes anchored at the coarsest step size
+    h_arr = np.array(h)
     h_ref = np.array([h_arr[0], h_arr[-1]])
 
-    def ref_line(order, anchor_val, h_anchor):
-        return anchor_val * (h_ref / h_anchor) ** order
+    panels = [
+        (axes[0], "rot_radau5", "rot_rk4",
+         r"$\|R_\mathrm{num}(T) - R_\mathrm{ref}(T)\|_F$", "Attitude"),
+        (axes[1], "pos_radau5", "pos_rk4",
+         r"$\|p_\mathrm{num}(T) - p_\mathrm{ref}(T)\|_2$  [m]", "Position"),
+    ]
 
-    ax.loglog(h_ref, ref_line(5, er_arr[0], h_arr[0]),
-              "k:",  lw=0.9, label=r"$\mathcal{O}(h^5)$ slope")
-    ax.loglog(h_ref, ref_line(4, ek_arr[0], h_arr[0]),
-              "k-.", lw=0.9, label=r"$\mathcal{O}(h^4)$ slope")
+    for ax, k_radau, k_rk4, ylabel, title in panels:
+        er = np.array(cols[k_radau])
+        ek = np.array(cols[k_rk4])
 
-    ax.set_xlabel(r"Step size $h$ [s]", fontsize=10)
-    ax.set_ylabel(r"$\|R_\mathrm{num}(T) - R_\mathrm{exact}(T)\|_F$", fontsize=10)
-    ax.set_title(r"Convergence order — free symmetric sphere, $T=1\,\mathrm{s}$",
+        ax.loglog(h_arr, er, "o-",  color="#1f77b4", lw=1.6, ms=4.5,
+                  label=f"Radau IIA RKMK ($p$={summary[k_radau]:.2f})")
+        ax.loglog(h_arr, ek, "s--", color="#d62728", lw=1.4, ms=4.5,
+                  label=f"Explicit RK4 RKMK ($p$={summary[k_rk4]:.2f})")
+
+        ax.loglog(h_ref, er[0] * (h_ref / h_arr[0]) ** 5,
+                  "k:",  lw=0.9, label=r"$\mathcal{O}(h^5)$")
+        ax.loglog(h_ref, ek[0] * (h_ref / h_arr[0]) ** 4,
+                  "k-.", lw=0.9, label=r"$\mathcal{O}(h^4)$")
+
+        ax.set_xlabel(r"Step size $h$ [s]", fontsize=9)
+        ax.set_ylabel(ylabel, fontsize=9)
+        ax.set_title(title, fontsize=9)
+        ax.grid(True, which="both", ls=":", lw=0.5, alpha=0.6)
+        ax.tick_params(labelsize=8)
+        ax.legend(fontsize=7, loc="upper left")
+
+    fig.suptitle(r"Convergence order: torque-free asymmetric body, $T=2\,\mathrm{s}$",
                  fontsize=10)
-    ax.legend(fontsize=9, loc="upper left")
-    ax.grid(True, which="both", ls=":", lw=0.5, alpha=0.6)
-    ax.tick_params(labelsize=9)
-
-    # Annotate mean orders
-    mean_r = sum(ord_radau) / len(ord_radau)
-    mean_k = sum(ord_rk4)   / len(ord_rk4)
-    ax.annotate(f"mean order = {mean_r:.2f}",
-                xy=(h_arr[len(h_arr)//2], er_arr[len(er_arr)//2]),
-                xytext=(6, 12), textcoords="offset points",
-                fontsize=8, color="#1f77b4")
-    ax.annotate(f"mean order = {mean_k:.2f}",
-                xy=(h_arr[len(h_arr)//2], ek_arr[len(ek_arr)//2]),
-                xytext=(6, -18), textcoords="offset points",
-                fontsize=8, color="#d62728")
-
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.95))
 
     FIGURES_DIR.mkdir(parents=True, exist_ok=True)
     pdf_path = FIGURES_DIR / "convergence_order.pdf"
@@ -138,11 +149,12 @@ def main():
     fig.savefig(png_path, format="png", dpi=200, bbox_inches="tight")
     plt.close(fig)
 
-    print(f"\nFigures saved:")
+    print("\nFigures saved:")
     print(f"  {pdf_path}")
     print(f"  {png_path}")
-    print(f"\nInclude in LaTeX with:")
-    print(r"  \includegraphics[width=\columnwidth]{figures/convergence_order}")
+    print("\nInclude in LaTeX with:")
+    print(r"  \includegraphics[width=0.72\linewidth]{figures/convergence_order}")
+
 
 if __name__ == "__main__":
     main()

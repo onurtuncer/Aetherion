@@ -127,14 +127,22 @@
     system is solved with fixed-size, stack-resident data structures for
     real-time applicability.  Equations of motion are formulated using
     Featherstone spatial vector algebra, yielding a compact Newton-Euler
-    equation that is both coordinate-free and AD-compatible.  Validation is
-    performed against four scenarios from NASA Technical Memorandum
-    TM-2015-218675, covering a dragless point mass, the F-16 longitudinal
-    response, and a two-stage rocket with staging events.  Convergence studies
-    confirm fifth-order accuracy and demonstrate that the SE(3)-RKMK integrator
-    maintains $\SO$ orthonormality to machine precision across 600-second
-    trajectories, whereas a conventional quaternion RK4 integrator accumulates
-    observable constraint drift.
+    equation that is both coordinate-free and AD-compatible.  We further report
+    a practical result that we believe is under-stated in the literature: for a
+    body-frame (left-trivialized) kinematic field the $\dexp^{-1}$ stage
+    correction must be evaluated at $-\eta_i$, and the widely tabulated
+    right-trivialized form silently caps the attained order at two for
+    \emph{any} Butcher tableau while leaving every conventional
+    diagnostic---manifold membership, Newton convergence, and exactness on
+    constant-twist motion---intact.  We show that detecting this requires a
+    convergence study on a problem with time-varying body twist, and give one.
+    With the correct convention the measured orders are 5.00 and 3.91 for the
+    Radau~IIA and explicit RK4 variants respectively.  Validation against
+    scenarios from NASA Technical Memorandum TM-2015-218675 covers a dragless
+    point mass, F-16 manoeuvres, and a two-stage rocket with staging events;
+    the SE(3)-RKMK integrator holds $\SO$ orthonormality at the round-off level
+    across 600-second trajectories, whereas an unconstrained quaternion RK4
+    integrator accumulates constraint error nine orders of magnitude larger.
   \end{minipage}
 \end{center}
 
@@ -173,7 +181,7 @@ independent exponential maps to each factor \citep{stevens2016aircraft}.
 This approach loses the screw-motion coupling that $\SE$ encodes natively and
 requires two separate tangent-space corrections.
 
-\textbf{Contributions.}  This paper makes four specific contributions:
+\textbf{Contributions.}  This paper makes five specific contributions:
 
 \begin{enumerate}[leftmargin=*, label=(\arabic*)]
   \item An RKMK integrator that treats $g \in \SE$ as a \emph{single} Lie
@@ -186,7 +194,15 @@ requires two separate tangent-space corrections.
     \citep{cppad}, reducing Newton convergence failures caused by
     finite-difference truncation and enabling AD-transparent sensitivity
     propagation.
-  \item Quantitative validation against four NASA TM-2015-218675 reference
+  \item An explicit treatment of the \emph{trivialization convention} in the
+    $\dexp^{-1}$ stage correction (Section~\ref{sec:trivialization}).  We show
+    that the right-trivialized form---the one usually tabulated---reduces a
+    left-trivialized body-frame integrator to order two irrespective of the
+    tableau, that this is invisible to the diagnostics normally used to
+    validate such an integrator, and that exposing it requires a test problem
+    whose body twist is time-varying.  We give the test problem and the
+    measured orders.
+  \item Quantitative validation against NASA TM-2015-218675 reference
     scenarios with published ground-truth trajectories.
 \end{enumerate}
 
@@ -194,7 +210,8 @@ The remainder of this paper is organised as follows.
 Section~\ref{sec:math} reviews $\SE$ and the necessary Lie-group tools.
 Section~\ref{sec:eom} states the equations of motion in spatial-vector-algebra
 form.  Section~\ref{sec:rkmk} derives the RKMK stage system and the implicit
-solver.  Section~\ref{sec:ad} describes the CppAD Jacobian pipeline.
+solver, including the trivialization result.
+Section~\ref{sec:ad} describes the CppAD Jacobian pipeline.
 Section~\ref{sec:validation} presents validation results.
 Section~\ref{sec:conclusions} concludes.
 
@@ -270,13 +287,26 @@ $\mathbf{v}$, discarding this coupling.
 
 \subsection{The $\dexp^{-1}$ Operator}
 
-Let $g(t) = g_0 \cdot \Exp(\eta(t))$ be a curve on $\SE$.  Left-trivialising
-the velocity gives
+Let $g(t) = g_0 \cdot \Exp(\eta(t))$ be a curve on $\SE$, and define the
+tangent map of the exponential by its Lie series,
 \begin{equation}
-  g(t)^{-1}\dot{g}(t) = \dexp_{\eta(t)}\bigl(\dot{\eta}(t)\bigr),
+  \dexp_\eta(u) = \sum_{k \geq 0} \frac{1}{(k+1)!}\,\ad^k_\eta(u).
+  \label{eq:dexp_series}
 \end{equation}
-where $\dexp_\eta : \se \to \se$ is the right-trivialized tangent map of
-$\Exp$.  RKMK requires its inverse.  For $\SE$ this is the $6\times 6$ matrix
+The standard identity is right-trivialized,
+$\bigl(\tfrac{d}{dt}\Exp(\eta)\bigr)\Exp(-\eta) = \dexp_\eta(\dot\eta)$.
+Left-trivialising instead, and using
+$\Ad_{\Exp(-\eta)}\dexp_\eta = \dexp_{-\eta}$, gives
+\begin{equation}
+  g(t)^{-1}\dot{g}(t) = \dexp_{-\eta(t)}\bigl(\dot{\eta}(t)\bigr),
+  \qquad\text{so}\qquad
+  \dot\eta = \dexp^{-1}_{-\eta}\bigl(g^{-1}\dot g\bigr).
+  \label{eq:left_triv}
+\end{equation}
+It is $\dexp^{-1}_{-\eta}$, not $\dexp^{-1}_{+\eta}$, that the RKMK stages
+require for a body-frame field; Section~\ref{sec:trivialization} shows what
+goes wrong otherwise.  Writing $\xi$ for the argument, the operator is the
+$6\times 6$ matrix
 \begin{equation}
   \dexp^{-1}_\xi =
   \begin{bmatrix}
@@ -511,7 +541,7 @@ For each stage $i = 1,2,3$:
     & &\text{(stage kinematic rate $\in \R^6$)}\label{eq:stage_v}\\
   k_i    &= F_x\!\left(t_0 + c_i h,\; g_i,\; x_i\right)
     & &\text{(stage Euclidean rate $\in \R^7$)}\label{eq:stage_k}\\
-  r_i    &= \xi_i - h\;\dexp^{-1}_{\eta_i}\,v_i
+  r_i    &= \xi_i - h\;\dexp^{-1}_{-\eta_i}\,v_i
     & &\text{(residual for stage $i$)}\label{eq:residual}
 \end{align}
 
@@ -566,6 +596,129 @@ Default tolerances are $\varepsilon_{\mathrm{abs}} = 10^{-9}$ and
 $\varepsilon_{\mathrm{rel}} = 10^{-9}$ with a maximum of 20 iterations;
 typical convergence is achieved in 3--5 iterations for step sizes $h \leq
 0.1\,$s.
+
+% ---------------------------------------------------------------------------
+\subsection{The Trivialization Convention and Silent Order Collapse}
+\label{sec:trivialization}
+% ---------------------------------------------------------------------------
+
+Equation~\eqref{eq:residual} evaluates $\dexp^{-1}$ at $-\eta_i$.  This
+follows from~\eqref{eq:left_triv} and is not optional, but it is easy to get
+wrong, because the Bernoulli series is almost always tabulated in the
+right-trivialized form.  Expanding both:
+\begin{align}
+  \dexp^{-1}_{+\eta} &= I - \tfrac{1}{2}\ad_\eta + \tfrac{1}{12}\ad^2_\eta
+    - \tfrac{1}{720}\ad^4_\eta + O(\ad^6_\eta),
+    \label{eq:dexpinv_right}\\
+  \dexp^{-1}_{-\eta} &= I + \tfrac{1}{2}\ad_\eta + \tfrac{1}{12}\ad^2_\eta
+    - \tfrac{1}{720}\ad^4_\eta + O(\ad^6_\eta),
+    \label{eq:dexpinv_left}
+\end{align}
+where the $\ad^3$ term is absent because $B_3 = 0$.  The two differ only in
+the sign of the $O(\ad)$ term.
+
+\begin{remark}[Order collapse]
+\label{rem:order_collapse}
+RKMK theory requires $\dexp^{-1}$ to be correct through $\ad^{p-2}$ for the
+method to attain order $p$ \citep{muntheKaas1998,iserles2000liegroup}.
+Substituting \eqref{eq:dexpinv_right} for \eqref{eq:dexpinv_left} therefore
+leaves the correction accurate only through $\ad^0$, and the scheme attains
+order~2 --- for \emph{any} tableau.  A three-stage Radau~IIA scheme and a
+classical RK4 scheme both degrade to order~2, and, because the leading error
+term is then shared, produce numerically indistinguishable trajectories.
+\end{remark}
+
+What makes this failure mode worth reporting is that it survives every
+diagnostic normally applied to a Lie-group integrator:
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Manifold membership holds exactly.}  The update is still
+    $g_1 = g_0\Exp(\Delta)$, so $g$ never leaves $\SE$ and
+    $\norm{R^\top R - I}_F$ stays at round-off.  A constraint-preservation
+    test passes.
+  \item \textbf{Newton still converges} quadratically to the (wrong) stage
+    system, because the AD Jacobian is the exact Jacobian of the residual as
+    written.  A residual-norm check passes.
+  \item \textbf{Constant-twist motion is integrated exactly.}  If $\xi$ is
+    constant then $\eta_i \parallel \xi$ and $\ad_\eta \xi = 0$, so the
+    erroneous term vanishes identically.  The scheme reproduces the
+    one-parameter subgroup $g_0\Exp(t\xi)$ to machine precision at every step
+    size.
+\end{itemize}
+
+The third point is the trap.  The natural smoke test for a 6-DOF Lie
+integrator---a torque-free \emph{symmetric} body, whose exact solution is a
+known closed-form rotation---is exactly the case in which the error term is
+annihilated.  Used as a convergence study it reports machine-precision error
+at every step size, which is easily read as ``better than fifth order'' rather
+than as ``this problem cannot measure order''.
+
+\subsection{A Test Problem That Exposes It}
+\label{sec:order_test}
+
+To measure order, the body twist must genuinely vary.  We use a torque-free
+\emph{asymmetric} rigid body: $I_{xx} = 0.10$, $I_{yy} = 0.25$,
+$I_{zz} = 0.32\ \si{\kilogram\metre\squared}$, all distinct, so that
+$\omB \times \IB\omB \neq 0$ and Euler's equations are nonlinear.  The initial
+condition $\omB = [1, 2, 0.5]^\top\,\si{\radian\per\second}$,
+$\vB = [50, 5, -3]^\top\,\si{\metre\per\second}$ additionally exercises the
+translational screw coupling, since $\dot{\vB} = -\omB \times \vB$.  The
+reference solution is computed at $h_{\mathrm{ref}} = \SI{2.5e-4}{\second}$,
+fifty times smaller than the finest tested step, and cross-validated between
+the Radau~IIA and RK4 integrators, which agree at $h_{\mathrm{ref}}$ to
+$< 10^{-11}$ in attitude.
+
+Table~\ref{tab:order_data} reports the errors at $T = \SI{2}{\second}$ with
+the corrected convention, and Table~\ref{tab:order_summary} the mean log-log
+slopes with and without it.
+
+\begin{table}[h]
+  \centering
+  \caption{Global error at $T = \SI{2}{\second}$, torque-free asymmetric body,
+    corrected ($-\eta$) convention.
+    $e_R = \norm{R_{\mathrm{num}} - R_{\mathrm{ref}}}_F$,
+    $e_p = \norm{\mathbf{p}_{\mathrm{num}} - \mathbf{p}_{\mathrm{ref}}}_2$ in
+    metres.}
+  \label{tab:order_data}
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    & \multicolumn{2}{c}{Radau IIA RKMK} & \multicolumn{2}{c}{Explicit RK4 RKMK} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+    $h$ [s] & $e_R$ & $e_p$ [m] & $e_R$ & $e_p$ [m] \\
+    \midrule
+    0.2    & $2.59\times10^{-6}$  & $1.02\times10^{-3}$  & $8.12\times10^{-5}$ & $1.17\times10^{-1}$ \\
+    0.1    & $8.11\times10^{-8}$  & $3.20\times10^{-5}$  & $5.80\times10^{-6}$ & $7.55\times10^{-3}$ \\
+    0.05   & $2.53\times10^{-9}$  & $9.99\times10^{-7}$  & $3.89\times10^{-7}$ & $4.79\times10^{-4}$ \\
+    0.025  & $7.90\times10^{-11}$ & $3.12\times10^{-8}$  & $2.52\times10^{-8}$ & $3.02\times10^{-5}$ \\
+    0.0125 & $2.46\times10^{-12}$ & $9.82\times10^{-10}$ & $1.60\times10^{-9}$ & $1.89\times10^{-6}$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{table}[h]
+  \centering
+  \caption{Mean empirical order (log-log slope over the five step sizes of
+    Table~\ref{tab:order_data}) under the two conventions.}
+  \label{tab:order_summary}
+  \small
+  \begin{tabular}{lcccc}
+    \toprule
+    & \multicolumn{2}{c}{$\dexp^{-1}_{+\eta}$ (incorrect)} & \multicolumn{2}{c}{$\dexp^{-1}_{-\eta}$ (correct)} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
+    Integrator & attitude & position & attitude & position \\
+    \midrule
+    Radau IIA RKMK (order 5)    & 2.00 & 2.00 & 5.00 & 5.00 \\
+    Explicit RK4 RKMK (order 4) & 2.00 & 2.00 & 3.91 & 3.98 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Under the incorrect convention the two schemes are not merely both order~2;
+their errors agree to five significant figures at every step size, which is
+itself a useful diagnostic signature.  If an order-5 implicit method and an
+order-4 explicit method produce the same error, the limiting factor is neither
+tableau.
 
 % ---------------------------------------------------------------------------
 \section{Algorithmic Differentiation for Exact Jacobians}
@@ -640,35 +793,89 @@ Results are compared on the following output variables:
   \item Altitude MSL [\si{\metre}]
 \end{itemize}
 
+\subsection{Interpreting the Reference Data}
+\label{sec:ref_spread}
+
+TM-2015-218675 publishes up to six independent reference runs per scenario,
+produced by different simulation frameworks, and those runs do not agree with
+each other.  Quoting a single error against one nominated run therefore says
+as much about which run was nominated as about the integrator under test.  We
+report instead the deviation from the \emph{closest} NASA run alongside the
+maximum spread among the NASA runs themselves, so that the reader can see
+whether the code under test lies inside the reference envelope.
+Table~\ref{tab:validation_summary} gives both.
+
+\begin{table}[h]
+  \centering
+  \caption{Maximum $\lvert\Delta h_{\mathrm{MSL}}\rvert$ over $0 < t \leq T$
+    against the closest NASA reference run, and the maximum spread among the
+    NASA runs over the same interval.  Cases 1--10 at
+    $h = \SI{2}{\milli\second}$, 11--16 at $h = \SI{10}{\milli\second}$.}
+  \label{tab:validation_summary}
+  \small
+  \begin{tabular}{clcrr}
+    \toprule
+    Case & Scenario & $T$ [s] & SE(3)-RKMK [m] & NASA spread [m] \\
+    \midrule
+     1 & Dragless sphere             & 30  & $2.0\times10^{-5}$ & $7.1\times10^{-4}$ \\
+     2 & Tumbling brick, undamped    & 30  & $2.0\times10^{-5}$ & $7.1\times10^{-4}$ \\
+     3 & Tumbling brick, damped      & 30  & $2.0\times10^{-5}$ & $3.6\times10^{-4}$ \\
+     6 & Sphere with drag            & 30  & $1.2\times10^{-5}$ & $0.273$ \\
+     7 & Dropped sphere, steady wind & 30  & $1.8\times10^{-5}$ & $0.273$ \\
+     8 & Dropped sphere, wind shear  & 30  & $5.4\times10^{-5}$ & $0.273$ \\
+     9 & Eastward cannonball         & 30  & $4.0\times10^{-4}$ & $1.30$ \\
+    10 & Northward cannonball        & 30  & $1.8\times10^{-4}$ & $1.30$ \\
+    11 & F-16 subsonic trim          & 180 & $13.2$  & $13.7$  \\
+    12 & F-16 supersonic trim        & 180 & $97.5$  & $140$   \\
+    13.1 & F-16 altitude change      & 180 & $0.171$ & $0.316$ \\
+    13.2 & F-16 airspeed change      & 180 & $0.138$ & $1.21$  \\
+    13.3 & F-16 heading change       & 180 & $0.178$ & $0.288$ \
+    13.4 & F-16 lateral side step    & 180 & $0.172$ & $0.295$ \\
+    15 & F-16 polar circumnavigation & 180 & $0.030$ & $0.430$ \\
+    16 & F-16 equatorial circuit     & 180 & $0.036$ & $0.293$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The integrator lies inside the reference envelope in every case.  For the
+ballistic cases~6--10, where the NASA runs disagree among themselves by
+\SIrange{0.27}{1.3}{\metre}, the SE(3)-RKMK trajectory tracks the closest run
+to $\sim\!10^{-5}\,\si{\metre}$; the residual disagreement is therefore
+dominated by differences between the reference implementations rather than by
+the integrator.
+
+Two reporting choices are worth stating.  Errors are maxima over the
+trajectory, not endpoint values.  And $t = 0$ is excluded, because the NASA
+files record true airspeed as identically zero at release in the wind cases
+whereas Aetherion reports the air-relative speed, which is non-zero in a
+crosswind; including that sample injects a spurious
+\SI{20}{\metre\per\second} into the maximum without saying anything about
+the integrator.
+
 \subsection{Scenario 1: Dragless Sphere (Point-Mass Gravity)}
 
 A 1-kg point mass is released from rest at altitude
 $h_0 = \SI{762}{m}$ above MSL with no aerodynamic forces.  Only the WGS-84
 J$_2$ gravity model acts on the vehicle.  This scenario isolates the position
-integrator and verifies the gravity model against a Kepler reference.
+integrator and the gravity model.  Over \SI{30}{\second} the altitude tracks
+the closest NASA run to $\SI{2.0e-5}{\metre}$ and the local gravity magnitude
+to a relative $4.7\times10^{-9}$.  Being a pure quadrature of the gravity
+field, this case is also the most sensitive in the set to the integrator's
+attained order, and the deviation improves by roughly four orders of magnitude
+once the trivialization convention of Section~\ref{sec:trivialization} is
+corrected.
 
-\TODO{Insert Table: Scenario 1 final position error at $t = \SI{6.1}{s}$.
-Reference: NASA TM Table 4.1.  Expected error $< 10^{-3}\,$m.}
+\subsection{Scenarios 11--16: F-16 Closed-Loop Manoeuvres}
 
-\subsection{Scenario 11: F-16 Steady Level Flight}
-
-The F-16 model with DAVE-ML aerodynamic tables is trimmed at Mach~0.6,
-altitude \SI{5000}{ft}, wings-level.  The integrator must maintain trim to
-within a tolerance of $0.05\,^\circ$ in Euler angles for \SI{5}{s}.  This
-scenario tests the aerodynamic model, the rotating-atmosphere wind correction,
-and the Newton-Euler dynamics simultaneously.
-
-\TODO{Insert Table: Scenario 11 angle/rate drift over 5 s.  Reference: NASA TM
-Table 6.2.}
-
-\subsection{Scenario 13: F-16 Longitudinal Pull-Up}
-
-Starting from the Scenario~11 trim condition, a step elevator deflection of
-$\delta_e = +5\,^\circ$ is applied at $t = 0$ for \SI{5}{s}.  The resulting
-pitch rate and altitude response is compared to the reference.
-
-\TODO{Insert Figure: Scenario 13 pitch rate $q(t)$ and altitude $h(t)$ vs.
-NASA reference over 5 s.}
+The F-16 cases exercise the DAVE-ML aerodynamic tables, the trim solver, the
+rotating-atmosphere wind correction, and closed-loop guidance simultaneously,
+over \SI{180}{\second} rather than the \SI{30}{\second} of the ballistic
+cases.  They are the least clean comparison in the set---the reference runs
+disagree with one another by \SI{13.7}{\metre} in altitude for the subsonic
+trim case and \SI{140}{\metre} for the supersonic one, reflecting differences
+in the guidance implementations rather than in the equations of motion---but
+Aetherion remains inside that envelope
+(Table~\ref{tab:validation_summary}).
 
 \subsection{Scenario 17: Two-Stage Rocket}
 
@@ -709,27 +916,89 @@ NASA Sim~06 reference trajectory.
 \TODO{Insert Figure: Scenario 17 altitude and speed profiles vs.\ NASA reference.}
 
 \subsection{Constraint Preservation}
+\label{sec:constraint}
 
-Figure~\ref{fig:constraint_drift} compares the $\SO$ constraint residual
-$\norm{R^\top R - I}_F$ over the Scenario~17 trajectory for:
-(a) SE(3)-RKMK (this work),
-(b) quaternion RK4 with re-normalisation every step,
-(c) quaternion RK4 without re-normalisation.
+The $\SO$ constraint residual $\norm{R^\top R - I}_F$ was measured over a
+\SI{600}{\second} trajectory of the asymmetric tumbling body of
+Section~\ref{sec:order_test} at $h = \SI{0.1}{\second}$
+(\num{6000} steps), for three integrators:
+(a) SE(3)-RKMK, (b) a conventional RK4 applied to an unconstrained
+13-component quaternion state
+$[q,\,\mathbf{p},\,\omB,\,\vB]$, and (c) the same RK4 with the quaternion
+re-normalised after every step.  Figure~\ref{fig:constraint_drift} shows the
+time histories and Table~\ref{tab:drift} the final values.
 
-\TODO{Insert Figure: Constraint residual $\|R^\top R - I\|_F$ vs.\ time for
-three integrators.  Expected: SE(3)-RKMK at $\sim 10^{-15}$; RK4 with
-renorm at $\sim 10^{-7}$ at 600 s; RK4 no renorm visibly drifts.}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.72\linewidth]{figures/constraint_drift}
+  \caption{Attitude constraint residual over \SI{600}{\second}.  The
+    unconstrained quaternion RK4 baseline (red) grows secularly; the SE(3)-RKMK
+    pose (blue) accumulates only round-off; per-step re-normalisation (green,
+    dashed) also holds the constraint, by projection.  Generated from
+    \texttt{papers/eucass/data/constraint\_drift.csv}, emitted by the
+    \texttt{[drift][csv]} regression test.}
+  \label{fig:constraint_drift}
+\end{figure}
+
+\begin{table}[h]
+  \centering
+  \caption{Attitude constraint residual $\norm{R^\top R - I}_F$ after
+    \SI{600}{\second} ($h = \SI{0.1}{\second}$, \num{6000} steps).}
+  \label{tab:drift}
+  \small
+  \begin{tabular}{lcc}
+    \toprule
+    Integrator & $\norm{R^\top R - I}_F$ at $T$ & Behaviour \\
+    \midrule
+    SE(3)-RKMK (this work)          & $4.4\times10^{-14}$ & bounded round-off \\
+    Quaternion RK4, no re-normalisation & $2.1\times10^{-3}$  & secular growth \\
+    Quaternion RK4, re-normalised   & $6.9\times10^{-16}$ & bounded (by projection) \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The unconstrained baseline leaves the manifold at a rate set by its truncation
+error, ending nine orders of magnitude further from $\SO$ than the
+SE(3)-RKMK pose, and the growth is secular rather than diffusive.  The
+SE(3)-RKMK residual is pure round-off accumulated over the step count: the
+rotation factor is a product of exact $\SO$ elements, so there is no
+truncation contribution to remove.
+
+We report the third row deliberately rather than omitting it.  Per-step
+re-normalisation \emph{does} satisfy the constraint, and to a tighter tolerance
+than the accumulated matrix product, because $R$ is reconstructed from a unit
+quaternion at every step.  The orthonormality metric alone therefore does not
+discriminate between (a) and (c), and a comparison that reports only (a)
+versus (b) overstates the case.  The distinction is in \emph{how} the
+constraint is met: re-normalisation is a projection applied outside the
+integrator, so the trajectory it produces is not the trajectory of the
+discrete method whose Jacobian an estimator would linearise, and the
+projection's own contribution is absent from that Jacobian.  This is the
+concrete sense in which structure preservation matters here, and it is a
+statement about consistency rather than about orthonormality.
 
 \subsection{Convergence Order Verification}
 
-The global error $e(h) = \norm{g(T) - g_{\mathrm{ref}}(T)}_\SE$ is measured at
-$T = \SI{10}{s}$ for step sizes $h \in \{0.1, 0.05, 0.02, 0.01, 0.005\}\,$s
-using Scenario~1 (where the reference solution is analytically available).
-A log-log fit confirms empirical order $p \approx 5$ for the SE(3)-RKMK
-integrator.
+Convergence order is established in Section~\ref{sec:order_test}:
+Tables~\ref{tab:order_data} and~\ref{tab:order_summary} give the errors and
+the fitted slopes, with measured orders of 5.00 (Radau~IIA) and 3.91--3.98
+(explicit RK4) against nominal 5 and 4.
+Figure~\ref{fig:convergence} plots the same data.
 
-\TODO{Insert Figure: Log-log convergence plot.  Slope $\approx 5$ expected.
-Include RK4 (slope $\approx 4$) for comparison.}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.72\linewidth]{figures/convergence_order}
+  \caption{Global attitude and position error at $T = \SI{2}{\second}$ versus
+    step size, torque-free asymmetric body.  Reference slopes $h^5$ and $h^4$
+    shown dotted.  Generated from
+    \texttt{papers/eucass/data/convergence\_order.csv}, which is emitted by the
+    \texttt{[convergence][csv]} regression test.}
+  \label{fig:convergence}
+\end{figure}
+
+Because both studies are regression tests that emit the data files from which
+these figures are produced, a change that degrades the integrator fails the
+build rather than silently invalidating a published claim.
 
 % ---------------------------------------------------------------------------
 \section{Conclusions}

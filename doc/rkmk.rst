@@ -360,43 +360,89 @@ small :math:`\theta`).
 Left Jacobian and :math:`\dexp^{-1}` on SO(3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For :math:`\SO(3)`, :math:`\dexp` corresponds to the *left Jacobian* :math:`J(\phi)`:
+On :math:`\SO(3)` the operator :math:`\dexp_{\phi}` is the *left Jacobian*
+:math:`J_\ell(\phi)`, which is also the matrix appearing in the translational
+block of the :math:`\SE(3)` exponential:
 
 .. math::
 
-   \dexp_{\phi}(u) \equiv J(\phi)\,u,\qquad u\in\R^3.
+   \dexp_{\phi}(u) \equiv J_\ell(\phi)\,u,\qquad
+   J_\ell(\phi) = I
+   + \frac{1-\cos\theta}{\theta^2}[\phi]_\times
+   + \frac{\theta-\sin\theta}{\theta^3}[\phi]_\times^2 .
 
-A standard closed form is
+What the RKMK stage correction needs, however, is :math:`\dexp_{-\phi}^{-1}`
+(see the derivation above), and
 
 .. math::
 
-   J(\phi) = I
+   \dexp_{-\phi} = J_\ell(-\phi) = J_r(\phi) = I
    - \frac{1-\cos\theta}{\theta^2}[\phi]_\times
-   + \frac{\theta-\sin\theta}{\theta^3}[\phi]_\times^2.
+   + \frac{\theta-\sin\theta}{\theta^3}[\phi]_\times^2,
 
-Hence
-
-.. math::
-
-   \dexp^{-1}_{\phi}(v) \equiv J(\phi)^{-1} v.
-
-A commonly used closed form for :math:`J(\phi)^{-1}` (for :math:`\theta\not\approx 0`) is
+the *right* Jacobian.  Its inverse is the quantity actually evaluated in code:
 
 .. math::
 
-   J(\phi)^{-1} =
+   \dexp^{-1}_{-\phi} = J_r(\phi)^{-1} =
    I + \frac{1}{2}[\phi]_\times
-   + \left(\frac{1}{\theta^2} - \frac{1+\cos\theta}{2\theta\sin\theta}\right)[\phi]_\times^2.
+   + \left(\frac{1}{\theta^2} - \frac{1+\cos\theta}{2\theta\sin\theta}\right)[\phi]_\times^2,
+   \qquad \theta \not\approx 0 .
 
 For small :math:`\theta`, use the series expansion
 
 .. math::
 
-   J(\phi)^{-1} \approx
+   J_r(\phi)^{-1} \approx
    I + \frac{1}{2}[\phi]_\times + \frac{1}{12}[\phi]_\times^2 + \mathcal{O}(\theta^3).
 
 This is often the most AD-friendly route: branch on :math:`\theta^2` and use series
 near zero.
+
+.. note::
+
+   The :math:`+\tfrac12[\phi]_\times` here is the :math:`\SO(3)` instance of the
+   :math:`+\tfrac12\ad_\eta` term in the Bernoulli series above.  If a derivation
+   yields :math:`-\tfrac12[\phi]_\times` for a body-frame (left-trivialized)
+   field, the trivialization convention has been mixed up.
+
+.. _rkmk_order_verification:
+
+Verifying the order in practice
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Convergence order cannot be verified on a torque-free *symmetric* body.  For
+:math:`I_{xx}=I_{yy}=I_{zz}` and no external wrench, Euler's equations give
+:math:`\dot\omega = 0`, so the body twist is constant and the exact flow is the
+one-parameter subgroup :math:`g(t) = g_0\exp(t\xi)`.  Every RKMK method
+reproduces that *exactly*, at every step size, regardless of its classical
+order --- the errors sit at machine precision and the log-log slope is
+meaningless noise.
+
+A usable test problem must have a genuinely time-varying twist.  Aetherion uses
+a torque-free **asymmetric** body (:math:`I_{xx}`, :math:`I_{yy}`,
+:math:`I_{zz}` all distinct, so :math:`\omega\times I\omega \neq 0`) with a
+non-zero initial body velocity, integrated against a reference computed at a
+step size 50 times smaller than the finest tested step and cross-validated
+between two independent integrators.  Measured mean log-log slopes:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 20 20
+
+   * - Integrator
+     - Attitude
+     - Position
+   * - Radau IIA RKMK (3-stage, order 5)
+     - 5.00
+     - 5.00
+   * - Explicit RK4 RKMK (4-stage, order 4)
+     - 3.91
+     - 3.98
+
+Both checks are regression tests
+(:file:`tests/RigidBody/test_ConvergenceOrder.cpp`): the exactness property on
+the symmetric sphere, and the measured order on the asymmetric body.
 
 Typical coupled state example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
