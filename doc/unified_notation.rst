@@ -218,7 +218,7 @@ differential of the exponential:
 
 .. math::
 
-   K_i = \dexp_{\eta_i}^{-1}\!\big(\Omega(g_i,y_i)\big)\in \Lie{se}(3),
+   K_i = \dexp_{-\eta_i}^{-1}\!\big(\Omega(g_i,y_i)\big)\in \Lie{se}(3),
    \qquad
    k_i = f(g_i,y_i)\in\R^m.
 

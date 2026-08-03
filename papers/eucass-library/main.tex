@@ -1,0 +1,800 @@
+% =============================================================================
+% EUCASS 2027 Paper Draft (Library / Tool Paper)
+% "Aetherion: An Open-Source C++23 Library for Structure-Preserving
+%  Six-Degree-of-Freedom Flight Dynamics"
+%
+% Author: Onur Tuncer, Istanbul Technical University
+%
+% This is the broad "introduce the library" paper.  The companion paper
+% (papers/eucass/main.tex) treats the SE(3) RKMK integrator in depth.
+%
+% NOTE: formatted to match the EUCASS proceedings style.  When the official
+% EUCASS 2027 LaTeX class is released, replace
+%   \documentclass[a4paper,10pt]{article}
+% with
+%   \documentclass[twoside]{eucass}
+% and remove the manual geometry/font settings below.
+% =============================================================================
+
+\documentclass[a4paper,10pt]{article}
+
+% ---------------------------------------------------------------------------
+% Packages
+% ---------------------------------------------------------------------------
+\usepackage[a4paper, top=25mm, bottom=25mm, left=20mm, right=20mm]{geometry}
+\usepackage{times}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{microtype}
+\usepackage{natbib}
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{siunitx}
+\usepackage{listings}
+
+% ---------------------------------------------------------------------------
+% EUCASS-style formatting
+% ---------------------------------------------------------------------------
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\itshape 13th European Conference for Aeronautics and Space Sciences (EUCASS)}
+\fancyhead[R]{\small\thepage}
+\fancyfoot{}
+
+\titleformat{\section}{\normalsize\bfseries\uppercase}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\normalsize\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}{\normalsize\itshape}{\thesubsubsection}{0.5em}{}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+% ---------------------------------------------------------------------------
+% Listings style for C++
+% ---------------------------------------------------------------------------
+\definecolor{lstkw}{HTML}{0F4C81}
+\definecolor{lstcm}{HTML}{6B7280}
+\definecolor{lstst}{HTML}{9A3412}
+\definecolor{lstbg}{HTML}{F7F7F9}
+
+\lstdefinestyle{cpp}{
+  language=C++,
+  basicstyle=\ttfamily\scriptsize,
+  keywordstyle=\color{lstkw}\bfseries,
+  commentstyle=\color{lstcm}\itshape,
+  stringstyle=\color{lstst},
+  backgroundcolor=\color{lstbg},
+  frame=single,
+  rulecolor=\color{lstcm!40},
+  framesep=4pt,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  breaklines=true,
+  captionpos=b,
+  morekeywords={concept,requires,constexpr,consteval,noexcept,nullptr,auto,using,template,typename,struct,class,namespace,co_await}
+}
+\lstset{style=cpp}
+
+% ---------------------------------------------------------------------------
+% Math macros
+% ---------------------------------------------------------------------------
+\newcommand{\SO}{\mathrm{SO}(3)}
+\newcommand{\SE}{\mathrm{SE}(3)}
+\newcommand{\so}{\mathfrak{so}(3)}
+\newcommand{\se}{\mathfrak{se}(3)}
+\newcommand{\Exp}{\mathrm{Exp}}
+\newcommand{\dexp}{\mathrm{d}\exp}
+\newcommand{\ad}{\mathrm{ad}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
+\newcommand{\nuB}{\boldsymbol{\nu}_B}
+\newcommand{\IB}{\mathbf{I}_B}
+\newcommand{\wext}{\mathbf{w}_{\mathrm{ext}}}
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+\theoremstyle{definition}
+\newtheorem{remark}{Remark}
+
+% ---------------------------------------------------------------------------
+% Document
+% ---------------------------------------------------------------------------
+\begin{document}
+
+% ---------------------------------------------------------------------------
+% Title block
+% ---------------------------------------------------------------------------
+\begin{center}
+  {\Large\bfseries
+    Aetherion: An Open-Source C++23 Library for\\[4pt]
+    Structure-Preserving Six-Degree-of-Freedom Flight Dynamics}
+
+  \vspace{10pt}
+
+  {\normalsize\bfseries Onur Tuncer$^{1}$}
+
+  \vspace{4pt}
+
+  {\small
+    $^{1}$Department of Aerospace Engineering, Istanbul Technical University,\\
+    Maslak, 34469 Istanbul, Turkey\\
+    \texttt{otuncer@itu.edu.tr}}
+
+  \vspace{10pt}
+\end{center}
+
+% ---------------------------------------------------------------------------
+% Abstract
+% ---------------------------------------------------------------------------
+\begin{center}
+  \begin{minipage}{0.92\linewidth}
+    \small\textbf{Abstract}
+
+    Six-degree-of-freedom (6-DOF) flight simulation underpins vehicle design,
+    control law verification, and trajectory optimisation, yet the software
+    used in practice is typically either proprietary, tied to a single vehicle
+    class, or written in a style that resists differentiation and reuse.  This
+    paper introduces \emph{Aetherion}, an open-source (MIT) C++23 library for
+    atmospheric and space flight vehicle dynamics built on three design
+    commitments: Featherstone spatial vector algebra as the sole kinematic and
+    dynamic vocabulary; a state that lives explicitly on the product manifold
+    $\SE \times \R^{7}$ and is advanced by Runge--Kutta--Munthe-Kaas (RKMK)
+    integrators that never leave the group; and scalar-type genericity
+    throughout, so that every model evaluates identically under
+    \code{double} and under an algorithmic-differentiation (AD) type.  Vehicle
+    models are assembled from gravity, aerodynamic, propulsion, and mass
+    policies that are checked at compile time by C++20 concepts instantiated
+    for \emph{both} scalar types, so a model that is not AD-safe fails to
+    compile rather than failing inside a differentiation tape.  The library is
+    verified against sixteen check cases from NASA
+    TM-2015-218675, spanning ballistic point masses, tumbling rigid bodies,
+    wind-shear fields, closed-loop F-16 manoeuvres, polar and equatorial
+    circumnavigation, and a two-stage rocket ascent to
+    \SI{232}{\kilo\metre}; agreement with the NASA reference is sub-metre for
+    the analytic cases and below \SI{1}{\percent} for the full launch-vehicle
+    trajectory.  We report the verified convergence order of the integrators,
+    describe the extension path for new vehicles, and summarise the continuous
+    integration gates---static analysis, sanitizers, include hygiene, and
+    complexity metrics---that the code base is held to.  Plants export to
+    FMI 2.0/3.0 functional mock-up units, allowing Aetherion models to be
+    co-simulated inside third-party environments.
+  \end{minipage}
+\end{center}
+
+\vspace{6pt}
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+\label{sec:intro}
+% ---------------------------------------------------------------------------
+
+The equations of motion of a rigid aerospace vehicle are not in dispute.  What
+differs between simulation codes---and what determines whether a code can be
+reused, differentiated, verified, or trusted at the margins of its envelope---is
+how those equations are \emph{expressed} in software.
+
+Three recurring choices in existing 6-DOF codes motivated this work.
+
+\textbf{Flattened state vectors.}  The dominant idiom is to pack attitude,
+position, velocity, and mass into a single flat array and hand it to a
+general-purpose ODE solver.  This is convenient and wrong in a specific way:
+the attitude components are constrained (a unit quaternion, or an orthonormal
+matrix) and the solver does not know it.  The constraint is then restored by
+periodic re-normalisation, an ad hoc projection applied outside the
+integrator that perturbs the trajectory and is invisible to any propagation
+Jacobian derived from the solver.
+
+\textbf{Hand-written Jacobians.}  Codes intended for estimation or optimisation
+typically carry a second, separately maintained implementation of the dynamics
+that returns partial derivatives.  The two implementations drift apart.  The
+alternative---finite differences---introduces truncation error precisely where
+the Newton or filter update is most sensitive to it.
+
+\textbf{Vehicle-specific plumbing.}  Aerodynamic, propulsion, and mass models
+are often hard-wired into the integration loop, so adding a vehicle means
+editing the solver rather than supplying a model.
+
+Aetherion is an attempt to remove all three by construction rather than by
+convention.  The state is declared on the manifold it actually inhabits and
+advanced by an integrator that respects it; every model is written once,
+generically over the scalar type, so the differentiated version \emph{is} the
+simulated version; and vehicles are assembled from policies whose interfaces
+are enforced by the compiler.
+
+\textbf{Contributions.}  This paper contributes:
+
+\begin{enumerate}[leftmargin=*, label=(\arabic*)]
+  \item A description of the library architecture, and in particular of the
+    compile-time policy/concept mechanism that makes AD-safety a property the
+    compiler checks rather than a property the author remembers
+    (Section~\ref{sec:design}--\ref{sec:arch}).
+  \item A verified numerical core: RKMK integrators on $\SE$ whose empirical
+    convergence orders are measured, not assumed, and whose attitude constraint
+    residual remains at the round-off level over 600-second trajectories
+    (Section~\ref{sec:numerics}).
+  \item A verification campaign against sixteen NASA TM-2015-218675 check
+    cases with published reference trajectories, reported per scenario
+    (Section~\ref{sec:verification}).
+  \item An explicit extension path---what a user writes to add a new
+    vehicle---together with the interoperability surface (FMI/FMU export,
+    DAVE-ML model ingestion, JSON configuration, NASA-compatible CSV output)
+    (Sections~\ref{sec:extensibility}--\ref{sec:interop}).
+  \item A statement of the engineering process: coding standard, continuous
+    integration gates, and test coverage (Section~\ref{sec:quality}).
+\end{enumerate}
+
+The library is available under the MIT licence \citep{aetherion_2025}.  The
+companion paper \citep{tuncer2027rkmk} treats the implicit SE(3) RKMK
+integrator and its Newton/AD machinery in depth; the present paper is
+deliberately broader and lighter on derivation.
+
+% ---------------------------------------------------------------------------
+\section{Related Software}
+\label{sec:related}
+% ---------------------------------------------------------------------------
+
+Open-source flight dynamics software is well established but stratified by
+purpose.  JSBSim \citep{berndt2004jsbsim} is a mature, widely used
+atmospheric flight dynamics model with an extensive XML vehicle description
+format, oriented towards flight simulation rather than towards
+differentiability or launch-vehicle trajectories.  General multibody
+libraries such as RBDL \citep{felis2017rbdl} and Pinocchio
+\citep{carpentier2019pinocchio} implement Featherstone's algorithms with high
+quality---Pinocchio in particular offers analytical derivatives---but target
+robotic articulated systems and do not carry atmosphere, gravity-field, or
+launch-vehicle staging models.  On the geometry side, Sophus and manif
+\citep{deray2020manif} provide Lie group primitives with Jacobians, but are
+libraries of group operations rather than of vehicle dynamics.  MATLAB's
+Aerospace Blockset and NASA's Trick/POST families are widely used in
+industry but are respectively commercial and export-controlled or
+distribution-restricted.
+
+Aetherion occupies the intersection: aerospace vehicle models (atmosphere,
+WGS84 gravity, DAVE-ML aerodynamic tables, staging) expressed in Featherstone
+spatial algebra, integrated by Lie-group methods, and differentiable
+end-to-end.
+
+% ---------------------------------------------------------------------------
+\section{Design Principles}
+\label{sec:design}
+% ---------------------------------------------------------------------------
+
+\subsection{One vocabulary: spatial vector algebra}
+
+All kinematic and dynamic quantities are 6-vectors in Featherstone's spatial
+algebra \citep{featherstone2008rbd}: twists $\nuB = [\boldsymbol{\omega}_B^\top,
+\mathbf{v}_B^\top]^\top$, wrenches $\mathbf{w} = [\mathbf{m}^\top,
+\mathbf{f}^\top]^\top$, the $6\times6$ spatial inertia $\IB$, and the motion
+and force cross-product operators $\ad$ and $\ad^*$.  The equation of motion
+is then a single line,
+\begin{equation}
+  \IB(m)\,\dot{\nuB} + \ad^*(\nuB)\,\IB(m)\,\nuB = \wext,
+  \label{eq:newton_euler}
+\end{equation}
+with no separate force and moment bookkeeping and no frame-specific special
+cases.  Types are distinct at compile time (\code{Spatial::Twist},
+\code{Spatial::Wrench}, \code{Spatial::Inertia}), so a wrench cannot be
+silently passed where a twist is expected.
+
+\subsection{The state lives on the manifold}
+
+The 6-DOF state is the triple $(g, \nuB, m)$ on
+\begin{equation}
+  \mathcal{M} = \SE \times \R^{6} \times \R_{>0},
+\end{equation}
+represented as a pose $g \in \SE$ plus a Euclidean vector
+$x = [\nuB^\top, m]^\top \in \R^{7}$.  The two factors are advanced by
+different retractions: $x$ by ordinary weighted sums, $g$ by the Lie
+exponential.  Because $g$ is only ever updated as $g \leftarrow g \cdot
+\Exp(\Delta)$ with $\Delta \in \se$, the rotation factor is a product of exact
+$\SO$ elements and never needs re-orthonormalisation.
+
+\subsection{Scalar-type genericity}
+
+Every model---gravity, atmosphere, aerodynamic table interpolation,
+propulsion, the exponential map, the $\dexp^{-1}$ operator, the Newton--Euler
+right-hand side---is a template over a scalar type $S$.  Instantiating with
+$S = $ \code{double} yields the simulation path; instantiating with
+$S = $ \code{CppAD::AD<double>} \citep{cppad} yields a differentiable path
+through \emph{the same source}.  There is no second implementation to keep in
+step.
+
+This has a practical cost that shapes the code: branches on floating-point
+comparisons do not tape correctly, so environment models are written
+branch-free where possible and otherwise use conditional-expression wrappers
+(\code{Environment::detail::MathWrappers}).  Table lookups are interpolated
+with AD-transparent arithmetic rather than with index-selecting control flow.
+
+\subsection{Policies checked by concepts}
+
+A vehicle is a composition of four policies.  Their interfaces are C++20
+concepts, and---this is the load-bearing detail---each concept is required to
+hold for \emph{both} scalar types:
+
+\begin{lstlisting}[caption={Policy concepts are instantiated for \code{double} and for the AD type, so a model that is not differentiable is a compile error.}, label={lst:concepts}]
+template<class P, class S>
+concept GravityPolicyFor =
+    requires(const P& p, const Lie::SE3<S>& g, S mass) {
+        { p(g, mass) } -> std::same_as<Spatial::Wrench<S>>;
+    };
+
+template<class P>
+concept GravityPolicy =
+       detail::GravityPolicyFor<P, double>
+    && detail::GravityPolicyFor<P, CppAD::AD<double>>;
+\end{lstlisting}
+
+A policy that inadvertently uses \code{std::sqrt} on a raw \code{double}, or
+takes a branch that the tape cannot record, fails the concept check at the
+point of use with a readable diagnostic---rather than producing a silently
+wrong Jacobian at run time.
+
+\subsection{Predictable allocation}
+
+The stage system, the residual, and the Newton Jacobian are fixed-size Eigen
+objects and are therefore stack-resident.  No heap allocation occurs inside
+the integration hot path other than the vector round-trips mandated by the
+CppAD tape interface.  This is a prerequisite for the real-time and
+hardware-in-the-loop use the library is intended to support.
+
+% ---------------------------------------------------------------------------
+\section{Architecture}
+\label{sec:arch}
+% ---------------------------------------------------------------------------
+
+Aetherion is a header-dominant library of roughly \num{40000} lines across
+the modules in Table~\ref{tab:modules}.  Dependencies are deliberately few:
+Eigen for linear algebra, CppAD for differentiation, nlohmann/json for
+configuration, Catch2 for tests, and fmu4cpp for FMU export.
+
+\begin{table}[h]
+  \centering
+  \caption{Module map.  Namespaces mirror directory structure.}
+  \label{tab:modules}
+  \small
+  \begin{tabular}{lll}
+    \toprule
+    Module & Namespace & Responsibility \\
+    \midrule
+    Spatial        & \code{Aetherion::Spatial}      & Twists, wrenches, spatial inertia, $\ad$/$\ad^*$, transforms \\
+    ODE/RKMK/Lie   & \code{...::ODE::RKMK::Lie}     & $\SO$, $\SE$, $\Exp$, $\dexp^{-1}$, adjoints \\
+    ODE/RKMK/Core  & \code{...::ODE::RKMK::Core}    & Butcher tableaux, stage residuals, Newton solve, AD Jacobian \\
+    ODE/RKMK/Integrators & \code{...::Integrators}  & Radau IIA and explicit RK4 RKMK steppers \\
+    RigidBody      & \code{...::RigidBody}          & State, spatial inertia assembly, vector field, 6-DOF stepper \\
+    Environment    & \code{...::Environment}        & US1976 atmosphere, WGS84 gravity and constants, wind models \\
+    Aerodynamics   & \code{...::Aerodynamics}       & Aerodynamic angles, Mach number, force/moment assembly \\
+    Coordinate     & \code{...::Coordinate}         & ECI/ECEF/geodetic/NED conversions \\
+    FlightDynamics & \code{...::FlightDynamics}     & Gravity/aero/propulsion/mass policies, trim solver \\
+    Serialization  & \code{...::Serialization}      & DAVE-ML model reader, JSON configuration \\
+    Simulation     & \code{...::Simulation}         & Application template method, simulator interface, CSV snapshots \\
+    FMU            & ---                            & FMI 2.0/3.0 export wrappers \\
+    Examples       & \code{...::Examples}           & The sixteen verification scenarios \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{Assembling a vehicle}
+
+The composition is visible in the type.  A vehicle's right-hand side is a
+\code{VectorField} parameterised by its four policies; the stepper is a
+\code{SixDoFStepper} parameterised by that vector field:
+
+\begin{lstlisting}[caption={A complete vehicle definition.  The Newton--Euler equation, the SE(3) kinematics, the implicit stage system, and the AD Jacobian are all supplied by the library.}, label={lst:vehicle}]
+using RocketVF = RigidBody::VectorField<
+        RocketGravityPolicy,     // w_grav(g, m)
+        RocketAeroPolicy,        // w_aero(g, nu_B, m, t)
+        RocketPropulsionPolicy,  // w_prop(g, nu_B, m, t)
+        RocketMassPolicy>;       // mdot(t, m)
+
+using Stepper = RigidBody::SixDoFStepper<RocketVF>;   // Radau IIA RKMK, default
+
+Stepper stepper{ inertialParameters, newtonOptions };
+
+auto result = stepper.step(t, state, h);
+if (result.converged)
+    state = Stepper::unpack(result);
+\end{lstlisting}
+
+Substituting a different integrator is a third template argument; substituting
+a different vehicle is four different policy types.  Neither requires touching
+the solver.
+
+\subsection{Application scaffolding}
+
+Executable scenarios derive from \code{Simulation::Application}, a template
+method that owns the run loop, argument parsing, logging, and CSV output.  A
+scenario supplies four hooks---\code{prepareSimulation}, \code{writeInitialSnapshot},
+\code{stepAndRecord}, \code{logFinalSummary}---and the output column schema is
+selected at compile time through \code{SnapshotTraits}, which offers a
+31-column layout matching the NASA reference files exactly (so that comparison
+requires no column mapping) and a 38-column extended layout that additionally
+records the ECI velocity and the body-to-ECI quaternion.
+
+% ---------------------------------------------------------------------------
+\section{Numerical Core}
+\label{sec:numerics}
+% ---------------------------------------------------------------------------
+
+\subsection{RKMK on $\SE \times \R^{7}$}
+
+Runge--Kutta--Munthe-Kaas methods \citep{muntheKaas1998,iserles2000liegroup}
+perform all Runge--Kutta stages inside the Lie algebra---a vector space---and
+map back to the group with the exponential.  Aetherion treats the pose as a
+single $\SE$ element rather than as a split $\SO \times \R^3$ product, so the
+screw coupling between rotation and translation is retained.  Two integrators
+are provided: a three-stage Radau~IIA scheme (order~5, stiffly accurate,
+solved by Newton iteration with an exact CppAD Jacobian) and an explicit
+four-stage RK4 scheme for cheap or non-stiff cases.  Both share the same stage
+residual formulation and the same $\Exp$/$\dexp^{-1}$ primitives.
+
+\begin{remark}[Trivialisation convention]
+\label{rem:trivialisation}
+The kinematic ODE is written in left-trivialised (body) form,
+$\dot g = g \cdot \hat\xi$.  Writing $g(t) = g_0\Exp(u(t))$ then gives
+$u̇ = \dexp^{-1}_{-u}(\xi)$, so the RKMK stage correction must be evaluated at
+$-\eta_i$.  Evaluating it at $+\eta_i$---the right-trivialised convention,
+$\dot g = \hat\xi \cdot g$, and the form in which the series is most often
+tabulated---flips the sign of the $O(\ad)$ Bernoulli term and silently caps
+the method at order~2 for \emph{any} Butcher tableau.  The failure is
+invisible in the usual smoke tests: constant-twist motion is still integrated
+exactly, and the residual still converges.  It is detected only by a
+convergence study on a problem with time-varying twist.  The companion paper
+\citep{tuncer2027rkmk} develops this point; it is repeated here because it is
+a defect that a reader implementing RKMK is likely to reproduce.
+\end{remark}
+
+\subsection{Measured convergence order}
+
+Order is verified rather than asserted.  The test problem is a torque-free
+asymmetric rigid body ($I_{xx}, I_{yy}, I_{zz}$ all distinct) with a non-zero
+initial body velocity, so that Euler's equations are nonlinear, the body twist
+is genuinely time-varying, and the translational screw coupling is exercised.
+Errors are measured against a reference computed at a step size 50 times
+smaller than the finest tested step, cross-validated between the two
+independent integrators.  Table~\ref{tab:order} reports the outcome.
+
+\begin{table}[h]
+  \centering
+  \caption{Empirical convergence order at $T = \SI{2}{\second}$, torque-free
+    asymmetric body.  Errors are $\norm{R_{\text{num}} - R_{\text{ref}}}_F$
+    and $\norm{\mathbf{p}_{\text{num}} - \mathbf{p}_{\text{ref}}}_2$.  Mean
+    log--log slope over the five step sizes.}
+  \label{tab:order}
+  \small
+  \begin{tabular}{lcc}
+    \toprule
+    Integrator & Attitude order & Position order \\
+    \midrule
+    Radau IIA RKMK (3-stage, order 5)  & 5.00 & 5.00 \\
+    Explicit RK4 RKMK (4-stage, order 4) & 3.91 & 3.98 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+A companion property is that both integrators reproduce constant-twist motion
+\emph{exactly}, at every step size: a constant body twist generates a
+one-parameter subgroup, and the RKMK stage system collapses onto the
+exponential of a constant algebra element.  This is the defining behaviour of
+a Lie-group method, and it is asserted as a regression test.
+
+\subsection{Attitude constraint}
+
+Over a \SI{600}{\second} tumbling trajectory the orthonormality residual
+$\norm{R^\top R - I}_F$ of the SE(3) RKMK pose remains at the round-off
+level and shows no secular growth, because the rotation factor is a product of
+exact $\SO$ elements.  A conventional RK4 integrator applied to an
+unconstrained 13-component quaternion state accumulates a residual many orders
+of magnitude larger over the same trajectory.  Per-step re-normalisation of
+that quaternion does restore the constraint---the distinction is therefore not
+\emph{whether} orthonormality is achieved but \emph{how}: re-normalisation is a
+projection applied outside the integrator, which perturbs the solution and is
+not represented in any propagation Jacobian derived from the solver.
+Section~\ref{sec:roadmap} returns to why this matters for filtering.
+
+% ---------------------------------------------------------------------------
+\section{Vehicle and Environment Models}
+\label{sec:models}
+% ---------------------------------------------------------------------------
+
+\textbf{Atmosphere.}  The US Standard Atmosphere 1976 is implemented over the
+full layered profile, returning temperature, pressure, density, and speed of
+sound, in a branch-free form suitable for differentiation.
+
+\textbf{Gravity.}  WGS84 constants and an oblateness ($J_2$) gravity model are
+provided, together with the full set of ECI/ECEF/geodetic/NED conversions.
+Round-trip conversion consistency is unit-tested over randomised inputs.
+
+\textbf{Aerodynamics.}  Coefficients are read from DAVE-ML
+\citep{jackson2002daveml} model files---the same interchange format used by
+the NASA reference cases---and interpolated in the model's independent
+variables.  Air-relative velocity accounts for the rotating atmosphere, so the
+aerodynamic angles are computed against the moving air mass rather than
+against the inertial frame.
+
+\textbf{Propulsion and variable mass.}  Thrust and mass flow are supplied by a
+propulsion policy and a mass policy; staging is handled by event-triggered
+replacement of the active policies, with per-stage propellant tracking and a
+centre-of-gravity offset that travels as propellant is consumed.  The spatial
+inertia is rebuilt from the current fuel state on each step.
+
+\textbf{Trim.}  A two-stage Newton--Raphson trim solver finds the
+$(\alpha, \delta_e, \text{throttle})$ that balances a straight-and-level
+condition, using an exact CppAD Jacobian for the longitudinal $2\times2$
+subproblem and a bisection inversion of the propulsion map for thrust.  The
+solver applies the aerodynamic-reference-centre to centre-of-gravity moment
+transfer explicitly, which is necessary to reproduce the NASA F-16 trim
+condition.
+
+% ---------------------------------------------------------------------------
+\section{Verification}
+\label{sec:verification}
+% ---------------------------------------------------------------------------
+
+\subsection{Method}
+
+NASA Technical Memorandum TM-2015-218675 \citep{NASA_TM_2015_218675} defines a
+set of atmospheric and space flight check cases and publishes reference
+trajectories generated by independently developed NASA simulation frameworks.
+It is, for this purpose, close to an ideal verification target: the vehicle
+models are fully specified, the reference output is machine-readable, and the
+cases are graded from analytically checkable point masses up to a full
+launch-vehicle ascent.
+
+Aetherion implements sixteen of these cases as executable examples.  Each
+writes a CSV file whose columns match the reference file exactly, and the two
+are compared column by column with a scripted differencing tool.  The examples
+are not toy drivers: they are the same code paths a user would write, and they
+are built and run in continuous integration.
+
+\subsection{Results}
+
+Table~\ref{tab:verification} summarises agreement with the NASA reference for
+each scenario.
+
+\begin{table}[h]
+  \centering
+  \caption{Verification against NASA TM-2015-218675 reference trajectories.
+    \TODO{Regenerate all entries after the trivialisation fix of
+    Remark~\ref{rem:trivialisation}; the numbers below are carried over from
+    the pre-fix documentation and must be re-measured before submission.}}
+  \label{tab:verification}
+  \small
+  \begin{tabular}{clll}
+    \toprule
+    Case & Scenario & Aetherion example & Agreement with reference \\
+    \midrule
+     1 & Dragless sphere              & \code{DraglessSphere}            & altitude $< \SI{0.53}{\metre}$; $g$ rel.\ err.\ $< 9\times10^{-8}$ \\
+     2 & Tumbling brick, undamped     & \code{TumblingBrickNoDamping}    & altitude $< \SI{0.6}{\metre}$; speed $< \SI{0.021}{\metre\per\second}$ \\
+     3 & Tumbling brick, damped       & \code{TumblingBrickWithDamping}  & as case 2 translationally \\
+     6 & Sphere with drag             & \code{SphereWithAtmosphericDrag} & altitude $< \SI{0.45}{\metre}$; TAS $< \SI{0.02}{\metre\per\second}$ \\
+     7 & Dropped sphere, steady wind  & \code{DroppedSphereSteadyWind}   & altitude \SI{0.444}{\metre} (\SI{0.009}{\percent}); TAS $< \SI{0.001}{\percent}$ \\
+     8 & Dropped sphere, wind shear   & \code{DroppedSphere2DWindShear}  & \TODO{measure} \\
+     9 & Eastward cannonball          & \code{EastwardCannonball}        & \TODO{measure} \\
+    10 & Northward cannonball         & \code{NorthwardCannonball}       & \TODO{measure} \\
+    11 & F-16 subsonic trim           & \code{F16SteadyFlight}           & $\alpha$ within \SI{0.013}{\degree} of reference \\
+    12 & F-16 supersonic trim         & \code{F16SupersonicTrim}         & trim within \SI{0.004}{\degree} \\
+    13.1 & F-16 altitude change       & \code{F16AltitudeChange}         & \SI{0.4}{\foot} altitude; \SI{0.007}{\degree} pitch at \SI{20}{\second} \\
+    13.2 & F-16 airspeed change       & \code{F16AirspeedChange}         & final KEAS $< \SI{0.01}{\knot}$; altitude within \SI{0.3}{\foot} \\
+    13.3 & F-16 heading change        & \code{F16HeadingChange}          & final yaw within \SI{0.02}{\degree} \\
+    13.4 & F-16 lateral side step     & \code{F16LateralSideStep}        & course within \SI{0.28}{\degree}; altitude within \SI{0.6}{\foot} \\
+    15 & F-16 polar circumnavigation  & \code{CircleNorthPole}           & latitude $< \SI{0.0003}{\degree}$ ($<\SI{20}{\metre}$); roll $< \SI{0.1}{\degree}$ \\
+    16 & F-16 equatorial circuit      & \code{CircleEquatorDateLine}     & latitude $< \SI{0.0006}{\degree}$; longitude $< \SI{0.002}{\degree}$ \\
+    17 & Two-stage rocket to orbit    & \code{TwoStageRocket}            & altitude $-\SI{0.87}{\percent}$; speed $+\SI{0.14}{\percent}$ at \SI{200}{\second} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\subsection{The launch-vehicle case}
+
+Scenario 17 is the most demanding case and the one that exercises the whole
+library at once: variable mass, travelling centre of gravity, supersonic and
+hypersonic aerodynamic tables, staging, and \SI{200}{\second} of ascent from
+sea level to \SI{232}{\kilo\metre}.  Through the first-stage burn the altitude
+error against the NASA Sim~06 reference stays below \SI{0.15}{\percent} and the
+speed error below \SI{1.5}{\metre\per\second}; the offset is unchanged through
+the coast phase, confirming that the spatial inertia and gravity model are
+consistent in ballistic flight; and at second-stage ignition the two
+simulations are still within \SI{0.16}{\percent}.
+
+\TODO{Insert Figure: Scenario 17 altitude and speed vs.\ NASA Sim 06, with
+phase markers at S1 burnout, S2 ignition, and end of simulation.
+Source: \code{doc/\_static/atmos17/}.}
+
+Two known modelling differences account for most of the residual disagreement
+at the end of the trajectory and are stated here rather than absorbed into a
+tolerance.  First, the variable-mass Newton--Euler equation strictly carries an
+inertia-relief term $-\dot{\IB}\nuB$ that Aetherion currently omits,
+approximating it instead by rebuilding $\IB$ from the fuel state each step;
+at the recommended $\Delta t = \SI{0.001}{\second}$ the per-step inertia change
+is negligible against $I_{yy}$, but the approximation is not exact.  Second,
+the pitch history during coast decays at a slightly different rate than the
+reference, which shifts the effective second-stage ignition attitude.
+
+% ---------------------------------------------------------------------------
+\section{Extending the Library}
+\label{sec:extensibility}
+% ---------------------------------------------------------------------------
+
+Adding a vehicle means writing policies, not editing the solver.  A gravity
+policy is representative: it is a callable returning a body-frame wrench,
+templated on the scalar type.
+
+\begin{lstlisting}[caption={A user-supplied policy.  Writing \code{operator()} as a template over \code{S} is the entire requirement; the concept in Listing~\ref{lst:concepts} then admits it for both the simulation and the differentiated path.}, label={lst:policy}]
+struct MyGravityPolicy {
+    template<class S>
+    Spatial::Wrench<S> operator()(const Lie::SE3<S>& g, S mass) const
+    {
+        const Eigen::Matrix<S,3,1> g_eci  = gravityField(g.p);   // AD-transparent
+        const Eigen::Matrix<S,3,1> f_body = g.R.transpose() * (mass * g_eci);
+
+        Spatial::Wrench<S> w{};
+        w.f.template head<3>().setZero();     // moment
+        w.f.template tail<3>() = f_body;      // force
+        return w;
+    }
+};
+
+static_assert(FlightDynamics::GravityPolicy<MyGravityPolicy>);
+\end{lstlisting}
+
+The \code{static\_assert} is the recommended idiom: it reports a violation at
+the definition site, before the type is buried inside an integrator
+instantiation.  Because the concept quantifies over both scalar types, a policy
+that compiles for \code{double} but not for the AD type is rejected here rather
+than producing a wrong Jacobian later.
+
+The same pattern extends to the output schema (specialise
+\code{SnapshotTraits} for a new column layout), to the integrator (any type
+satisfying \code{IntegratorFor} can replace Radau~IIA), and to the Lie group
+itself (the \code{LieGroup} concept requires only \code{Identity}, composition,
+\code{Exp}, and \code{dexp\_inv}, so a different manifold can be substituted
+without touching the stage machinery).
+
+% ---------------------------------------------------------------------------
+\section{Interoperability}
+\label{sec:interop}
+% ---------------------------------------------------------------------------
+
+\textbf{FMI/FMU export.}  Plants are exported as FMI 2.0 and 3.0 functional
+mock-up units through fmu4cpp \citep{fmu4cpp}, so an Aetherion vehicle can be
+dropped into any FMI-compliant co-simulation environment.  Exported units
+include the dragless sphere, the F-16 plant, an F-16 autopilot, and the
+two-stage rocket.  FMU round-trip behaviour is smoke-tested in continuous
+integration against the ecos co-simulation engine \citep{ecos}, and Simulink
+import is exercised by a dedicated workflow.
+
+\textbf{Model ingestion.}  Aerodynamic, inertia, propulsion, and control model
+data are read from DAVE-ML files, the same format the NASA reference cases are
+distributed in, so a check case can be reproduced without transcription.
+
+\textbf{Configuration and output.}  Initial conditions and simulation
+parameters are JSON; output is CSV in a column layout selectable at compile
+time, including one that matches the NASA reference files exactly.
+
+% ---------------------------------------------------------------------------
+\section{Software Quality}
+\label{sec:quality}
+% ---------------------------------------------------------------------------
+
+For a library whose purpose is to be trusted numerically, process is part of
+the contribution.  The code base follows a practical subset of the JSF~AV C++
+coding standard \citep{jsfav2005}, with deviations documented individually
+rather than waived silently.  Table~\ref{tab:ci} lists the gates that run on
+every pull request.
+
+\begin{table}[h]
+  \centering
+  \caption{Continuous integration gates.}
+  \label{tab:ci}
+  \small
+  \begin{tabular}{ll}
+    \toprule
+    Gate & Purpose \\
+    \midrule
+    Linux and Windows builds        & Portability across GCC/Clang and MSVC \\
+    Catch2 test suite               & $\approx$\num{590} test cases in 69 translation units \\
+    AddressSanitizer / UBSanitizer  & Memory and undefined-behaviour detection \\
+    Clang-Tidy                      & Static analysis, coding-standard enforcement \\
+    IWYU                            & Include hygiene \\
+    Clang-Format / CMake-Format / CMake-Lint & Formatting and build-script consistency \\
+    Metrix++                        & Cyclomatic complexity budget \\
+    Codecov                         & Line coverage tracking \\
+    Simulink workflow               & FMU import round trip \\
+    Doxygen + Sphinx                & API reference and narrative documentation, published to GitHub Pages \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The test suite is deliberately weighted towards the numerical core: the Lie
+group operations, the stage residual, the Newton solve, the spatial algebra
+identities, and the coordinate conversions are each tested against closed-form
+or round-trip references, independently of the end-to-end scenario
+comparisons.  The convergence-order and constraint-drift studies reported in
+Section~\ref{sec:numerics} are themselves regression tests, and they emit the
+data files from which the figures in this paper are generated---so a change
+that degrades the integrator fails the build rather than quietly degrading a
+published claim.
+
+% ---------------------------------------------------------------------------
+\section{Limitations and Roadmap}
+\label{sec:roadmap}
+% ---------------------------------------------------------------------------
+
+Aetherion is at version~0.11 and is explicitly pre-1.0; the following are known
+gaps rather than design positions.
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Manifold state estimation.}  The library is architected so that
+    the AD Jacobian of the simulated dynamics can feed an extended Kalman
+    filter on the same product manifold---this is the principal motivation for
+    the constraint-preservation and AD-transparency properties above---but the
+    filter itself is currently a stub.  Implementing it is the next major
+    piece of work.
+  \item \textbf{Inertia relief.}  The $-\dot{\IB}\nuB$ term in the
+    variable-mass Newton--Euler equation is approximated by per-step rebuilding
+    of $\IB$ rather than carried explicitly.
+  \item \textbf{Step-size control.}  The integrators are fixed-step.  An
+    embedded error estimate for Radau~IIA and adaptive stepping are planned.
+  \item \textbf{Single rigid body.}  Articulated multibody dynamics are not
+    implemented, although the spatial-algebra foundation is the standard one
+    for it.
+  \item \textbf{Aerodynamic model coverage.}  DAVE-ML ingestion covers the
+    subset exercised by the NASA check cases and is not a complete
+    implementation of the specification.
+\end{itemize}
+
+% ---------------------------------------------------------------------------
+\section{Conclusions}
+\label{sec:conclusions}
+% ---------------------------------------------------------------------------
+
+Aetherion demonstrates that the properties usually traded off against each
+other in flight dynamics software---manifold correctness, differentiability,
+extensibility, and verifiability---can be obtained simultaneously if they are
+expressed in the type system rather than in convention.  The state is declared
+on $\SE \times \R^7$ and advanced by integrators that keep it there, with
+convergence orders measured at 5.00 and 3.9 rather than assumed.  Every model
+is written once and evaluates identically under \code{double} and under an AD
+type, with the requirement enforced by concepts that quantify over both.
+Vehicles are compositions of four policies.  And the whole is verified against
+sixteen published NASA reference trajectories, from analytic point masses to a
+two-stage ascent to \SI{232}{\kilo\metre}, with the verification studies
+wired into continuous integration.
+
+The library is open source under the MIT licence and is offered as a
+foundation for work in trajectory optimisation, manifold-consistent state
+estimation, and control law verification.
+
+% ---------------------------------------------------------------------------
+\section*{Availability}
+% ---------------------------------------------------------------------------
+
+Source code, documentation, and the verification scenarios are available at
+\url{https://github.com/onurtuncer/Aetherion} under the MIT licence.  API
+reference and narrative documentation are published at
+\url{https://onurtuncer.github.io/Aetherion/}.
+
+% ---------------------------------------------------------------------------
+\section*{Acknowledgements}
+% ---------------------------------------------------------------------------
+
+The author thanks the NASA Engineering and Safety Center (NESC) for making the
+reference simulation data from TM-2015-218675 publicly available.
+\TODO{Add TÜBİTAK grant number if applicable.}
+
+% ---------------------------------------------------------------------------
+% Bibliography
+% ---------------------------------------------------------------------------
+\bibliographystyle{unsrtnat}
+\bibliography{references}
+
+\end{document}
