@@ -445,7 +445,7 @@ residual formulation and the same $\Exp$/$\dexp^{-1}$ primitives.
 \label{rem:trivialisation}
 The kinematic ODE is written in left-trivialised (body) form,
 $\dot g = g \cdot \hat\xi$.  Writing $g(t) = g_0\Exp(u(t))$ then gives
-$u̇ = \dexp^{-1}_{-u}(\xi)$, so the RKMK stage correction must be evaluated at
+$\dot u = \dexp^{-1}_{-u}(\xi)$, so the RKMK stage correction must be evaluated at
 $-\eta_i$.  Evaluating it at $+\eta_i$---the right-trivialised convention,
 $\dot g = \hat\xi \cdot g$, and the form in which the series is most often
 tabulated---flips the sign of the $O(\ad)$ Bernoulli term and silently caps
@@ -603,7 +603,7 @@ interval.
     13.4 & F-16 lateral side step     & \code{F16LateralSideStep}        & 180 & $0.172$ & $0.295$ \\
     15 & F-16 polar circumnavigation  & \code{CircleNorthPole}           & 180 & $0.030$ & $0.430$ \\
     16 & F-16 equatorial circuit      & \code{CircleEquatorDateLine}     & 180 & $0.036$ & $0.293$ \\
-    17 & Two-stage rocket to orbit    & \code{TwoStageRocket}            & 200 & \TODO{X} & \TODO{X} \\
+    17 & Two-stage rocket to orbit    & \code{TwoStageRocket}            & 200 & $2.04\times10^{3}$ & $1.70\times10^{4}$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -635,9 +635,23 @@ the coast phase, confirming that the spatial inertia and gravity model are
 consistent in ballistic flight; and at second-stage ignition the two
 simulations are still within \SI{0.16}{\percent}.
 
-\TODO{Insert Figure: Scenario 17 altitude and speed vs.\ NASA Sim 06, with
-phase markers at S1 burnout, S2 ignition, and end of simulation.
-Source: \code{doc/\_static/atmos17/}.}
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.72\linewidth]{figures/scenario17_profiles}
+  \caption{Scenario 17 altitude and true-airspeed histories: Aetherion
+    (dashed) vs.\ NASA Sim~06 (solid), with markers at S1 burnout
+    (\SI{37.4}{s}), S2 ignition (\SI{131.8}{s}), and S2 burnout
+    (\SI{193}{s}).}
+  \label{fig:scenario17_profiles}
+\end{figure}
+
+The scenario-17 row of Table~\ref{tab:verification} deserves a caveat that
+strengthens rather than weakens the comparison: the three NASA reference runs
+themselves diverge after second-stage ignition, disagreeing by up to
+\SI{1.7e4}{\metre} in altitude and $10.6^\circ$ in pitch at
+$t = \SI{200}{s}$, while Aetherion tracks the closest run (Sim~06) to
+\SI{2.0e3}{\metre}.  As in the ballistic cases, the reference envelope is
+wider than Aetherion's deviation from it.
 
 Two known modelling differences account for most of the residual disagreement
 at the end of the trajectory and are stated here rather than absorbed into a
@@ -819,7 +833,6 @@ reference and narrative documentation are published at
 
 The author thanks the NASA Engineering and Safety Center (NESC) for making the
 reference simulation data from TM-2015-218675 publicly available.
-\TODO{Add TÜBİTAK grant number if applicable.}
 
 % ---------------------------------------------------------------------------
 % Bibliography

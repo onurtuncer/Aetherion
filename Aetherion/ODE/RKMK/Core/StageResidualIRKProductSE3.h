@@ -152,11 +152,9 @@ namespace Aetherion::ODE::RKMK::Core {
                 //   (d/dt Exp(u)) Exp(-u) = dexp_u(u_dot)
                 // together with Ad_{Exp(-u)} dexp_u = dexp_{-u} gives
                 //   g^-1 g_dot = dexp_{-u}(u_dot) = xi   ==>   u_dot = dexp_{-u}^{-1}(xi).
-                // The RKMK stage correction is therefore evaluated at -Eta_i.
-                // Using +Eta_i (the right-trivialised convention, g_dot = hat(xi) g)
-                // flips the sign of the O(ad) Bernoulli term and caps the method at
-                // order 2 regardless of the Butcher tableau.
-                const auto Jinv = detail::se3_dexp_inv<S>((-Eta_i).eval());
+                // The RKMK stage correction is therefore evaluated at -Eta_i;
+                // se3_dexp_inv_left performs that negation internally.
+                const auto Jinv = detail::se3_dexp_inv_left<S>(Eta_i);
                 const Vec6 rhs = Jinv * v_i;
 
                 // r_xi_i = xi_i - h * rhs

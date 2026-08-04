@@ -26,6 +26,14 @@ jobs:
       - name: Run CMake Lint
         run: |
           sudo pip3 install --break-system-packages cmakelang
-          find . \( -path ./out -o -path ./vendor -o -path ./.venv \) -prune \
-            -o -type f \( -name CMakeLists.txt -o -name "*.cmake" \) -print \
-            | xargs cmake-lint --config-files .cmake-format
+          # --config-files takes nargs='+', so anything after it is swallowed as a
+          # further config file. Piping the file list into `xargs cmake-lint
+          # --config-files .cmake-format` therefore appends the listfiles to that
+          # option and cmake-lint scans nothing at all, passing unconditionally.
+          # The positional arguments have to come first.
+          mapfile -t listfiles < <(
+            find . \( -path ./out -o -path ./vendor -o -path ./.venv \) -prune \
+              -o -type f \( -name CMakeLists.txt -o -name "*.cmake" \) -print
+          )
+          echo "Linting ${#listfiles[@]} CMake listfiles"
+          cmake-lint "${listfiles[@]}" --config-files .cmake-format
