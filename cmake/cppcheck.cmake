@@ -18,9 +18,9 @@ if(NOT CPPCHECK_EXECUTABLE)
   return()
 endif()
 
-file(GLOB_RECURSE APP_SOURCES "${CMAKE_SOURCE_DIR}/src/*.cpp")
+file(GLOB_RECURSE APP_SOURCES "${PROJECT_SOURCE_DIR}/src/*.cpp")
 
-set(STATIC_ANALYSIS_SOURCE_DIR "${CMAKE_SOURCE_DIR}")
+set(STATIC_ANALYSIS_SOURCE_DIR "${PROJECT_SOURCE_DIR}")
 set(STATIC_ANALYSIS_REPORT_DIR "${CMAKE_BINARY_DIR}/static_analysis")
 file(MAKE_DIRECTORY "${STATIC_ANALYSIS_REPORT_DIR}")
 set(STATIC_ANALYSIS_XML_FILE "${STATIC_ANALYSIS_REPORT_DIR}/static_analysis_report.xml")
@@ -30,7 +30,7 @@ add_custom_target(
   ${NAMESPACED_TARGET}
   COMMAND
     "${CPPCHECK_EXECUTABLE}" --enable=all --force --suppress=unusedFunction
-    --cppcheck-build-dir="${STATIC_ANALYSIS_REPORT_DIR}" -I"${CMAKE_SOURCE_DIR}"
+    --cppcheck-build-dir="${STATIC_ANALYSIS_REPORT_DIR}" -I"${PROJECT_SOURCE_DIR}"
     --suppressions-list="${CMAKE_BINARY_DIR}/../../tools/cppcheck/CppCheckSuppressions.txt" --inconclusive
     --xml-version=2 -v ${APP_SOURCES} --output-file="${STATIC_ANALYSIS_XML_FILE}"
   COMMAND

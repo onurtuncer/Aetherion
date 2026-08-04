@@ -15,7 +15,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_initial_state PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_initial_state PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_initial_state)
@@ -33,7 +33,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_gravity_policies PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_gravity_policies PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 catch_discover_tests(test_gravity_policies)
 
@@ -52,7 +52,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_mass_propulsion_aero_policies PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_mass_propulsion_aero_policies PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 catch_discover_tests(test_mass_propulsion_aero_policies)
 
@@ -71,7 +71,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_wind_models PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_wind_models PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 catch_discover_tests(test_wind_models)
 
@@ -79,8 +79,8 @@ catch_discover_tests(test_wind_models)
 # Trim solver tests (F-16 DAVE-ML models required)
 # --------------------------------------------------------------------------
 
-set(DAVEML_F16_AERO "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_aero.dml")
-set(DAVEML_F16_PROP "${CMAKE_SOURCE_DIR}/data/F16_S119_source/F16_prop.dml")
+set(DAVEML_F16_AERO "${PROJECT_SOURCE_DIR}/data/F16_S119_source/F16_aero.dml")
+set(DAVEML_F16_PROP "${PROJECT_SOURCE_DIR}/data/F16_S119_source/F16_prop.dml")
 
 add_executable(test_trim_solver test_TrimSolver.cpp)
 
@@ -89,8 +89,8 @@ target_compile_definitions(test_trim_solver PRIVATE "DAVEML_F16_AERO_FILE=\"${DA
 
 target_compile_options(test_trim_solver PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(test_trim_solver PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include"
-                                                    "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(test_trim_solver PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
+                                                    "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(
   test_trim_solver

@@ -3,7 +3,7 @@
 # Minimal DAVE-ML reader — variableDef initial values + simple MathML arithmetic. Uses pugixml (vendored via Janus
 # ThirdParty, MIT license).
 
-set(PUGIXML_DIR "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+set(PUGIXML_DIR "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_sources(
   Aetherion
@@ -15,5 +15,5 @@ target_sources(
 )
 
 target_include_directories(
-  Aetherion PRIVATE ${PUGIXML_DIR} ${CMAKE_SOURCE_DIR}/vendor/CppAD/include # for CppAD::Value / CondExp
+  Aetherion PRIVATE ${PUGIXML_DIR} ${PROJECT_SOURCE_DIR}/vendor/CppAD/include # for CppAD::Value / CondExp
 )

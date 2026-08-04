@@ -14,6 +14,6 @@ add_custom_command(
   POST_BUILD
   COMMAND
     ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/data/Atmos_08_DroppedSphere2DWindShear/nasa_2015_scenario8_dropped_sphere_2d_wind_shear.json"
+    "${PROJECT_SOURCE_DIR}/data/Atmos_08_DroppedSphere2DWindShear/nasa_2015_scenario8_dropped_sphere_2d_wind_shear.json"
     "$<TARGET_FILE_DIR:DroppedSphere2DWindShear>/nasa_2015_scenario8_dropped_sphere_2d_wind_shear.json"
   COMMENT "Copying NASA Atmos-08 config to build directory")

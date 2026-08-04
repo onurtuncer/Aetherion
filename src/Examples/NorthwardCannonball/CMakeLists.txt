@@ -13,6 +13,6 @@ add_custom_command(
   POST_BUILD
   COMMAND
     ${CMAKE_COMMAND} -E copy_if_different
-    "${CMAKE_SOURCE_DIR}/data/Atmos_10_NorthwardCannonball/nasa_2015_scenario10_northward_cannonball.json"
+    "${PROJECT_SOURCE_DIR}/data/Atmos_10_NorthwardCannonball/nasa_2015_scenario10_northward_cannonball.json"
     "$<TARGET_FILE_DIR:NorthwardCannonball>/nasa_2015_scenario10_northward_cannonball.json"
   COMMENT "Copying NASA Atmos-10 config to build directory")

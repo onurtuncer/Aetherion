@@ -26,7 +26,7 @@ project(
 # ------------------------------------------------------------------------------
 # CMake module path� -- must come before any include() that uses it
 # ------------------------------------------------------------------------------
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # ------------------------------------------------------------------------------
 # Options � all option() declarations live here, parsed before anything else
@@ -71,7 +71,11 @@ include(GNUInstallDirs)
 # Vendored dependencies
 # ------------------------------------------------------------------------------
 # --- fmu4cpp vendor integration ---
-set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+# BUILD_TESTING is intentionally NOT forced via CACHE here: that would permanently overwrite the global cache
+# entry and disable CTest for a parent project consuming Aetherion via FetchContent/add_subdirectory. A plain
+# (non-CACHE) directory-scoped set() shadows it for this add_subdirectory() call only, keeping fmu4cpp's own
+# "test" target from colliding with CTest's reserved "test" target without touching the outer project's cache.
+set(BUILD_TESTING OFF)
 set(FMU4CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(FMU4CPP_TESTS OFF CACHE BOOL "" FORCE)
 add_subdirectory(vendor/fmu4cpp/export EXCLUDE_FROM_ALL)
@@ -120,7 +124,7 @@ if(AETHERION_INSTALL)
   add_library(aetherion_fmu4cpp_base STATIC)
   target_sources(aetherion_fmu4cpp_base PRIVATE $<TARGET_OBJECTS:fmu4cpp_base>)
   target_include_directories(
-    aetherion_fmu4cpp_base PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/include>
+    aetherion_fmu4cpp_base PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/fmu4cpp/export/include>
                                   $<INSTALL_INTERFACE:include>)
   set_target_properties(aetherion_fmu4cpp_base PROPERTIES EXPORT_NAME fmu4cpp_base)
 
@@ -128,7 +132,7 @@ if(AETHERION_INSTALL)
   target_sources(aetherion_fmu4cpp_fmi2 PRIVATE $<TARGET_OBJECTS:fmu4cpp_fmi2>)
   target_compile_definitions(aetherion_fmu4cpp_fmi2 PUBLIC FMI2)
   target_include_directories(
-    aetherion_fmu4cpp_fmi2 PUBLIC $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/vendor/fmu4cpp/export/include>
+    aetherion_fmu4cpp_fmi2 PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/fmu4cpp/export/include>
                                   $<INSTALL_INTERFACE:include>)
   set_target_properties(aetherion_fmu4cpp_fmi2 PROPERTIES EXPORT_NAME fmu4cpp_fmi2)
 

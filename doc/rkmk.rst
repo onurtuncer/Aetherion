@@ -197,20 +197,69 @@ Left-trivialize at :math:`g(t)`:
 
    g(t)^{-1}\dot g(t) = \Omega(g(t), r(t)).
 
-A standard identity gives
+Define the differential of the exponential by its Lie series,
 
 .. math::
 
-   g(t)^{-1}\dot g(t) = \dexp_{\eta(t)}(\dot \eta(t)),
+   \dexp_{\eta}(u) = \sum_{k\ge 0}\frac{1}{(k+1)!}\,\ad_{\eta}^{\,k}(u),
 
-so
+for which the standard identity is *right*-trivialized:
 
 .. math::
 
-   \dot \eta(t) = \dexp_{\eta(t)}^{-1}\!\big(\Omega(g_n\exp(\eta(t)), r(t))\big).
+   \Big(\tfrac{d}{dt}\exp(\eta)\Big)\exp(-\eta) = \dexp_{\eta}(\dot\eta).
+
+Our field is left-trivialized, so we must move the correction across the group
+element.  Using :math:`\Ad_{\exp(-\eta)}\dexp_{\eta} = \dexp_{-\eta}`,
+
+.. math::
+
+   \exp(-\eta)\Big(\tfrac{d}{dt}\exp(\eta)\Big) = \dexp_{-\eta}(\dot\eta),
+
+hence
+
+.. math::
+
+   g(t)^{-1}\dot g(t) = \dexp_{-\eta(t)}(\dot \eta(t)),
+
+and therefore
+
+.. math::
+
+   \dot \eta(t) = \dexp_{-\eta(t)}^{-1}\!\big(\Omega(g_n\exp(\eta(t)), r(t))\big).
 
 This is the core: it converts the *group* ODE into an *algebra* ODE (a vector
 space), where we can apply RK.
+
+In Bernoulli-series form,
+
+.. math::
+
+   \dexp_{-\eta}^{-1}
+   = \sum_{k\ge 0}\frac{B_k}{k!}\,\ad_{-\eta}^{\,k}
+   = I + \tfrac{1}{2}\ad_{\eta} + \tfrac{1}{12}\ad_{\eta}^{2}
+     - \tfrac{1}{720}\ad_{\eta}^{4} + \mathcal{O}(\ad_{\eta}^{6}),
+
+where the :math:`\ad^{3}` term vanishes because :math:`B_3 = 0`.
+
+.. warning::
+
+   **The sign of the argument is load-bearing.**  The series is most often
+   tabulated for the *right*-trivialized convention
+   :math:`\dot g = \hat\xi\,g`, where the correction is
+   :math:`\dexp_{+\eta}^{-1} = I - \tfrac12\ad_\eta + \tfrac1{12}\ad_\eta^2 - \cdots`.
+   Body-frame flight dynamics is left-trivialized
+   (:math:`\dot g = g\,\hat\xi`), so the correct correction is evaluated at
+   :math:`-\eta` and the :math:`\mathcal{O}(\ad)` term changes sign.
+
+   Using the wrong sign does *not* produce an obviously broken simulation.  The
+   group element still stays exactly on the manifold, the Newton iteration
+   still converges, and constant-twist motion is still integrated exactly
+   (because :math:`\ad_\eta\eta = 0`, so the erroneous term vanishes).  What it
+   does is silently reduce the method to **order 2 for any Butcher tableau**.
+   The defect is observable only in a convergence study on a problem whose body
+   twist actually varies in time --- for example a torque-free *asymmetric*
+   body.  See :ref:`rkmk_order_verification`.
 
 RKMK on :math:`G\times \R^n`: coupled stage equations
 -----------------------------------------------------
@@ -240,7 +289,7 @@ Compute:
 
 .. math::
 
-   K_i = \dexp_{\eta_i}^{-1}\!\left(\Omega(g_i,r_i)\right)\in \Lie{g}, \qquad
+   K_i = \dexp_{-\eta_i}^{-1}\!\left(\Omega(g_i,r_i)\right)\in \Lie{g}, \qquad
    k_i = f(g_i,r_i)\in \R^n.
 
 Stage accumulation
@@ -311,43 +360,89 @@ small :math:`\theta`).
 Left Jacobian and :math:`\dexp^{-1}` on SO(3)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-For :math:`\SO(3)`, :math:`\dexp` corresponds to the *left Jacobian* :math:`J(\phi)`:
+On :math:`\SO(3)` the operator :math:`\dexp_{\phi}` is the *left Jacobian*
+:math:`J_\ell(\phi)`, which is also the matrix appearing in the translational
+block of the :math:`\SE(3)` exponential:
 
 .. math::
 
-   \dexp_{\phi}(u) \equiv J(\phi)\,u,\qquad u\in\R^3.
+   \dexp_{\phi}(u) \equiv J_\ell(\phi)\,u,\qquad
+   J_\ell(\phi) = I
+   + \frac{1-\cos\theta}{\theta^2}[\phi]_\times
+   + \frac{\theta-\sin\theta}{\theta^3}[\phi]_\times^2 .
 
-A standard closed form is
+What the RKMK stage correction needs, however, is :math:`\dexp_{-\phi}^{-1}`
+(see the derivation above), and
 
 .. math::
 
-   J(\phi) = I
+   \dexp_{-\phi} = J_\ell(-\phi) = J_r(\phi) = I
    - \frac{1-\cos\theta}{\theta^2}[\phi]_\times
-   + \frac{\theta-\sin\theta}{\theta^3}[\phi]_\times^2.
+   + \frac{\theta-\sin\theta}{\theta^3}[\phi]_\times^2,
 
-Hence
-
-.. math::
-
-   \dexp^{-1}_{\phi}(v) \equiv J(\phi)^{-1} v.
-
-A commonly used closed form for :math:`J(\phi)^{-1}` (for :math:`\theta\not\approx 0`) is
+the *right* Jacobian.  Its inverse is the quantity actually evaluated in code:
 
 .. math::
 
-   J(\phi)^{-1} =
+   \dexp^{-1}_{-\phi} = J_r(\phi)^{-1} =
    I + \frac{1}{2}[\phi]_\times
-   + \left(\frac{1}{\theta^2} - \frac{1+\cos\theta}{2\theta\sin\theta}\right)[\phi]_\times^2.
+   + \left(\frac{1}{\theta^2} - \frac{1+\cos\theta}{2\theta\sin\theta}\right)[\phi]_\times^2,
+   \qquad \theta \not\approx 0 .
 
 For small :math:`\theta`, use the series expansion
 
 .. math::
 
-   J(\phi)^{-1} \approx
+   J_r(\phi)^{-1} \approx
    I + \frac{1}{2}[\phi]_\times + \frac{1}{12}[\phi]_\times^2 + \mathcal{O}(\theta^3).
 
 This is often the most AD-friendly route: branch on :math:`\theta^2` and use series
 near zero.
+
+.. note::
+
+   The :math:`+\tfrac12[\phi]_\times` here is the :math:`\SO(3)` instance of the
+   :math:`+\tfrac12\ad_\eta` term in the Bernoulli series above.  If a derivation
+   yields :math:`-\tfrac12[\phi]_\times` for a body-frame (left-trivialized)
+   field, the trivialization convention has been mixed up.
+
+.. _rkmk_order_verification:
+
+Verifying the order in practice
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Convergence order cannot be verified on a torque-free *symmetric* body.  For
+:math:`I_{xx}=I_{yy}=I_{zz}` and no external wrench, Euler's equations give
+:math:`\dot\omega = 0`, so the body twist is constant and the exact flow is the
+one-parameter subgroup :math:`g(t) = g_0\exp(t\xi)`.  Every RKMK method
+reproduces that *exactly*, at every step size, regardless of its classical
+order --- the errors sit at machine precision and the log-log slope is
+meaningless noise.
+
+A usable test problem must have a genuinely time-varying twist.  Aetherion uses
+a torque-free **asymmetric** body (:math:`I_{xx}`, :math:`I_{yy}`,
+:math:`I_{zz}` all distinct, so :math:`\omega\times I\omega \neq 0`) with a
+non-zero initial body velocity, integrated against a reference computed at a
+step size 50 times smaller than the finest tested step and cross-validated
+between two independent integrators.  Measured mean log-log slopes:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 20 20
+
+   * - Integrator
+     - Attitude
+     - Position
+   * - Radau IIA RKMK (3-stage, order 5)
+     - 5.00
+     - 5.00
+   * - Explicit RK4 RKMK (4-stage, order 4)
+     - 3.91
+     - 3.98
+
+Both checks are regression tests
+(:file:`tests/RigidBody/test_ConvergenceOrder.cpp`): the exactness property on
+the symmetric sphere, and the measured order on the asymmetric body.
 
 Typical coupled state example
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -398,7 +493,7 @@ Using classical RK4 tableau, stages are explicit. A compact description:
 
 .. math::
 
-   K_1 = \dexp_{\eta_1}^{-1}\!\left(\Omega(g_1,r_1)\right),\quad
+   K_1 = \dexp_{-\eta_1}^{-1}\!\left(\Omega(g_1,r_1)\right),\quad
    k_1 = f(g_1,r_1),
 
 .. math::
@@ -408,7 +503,7 @@ Using classical RK4 tableau, stages are explicit. A compact description:
 
 .. math::
 
-   K_2 = \dexp_{\eta_2}^{-1}\!\left(\Omega(g_2,r_2)\right),\quad
+   K_2 = \dexp_{-\eta_2}^{-1}\!\left(\Omega(g_2,r_2)\right),\quad
    k_2 = f(g_2,r_2),
 
 .. math::
@@ -418,7 +513,7 @@ Using classical RK4 tableau, stages are explicit. A compact description:
 
 .. math::
 
-   K_3 = \dexp_{\eta_3}^{-1}\!\left(\Omega(g_3,r_3)\right),\quad
+   K_3 = \dexp_{-\eta_3}^{-1}\!\left(\Omega(g_3,r_3)\right),\quad
    k_3 = f(g_3,r_3),
 
 .. math::
@@ -428,7 +523,7 @@ Using classical RK4 tableau, stages are explicit. A compact description:
 
 .. math::
 
-   K_4 = \dexp_{\eta_4}^{-1}\!\left(\Omega(g_4,r_4)\right),\quad
+   K_4 = \dexp_{-\eta_4}^{-1}\!\left(\Omega(g_4,r_4)\right),\quad
    k_4 = f(g_4,r_4).
 
 Then update:
@@ -460,7 +555,7 @@ are solved simultaneously with
 
 .. math::
 
-   K_i = \dexp_{\eta_i}^{-1}\!\left(\Omega(g_i,r_i)\right),\qquad
+   K_i = \dexp_{-\eta_i}^{-1}\!\left(\Omega(g_i,r_i)\right),\qquad
    k_i = f(g_i,r_i).
 
 This forms a nonlinear system in :math:`\{\eta_i,\rho_i\}_{i=1}^s`.
@@ -473,7 +568,7 @@ Your unknown vector is a stacked Euclidean vector consisting of:
 - Lie algebra coordinates for each :math:`\eta_i` (e.g. :math:`\R^3` per :math:`\SO(3)` factor),
 - Euclidean increments :math:`\rho_i\in\R^n`.
 
-The nonlinearities enter through :math:`\exp(\eta_i)` and :math:`\dexp^{-1}_{\eta_i}`
+The nonlinearities enter through :math:`\exp(\eta_i)` and :math:`\dexp^{-1}_{-\eta_i}`
 (plus whatever nonlinearities are in :math:`\Omega` and :math:`f`). This is exactly
 where algorithmic differentiation (e.g. CppAD) is helpful.
 
@@ -507,7 +602,7 @@ Summary for :math:`G\times\R^n` implementations
 2. Choose a base R-K tableau (explicit or implicit).
 3. In each stage, reconstruct :math:`(g_i,r_i)` via :math:`(g_n\exp(\eta_i),\, r_n+\rho_i)`.
 4. Evaluate :math:`\Omega(g_i,r_i)` and :math:`f(g_i,r_i)`.
-5. Convert the group rate to the algebraic rate with :math:`\dexp^{-1}_{\eta_i}`.
+5. Convert the group rate to the algebraic rate with :math:`\dexp^{-1}_{-\eta_i}`.
 6. Accumulate stages using R-K coefficients.
 7. Update :math:`g` with a final :math:`\exp(\cdot)` and :math:`r` with a final weighted sum.
 8. For :math:`\SO(3)`, implement stable :math:`\Exp`, :math:`J(\phi)`, :math:`J(\phi)^{-1}` with small-angle series.

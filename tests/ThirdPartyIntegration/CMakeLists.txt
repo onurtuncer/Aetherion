@@ -38,7 +38,7 @@ add_executable(test_eigen test_eigen.cpp)
 
 target_link_libraries(test_eigen PRIVATE Catch2::Catch2WithMain Eigen3::Eigen)
 
-target_include_directories(test_eigen PRIVATE "${CMAKE_SOURCE_DIR}/vendor/eigen")
+target_include_directories(test_eigen PRIVATE "${PROJECT_SOURCE_DIR}/vendor/eigen")
 
 catch_discover_tests(test_eigen)
 
@@ -54,6 +54,6 @@ add_executable(test_cppad test_cppad.cpp)
 
 target_link_libraries(test_cppad PRIVATE Catch2::Catch2WithMain CppAD::cppad Eigen3::Eigen)
 
-target_include_directories(test_cppad PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_cppad PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 catch_discover_tests(test_cppad)

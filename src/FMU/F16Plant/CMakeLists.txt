@@ -11,7 +11,7 @@
 # the FMU reads them from fmu4cpp::fmu_base::resourceLocation().
 # ------------------------------------------------------------------------------
 
-set(F16_DATA_DIR "${CMAKE_SOURCE_DIR}/data/F16_S119_source")
+set(F16_DATA_DIR "${PROJECT_SOURCE_DIR}/data/F16_S119_source")
 
 # Stage only the three DAVE-ML files actually loaded at runtime. The source directory also contains control, gnc, and
 # other files that are not used by F16PlantFMU and must not bloat the FMU archive.
@@ -28,10 +28,10 @@ generatefmu(
   SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/F16PlantFMU.cpp"
   INCLUDE_DIRS
-  "${CMAKE_SOURCE_DIR}" # <Aetherion/...> headers
-  "${CMAKE_SOURCE_DIR}/vendor/eigen" # <Eigen/...>
-  "${CMAKE_SOURCE_DIR}/vendor/CppAD/include" # <cppad/...>
-  "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml" # DAVEMLReader → pugixml
+  "${PROJECT_SOURCE_DIR}" # <Aetherion/...> headers
+  "${PROJECT_SOURCE_DIR}/vendor/eigen" # <Eigen/...>
+  "${PROJECT_SOURCE_DIR}/vendor/CppAD/include" # <cppad/...>
+  "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml" # DAVEMLReader → pugixml
   LINK_TARGETS
   Aetherion::Aetherion
   CppAD::cppad

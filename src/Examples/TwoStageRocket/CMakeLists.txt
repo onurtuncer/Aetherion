@@ -1,6 +1,6 @@
 # src/Examples/TwoStageRocket/CMakeLists.txt NASA TM-2015-218675 Atmospheric Scenario 17 — Two-Stage Rocket to Orbit
 
-set(TWOSTAGE_DATA_DIR "${CMAKE_SOURCE_DIR}/data/TwoStageRocket_S119_source")
+set(TWOSTAGE_DATA_DIR "${PROJECT_SOURCE_DIR}/data/TwoStageRocket_S119_source")
 
 add_executable(
   TwoStageRocket ${CMAKE_CURRENT_SOURCE_DIR}/TwoStageRocket.cpp ${CMAKE_CURRENT_SOURCE_DIR}/RocketStageModel.cpp
@@ -16,13 +16,13 @@ target_compile_definitions(
           "TWOSTAGE_PROP_FILE=\"${TWOSTAGE_DATA_DIR}/twostage_prop.dml\""
           "TWOSTAGE_AERO_FILE=\"${TWOSTAGE_DATA_DIR}/twostage_aero.dml\"")
 
-target_include_directories(TwoStageRocket PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include"
-                                                  "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(TwoStageRocket PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
+                                                  "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(TwoStageRocket PRIVATE Aetherion::Aetherion Aetherion::Simulation CppAD::cppad)
 
 # Copy NASA Atmos-17 reference CSVs next to the executable for comparison
-set(TWOSTAGE_REF_DIR "${CMAKE_SOURCE_DIR}/data/Atmos_17_TwoStageRocketToOrbit")
+set(TWOSTAGE_REF_DIR "${PROJECT_SOURCE_DIR}/data/Atmos_17_TwoStageRocketToOrbit")
 foreach(_csv Atmos_17_sim_06.csv)
   add_custom_command(
     TARGET TwoStageRocket

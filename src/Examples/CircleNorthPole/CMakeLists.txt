@@ -4,7 +4,7 @@
 # NOTE: the closed-loop LQR is stiff — use timeStep <= 0.02 s for accurate results. Recommended run command:
 # CircleNorthPole --endTime 180 --timeStep 0.02 --outputFileName atmos_15_output.csv
 
-set(F16_DATA_DIR "${CMAKE_SOURCE_DIR}/data/F16_S119_source")
+set(F16_DATA_DIR "${PROJECT_SOURCE_DIR}/data/F16_S119_source")
 
 add_executable(CircleNorthPole ${CMAKE_CURRENT_SOURCE_DIR}/CircleNorthPole.cpp)
 
@@ -19,13 +19,13 @@ target_compile_definitions(
           "F16_PROP_FILE=\"${F16_DATA_DIR}/F16_prop.dml\""
           "F16_CONTROL_FILE=\"${F16_DATA_DIR}/F16_gnc.dml\"")
 
-target_include_directories(CircleNorthPole PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include"
-                                                   "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(CircleNorthPole PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
+                                                   "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(CircleNorthPole PRIVATE Aetherion::Aetherion Aetherion::Simulation CppAD::cppad)
 
 # Copy NASA Atmos-15 reference CSVs next to the executable
-set(F16_REF_DIR "${CMAKE_SOURCE_DIR}/data/Atmos_15_CircleNorthPole")
+set(F16_REF_DIR "${PROJECT_SOURCE_DIR}/data/Atmos_15_CircleNorthPole")
 foreach(_csv Atmos_15_sim_02.csv Atmos_15_sim_04.csv Atmos_15_sim_05.csv)
   add_custom_command(
     TARGET CircleNorthPole

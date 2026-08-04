@@ -12,7 +12,7 @@
 # library (it is only otherwise compiled into the TwoStageRocket example executable), so it is listed directly here.
 # ------------------------------------------------------------------------------
 
-set(TWOSTAGE_DATA_DIR "${CMAKE_SOURCE_DIR}/data/TwoStageRocket_S119_source")
+set(TWOSTAGE_DATA_DIR "${PROJECT_SOURCE_DIR}/data/TwoStageRocket_S119_source")
 
 set(TWOSTAGE_STAGED_RES "${CMAKE_BINARY_DIR}/twostagerocket_resources")
 file(MAKE_DIRECTORY "${TWOSTAGE_STAGED_RES}")
@@ -26,12 +26,12 @@ generatefmu(
   fmi2
   SOURCES
   "${CMAKE_CURRENT_SOURCE_DIR}/TwoStageRocketFMU.cpp"
-  "${CMAKE_SOURCE_DIR}/src/Examples/TwoStageRocket/RocketStageModel.cpp"
+  "${PROJECT_SOURCE_DIR}/src/Examples/TwoStageRocket/RocketStageModel.cpp"
   INCLUDE_DIRS
-  "${CMAKE_SOURCE_DIR}" # <Aetherion/...> headers
-  "${CMAKE_SOURCE_DIR}/vendor/eigen" # <Eigen/...>
-  "${CMAKE_SOURCE_DIR}/vendor/CppAD/include" # <cppad/...>
-  "${CMAKE_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml" # DAVEMLReader → pugixml
+  "${PROJECT_SOURCE_DIR}" # <Aetherion/...> headers
+  "${PROJECT_SOURCE_DIR}/vendor/eigen" # <Eigen/...>
+  "${PROJECT_SOURCE_DIR}/vendor/CppAD/include" # <cppad/...>
+  "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml" # DAVEMLReader → pugixml
   LINK_TARGETS
   Aetherion::Aetherion
   CppAD::cppad

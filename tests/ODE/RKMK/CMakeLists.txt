@@ -15,7 +15,7 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_rkmk_concepts PRIVATE "${CMAKE_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_rkmk_concepts PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_rkmk_concepts)
