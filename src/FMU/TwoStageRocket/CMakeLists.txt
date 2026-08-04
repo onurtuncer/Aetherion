@@ -30,7 +30,6 @@ generatefmu(
   INCLUDE_DIRS
   "${PROJECT_SOURCE_DIR}" # <Aetherion/...> headers
   "${PROJECT_SOURCE_DIR}/vendor/eigen" # <Eigen/...>
-  "${PROJECT_SOURCE_DIR}/vendor/CppAD/include" # <cppad/...>
   "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml" # DAVEMLReader → pugixml
   LINK_TARGETS
   Aetherion::Aetherion

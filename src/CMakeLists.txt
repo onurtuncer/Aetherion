@@ -33,9 +33,7 @@ target_include_directories(
   Aetherion
   PUBLIC # During build: project root so that includes like <FlightDynamics/Serialization/SimulationConfigJson.hpp>
          # resolve.
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/eigen>
-         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/CppAD/include>
+         $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}> $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/eigen>
          # During install (if AETHERION_INSTALL=ON):
          $<INSTALL_INTERFACE:include>)
 

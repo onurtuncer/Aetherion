@@ -15,6 +15,9 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Cache vcpkg dependencies
+        uses: ./.github/actions/vcpkg-cache
+
       - name: Set up MSVC environment
         uses: ilammy/msvc-dev-cmd@v1
 
