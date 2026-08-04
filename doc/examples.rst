@@ -17,6 +17,138 @@ Examples
 
 .. _NASA TM-2015-218675: https://ntrs.nasa.gov/citations/20150001263
 
+.. _reference_run_spread:
+
+How to read the validation numbers
+-----------------------------------
+
+`NASA TM-2015-218675`_ publishes **several independent reference runs per
+scenario** — up to six, produced by different simulation frameworks — and those
+runs do not agree with each other.  A single "error against the reference"
+figure therefore says as much about which run was picked as about the code
+under test.
+
+The table below gives, for each scenario, the maximum absolute MSL-altitude
+deviation of Aetherion from the *closest* NASA run, next to the maximum spread
+among the NASA runs themselves over the same interval.  Cases 1–10 run for
+30 s at :math:`\Delta t = 0.002\ \text{s}`; cases 11–16 for 180 s at
+:math:`\Delta t = 0.01\ \text{s}`.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 8 40 12 20 20
+
+   * - Case
+     - Scenario
+     - T [s]
+     - Aetherion [m]
+     - NASA spread [m]
+   * - 1
+     - Dragless sphere
+     - 30
+     - 2.0 × 10⁻⁵
+     - 7.1 × 10⁻⁴
+   * - 2
+     - Tumbling brick, undamped
+     - 30
+     - 2.0 × 10⁻⁵
+     - 7.1 × 10⁻⁴
+   * - 3
+     - Tumbling brick, damped
+     - 30
+     - 2.0 × 10⁻⁵
+     - 3.6 × 10⁻⁴
+   * - 6
+     - Sphere with drag
+     - 30
+     - 1.2 × 10⁻⁵
+     - 0.273
+   * - 7
+     - Dropped sphere, steady wind
+     - 30
+     - 1.8 × 10⁻⁵
+     - 0.273
+   * - 8
+     - Dropped sphere, 2-D wind shear
+     - 30
+     - 5.4 × 10⁻⁵
+     - 0.273
+   * - 9
+     - Eastward cannonball
+     - 30
+     - 4.0 × 10⁻⁴
+     - 1.30
+   * - 10
+     - Northward cannonball
+     - 30
+     - 1.8 × 10⁻⁴
+     - 1.30
+   * - 11
+     - F-16 subsonic trim
+     - 180
+     - 13.2
+     - 13.7
+   * - 12
+     - F-16 supersonic trim
+     - 180
+     - 97.5
+     - 140
+   * - 13.1
+     - F-16 altitude change
+     - 180
+     - 0.171
+     - 0.316
+   * - 13.2
+     - F-16 airspeed change
+     - 180
+     - 0.138
+     - 1.21
+   * - 13.3
+     - F-16 heading change
+     - 180
+     - 0.178
+     - 0.288
+   * - 13.4
+     - F-16 lateral side step
+     - 180
+     - 0.172
+     - 0.295
+   * - 15
+     - F-16 polar circumnavigation
+     - 180
+     - 0.030
+     - 0.430
+   * - 16
+     - F-16 equatorial circuit
+     - 180
+     - 0.036
+     - 0.293
+
+Aetherion lies inside the reference envelope in every case.  For the ballistic
+cases 6–10, where the NASA runs disagree among themselves by 0.27–1.3 m,
+Aetherion tracks the closest run to about 10⁻⁵ m — so the residual
+disagreement is dominated by differences between the reference implementations,
+not by Aetherion.
+
+Two reporting conventions apply throughout:
+
+* Errors are **maxima over the trajectory**, not endpoint values.
+* :math:`t = 0` is **excluded**.  The NASA files record true airspeed as
+  identically zero at release in the wind cases, whereas Aetherion reports the
+  air-relative speed, which is non-zero in a crosswind.  Including that sample
+  injects a spurious ~20 m/s into the maximum without saying anything about the
+  dynamics.
+
+.. note::
+
+   These figures were re-measured after the RKMK trivialisation fix described
+   in :ref:`rkmk-product-manifolds` (the :math:`\dexp^{-1}` stage correction is
+   evaluated at :math:`-\eta_i`, not :math:`+\eta_i`).  Before that fix both
+   integrators were effectively second order, and the scenario-1 altitude
+   deviation was four orders of magnitude larger.  Per-scenario figures further
+   down this page that were generated before the fix are being regenerated;
+   where a figure and the summary table above disagree, the table is current.
+
 .. _example_dragless_sphere:
 
 Dragless Sphere (NASA TM-2015-218675 Atmospheric Scenario 1)
@@ -277,7 +409,8 @@ onto the Aetherion time grid and plots each column.  The output directory
    Side-by-side comparison of Aetherion vs. `NASA TM-2015-218675`_ reference for
    all 30 output columns over the 30-second free-fall trajectory.
 
-**Altitude** — :math:`h(t)` vs. NASA reference (max absolute error < 0.53 m):
+**Altitude** — :math:`h(t)` vs. NASA reference (max absolute error
+2.0 x 10⁻⁵ m):
 
 .. figure:: _static/atmos01/altitudeMsl_m.png
    :alt: Altitude MSL comparison
@@ -298,7 +431,8 @@ onto the Aetherion time grid and plots each column.  The output directory
    :align: center
    :width: 85%
 
-**Local gravitational acceleration** (J₂ model, max relative error < 9 × 10⁻⁶ %):
+**Local gravitational acceleration** (J₂ model, max relative error
+4.7 × 10⁻⁷ %):
 
 .. figure:: _static/atmos01/localGravity_m_s2.png
    :alt: Local gravity comparison
@@ -574,8 +708,8 @@ Simulation run with :math:`\Delta t = 0.002\ \text{s}`, output every 0.1 s.
      - **12.618**
      - **0.000**
 
-Altitude error < 0.6 m (0.012%) and speed error < 0.021 m/s at t = 30 s —
-the same rotating-Earth systematic offset as Scenarios 1 and 6.  Angular
+Altitude error 4.7 x 10⁻⁴ m and speed error 1.0 x 10⁻³ m/s at t = 30 s.
+Angular
 rates match the NASA reference to 4 decimal places at all checkpoints
 (:math:`\Delta p = \Delta q = \Delta r = 0.000\ \text{deg/s}`), confirming
 that Aetherion's Radau IIA RKMK conserves the Euler-equation invariants
@@ -597,7 +731,7 @@ The figures below were generated by ``compare_sim_validation.py`` against
    Side-by-side comparison of Aetherion vs. `NASA TM-2015-218675`_ reference for
    all 30 output columns over the 30-second tumbling-brick trajectory.
 
-**Altitude** — translational dynamics match to < 0.6 m over 30 s:
+**Altitude** — translational dynamics match to < 10⁻³ m over 30 s:
 
 .. figure:: _static/atmos02/altitudeMsl_m.png
    :alt: Altitude MSL comparison
@@ -840,8 +974,8 @@ Validation Results
      - **0.000**
      - **0.000**
 
-Translational accuracy is the same as Scenarios 1 and 2 (Δalt < 0.6 m,
-Δv < 0.02 m/s — rotating-Earth systematic offset).  The angular rates
+Translational accuracy is the same as Scenarios 1 and 2 (Δalt = 2.0 x 10⁻⁵ m,
+Δv = 3.8 x 10⁻³ m/s).  The angular rates
 damp to zero by t ≈ 18 s; from t = 15 s onward Δp = Δq = Δr = 0.000°/s.
 
 Comparison Plots
@@ -1113,10 +1247,11 @@ matching the NASA CSV cadence).
      - **263.3383**
      - **263.3380**
 
-The residual is a smooth, slowly growing systematic offset (~0.44 m at t = 30 s,
-0.009% of altitude) attributable to the difference between Aetherion's
-full rotating-Earth dynamics and the NASA reference's non-rotating-atmosphere
-model.  The true-airspeed error at t = 30 s is 0.0003 m/s (< 0.001%).
+The residual against ``Atmos_06_sim_01`` is a smooth, slowly growing offset
+(0.085 m at t = 30 s).  This is not a measure of Aetherion's error: the six NASA
+reference runs for this scenario disagree with one another by up to 0.273 m in
+altitude, and Aetherion tracks the closest of them (``Atmos_06_sim_04``) to
+1.2 x 10⁻⁵ m.  See :ref:`reference_run_spread`.
 
 Comparison Plots
 ^^^^^^^^^^^^^^^^
@@ -1134,14 +1269,16 @@ The figures below are generated by the bundled
    Side-by-side comparison of Aetherion vs. `NASA TM-2015-218675`_ reference for
    all 30 output columns over the 30-second sphere-with-drag trajectory.
 
-**Altitude** — :math:`h(t)` vs. NASA reference (max absolute error < 0.45 m):
+**Altitude** — :math:`h(t)` vs. ``Atmos_06_sim_01`` (max absolute error
+0.085 m; 1.2 x 10⁻⁵ m against the closest reference run):
 
 .. figure:: _static/atmos06/altitudeMsl_m.png
    :alt: Altitude MSL comparison
    :align: center
    :width: 85%
 
-**True airspeed** — atmosphere-relative speed (max error < 0.02 m/s):
+**True airspeed** — atmosphere-relative speed (max error 0.013 m/s vs
+``Atmos_06_sim_01``; 2.8 x 10⁻⁴ m/s against the closest reference run):
 
 .. figure:: _static/atmos06/trueAirspeed_m_s.png
    :alt: True airspeed comparison
@@ -1372,7 +1509,8 @@ Validation Results
      - **263.366**
      - **0.000**
 
-Altitude error 0.444 m (0.009%) and TAS error < 0.001% at t = 30 s.
+Altitude error 3.2 x 10⁻³ m and TAS error 3.8 x 10⁻³ m/s at t = 30 s
+(1.8 x 10⁻⁵ m against the closest of the six reference runs).
 The wind-corrected TAS matches at t = 0 (6.096 m/s = wind speed) as well
 as throughout the fall.
 
