@@ -58,3 +58,7 @@ __pycache__/
 
 # debug information files
 *.dwo
+
+# vcpkg
+vcpkg_installed/
+.vcpkg-cache/

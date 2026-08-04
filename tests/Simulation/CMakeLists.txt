@@ -21,7 +21,6 @@ target_link_libraries(
           Catch2::Catch2WithMain)
 
 target_compile_options(test_simulation PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8 /bigobj>)
-# target_include_directories(test_simulation PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_simulation)

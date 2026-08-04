@@ -20,9 +20,9 @@ include_guard(GLOBAL)
 # ==============================================================================
 
 # Default to ON only when Aetherion is the top-level project (a standalone build/CI run). When pulled in via
-# FetchContent/add_subdirectory as a dependency of another project, these default to OFF so consuming that
-# project doesn't unexpectedly pull in Aetherion's own test suite, examples, and data-driven demos. A consumer
-# can still opt in explicitly with -DAETHERION_BUILD_TESTS=ON etc.
+# FetchContent/add_subdirectory as a dependency of another project, these default to OFF so consuming that project
+# doesn't unexpectedly pull in Aetherion's own test suite, examples, and data-driven demos. A consumer can still opt in
+# explicitly with -DAETHERION_BUILD_TESTS=ON etc.
 option(AETHERION_BUILD_TESTS "Build the Aetherion unit and integration test suite (requires CTest)"
        ${PROJECT_IS_TOP_LEVEL})
 
@@ -79,12 +79,12 @@ Recommended for CI; avoid enabling in end-user builds." OFF)
 # Derived / Enforced Constraints
 # ==============================================================================
 
-# fmu4cpp vendored tests must always be suppressed from Aetherion's build. Force these (Aetherion-namespaced
-# options only) regardless of what a parent project or cache may have set. BUILD_TESTING itself is deliberately
-# NOT forced here -- it's a global CMake convention variable shared with the consuming project's own CTest setup
-# when Aetherion is pulled in via FetchContent/add_subdirectory. It is instead shadowed locally, directory-scoped
-# and without CACHE, right around the specific vendored add_subdirectory() calls that need it suppressed (see
-# root CMakeLists.txt and cmake/Dependencies.cmake).
+# fmu4cpp vendored tests must always be suppressed from Aetherion's build. Force these (Aetherion-namespaced options
+# only) regardless of what a parent project or cache may have set. BUILD_TESTING itself is deliberately NOT forced here
+# -- it's a global CMake convention variable shared with the consuming project's own CTest setup when Aetherion is
+# pulled in via FetchContent/add_subdirectory. It is instead shadowed locally, directory-scoped and without CACHE, right
+# around the specific vendored add_subdirectory() calls that need it suppressed (see root CMakeLists.txt and
+# cmake/Dependencies.cmake).
 set(FMU4CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(FMU4CPP_TESTS OFF CACHE BOOL "" FORCE)
 
@@ -120,6 +120,12 @@ message(STATUS "  Developer options")
 message(STATUS "    Static analysis        : ${ENABLE_STATIC_ANALYSIS}")
 message(STATUS "    Coverage               : ${AETHERION_ENABLE_COVERAGE}")
 message(STATUS "    Warnings as errors     : ${AETHERION_WARNINGS_AS_ERRORS}")
+message(STATUS "")
+message(STATUS "  Dependencies")
+message(STATUS "    vcpkg                  : ${AETHERION_USE_VCPKG}")
+if(AETHERION_USE_VCPKG)
+  message(STATUS "    vcpkg triplet          : ${VCPKG_TARGET_TRIPLET}")
+endif()
 message(STATUS "")
 message(STATUS "  MSVC static CRT          : ${FMU4CPP_MSVC_STATIC_CRT}")
 message(STATUS "--------------------------------------------------------------")

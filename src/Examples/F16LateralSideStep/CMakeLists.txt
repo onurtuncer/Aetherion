@@ -21,8 +21,7 @@ target_compile_definitions(
           "F16_PROP_FILE=\"${F16_DATA_DIR}/F16_prop.dml\""
           "F16_CONTROL_FILE=\"${F16_DATA_DIR}/F16_control.dml\"")
 
-target_include_directories(F16LateralSideStep PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
-                                                      "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(F16LateralSideStep PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(F16LateralSideStep PRIVATE Aetherion::Aetherion Aetherion::Simulation CppAD::cppad)
 

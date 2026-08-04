@@ -70,7 +70,9 @@
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
 \newcommand{\cross}[1]{[#1]_\times}
-\newcommand{\skew}[1]{\widehat{#1}}
+% \skew is a LaTeX kernel math command (accent positioning); we never use that
+% meaning, so shadow it deliberately.
+\renewcommand{\skew}[1]{\widehat{#1}}
 \newcommand{\nuB}{\boldsymbol{\nu}_B}
 \newcommand{\omB}{\boldsymbol{\omega}_B}
 \newcommand{\vB}{\mathbf{v}_B}
@@ -184,6 +186,15 @@ requires two separate tangent-space corrections.
 \textbf{Contributions.}  This paper makes five specific contributions:
 
 \begin{enumerate}[leftmargin=*, label=(\arabic*)]
+  \item An explicit treatment of the \emph{trivialization convention} in the
+    $\dexp^{-1}$ stage correction (Section~\ref{sec:trivialization}).  We show
+    that the right-trivialized form---the one usually tabulated---reduces a
+    left-trivialized body-frame integrator to order two irrespective of the
+    tableau, that this is invisible to the diagnostics normally used to
+    validate such an integrator, and that exposing it requires a test problem
+    whose body twist is time-varying.  We give the test problem and the
+    measured orders.  We believe this is the contribution most immediately
+    useful to a reader implementing RKMK.
   \item An RKMK integrator that treats $g \in \SE$ as a \emph{single} Lie
     group throughout, with one $\se$-valued stage increment per stage and a
     single $\SE$ exponential map at the update step.
@@ -194,14 +205,6 @@ requires two separate tangent-space corrections.
     \citep{cppad}, reducing Newton convergence failures caused by
     finite-difference truncation and enabling AD-transparent sensitivity
     propagation.
-  \item An explicit treatment of the \emph{trivialization convention} in the
-    $\dexp^{-1}$ stage correction (Section~\ref{sec:trivialization}).  We show
-    that the right-trivialized form---the one usually tabulated---reduces a
-    left-trivialized body-frame integrator to order two irrespective of the
-    tableau, that this is invisible to the diagnostics normally used to
-    validate such an integrator, and that exposing it requires a test problem
-    whose body twist is time-varying.  We give the test problem and the
-    measured orders.
   \item Quantitative validation against NASA TM-2015-218675 reference
     scenarios with published ground-truth trajectories.
 \end{enumerate}
@@ -829,7 +832,7 @@ Table~\ref{tab:validation_summary} gives both.
     12 & F-16 supersonic trim        & 180 & $97.5$  & $140$   \\
     13.1 & F-16 altitude change      & 180 & $0.171$ & $0.316$ \\
     13.2 & F-16 airspeed change      & 180 & $0.138$ & $1.21$  \\
-    13.3 & F-16 heading change       & 180 & $0.178$ & $0.288$ \
+    13.3 & F-16 heading change       & 180 & $0.178$ & $0.288$ \\
     13.4 & F-16 lateral side step    & 180 & $0.172$ & $0.295$ \\
     15 & F-16 polar circumnavigation & 180 & $0.030$ & $0.430$ \\
     16 & F-16 equatorial circuit     & 180 & $0.036$ & $0.293$ \\
@@ -882,38 +885,56 @@ Aetherion remains inside that envelope
 This is the primary validation scenario for launch-vehicle dynamics.  A
 two-stage rocket undergoes:
 \begin{enumerate}[label=(\roman*)]
-  \item S1 burn with variable thrust and mass-flow;
-  \item post-burnout coast of $\SI{7}{s}$;
+  \item S1 burn with variable thrust and mass-flow (to $t = \SI{37.4}{s}$);
+  \item post-burnout ballistic coast to $t = \SI{131.8}{s}$;
   \item staging (S1 jettison, S2 ignition);
-  \item S2 burn until apogee.
+  \item S2 burn to $t = \SI{193}{s}$, then coast.
 \end{enumerate}
 Aerodynamics are provided via DAVE-ML tables (axial/normal force coefficients
 as functions of Mach and $\alpha$).  Total simulation duration is
-approximately \SI{600}{s}.
+\SI{200}{s}, from sea-level release to an altitude of roughly
+\SI{230}{\kilo\metre}.
 
 Table~\ref{tab:scenario17_errors} summarises peak errors relative to the
-NASA Sim~06 reference trajectory.
+NASA Sim~06 reference trajectory, and Figure~\ref{fig:scenario17_profiles}
+shows the altitude and airspeed histories.
 
 \begin{table}[h]
   \centering
-  \caption{Scenario 17 peak absolute errors vs.\ NASA Sim~06 reference.
-    Step size $h = 0.01\,$s; post-burn coast $= 7\,$s.}
+  \caption{Scenario 17 peak absolute errors vs.\ NASA Sim~06 reference
+    over $0 < t \leq \SI{200}{s}$.  Step size $h = 0.001\,$s
+    (the NASA TM recommends $h \leq 0.001\,$s for this scenario).}
   \label{tab:scenario17_errors}
   \small
   \begin{tabular}{lrr}
     \toprule
     Quantity & Peak error & Reference range \\
     \midrule
-    Altitude MSL [m]          & \TODO{X.X}  & $0$--$\SI{120}{km}$ \\
-    Down-range position [m]   & \TODO{X.X}  & $0$--$\SI{200}{km}$ \\
-    Pitch angle [deg]         & \TODO{X.X}  & $0$--$90$ \\
-    Body pitch rate [deg/s]   & \TODO{X.X}  & $\pm 5$ \\
-    Vehicle speed [m/s]       & \TODO{X.X}  & $0$--$\SI{7000}{m/s}$ \\
+    Altitude MSL [m]          & $2.04\times10^{3}$ & $0$--$\SI{234}{km}$ \\
+    Down-range position [m]   & $1.58\times10^{4}$ & $0$--$\SI{529}{km}$ \\
+    Pitch angle [deg]         & $3.2$              & $12$--$55$ \\
+    Body pitch rate [deg/s]   & $2.2$              & $-3.0$--$+1.4$ \\
+    Vehicle speed [m/s]       & $587$              & $0$--$\SI{8393}{m/s}$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\TODO{Insert Figure: Scenario 17 altitude and speed profiles vs.\ NASA reference.}
+All peak errors occur during or after the second-stage burn, where the NASA
+reference runs themselves diverge: over the same interval Sim~04/05 and
+Sim~06 disagree by up to \SI{1.7e4}{\metre} in altitude and $10.6^\circ$ in
+pitch, an order of magnitude more than Aetherion's deviation from the closest
+run.  Through the first-stage burn and the coast the altitude error stays
+below \SI{0.17}{\percent}, and the endpoint state at $t = \SI{200}{s}$ is
+within \SI{-0.87}{\percent} in altitude and \SI{+0.14}{\percent} in true
+airspeed of Sim~06.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.72\linewidth]{figures/scenario17_profiles}
+  \caption{Scenario 17 altitude and true-airspeed histories: Aetherion
+    (dashed) vs.\ NASA Sim~06 (solid), with stage-event markers.}
+  \label{fig:scenario17_profiles}
+\end{figure}
 
 \subsection{Constraint Preservation}
 \label{sec:constraint}
@@ -1038,7 +1059,6 @@ is available as open-source software at the address given in
 
 The author thanks the NASA Engineering and Safety Center (NESC) for making the
 reference simulation data from TM-2015-218675 publicly available.
-\TODO{Add TÜBİTAK grant number if applicable.}
 
 % ---------------------------------------------------------------------------
 % Bibliography

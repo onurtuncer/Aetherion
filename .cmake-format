@@ -345,13 +345,26 @@ with section("lint"):
   # (cache) scope
   global_var_pattern = '[A-Z][0-9A-Z_]+'
 
+  # The naming patterns below are widened from the cmakelang defaults, which
+  # describe a convention this project does not use. Two in particular:
+  #
+  #   * a leading underscore marks a file-private variable (_target, _csv,
+  #     _cppad_prefix, _fmu4cpp_root) -- the defaults reject it outright for
+  #     local and argument variables;
+  #   * find modules must publish <PackageName>_VERSION / _INCLUDE_DIRS /
+  #     _LIBRARIES, and vendored subprojects export names like ecos_TARGET, so
+  #     directory variables cannot be constrained to SCREAMING_CASE.
+  #
+  # Cache variables keep the strict SCREAMING_CASE pattern: those are the names
+  # users type on the command line, so they are the ones worth policing.
+
   # regular expression pattern describing valid names for variables with global
   # scope (but internal semantic)
-  internal_var_pattern = '_[A-Z][0-9A-Z_]+'
+  internal_var_pattern = '_[0-9A-Za-z_]+'
 
   # regular expression pattern describing valid names for variables with local
   # scope
-  local_var_pattern = '[a-z][a-z0-9_]+'
+  local_var_pattern = '_?[A-Za-z][0-9A-Za-z_]*'
 
   # regular expression pattern describing valid names for privatedirectory
   # variables
@@ -359,11 +372,11 @@ with section("lint"):
 
   # regular expression pattern describing valid names for public directory
   # variables
-  public_var_pattern = '[A-Z][0-9A-Z_]+'
+  public_var_pattern = '[A-Za-z][0-9A-Za-z_]*'
 
   # regular expression pattern describing valid names for function/macro
   # arguments and loop variables.
-  argument_var_pattern = '[a-z][a-z0-9_]+'
+  argument_var_pattern = '_?[a-z][a-z0-9_]*'
 
   # regular expression pattern describing valid names for keywords used in
   # functions or macros

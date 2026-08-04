@@ -17,6 +17,11 @@ string(
           projectVersion
           "${projectVersion}")
 
+# ------------------------------------------------------------------------------
+# Dependency provider -- must run before project(), the last point at which CMAKE_TOOLCHAIN_FILE can be set
+# ------------------------------------------------------------------------------
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/VcpkgToolchain.cmake")
+
 project(
   Aetherion
   VERSION ${projectVersion}
@@ -71,10 +76,10 @@ include(GNUInstallDirs)
 # Vendored dependencies
 # ------------------------------------------------------------------------------
 # --- fmu4cpp vendor integration ---
-# BUILD_TESTING is intentionally NOT forced via CACHE here: that would permanently overwrite the global cache
-# entry and disable CTest for a parent project consuming Aetherion via FetchContent/add_subdirectory. A plain
-# (non-CACHE) directory-scoped set() shadows it for this add_subdirectory() call only, keeping fmu4cpp's own
-# "test" target from colliding with CTest's reserved "test" target without touching the outer project's cache.
+# BUILD_TESTING is intentionally NOT forced via CACHE here: that would permanently overwrite the global cache entry and
+# disable CTest for a parent project consuming Aetherion via FetchContent/add_subdirectory. A plain (non-CACHE)
+# directory-scoped set() shadows it for this add_subdirectory() call only, keeping fmu4cpp's own "test" target from
+# colliding with CTest's reserved "test" target without touching the outer project's cache.
 set(BUILD_TESTING OFF)
 set(FMU4CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(FMU4CPP_TESTS OFF CACHE BOOL "" FORCE)
@@ -167,16 +172,23 @@ if(AETHERION_INSTALL)
   # Eigen3 headers → include/Eigen/
   install(DIRECTORY vendor/eigen/Eigen DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
-  # CppAD headers
-  if(WIN32)
-    install(
-      DIRECTORY vendor/cppad/x64-Release/include/
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-      FILES_MATCHING
-      PATTERN "*.h"
-      PATTERN "*.hpp")
-    install(FILES vendor/cppad/x64-Release/lib/cppad_lib.lib DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    install(FILES vendor/cppad/x64-Debug/lib/cppad_lib.lib DESTINATION ${CMAKE_INSTALL_LIBDIR}/debug)
+  # CppAD headers and cppad_lib → alongside Aetherion, so the installed SDK is self-contained (Aetherion's public
+  # headers include <cppad/cppad.hpp>). Sources are wherever find_package(CppAD) located them -- vcpkg's vcpkg_installed
+  # tree by default. AetherionConfig.cmake prefers a CppAD found on the consumer's own prefix and only falls back to
+  # these copies.
+  install(
+    DIRECTORY "${CppAD_INCLUDE_DIR}/cppad"
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "*.hpp")
+
+  if(CppAD_LIBRARY_RELEASE)
+    install(FILES "${CppAD_LIBRARY_RELEASE}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
+  endif()
+
+  if(CppAD_LIBRARY_DEBUG)
+    install(FILES "${CppAD_LIBRARY_DEBUG}" DESTINATION ${CMAKE_INSTALL_LIBDIR}/debug)
   endif()
 
   # ── CMake integration ───────────────────────────────────────────────────────── fmu4cpp source template —
@@ -185,6 +197,9 @@ if(AETHERION_INSTALL)
           DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion/fmu4cpp/export/src/fmu4cpp)
 
   install(FILES cmake/generate_fmu.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion)
+
+  # AetherionConfig.cmake calls find_package(CppAD MODULE) — ship the module it needs.
+  install(FILES cmake/FindCppAD.cmake DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/Aetherion)
 
   write_basic_package_version_file("${CMAKE_CURRENT_BINARY_DIR}/AetherionConfigVersion.cmake" VERSION ${PROJECT_VERSION}
                                    COMPATIBILITY SameMajorVersion)

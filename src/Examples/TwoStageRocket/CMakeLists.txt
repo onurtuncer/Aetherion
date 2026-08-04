@@ -16,8 +16,7 @@ target_compile_definitions(
           "TWOSTAGE_PROP_FILE=\"${TWOSTAGE_DATA_DIR}/twostage_prop.dml\""
           "TWOSTAGE_AERO_FILE=\"${TWOSTAGE_DATA_DIR}/twostage_aero.dml\"")
 
-target_include_directories(TwoStageRocket PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
-                                                  "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(TwoStageRocket PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(TwoStageRocket PRIVATE Aetherion::Aetherion Aetherion::Simulation CppAD::cppad)
 

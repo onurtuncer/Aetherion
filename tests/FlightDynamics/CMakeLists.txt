@@ -15,8 +15,6 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_initial_state PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
-
 include(Catch)
 catch_discover_tests(test_initial_state)
 
@@ -32,8 +30,6 @@ target_link_libraries(
           Catch2::Catch2WithMain
           CppAD::cppad
           Eigen3::Eigen)
-
-target_include_directories(test_gravity_policies PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 catch_discover_tests(test_gravity_policies)
 
@@ -52,8 +48,6 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_mass_propulsion_aero_policies PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
-
 catch_discover_tests(test_mass_propulsion_aero_policies)
 
 # --------------------------------------------------------------------------
@@ -71,8 +65,6 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_wind_models PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
-
 catch_discover_tests(test_wind_models)
 
 # --------------------------------------------------------------------------
@@ -89,8 +81,7 @@ target_compile_definitions(test_trim_solver PRIVATE "DAVEML_F16_AERO_FILE=\"${DA
 
 target_compile_options(test_trim_solver PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(test_trim_solver PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
-                                                    "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(test_trim_solver PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(
   test_trim_solver

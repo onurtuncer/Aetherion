@@ -106,6 +106,29 @@ struct SE3 {
     [[nodiscard]] static Tangent dexp_inv(const Tangent& x, const Tangent& y) {
         return dexp_inv(x) * y;
     }
+
+    /// @brief Left-trivialised inverse tangent map @f$ d\exp^{-1}_{-x} @f$.
+    ///
+    /// For the left-trivialised kinematic ODE @f$ \dot{g} = g\,\hat{\xi} @f$ with
+    /// @f$ g(t) = g_0 \exp(\hat{u}(t)) @f$, the stage correction is
+    /// @f$ \dot{u} = d\exp^{-1}_{-u}(\xi) @f$ — i.e. dexp_inv() evaluated at the
+    /// *negated* argument.  Use this overload in RKMK stage corrections so the
+    /// negation cannot be dropped at a call site; evaluating at @f$ +u @f$
+    /// (the right-trivialised convention) flips the sign of the O(ad) Bernoulli
+    /// term and caps the method at order 2 regardless of the Butcher tableau.
+    /// @param x Tangent vector at which to evaluate the map (negated internally).
+    /// @return 6×6 matrix @f$ d\exp^{-1}(-x) @f$.
+    [[nodiscard]] static Mat6 dexp_inv_left(const Tangent& x) {
+        return dexp_inv(Tangent(-x));
+    }
+
+    /// @brief Applies @f$ d\exp^{-1}(-x) @f$ to a tangent vector @f$ y @f$.
+    /// @param x Tangent vector defining the evaluation point (negated internally).
+    /// @param y Tangent vector to transform.
+    /// @return Result of @f$ d\exp^{-1}(-x)\,y @f$.
+    [[nodiscard]] static Tangent dexp_inv_left(const Tangent& x, const Tangent& y) {
+        return dexp_inv_left(x) * y;
+    }
 };
 
 } // namespace Aetherion::ODE::RKMK::Lie

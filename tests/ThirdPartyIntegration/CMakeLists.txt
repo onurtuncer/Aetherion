@@ -54,6 +54,4 @@ add_executable(test_cppad test_cppad.cpp)
 
 target_link_libraries(test_cppad PRIVATE Catch2::Catch2WithMain CppAD::cppad Eigen3::Eigen)
 
-target_include_directories(test_cppad PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
-
 catch_discover_tests(test_cppad)

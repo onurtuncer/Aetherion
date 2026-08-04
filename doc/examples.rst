@@ -1676,49 +1676,51 @@ Validation Results
      - 0.000
    * - 5
      - 9 022.292
-     - 9 022.390
-     - +0.098
+     - 9 022.292
+     - +0.000
      - 52.905
-     - 52.907
-     - +0.002
+     - 52.904
+     - −0.001
    * - 10
      - 8 658.937
-     - 8 659.133
-     - +0.196
+     - 8 658.939
+     - +0.002
      - 98.488
-     - 98.479
-     - −0.009
+     - 98.487
+     - −0.001
    * - 15
      - 8 059.325
-     - 8 059.612
-     - +0.287
+     - 8 059.323
+     - −0.002
      - 144.023
-     - 144.011
-     - −0.011
+     - 144.024
+     - +0.001
    * - 20
      - 7 233.060
-     - 7 233.428
-     - +0.368
+     - 7 233.050
+     - −0.011
      - 187.569
-     - 187.559
-     - −0.010
+     - 187.573
+     - +0.004
    * - 25
      - 6 194.871
-     - 6 195.297
-     - +0.426
+     - 6 194.835
+     - −0.036
      - 227.792
-     - 227.786
-     - −0.006
+     - 227.800
+     - +0.008
    * - 30
      - **4 965.582**
-     - **4 966.032**
-     - **+0.449**
+     - **4 965.496**
+     - **−0.086**
      - **263.313**
-     - **263.313**
-     - **0.000**
+     - **263.326**
+     - **+0.013**
 
-Altitude error 0.449 m (0.009%) and TAS error essentially zero at t = 30 s —
-the same rotating-Earth systematic offset as all previous scenarios.
+The residual against sim_01 stays below 0.09 m over the whole trajectory;
+against the *closest* NASA run (sim_04) the maximum altitude deviation is
+**5.4 × 10⁻⁵ m**, far inside the 0.27 m spread among the NASA references
+themselves (see :ref:`reference_run_spread`).
 The wind formula is the exact NASA specification:
 :math:`v_E(h) = 0.003\,h_\text{m} - 6.096` m/s (linear, not a power law).
 
@@ -1841,44 +1843,47 @@ Validation Results
      - 431.052
      - 431.052
    * - 5
-     - 1 301.340
-     - 1 301.377
-     - +0.037
+     - 1 301.341
+     - 1 301.433
+     - +0.091
      - 344.434
-     - 344.337
+     - 344.477
    * - 10
-     - 2 226.770
-     - 2 227.004
-     - +0.235
+     - 2 226.765
+     - 2 227.054
+     - +0.288
      - 283.972
-     - 283.907
+     - 284.032
    * - 15
-     - 2 840.160
-     - 2 840.661
-     - +0.501
+     - 2 840.163
+     - 2 840.689
+     - +0.526
      - 240.739
-     - 240.691
+     - 240.809
    * - 20
-     - 3 176.450
-     - 3 177.243
-     - +0.793
+     - 3 176.445
+     - 3 177.221
+     - +0.776
      - 211.852
-     - 211.802
+     - 211.914
    * - 25
-     - 3 256.730
-     - 3 257.816
-     - +1.086
+     - 3 256.731
+     - 3 257.756
+     - +1.025
      - 196.608
-     - 196.559
+     - 196.664
    * - 30
-     - **3 095.800**
-     - **3 097.169**
-     - **+1.369**
+     - **3 095.803**
+     - **3 097.070**
+     - **+1.267**
      - **194.179**
-     - **194.132**
+     - **194.223**
 
-Altitude error 1.37 m (0.044%) and speed error 0.047 m/s at t = 30 s —
-same rotating-Earth systematic offset as all other scenarios.
+The +1.27 m residual at t = 30 s is the disagreement between NASA sim_01 and
+the other reference runs, not an integration error: against the *closest*
+NASA run (sim_04) the maximum altitude deviation is **4.0 × 10⁻⁴ m**, while
+the NASA runs disagree among themselves by up to **1.30 m** over the same
+interval (see :ref:`reference_run_spread`).
 
 Comparison Plots
 ^^^^^^^^^^^^^^^^
@@ -1985,43 +1990,47 @@ Validation Results
      - 431.052
      - 431.052
    * - 5
-     - 1 300.840
-     - 1 300.897
-     - +0.062
+     - 1 300.837
+     - 1 300.928
+     - +0.091
      - 344.446
-     - 344.457
+     - 344.488
    * - 10
-     - 2 224.880
-     - 2 225.131
-     - +0.244
+     - 2 224.882
+     - 2 225.170
+     - +0.288
      - 284.021
-     - 284.053
+     - 284.081
    * - 15
-     - 2 836.160
-     - 2 836.625
-     - +0.473
+     - 2 836.156
+     - 2 836.682
+     - +0.526
      - 240.857
-     - 240.901
+     - 240.927
    * - 20
-     - 3 169.650
-     - 3 170.373
-     - +0.718
+     - 3 169.648
+     - 3 170.423
+     - +0.775
      - 212.073
-     - 212.111
+     - 212.135
    * - 25
-     - 3 246.550
-     - 3 247.512
-     - +0.961
+     - 3 246.549
+     - 3 247.572
+     - +1.023
      - 196.955
-     - 196.988
+     - 197.010
    * - 30
-     - **3 081.730**
-     - **3 082.927**
-     - **+1.198**
+     - **3 081.729**
+     - **3 082.993**
+     - **+1.264**
      - **194.646**
-     - **194.671**
+     - **194.690**
 
-Altitude error 1.20 m (0.039%) and speed error 0.025 m/s at t = 30 s.
+As in Scenario 9, the +1.26 m residual at t = 30 s reflects the disagreement
+between NASA sim_01 and the other reference runs: against the *closest* NASA
+run (sim_04) the maximum altitude deviation is **1.8 × 10⁻⁴ m**, while the
+NASA runs disagree among themselves by up to **1.30 m** over the same
+interval (see :ref:`reference_run_spread`).
 
 Comparison Plots
 ^^^^^^^^^^^^^^^^
@@ -5636,6 +5645,16 @@ to the ground plane:
 The NASA TM bundle contains three independent reference runs of Scenario 17,
 all produced by the original check-case code but with different step sizes:
 
+* ``Atmos_17_sim_04.csv`` — sampled at 0.01 s (no true-airspeed column)
+* ``Atmos_17_sim_05.csv`` — sampled at 0.01 s
+* ``Atmos_17_sim_06.csv`` — sampled at 0.1 s
+
+The three runs agree closely through the first-stage burn and coast, but
+diverge sharply after S2 ignition: at :math:`t = 200\ \text{s}` sims 04/05
+end **17 km above** sim_06 with a **10.6°** pitch difference.  The reference
+envelope for this scenario is therefore about 1.7 × 10⁴ m wide — an order of
+magnitude wider than Aetherion's deviation from the closest run.
+
 Aetherion at :math:`\Delta t = 0.001\ \text{s}` (Radau IIA RKMK) ends at
 **232 km** — placing it within **0.9%** of sim_06.  The NASA TM recommends an integration time step of :math:`\Delta t \leq
 0.001\ \text{s}` for this scenario.
@@ -5704,13 +5723,13 @@ Run with :math:`\Delta t = 0.001\ \text{s}`, ``--writeInterval 100``,
      - 1 926.82
      - 1 926.28
    * - 37.4 (S1 burnout)
-     - 26 787.7
+     - 26 787.6
      - 26 747.1
      - **+0.15%**
      - 36.09
      - 36.13
-     - 2 701.87
-     - 2 700.39
+     - 2 700.91
+     - 2 700.36
    * - 50 (coast)
      - 46 096.5
      - 46 027.1
@@ -5723,7 +5742,7 @@ Run with :math:`\Delta t = 0.001\ \text{s}`, ``--writeInterval 100``,
      - 109 276.5
      - 109 110.6
      - +0.15%
-     - 27.35
+     - 27.55
      - 29.17
      - 2 382.9
      - 2 384.7

@@ -118,6 +118,20 @@ namespace Aetherion::ODE::RKMK::Core {
             }
         }
 
+        // Left-trivialised variant: dexp^{-1} evaluated at -eta, as required by the
+        // RKMK stage correction for g_dot = g * hat(xi).  Centralised here so call
+        // sites cannot drop the negation (doing so caps the method at order 2).
+        template<class S>
+        [[nodiscard]] inline Mat6<S> se3_dexp_inv_left(const Vec6<S>& eta) {
+            using G = Aetherion::ODE::RKMK::Lie::SE3<S>;
+            if constexpr (requires { G::dexp_inv_left(eta); }) {
+                return G::dexp_inv_left(eta);
+            }
+            else {
+                return se3_dexp_inv<S>((-eta).eval());
+            }
+        }
+
         template<class G>
         [[nodiscard]] inline auto se3_compose(const G& a, const G& b) {
             if constexpr (requires { a* b; }) {
@@ -211,9 +225,7 @@ namespace Aetherion::ODE::RKMK::Core {
                 //
                 // See StageResidualIRKProductSE3.h for the derivation: the field is
                 // left-trivialised (xi = g^-1 g_dot), so u_dot = dexp_{-u}^{-1}(xi).
-                // Evaluating at +Eta flips the O(ad) Bernoulli term and caps the
-                // method at order 2.
-                const Mat6<S> Jinv = detail::se3_dexp_inv<S>((-Eta).eval());
+                const Mat6<S> Jinv = detail::se3_dexp_inv_left<S>(Eta);
                 const Vec6<S> rhs = Jinv * vi;
 
                 // r_i = xi_i - h * rhs_i

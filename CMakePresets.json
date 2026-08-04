@@ -12,6 +12,9 @@
       "hidden": true,
       "displayName": "Windows Base",
       "generator": "Ninja",
+      "environment": {
+        "VSLANG": "1033"
+      },
       "cacheVariables": {
         "CMAKE_CXX_STANDARD": "23",
         "CMAKE_CXX_STANDARD_REQUIRED": "ON",
