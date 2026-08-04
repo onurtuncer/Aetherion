@@ -18,7 +18,7 @@
 //   v_i    = xi_field(t_i, g_i, x_i)      -> R^6  (kinematics)
 //   f_i    = f_field (t_i, g_i, x_i)      -> R^m  (Euclidean dynamics)
 //
-//   r_xi_i = xi_i - h * dexp_inv(Eta_i) * v_i
+//   r_xi_i = xi_i - h * dexp_inv(-Eta_i) * v_i     (left-trivialised convention)
 //   r_u_i  = u_i  - h * f_i
 //
 // For 3-stage Radau IIA + EuclidDim=7: 39x39 Newton system.
@@ -145,8 +145,18 @@ namespace Aetherion::ODE::RKMK::Core {
                 // Euclidean dynamics: f_i = f_field(t_i, g_i, x_i)
                 const VecE f_i = f_field_(ti, g_i, x_full);
 
-                // dexp_inv(Eta_i) * v_i
-                const auto Jinv = detail::se3_dexp_inv<S>(Eta_i);
+                // dexp_inv(-Eta_i) * v_i
+                //
+                // The kinematic ODE is *left*-trivialised: g_dot = g * hat(xi),
+                // i.e. xi = g^-1 g_dot.  Writing g(t) = g0 * Exp(u(t)) and using
+                //   (d/dt Exp(u)) Exp(-u) = dexp_u(u_dot)
+                // together with Ad_{Exp(-u)} dexp_u = dexp_{-u} gives
+                //   g^-1 g_dot = dexp_{-u}(u_dot) = xi   ==>   u_dot = dexp_{-u}^{-1}(xi).
+                // The RKMK stage correction is therefore evaluated at -Eta_i.
+                // Using +Eta_i (the right-trivialised convention, g_dot = hat(xi) g)
+                // flips the sign of the O(ad) Bernoulli term and caps the method at
+                // order 2 regardless of the Butcher tableau.
+                const auto Jinv = detail::se3_dexp_inv<S>((-Eta_i).eval());
                 const Vec6 rhs = Jinv * v_i;
 
                 // r_xi_i = xi_i - h * rhs

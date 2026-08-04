@@ -20,7 +20,7 @@
 //   Eta_i = sum_j A(i,j) * xi_j
 //   g_i   = g0 * Exp(Eta_i)
 //   v_i   = f(t0 + c(i)*h, g_i)                   (left-trivialized body twist)
-//   rhs_i = dexp_inv(Eta_i) * v_i
+//   rhs_i = dexp_inv(-Eta_i) * v_i          (left-trivialised convention)
 //   r_i   = xi_i - h * rhs_i
 //
 // This header only assembles residuals; use your Core::CppADResidualJacobian
@@ -207,8 +207,13 @@ namespace Aetherion::ODE::RKMK::Core {
                 // v_i = f(t_i, g_i)   (expected Vec6<S>)
                 const Vec6<S> vi = f_(ti, Gi);
 
-                // rhs_i = dexp_inv(Eta_i) * v_i
-                const Mat6<S> Jinv = detail::se3_dexp_inv<S>(Eta);
+                // rhs_i = dexp_inv(-Eta_i) * v_i
+                //
+                // See StageResidualIRKProductSE3.h for the derivation: the field is
+                // left-trivialised (xi = g^-1 g_dot), so u_dot = dexp_{-u}^{-1}(xi).
+                // Evaluating at +Eta flips the O(ad) Bernoulli term and caps the
+                // method at order 2.
+                const Mat6<S> Jinv = detail::se3_dexp_inv<S>((-Eta).eval());
                 const Vec6<S> rhs = Jinv * vi;
 
                 // r_i = xi_i - h * rhs_i

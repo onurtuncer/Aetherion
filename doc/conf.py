@@ -91,6 +91,7 @@ mathjax3_config = {
             "Lie":    [r"\mathfrak{#1}", 1],
             "dexp":   r"\mathrm{dexp}",
             "ad":     r"\operatorname{ad}",
+            "Ad":     r"\operatorname{Ad}",
             "norm":   [r"\left\lVert #1 \right\rVert", 1],
             "twist":  r"\boldsymbol{\mathcal{T}}",
             "wrench": r"\boldsymbol{\mathcal{W}}",
