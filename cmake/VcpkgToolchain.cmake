@@ -30,7 +30,11 @@ if(NOT AETHERION_USE_VCPKG OR BUILD_DOCS)
   return()
 endif()
 
-if(DEFINED CMAKE_TOOLCHAIN_FILE OR DEFINED ENV{CMAKE_TOOLCHAIN_FILE})
+# Quoted rather than `DEFINED ENV{CMAKE_TOOLCHAIN_FILE}` so that an env var set to the empty string does not count as a
+# toolchain -- and because cmake-lint misreads the bare ENV{...} form as a malformed variable reference (W0106).
+set(_aetherion_env_toolchain "$ENV{CMAKE_TOOLCHAIN_FILE}")
+
+if(DEFINED CMAKE_TOOLCHAIN_FILE OR _aetherion_env_toolchain)
   # Caller supplied a toolchain (possibly vcpkg's own, possibly a cross-compilation one that chainloads it) -- respect
   # it and stay out of the way.
   return()
