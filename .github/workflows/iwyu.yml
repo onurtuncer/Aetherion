@@ -6,6 +6,7 @@ on:
       - main
   pull_request:
     paths:
+      - 'Aetherion/**'
       - 'src/**'
       - 'tests/**'
       - '.github/workflows/iwyu.yml'
@@ -52,7 +53,7 @@ jobs:
       - name: Run include-what-you-use
         continue-on-error: true
         run: |
-          iwyu_tool -p build/iwyu src tests \
+          iwyu_tool -p build/iwyu Aetherion src tests \
             -- -Xiwyu --cxx17ns -Xiwyu --no_fwd_decls \
             | tee iwyu-report.txt
 
