@@ -37,7 +37,7 @@ The flagship simulation is a full 6-DOF two-stage rocket gravity-turn ascent fro
   <img src="doc/_static/atmos17/trajectory_3d.png" width="680" alt="Two-Stage Rocket 3D Trajectory — Aetherion vs. NASA Sim 06"/>
 </p>
 
-Stage separation, coast phases, and second-stage ignition are all captured with sub-percent error versus the NASA reference. Final altitude error: **0.87 %** · Final speed error: **0.001 %**.
+Stage separation, coast phases, and second-stage ignition are all captured with sub-percent error versus the NASA reference (Δt = 1 ms). Final altitude error: **0.87 %** · Final speed error: **0.14 %**.
 
 ---
 

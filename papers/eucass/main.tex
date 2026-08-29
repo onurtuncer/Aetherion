@@ -70,7 +70,7 @@
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\norm}[1]{\left\lVert #1 \right\rVert}
 \newcommand{\cross}[1]{[#1]_\times}
-\newcommand{\skew}[1]{\widehat{#1}}
+\newcommand{\skw}[1]{\widehat{#1}}
 \newcommand{\nuB}{\boldsymbol{\nu}_B}
 \newcommand{\omB}{\boldsymbol{\omega}_B}
 \newcommand{\vB}{\mathbf{v}_B}
@@ -103,7 +103,7 @@
   {\small
     $^{1}$Department of Aerospace Engineering, Istanbul Technical University,\\
     Maslak, 34469 Istanbul, Turkey\\
-    \texttt{otuncer@itu.edu.tr}}
+    \texttt{onur.tuncer@itu.edu.tr}}
 
   \vspace{10pt}
 \end{center}
@@ -139,10 +139,18 @@
     With the correct convention the measured orders are 5.00 and 3.91 for the
     Radau~IIA and explicit RK4 variants respectively.  Validation against
     scenarios from NASA Technical Memorandum TM-2015-218675 covers a dragless
-    point mass, F-16 manoeuvres, and a two-stage rocket with staging events;
-    the SE(3)-RKMK integrator holds $\SO$ orthonormality at the round-off level
-    across 600-second trajectories, whereas an unconstrained quaternion RK4
-    integrator accumulates constraint error nine orders of magnitude larger.
+    point mass, F-16 manoeuvres, and a two-stage rocket with staging events.
+    To attribute structure preservation to the Munthe-Kaas construction rather
+    than to implicitness or to order, we hold the Butcher tableau fixed and
+    toggle only the manifold treatment: over 600-second trajectories the same
+    Radau~IIA tableau applied to an unconstrained 13-vector state accumulates
+    $\SO$ constraint error nine orders of magnitude larger than its RKMK
+    counterpart, while agreeing with it to within \SI{7}{\percent} in
+    trajectory error at every step size and attaining the same order~5.  The
+    Munthe-Kaas map is therefore accuracy-neutral and purely structural.  We
+    also report that a symplectic tableau attains round-off orthonormality
+    \emph{without} RKMK, and identify why this is not an alternative for the
+    stiff regime the method targets.
   \end{minipage}
 \end{center}
 
@@ -202,6 +210,16 @@ requires two separate tangent-space corrections.
     validate such an integrator, and that exposing it requires a test problem
     whose body twist is time-varying.  We give the test problem and the
     measured orders.
+  \item A controlled attribution of structure preservation
+    (Section~\ref{sec:constraint}).  Comparisons of a Lie-group integrator
+    against an explicit flat-state one vary the manifold treatment, the
+    tableau, and the order simultaneously, and so cannot isolate the
+    contribution of any of them.  We hold the tableau, the order, and the
+    stage-residual tolerance fixed and vary only the manifold treatment, and
+    report what the Munthe-Kaas map is and is not worth.  We further show
+    (Section~\ref{sec:stiff_exclusive}) that the flat formulation can obtain
+    manifold membership only from a symplectic tableau, and that doing so
+    forfeits the $L$-stability the stiff regime requires.
   \item Quantitative validation against NASA TM-2015-218675 reference
     scenarios with published ground-truth trajectories.
 \end{enumerate}
@@ -244,12 +262,12 @@ arithmetic), kept in sync at every group operation.
 The Lie algebra of $\SE$ is
 \begin{equation}
   \se = \left\{
-    \begin{bmatrix} \skew{\omega} & \mathbf{v} \\ \mathbf{0}^\top & 0 \end{bmatrix}
+    \begin{bmatrix} \skw{\omega} & \mathbf{v} \\ \mathbf{0}^\top & 0 \end{bmatrix}
     \;\middle|\;
     \omega, \mathbf{v} \in \R^3
   \right\},
 \end{equation}
-where $\skew{\omega}$ is the $3\times 3$ skew-symmetric matrix corresponding to
+where $\skw{\omega}$ is the $3\times 3$ skew-symmetric matrix corresponding to
 $\omega$.  We identify $\se$ with $\R^6$ via the isomorphism
 $\xi = [\omega^\top, \mathbf{v}^\top]^\top$.
 
@@ -262,16 +280,16 @@ The exponential map $\Exp : \se \to \SE$ takes the closed form
 \end{equation}
 where
 \begin{equation}
-  \Exp_{\SO}(\omega) = I + \frac{\sin\theta}{\theta}\skew{\omega}
-                         + \frac{1-\cos\theta}{\theta^2}\skew{\omega}^2,
+  \Exp_{\SO}(\omega) = I + \frac{\sin\theta}{\theta}\skw{\omega}
+                         + \frac{1-\cos\theta}{\theta^2}\skw{\omega}^2,
   \quad \theta = \norm{\omega},
   \label{eq:so3_exp}
 \end{equation}
 is the Rodrigues formula, and
 \begin{equation}
   J(\omega) = I
-    + \frac{1-\cos\theta}{\theta^2}\skew{\omega}
-    + \frac{\theta - \sin\theta}{\theta^3}\skew{\omega}^2
+    + \frac{1-\cos\theta}{\theta^2}\skw{\omega}
+    + \frac{\theta - \sin\theta}{\theta^3}\skw{\omega}^2
   \label{eq:so3_left_jac}
 \end{equation}
 is the $\SO$ left Jacobian.  For $\theta \to 0$ the limits are computed via
@@ -320,10 +338,10 @@ Baker-Campbell-Hausdorff series for $\SE$
 \citep{barfoot2017stateEstimation,hairerLubichWanner2006gni}:
 \begin{equation}
   Q(\omega, \mathbf{v}) =
-    \frac{1}{2}\skew{\mathbf{v}}
-    + c_1 \bigl(\skew{\omega}\skew{\mathbf{v}} + \skew{\mathbf{v}}\skew{\omega}\bigr)
-    + c_2 \bigl(\skew{\omega}\skew{\mathbf{v}}\skew{\omega}\bigr)
-    + c_3 \bigl(\skew{\omega}^2\skew{\mathbf{v}} + \skew{\mathbf{v}}\skew{\omega}^2\bigr),
+    \frac{1}{2}\skw{\mathbf{v}}
+    + c_1 \bigl(\skw{\omega}\skw{\mathbf{v}} + \skw{\mathbf{v}}\skw{\omega}\bigr)
+    + c_2 \bigl(\skw{\omega}\skw{\mathbf{v}}\skw{\omega}\bigr)
+    + c_3 \bigl(\skw{\omega}^2\skw{\mathbf{v}} + \skw{\mathbf{v}}\skw{\omega}^2\bigr),
   \label{eq:Q_term}
 \end{equation}
 with scalar coefficients $c_1,c_2,c_3$ depending on $\theta$; explicit
@@ -331,9 +349,9 @@ expressions are given in Appendix~\ref{app:dexp_coeffs}.
 
 The inverse of the $\SO$ left Jacobian is
 \begin{equation}
-  J(\omega)^{-1} = I + \tfrac{1}{2}\skew{\omega}
+  J(\omega)^{-1} = I + \tfrac{1}{2}\skw{\omega}
     + \left(\tfrac{1}{\theta^2} - \tfrac{1+\cos\theta}{2\theta\sin\theta}\right)
-      \skew{\omega}^2.
+      \skw{\omega}^2.
   \label{eq:so3_left_jac_inv}
 \end{equation}
 
@@ -343,8 +361,8 @@ The adjoint action of $\xi \in \se$ on itself is the $6\times6$ matrix
 \begin{equation}
   \ad(\xi) =
   \begin{bmatrix}
-    \skew{\omega} & \mathbf{0} \\
-    \skew{\mathbf{v}} & \skew{\omega}
+    \skw{\omega} & \mathbf{0} \\
+    \skw{\mathbf{v}} & \skw{\omega}
   \end{bmatrix},
   \label{eq:adjoint}
 \end{equation}
@@ -681,20 +699,35 @@ slopes with and without it.
     metres.}
   \label{tab:order_data}
   \small
-  \begin{tabular}{lcccc}
+  \begin{tabular}{lcccccc}
     \toprule
-    & \multicolumn{2}{c}{Radau IIA RKMK} & \multicolumn{2}{c}{Explicit RK4 RKMK} \\
-    \cmidrule(lr){2-3}\cmidrule(lr){4-5}
-    $h$ [s] & $e_R$ & $e_p$ [m] & $e_R$ & $e_p$ [m] \\
+    & \multicolumn{2}{c}{Radau IIA RKMK}
+    & \multicolumn{2}{c}{Radau IIA, flat state}
+    & \multicolumn{2}{c}{Explicit RK4 RKMK} \\
+    \cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}
+    $h$ [s] & $e_R$ & $e_p$ [m] & $e_R$ & $e_p$ [m] & $e_R$ & $e_p$ [m] \\
     \midrule
-    0.2    & $2.59\times10^{-6}$  & $1.02\times10^{-3}$  & $8.12\times10^{-5}$ & $1.17\times10^{-1}$ \\
-    0.1    & $8.11\times10^{-8}$  & $3.20\times10^{-5}$  & $5.80\times10^{-6}$ & $7.55\times10^{-3}$ \\
-    0.05   & $2.53\times10^{-9}$  & $9.99\times10^{-7}$  & $3.89\times10^{-7}$ & $4.79\times10^{-4}$ \\
-    0.025  & $7.90\times10^{-11}$ & $3.12\times10^{-8}$  & $2.52\times10^{-8}$ & $3.02\times10^{-5}$ \\
-    0.0125 & $2.46\times10^{-12}$ & $9.82\times10^{-10}$ & $1.60\times10^{-9}$ & $1.89\times10^{-6}$ \\
+    0.2    & $2.59\times10^{-6}$  & $1.02\times10^{-3}$  & $2.68\times10^{-6}$  & $9.68\times10^{-4}$  & $8.12\times10^{-5}$ & $1.17\times10^{-1}$ \\
+    0.1    & $8.11\times10^{-8}$  & $3.20\times10^{-5}$  & $8.45\times10^{-8}$  & $3.02\times10^{-5}$  & $5.80\times10^{-6}$ & $7.55\times10^{-3}$ \\
+    0.05   & $2.53\times10^{-9}$  & $9.99\times10^{-7}$  & $2.65\times10^{-9}$  & $9.40\times10^{-7}$  & $3.89\times10^{-7}$ & $4.79\times10^{-4}$ \\
+    0.025  & $7.90\times10^{-11}$ & $3.12\times10^{-8}$  & $8.28\times10^{-11}$ & $2.93\times10^{-8}$  & $2.52\times10^{-8}$ & $3.02\times10^{-5}$ \\
+    0.0125 & $2.46\times10^{-12}$ & $9.82\times10^{-10}$ & $2.57\times10^{-12}$ & $9.23\times10^{-10}$ & $1.60\times10^{-9}$ & $1.89\times10^{-6}$ \\
+    \midrule
+    order  & 5.00 & 5.00 & 5.00 & 5.00 & 3.91 & 3.98 \\
     \bottomrule
   \end{tabular}
 \end{table}
+
+The middle pair of columns is the accuracy counterpart of rows~(a) and~(c) of
+Table~\ref{tab:drift}: the same Radau~IIA tableau on the flat state, differing
+from the RKMK columns only in the manifold treatment.  The two agree to within
+\SI{7}{\percent} at every step size---RKMK is marginally better in position and
+marginally worse in attitude---and attain the same order to three significant
+figures.  The Munthe-Kaas map is therefore accuracy-neutral: it neither
+improves the trajectory nor degrades it, and everything it contributes is
+structural.  This is worth stating explicitly, because it also means the nine
+orders of magnitude in Table~\ref{tab:drift} cannot be explained away as a
+by-product of one method simply being more accurate than the other.
 
 \begin{table}[h]
   \centering
@@ -829,7 +862,7 @@ Table~\ref{tab:validation_summary} gives both.
     12 & F-16 supersonic trim        & 180 & $97.5$  & $140$   \\
     13.1 & F-16 altitude change      & 180 & $0.171$ & $0.316$ \\
     13.2 & F-16 airspeed change      & 180 & $0.138$ & $1.21$  \\
-    13.3 & F-16 heading change       & 180 & $0.178$ & $0.288$ \
+    13.3 & F-16 heading change       & 180 & $0.178$ & $0.288$ \\
     13.4 & F-16 lateral side step    & 180 & $0.172$ & $0.295$ \\
     15 & F-16 polar circumnavigation & 180 & $0.030$ & $0.430$ \\
     16 & F-16 equatorial circuit     & 180 & $0.036$ & $0.293$ \\
@@ -888,102 +921,329 @@ two-stage rocket undergoes:
   \item S2 burn until apogee.
 \end{enumerate}
 Aerodynamics are provided via DAVE-ML tables (axial/normal force coefficients
-as functions of Mach and $\alpha$).  Total simulation duration is
-approximately \SI{600}{s}.
+as functions of Mach and $\alpha$).  The reference trajectories run to
+\SI{200}{\second}, and the S2 ignition time is set so that the second stage
+burns through to that epoch after the nominal \SI{7}{\second} post-burnout
+coast.
 
-Table~\ref{tab:scenario17_errors} summarises peak errors relative to the
-NASA Sim~06 reference trajectory.
+Three reference runs are published for this scenario, and they do not carry
+equal weight.  Sims~04 and~05 agree with each other to \SI{6.6}{\metre} in
+altitude and \SI{0.07}{\metre\per\second} in speed over the full
+\SI{200}{\second}, so they are effectively one implementation; sim~06 is the
+genuinely independent second one, and it departs from that pair by
+\SI{17}{\kilo\metre} in altitude, \SI{7.4}{\kilo\metre} in ground range and
+\SI{45}{\metre\per\second} in speed.  As in Section~\ref{sec:ref_spread}, the
+useful question is therefore not the error against one nominated run but
+whether Aetherion falls inside the envelope the references themselves span.
+Table~\ref{tab:scenario17_errors} reports both, against sim~06.
 
 \begin{table}[h]
   \centering
-  \caption{Scenario 17 peak absolute errors vs.\ NASA Sim~06 reference.
-    Step size $h = 0.01\,$s; post-burn coast $= 7\,$s.}
+  \caption{Scenario 17 errors against the NASA sim~06 reference, with the peak
+    spread among sims~04, 05 and~06 for comparison.  Step size
+    $h = \SI{1}{\milli\second}$; post-burn coast $= \SI{7}{\second}$.  Down-range
+    is the great-circle ground range from the launch point.  Errors are
+    reported both at their peak and at the final epoch, because the peaks are
+    concentrated at the burn events (see text).}
   \label{tab:scenario17_errors}
   \small
-  \begin{tabular}{lrr}
+  \begin{tabular}{lrrrrc}
     \toprule
-    Quantity & Peak error & Reference range \\
+    Quantity & Peak $\lvert$err$\rvert$ & at $t$ [s] & Final $\lvert$err$\rvert$
+      & NASA spread & Reference range \\
     \midrule
-    Altitude MSL [m]          & \TODO{X.X}  & $0$--$\SI{120}{km}$ \\
-    Down-range position [m]   & \TODO{X.X}  & $0$--$\SI{200}{km}$ \\
-    Pitch angle [deg]         & \TODO{X.X}  & $0$--$90$ \\
-    Body pitch rate [deg/s]   & \TODO{X.X}  & $\pm 5$ \\
-    Vehicle speed [m/s]       & \TODO{X.X}  & $0$--$\SI{7000}{m/s}$ \\
+    Altitude MSL [m]        & \SI{2.04}{\kilo\metre} & 200.0 & \SI{2.04}{\kilo\metre} & \SI{17}{\kilo\metre}   & $0$--$\SI{234}{\kilo\metre}$ \\
+    Down-range position [m] & \SI{15.8}{\kilo\metre} & 200.0 & \SI{15.8}{\kilo\metre} & \SI{7.36}{\kilo\metre} & $0$--$\SI{529}{\kilo\metre}$ \\
+    Pitch angle [deg]       & 3.20                   & 158.4 & 0.46                   & 10.1                   & $12.2$--$55.2$ \\
+    Body pitch rate [deg/s] & 2.24                   &  25.8 & 0.19                   & 0.237                  & $-2.97$--$1.41$ \\
+    Vehicle speed [m/s]     & 586                    & 193.0 & 11.5                   & 45.1                   & $0$--$\SI{8393}{\metre\per\second}$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-\TODO{Insert Figure: Scenario 17 altitude and speed profiles vs.\ NASA reference.}
+Altitude and pitch angle sit inside the reference envelope: \SI{2.04}{\kilo\metre}
+against a \SI{17}{\kilo\metre} spread, and \SI{3.20}{\degree} against
+\SI{10.1}{\degree}.  For the two rate quantities the peak and the final error
+differ by more than an order of magnitude, and the location of the peak
+explains why.  The body-pitch-rate peak occurs at $t = \SI{25.8}{\second}$,
+inside the S1 burn, and the speed peak at $t = \SI{193.0}{\second}$, which is
+S2 burnout; away from the burn events the same channels track the reference to
+\SI{0.034}{\degree\per\second} and \SI{1.8}{\metre\per\second} at
+$t = \SI{100}{\second}$.  These are event-timing transients rather than
+accumulated integration error.  The speed difference opens at S2 ignition, grows
+monotonically through the second burn and then collapses at burnout: the two
+vehicles ignite the second stage at slightly different epochs, so through the
+burn they are at different points along the same acceleration history, and once
+both have expended the stage the speeds re-converge.  The final states
+agree to \SI{0.87}{\percent} in altitude (\SI{232.4}{} against
+\SI{234.5}{\kilo\metre}) and \SI{0.14}{\percent} in speed
+(\SI{8392}{} against \SI{8381}{\metre\per\second}), the latter well inside the
+\SI{45}{\metre\per\second} reference spread.
+
+Unlike the torque-free studies of Section~\ref{sec:order_test}, this scenario is
+\emph{not} step-converged at the order of the integrator, and the reason is
+worth stating because it bounds what the table can be taken to mean.  Repeating
+the run at $h = \SI{10}{\milli\second}$ moves the final altitude by
+\SI{593}{\metre} and the peak altitude error from \SI{2.04}{} to
+\SI{1.45}{\kilo\metre}---a \SI{29}{\percent} change for a tenfold change in step
+size, which is first-order behaviour, not fifth.  The limitation is not in the
+integrator but in the staging model around it: the example depletes propellant
+by an explicit Euler update, $m_{\mathrm{fuel}} \mathrel{+}= \dot m\,h$, and
+detects burnout only at step boundaries, with no interpolation to the crossing
+instant.  Both are $O(h)$ and both act precisely at the events that dominate
+Table~\ref{tab:scenario17_errors}.  A stiffly accurate order-5 tableau cannot
+recover an order the surrounding discrete model does not supply, and the
+remedy---event location on the fuel-exhaustion crossing, and a mass quadrature
+of matching order---is a property of the vehicle model rather than of the
+integrator.  The residuals quoted here should therefore be read as validating
+the force and moment models against the reference, not as a convergence
+statement about the method; the convergence evidence is
+Section~\ref{sec:order_test}, where the model is smooth.
+
+Down-range is the one quantity that lies outside the envelope, at
+\SI{15.8}{\kilo\metre} against a \SI{7.36}{\kilo\metre} spread---\SI{3.0}{\percent}
+of the \SI{529}{\kilo\metre} total.  We report it as an open discrepancy rather
+than absorb it into the envelope argument.  Its most likely source is the
+guidance model rather than the integrator: the S2 ignition epoch is chosen to
+match the reference pitch attitude at ignition, and the coast pitch rate in the
+present model (\SI{0.197}{\degree\per\second}) differs from the reference
+(\SI{0.163}{\degree\per\second}), so the two vehicles fly slightly different
+pitch programmes through the second burn.  That difference integrates into
+range far more strongly than into altitude or speed.  Isolating it requires the
+reference guidance logic, which is not published with the trajectories.
+
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=\linewidth]{figures/scenario17}
+  \caption{Scenario 17 altitude and speed against the NASA reference runs.  The
+    shaded band is the envelope spanned by sims~04, 05 and~06; the lower panels
+    give the signed difference of Aetherion from sim~06 on the same band.  The
+    altitude difference stays well inside the envelope throughout, and the
+    envelope itself widens sharply after S2 ignition.  The speed difference
+    opens at S2 ignition, grows through the second burn and collapses at
+    burnout, which identifies it as a difference in ignition epoch rather than
+    accumulated integration error.  Generated by
+    \texttt{papers/eucass/scripts/plot\_scenario17.py}; errors in
+    Table~\ref{tab:scenario17_errors} are produced by
+    \texttt{scripts/compare\_atmos17\_errors.py} from the same run.}
+  \label{fig:scenario17}
+\end{figure}
 
 \subsection{Constraint Preservation}
 \label{sec:constraint}
 
-The $\SO$ constraint residual $\norm{R^\top R - I}_F$ was measured over a
-\SI{600}{\second} trajectory of the asymmetric tumbling body of
-Section~\ref{sec:order_test} at $h = \SI{0.1}{\second}$
-(\num{6000} steps), for three integrators:
-(a) SE(3)-RKMK, (b) a conventional RK4 applied to an unconstrained
-13-component quaternion state
-$[q,\,\mathbf{p},\,\omB,\,\vB]$, and (c) the same RK4 with the quaternion
-re-normalised after every step.  Figure~\ref{fig:constraint_drift} shows the
-time histories and Table~\ref{tab:drift} the final values.
+A comparison between an implicit RKMK method on $\SE$ and an explicit RK4 on a
+flat state varies three things at once---the manifold treatment, the tableau,
+and the order---so nothing measured that way can be attributed to the
+Munthe-Kaas construction in particular.  We therefore measure the $\SO$
+constraint residual $\norm{R^\top R - I}_F$ over a factorial design in which
+the tableau and the manifold treatment are varied independently.
+
+All runs use the asymmetric tumbling body of Section~\ref{sec:order_test} over
+\SI{600}{\second} at $h = \SI{0.1}{\second}$ (\num{6000} steps).  The flat
+baselines carry the same 13-component state
+$[q,\,\mathbf{p},\,\omB,\,\vB]$ and, in the implicit cases, solve the same
+stage system to the same residual tolerance as the RKMK stepper, using the
+identical Butcher tableau; only the coordinate map differs.  Table~\ref{tab:drift}
+gives the final residuals and Figure~\ref{fig:constraint_drift} the time
+histories.
 
 \begin{figure}[h]
   \centering
-  \includegraphics[width=0.72\linewidth]{figures/constraint_drift}
-  \caption{Attitude constraint residual over \SI{600}{\second}.  The
-    unconstrained quaternion RK4 baseline (red) grows secularly; the SE(3)-RKMK
-    pose (blue) accumulates only round-off; per-step re-normalisation (green,
-    dashed) also holds the constraint, by projection.  Generated from
-    \texttt{papers/eucass/data/constraint\_drift.csv}, emitted by the
-    \texttt{[drift][csv]} regression test.}
+  \includegraphics[width=0.78\linewidth]{figures/constraint_drift}
+  \caption{Attitude constraint residual over \SI{600}{\second}, for the six
+    cells of Table~\ref{tab:drift}.  Both flat-state cells whose tableau is not
+    symplectic---RK4~(b) and Radau~IIA~(c)---grow secularly; holding the
+    tableau fixed and moving the update onto the group, (c)~$\to$~(a), removes
+    the growth entirely.  The two RKMK curves (a,~d) lie together at the
+    round-off floor irrespective of tableau, as do the symplectic flat cell~(e)
+    and the re-normalised cell~(f).  Generated from
+    \texttt{papers/eucass/data/manifold\_factorial\_trace.csv}, emitted by the
+    \texttt{[factorial][csv]} regression test.}
   \label{fig:constraint_drift}
 \end{figure}
 
 \begin{table}[h]
   \centering
   \caption{Attitude constraint residual $\norm{R^\top R - I}_F$ after
-    \SI{600}{\second} ($h = \SI{0.1}{\second}$, \num{6000} steps).}
+    \SI{600}{\second} ($h = \SI{0.1}{\second}$, \num{6000} steps).  Rows~(a)
+    and~(c) differ \emph{only} in the manifold treatment: same tableau, same
+    order, same stage-residual tolerance.}
   \label{tab:drift}
   \small
-  \begin{tabular}{lcc}
+  \begin{tabular}{llllcl}
     \toprule
-    Integrator & $\norm{R^\top R - I}_F$ at $T$ & Behaviour \\
+    & State & Tableau & Order & $\norm{R^\top R - I}_F$ at $T$ & Behaviour \\
     \midrule
-    SE(3)-RKMK (this work)          & $4.4\times10^{-14}$ & bounded round-off \\
-    Quaternion RK4, no re-normalisation & $2.1\times10^{-3}$  & secular growth \\
-    Quaternion RK4, re-normalised   & $6.9\times10^{-16}$ & bounded (by projection) \\
+    (a) & $\SE$ (RKMK)  & Radau IIA & 5 & $4.0\times10^{-14}$ & bounded round-off \\
+    (d) & $\SE$ (RKMK)  & RK4       & 4 & $3.0\times10^{-14}$ & bounded round-off \\
+    (c) & flat          & Radau IIA & 5 & $7.2\times10^{-5}$  & secular growth \\
+    (e) & flat          & Gauss     & 6 & $2.1\times10^{-14}$ & bounded (symplectic) \\
+    (b) & flat          & RK4       & 4 & $2.1\times10^{-3}$  & secular growth \\
+    (f) & flat + renorm & RK4       & 4 & $6.9\times10^{-16}$ & bounded (by projection) \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The unconstrained baseline leaves the manifold at a rate set by its truncation
-error, ending nine orders of magnitude further from $\SO$ than the
-SE(3)-RKMK pose, and the growth is secular rather than diffusive.  The
-SE(3)-RKMK residual is pure round-off accumulated over the step count: the
-rotation factor is a product of exact $\SO$ elements, so there is no
-truncation contribution to remove.
+The controlled comparison is (a) against (c).  Holding the Radau~IIA tableau,
+the order, and the Newton tolerance fixed and replacing the Lie-group update by
+a flat one costs \emph{nine orders of magnitude} in constraint residual.  The
+RKMK residual is pure round-off accumulated over the step count---the rotation
+factor is a product of exact $\SO$ elements, so there is no truncation
+contribution to remove---whereas the flat state leaves the manifold at a rate
+set by its truncation error, secularly rather than diffusively.
 
-We report the third row deliberately rather than omitting it.  Per-step
-re-normalisation \emph{does} satisfy the constraint, and to a tighter tolerance
-than the accumulated matrix product, because $R$ is reconstructed from a unit
-quaternion at every step.  The orthonormality metric alone therefore does not
-discriminate between (a) and (c), and a comparison that reports only (a)
-versus (b) overstates the case.  The distinction is in \emph{how} the
-constraint is met: re-normalisation is a projection applied outside the
-integrator, so the trajectory it produces is not the trajectory of the
-discrete method whose Jacobian an estimator would linearise, and the
-projection's own contribution is absent from that Jacobian.  This is the
-concrete sense in which structure preservation matters here, and it is a
-statement about consistency rather than about orthonormality.
+The remaining rows separate the two factors that the older comparison
+conflated.  Going from (b) to (c)---explicit order~4 to implicit order~5, still
+flat---improves the residual by a factor of \num{29}, so implicitness and order
+account for about \num{1.5} of the nine orders and no more.  Conversely (a)
+against (d) shows the same round-off-level residual for an explicit and an
+implicit tableau once the update is on the group: with RKMK, manifold
+membership does not depend on the tableau at all.
+
+Rows~(e) and~(f) are reported deliberately rather than omitted, because each
+reaches the constraint by a route that the orthonormality metric alone cannot
+distinguish from~(a).  Per-step re-normalisation~(f) satisfies the constraint,
+and to a tighter tolerance than the accumulated matrix product, because $R$ is
+rebuilt from a unit quaternion at every step.  Row~(e) is the more interesting
+case: $\norm{q}^2$ is a \emph{quadratic} invariant of the quaternion kinematics,
+and a Runge-Kutta method conserves every quadratic invariant of its vector
+field exactly when
+\begin{equation}
+  M_{ij} \;=\; b_i a_{ij} + b_j a_{ji} - b_i b_j \;=\; 0
+  \qquad \forall\, i,j ,
+  \label{eq:cooper}
+\end{equation}
+a condition satisfied by the Gauss-Legendre family and violated by Radau~IIA.
+Measured directly on the two tableaux, $\max_{ij}\lvert M_{ij}\rvert$ is
+\num{2.8e-17} for three-stage Gauss and \num{3.7e-2} for three-stage
+Radau~IIA, which is precisely why (e) holds the constraint and (c) does not.  A
+symplectic tableau therefore attains round-off orthonormality with no
+Munthe-Kaas machinery whatever, and any claim that only RKMK can preserve the
+manifold would be false.
+
+What distinguishes the RKMK rows is that they achieve this for \emph{any}
+tableau, and hence without constraining the choice of tableau on grounds
+unrelated to the dynamics.  Section~\ref{sec:stiff_exclusive} shows that this
+freedom is not academic: the flat formulation can buy manifold membership only
+by adopting a symplectic method, and symplectic methods forfeit exactly the
+stiff behaviour that motivated Radau~IIA in the first place.  For (f) the
+distinction is different in kind: re-normalisation is a projection applied
+outside the integrator, so the trajectory it produces is not the trajectory of
+the discrete method whose Jacobian an estimator would linearise, and the
+projection's own contribution is absent from that Jacobian.
+
+\subsection{Manifold Membership and Stiff Stability Are Exclusive Without RKMK}
+\label{sec:stiff_exclusive}
+
+Row~(e) of Table~\ref{tab:drift} raises an obvious question: if a symplectic
+tableau on a flat state already holds the constraint at round-off, what does
+RKMK add?  The answer is that condition~\eqref{eq:cooper} is a strong
+restriction on the tableau, and it is incompatible with the stiff behaviour for
+which Radau~IIA was adopted in the first place (Section~\ref{sec:rkmk}).
+
+Symplectic Runge-Kutta methods are $A$-stable but not $L$-stable.  The stability
+function of the three-stage Gauss method is the $(3,3)$ Pad\'e approximant to
+$e^z$, for which $\lvert R(z)\rvert \to 1$ as $z \to -\infty$: a stiff transient
+is not damped at all in the stiff limit, merely alternated in sign.  Radau~IIA
+is $L$-stable, $R(-\infty) = 0$, and stiffly accurate, so it annihilates the
+transient in a single step.
+
+To make this concrete we add a linear body-frame damping force
+$\mathbf{F}_B = -c\,\vB$ to the same tumbling body, which is the model problem
+for stiff aerodynamic damping.  Because the Coriolis term $-\omB \times \vB$ is
+norm-preserving, the speed obeys
+$\tfrac{\mathrm{d}}{\mathrm{d}t}\norm{\vB}^2 = -2(c/m)\norm{\vB}^2$ exactly, so
+\begin{equation}
+  \norm{\vB(t)} \;=\; \norm{\vB(0)}\, e^{-(c/m)\,t}
+  \label{eq:stiff_exact}
+\end{equation}
+is available in closed form and no reference integration is required.
+Table~\ref{tab:stiff} sweeps the stiffness ratio at fixed
+$h = \SI{0.1}{\second}$ and reports the retained fraction
+$\norm{\vB(T)}/\norm{\vB(0)}$ after \num{20} steps.
+
+\begin{table}[h]
+  \centering
+  \caption{Retained fraction $\norm{\vB(T)}/\norm{\vB(0)}$ after \num{20} steps
+    at $h = \SI{0.1}{\second}$ ($T = \SI{2}{\second}$) under linear damping, against
+    the exact value~\eqref{eq:stiff_exact}.  The last column is the analytic
+    amplification factor of the three-stage Gauss tableau, $\lvert R(h\lambda)\rvert$;
+    the flat Gauss column reproduces $\lvert R(h\lambda)\rvert^{20}$ to three
+    digits, confirming the behaviour is the tableau's and not the solver's.}
+  \label{tab:stiff}
+  \small
+  \begin{tabular}{rrcccc c}
+    \toprule
+    $c/m$ [\si{\per\second}] & $\lvert h\lambda\rvert$ & exact
+      & \shortstack{RKMK\\Radau IIA}
+      & \shortstack{flat\\Radau IIA}
+      & \shortstack{flat\\Gauss}
+      & $\lvert R_{\mathrm{G}}(h\lambda)\rvert$ \\
+    \midrule
+    $10^{1}$ & $10^{0}$ & $2.1\times10^{-9}$  & $2.1\times10^{-9}$  & $2.1\times10^{-9}$  & $2.1\times10^{-9}$ & 0.368 \\
+    $10^{2}$ & $10^{1}$ & $1.4\times10^{-87}$ & $1.3\times10^{-26}$ & $1.9\times10^{-26}$ & $4.4\times10^{-21}$ & 0.096 \\
+    $10^{3}$ & $10^{2}$ & $0$                 & $2.6\times10^{-28}$ & $1.2\times10^{-32}$ & $8.2\times10^{-3}$ & 0.787 \\
+    $10^{4}$ & $10^{3}$ & $0$                 & $2.4\times10^{-29}$ & $2.5\times10^{-51}$ & $0.619$ & 0.976 \\
+    $10^{5}$ & $10^{4}$ & $0$                 & $1.7\times10^{-30}$ & $3.4\times10^{-71}$ & $0.953$ & 0.998 \\
+    $10^{6}$ & $10^{5}$ & $0$                 & $2.3\times10^{-31}$ & $3.5\times10^{-91}$ & $0.995$ & 1.000 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+At $\lvert h\lambda\rvert = 1$ the problem is not stiff and all three methods
+agree with~\eqref{eq:stiff_exact}.  As the ratio grows the two Radau~IIA columns
+drive the transient monotonically further down---this is $L$-stability, and it
+is a property of the tableau alone, holding equally with and without the
+Munthe-Kaas map.  The Gauss column moves the opposite way, retaining
+\SI{62}{\percent}, \SI{95}{\percent} and finally \SI{99.5}{\percent} of the
+transient as $\lvert R(h\lambda)\rvert \to 1$.  A single stiffness point would
+not reveal this: at $\lvert h\lambda\rvert = 10^2$ the Gauss factor is still
+only \num{0.787}, and over a long enough horizon even that decays to
+underflow, which would wrongly suggest the method copes.
+
+Combining the two studies on the same stiff problem
+($c/m = \SI{1e3}{\per\second}$, $h = \SI{0.1}{\second}$,
+$T = \SI{600}{\second}$) gives the summary in Table~\ref{tab:stiff_exclusive}.
+
+\begin{table}[h]
+  \centering
+  \caption{Manifold membership and stiff transient damping on the same problem.
+    Only the RKMK row has both.}
+  \label{tab:stiff_exclusive}
+  \small
+  \begin{tabular}{llcc}
+    \toprule
+    State & Tableau & $\norm{R^\top R - I}_F$ at $T$ & Stiff transient \\
+    \midrule
+    $\SE$ (RKMK) & Radau IIA (order 5) & $3.3\times10^{-14}$ & annihilated \\
+    $\SE$ (RKMK) & explicit RK4        & \multicolumn{2}{c}{diverges at step 23} \\
+    flat         & Radau IIA (order 5) & $7.2\times10^{-5}$  & annihilated \\
+    flat         & Gauss (order 6)     & $5.1\times10^{-14}$ & retained \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The flat formulation can have manifold membership or stiff stability but not
+both, because the two demand incompatible tableaux: the constraint is held only
+by a symplectic method, and the transient only by an $L$-stable one.  Applying
+RKMK to the explicit tableau preserves its structure but leaves it with no
+stiff stability whatever---it diverges after \num{23} steps.  Only the
+Munthe-Kaas update on the $L$-stable, stiffly accurate Radau~IIA tableau
+delivers both at once, and Section~\ref{sec:order_test} shows it does so at no
+cost in accuracy.  This, rather than orthonormality in isolation, is the
+concrete case for the construction.
 
 \subsection{Convergence Order Verification}
 
 Convergence order is established in Section~\ref{sec:order_test}:
 Tables~\ref{tab:order_data} and~\ref{tab:order_summary} give the errors and
-the fitted slopes, with measured orders of 5.00 (Radau~IIA) and 3.91--3.98
-(explicit RK4) against nominal 5 and 4.
-Figure~\ref{fig:convergence} plots the same data.
+the fitted slopes, with measured orders of 5.00 (Radau~IIA RKMK) and
+3.91--3.98 (explicit RK4 RKMK) against nominal 5 and 4.  The flat-state
+Radau~IIA control attains 5.00 as well, and matches the RKMK columns to within
+\SI{7}{\percent} at every step size, which is what licenses the reading of
+Table~\ref{tab:drift} as a statement about structure rather than about
+accuracy.  Figure~\ref{fig:convergence} plots the same data.
 
 \begin{figure}[h]
   \centering
@@ -1006,8 +1266,50 @@ build rather than silently invalidating a published claim.
 % ---------------------------------------------------------------------------
 
 This paper has presented an implicit Runge-Kutta-Munthe-Kaas integrator for
-6-DOF flight dynamics that operates on the full Special Euclidean group
-$\SE$.  The key design decisions are:
+6-DOF flight dynamics that operates on the full Special Euclidean group $\SE$.
+Its principal result is an attribution rather than a construction:
+
+\begin{quote}
+  \emph{The Munthe-Kaas map decouples structure preservation from the choice of
+  Butcher tableau.}
+\end{quote}
+
+\noindent
+That single sentence carries the practical content of the method, and each
+half of it is measured.  Holding the tableau, the order, and the Newton
+tolerance fixed and varying only the manifold treatment---the controlled
+comparison of rows~(a) and~(c) of Table~\ref{tab:drift}---the Munthe-Kaas
+update is worth nine orders of magnitude in constraint residual
+($4.0\times10^{-14}$ against $7.2\times10^{-5}$ after \SI{600}{\second}) and,
+to within \SI{7}{\percent} at every step size tested, nothing at all in
+trajectory accuracy.  It is not an accuracy device and does not trade against
+accuracy; everything it contributes is structural.
+
+The decoupling is what makes that structural contribution useful, because
+preserving the manifold is not by itself exclusive to RKMK.  A symplectic
+tableau on a flat state holds $\norm{R^\top R - I}_F$ at round-off as well
+(row~(e)), so orthonormality on its own does not identify what a Lie-group
+integrator provides.  The difference is in what each approach costs elsewhere.
+The flat formulation can buy manifold membership only by adopting a symplectic
+method, and symplectic methods are $A$-stable but not $L$-stable: on the stiff
+model problem of Section~\ref{sec:stiff_exclusive} the Gauss tableau retains
+\SI{99.5}{\percent} of a transient that Radau~IIA annihilates.  A flat
+integrator may therefore have manifold membership or stiff stability, but not
+both, because the two demand incompatible tableaux.  RKMK grants membership to
+whichever tableau the dynamics require---here the $L$-stable, stiffly accurate
+Radau~IIA---and so is the only one of the four combinations examined that has
+both.
+
+A methodological corollary follows.  A comparison between a Lie-group
+integrator and an explicit flat-state one varies the manifold treatment, the
+tableau, and the order at the same time, and cannot support a claim about any
+one of them however large the gap it reports.  In the present case the
+confound proves benign---implicitness and order account for a factor of
+\num{29} of the total, and the Munthe-Kaas map for the remaining nine
+orders---but that is a measurement, not something the design of such a
+comparison could have established.
+
+Supporting these results are four design decisions:
 
 \begin{enumerate}[leftmargin=*, label=(\arabic*)]
   \item \textbf{Single Lie-group treatment}: the pose $g \in \SE$ is updated
@@ -1038,7 +1340,6 @@ is available as open-source software at the address given in
 
 The author thanks the NASA Engineering and Safety Center (NESC) for making the
 reference simulation data from TM-2015-218675 publicly available.
-\TODO{Add TÜBİTAK grant number if applicable.}
 
 % ---------------------------------------------------------------------------
 % Bibliography

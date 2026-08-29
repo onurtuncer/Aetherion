@@ -63,11 +63,11 @@ implementation convention came from.
 
 ## Next — in priority order
 
-### 1. Scenario 17 is INCOMPLETE — redo it first
+### 1. Scenario 17 — run completed, eucass paper filled
 
-The two-stage rocket run **did not finish**: the background task timed out and
-the CSV only reaches **t = 31.4 s of 200 s**. Do not use any Scenario 17 number
-currently in hand.
+The full 200 s run now completes. Launch it **detached** (`Start-Process`), not
+through a tool-managed background job: those cap out at 10 minutes, which is
+what truncated the earlier attempt at t = 31.4 s.
 
 ```
 out\build\windows-release\src\Examples\TwoStageRocket\TwoStageRocket.exe \
@@ -75,22 +75,56 @@ out\build\windows-release\src\Examples\TwoStageRocket\TwoStageRocket.exe \
     --timeStep 0.001 --writeInterval 100
 ```
 
-200 000 Radau steps — allow well over 15 minutes, run it detached and let it
-finish. Then:
+`--endTime` must be 200: S2 ignition is computed as
+`endTime - postBurnCoast - burnDuration`, so a different end time silently
+moves the staging event and invalidates the comparison.
 
-- [ ] Recompute vs `Atmos_17_sim_04/05/06`.
-- [ ] Fill the Scenario 17 row in **both** papers' verification tables
-      (`\TODO{X}` markers) and the Scenario 17 error table in
-      `papers/eucass/main.tex` (~line 907).
+- [x] Recompute vs `Atmos_17_sim_04/05/06` — `scripts/compare_atmos17_errors.py`
+      (committed, no longer a scratch script).
+- [x] Scenario 17 error table in `papers/eucass/main.tex` filled, with figure
+      `papers/eucass/scripts/plot_scenario17.py`.
+- [x] Reconciled the comparison scripts. The disagreement was the down-range
+      metric: Aetherion writes SI and the NASA files are imperial, and the
+      earlier small-angle construction carried `(R_earth + h)` with h up to
+      234 km, inflating range by 3.7 %. Now a haversine ground range on
+      `R_earth`, stated explicitly in the script docstring.
+- [x] `papers/eucass-library/main.tex`: Scenario 17 row, figure and prose filled;
+      also fixed a literal U+0307 combining dot (`u̇` -> `\dot u`) that was a hard
+      LaTeX error, and the stale author e-mail.
 - [ ] Update `doc/examples.rst` Scenario 17 checkpoint table (~line 5620) and the
       `-0.87 %` / `+0.14 %` headline claims — those are pre-fix.
-- [ ] Also fix `README.md`: "Final altitude error: **0.87 %**" is pre-fix.
-- [ ] Reconcile the two comparison scripts — for the partial atmos17 data they
-      disagreed (9.59 m vs 16.89 m max |dh| over the same window). Find out why
-      before trusting either.
+- [ ] `README.md`: "Final altitude error: **0.87 %**" was assumed pre-fix, but at
+      the recommended dt = 1 ms the measured value *is* **0.87 %** (232.4 vs
+      234.5 km). Check it against `doc/examples.rst` before changing anything.
 
-Scratch scripts (regenerate if the temp dir is gone):
-`<scratchpad>/run_validation.py`, `compare_all.py`, `summary.py`.
+Measured against sim 06 at dt = 1 ms:
+
+| Quantity | Peak err | at t | Final err | NASA spread |
+|---|---|---|---|---|
+| Altitude MSL | 2.04 km | 200.0 | 2.04 km | 17.0 km |
+| Down-range | 15.8 km | 200.0 | 15.8 km | 7.36 km |
+| Pitch angle | 3.20° | 158.4 | 0.46° | 10.1° |
+| Body pitch rate | 2.24°/s | 25.8 | 0.19°/s | 0.237°/s |
+| Vehicle speed | 586 m/s | 193.0 | 11.5 m/s | 45.1 m/s |
+
+Two things to know when reading these. Sims 04 and 05 are effectively the same
+implementation (6.6 m apart over 200 s); sim 06 is the only independent second
+reference, so the "spread" is really a two-way disagreement. And **down-range is
+outside the reference envelope** (15.8 km vs 7.36 km) — an open discrepancy,
+most likely the coast pitch rate (0.197 °/s here vs 0.163 °/s in the reference)
+rather than the integrator. It is reported as open in the paper, not absorbed.
+
+**The scenario is not step-converged, and it is not the integrator's fault.**
+Re-running at dt = 10 ms moves the final altitude by 593 m and the peak altitude
+error from 2.04 km to 1.45 km — a 29 % change for a 10x step change, i.e. first
+order, not fifth. `RocketStageModel::advance` depletes fuel with explicit Euler
+(`fuelUsed += mdot*dt`) and detects burnout only at step boundaries with no
+interpolation to the crossing. Both are O(dt) and both act exactly at the events
+that dominate the error table. Fixing it means event location on the
+fuel-exhaustion crossing plus a mass quadrature of matching order. Until then,
+quote Scenario 17 numbers *with* their step size — they are not comparable
+across dt.
+
 
 ### 2. Regenerate the pre-fix figures
 

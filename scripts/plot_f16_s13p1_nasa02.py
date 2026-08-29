@@ -61,7 +61,7 @@ else:
     _REPO    = _HERE.parent
     _SIM_DEFAULT = _REPO / "f16_s13p1_200s.csv"
     NASA_CSV = _REPO / "data" / "Atmos_13p1_SubsonicAltitudeChangeF16" / "Atmos_13p1_sim_02.csv"
-    OUT_DIR  = _REPO / "doc" / "figures" / "f16_s13p1"
+    OUT_DIR  = _REPO / "doc" / "_static" / "f16_s13p1"
 
 SIM_CSV = Path(sys.argv[1]) if len(sys.argv) > 1 else _SIM_DEFAULT
 OUT_DIR.mkdir(parents=True, exist_ok=True)

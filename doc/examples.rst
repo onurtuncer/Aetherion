@@ -145,9 +145,14 @@ Two reporting conventions apply throughout:
    in :ref:`rkmk-product-manifolds` (the :math:`\dexp^{-1}` stage correction is
    evaluated at :math:`-\eta_i`, not :math:`+\eta_i`).  Before that fix both
    integrators were effectively second order, and the scenario-1 altitude
-   deviation was four orders of magnitude larger.  Per-scenario figures further
-   down this page that were generated before the fix are being regenerated;
-   where a figure and the summary table above disagree, the table is current.
+   deviation was four orders of magnitude larger.
+
+   The per-scenario figures for the F-16 cases (11, 12, 13.1--13.4, 15, 16) and
+   for the two-stage rocket (17) have been regenerated post-fix and are current.
+   The figures for scenarios 1--10 under :file:`doc/_static/atmos01`
+   ... :file:`atmos10` still predate the fix, because no plot script for those
+   scenarios is checked in; where one of those figures and the summary table
+   above disagree, the table is current.
 
 .. _example_dragless_sphere:
 
@@ -5723,7 +5728,7 @@ Run with :math:`\Delta t = 0.001\ \text{s}`, ``--writeInterval 100``,
      - 109 276.5
      - 109 110.6
      - +0.15%
-     - 27.35
+     - 27.55
      - 29.17
      - 2 382.9
      - 2 384.7
@@ -5761,7 +5766,8 @@ Run with :math:`\Delta t = 0.001\ \text{s}`, ``--writeInterval 100``,
      - **8 380.7**
 
 Through the **S1 burn phase** (t = 0–37.4 s) altitude error vs NASA Sim 06
-remains below **0.15%** and velocity error below **1.5 m/s**.  Through the
+remains within **0.16%** (0.151% at burnout) and velocity error below
+**1.5 m/s** (0.71 m/s peak).  Through the
 **coast phase** (t = 37.4–131.8 s) the 0.16% offset holds unchanged —
 confirming the spatial inertia is correct during ballistic flight.  At S2
 ignition (t = 131.8 s) altitude error is still only **0.16%**, meaning both
