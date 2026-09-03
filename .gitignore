@@ -23,6 +23,9 @@ __pycache__/
 *.log
 *.aux
 *.pdf 
+*.bbl
+*.blg
+*.spl
 
 # Prerequisites
 *.d
