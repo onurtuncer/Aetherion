@@ -35,6 +35,26 @@ set(_fmu4cpp_root "${_fmu4cpp_root}" CACHE INTERNAL "")
 
 # ###################################################################3
 
+# Build one FMU per requested FMI version from a set of C++ sources.
+#
+# generateFMU(<modelIdentifier> FMI_VERSIONS <fmi2|fmi3>... SOURCES <src>... [INCLUDE_DIRS <dir>...] [LINK_TARGETS
+# <target>...] [COMPILE_DEFINITIONS <def>...] [RESOURCE_FOLDER <dir>] [DOC_FOLDER <dir>] [DESTINATION <file>]
+# [WITH_SOURCES])
+#
+# For each FMI version a shared library target <modelIdentifier>_<fmiVersion> is created, laid out under
+# ${CMAKE_BINARY_DIR}/models/<modelIdentifier>/<fmiVersion>/ in the layout the FMI standard mandates, given a generated
+# modelDescription.xml, and finally zipped into a .fmu archive.
+#
+# WITH_SOURCES additionally bundles the C++ sources into the archive; it applies to FMI 3 only and is ignored with a
+# warning for fmi2.
+#
+# The statement and branch counts are over the linter's limits and stay that way: this is the package's single entry
+# point, it validates a dozen optional arguments and then drives one target per FMI version. The per-step work is
+# already factored into the _package_fmu / _bundle_link_libraries / _include_sources_in_fmu macros below; splitting the
+# remaining argument handling would only scatter it. The directive below must stay its own comment paragraph --
+# cmake-format reflows it into the prose otherwise, and cmake-lint then reads the prose as directive arguments.
+#
+# cmake-lint: disable=R0912,R0915
 function(generateFMU modelIdentifier)
 
   set(options WITH_SOURCES)
@@ -119,10 +139,8 @@ function(generateFMU modelIdentifier)
 
     if(FMU_WITH_SOURCES)
       if(fmiVersion STREQUAL "fmi2")
-        message(
-          WARNING
-            "[generateFMU-fmi2] FMU_WITH_SOURCES is not supported for fmi2; skipping source inclusion for model '${modelIdentifier}'"
-        )
+        message(WARNING "[generateFMU-fmi2] FMU_WITH_SOURCES is not supported for fmi2; "
+                        "skipping source inclusion for model '${modelIdentifier}'")
       else()
         _include_sources_in_fmu()
       endif()
@@ -134,14 +152,16 @@ function(generateFMU modelIdentifier)
       set_target_properties(${versionTarget} PROPERTIES PREFIX "" LIBRARY_OUTPUT_DIRECTORY "${binaryOutputDir}")
     endif()
 
-    # Generate modelDescription.xml
+    # Generate modelDescription.xml. The message is echoed as well as passed as COMMENT: COMMENT is what the build tool
+    # prints as the step description, the echo is what survives in a non-verbose Ninja log.
+    set(_describe_msg "[generateFMU-${fmiVersion}] Generating modelDescription.xml for model '${modelIdentifier}'")
     add_custom_command(
       TARGET ${versionTarget}
       POST_BUILD
       WORKING_DIRECTORY "${binaryOutputDir}"
-      COMMAND ${CMAKE_COMMAND} -E echo
-              "[generateFMU-${fmiVersion}] Generating modelDescription.xml for model '${modelIdentifier}'"
-      COMMAND descriptionGenerator "$<TARGET_FILE_NAME:${versionTarget}>")
+      COMMAND ${CMAKE_COMMAND} -E echo "${_describe_msg}"
+      COMMAND descriptionGenerator "$<TARGET_FILE_NAME:${versionTarget}>"
+      COMMENT "${_describe_msg}")
 
     _package_fmu()
 
@@ -149,6 +169,10 @@ function(generateFMU modelIdentifier)
 
 endfunction()
 
+# Zip the assembled model directory into <FMU_DESTINATION_>.fmu.
+#
+# A macro rather than a function: it reads modelOutputDir, versionTarget, fmiVersion and the FMU_* argument variables
+# straight out of the calling generateFMU() scope.
 macro(_package_fmu)
   set(TAR_INPUTS "${modelOutputDir}/binaries" "${modelOutputDir}/modelDescription.xml")
   if(FMU_WITH_SOURCES AND fmiVersion STREQUAL "fmi3")
@@ -184,15 +208,21 @@ macro(_package_fmu)
   else()
     set(FMU_DESTINATION_ "${modelIdentifier}.fmu")
   endif()
+  set(_package_msg "[generateFMU-${fmiVersion}] Packaging ${modelIdentifier}.fmu in ${FMU_DESTINATION_}")
   add_custom_command(
     TARGET ${versionTarget}
     POST_BUILD
     WORKING_DIRECTORY "${modelOutputDir}"
-    COMMAND ${CMAKE_COMMAND} -E echo
-            "[generateFMU-${fmiVersion}] Packaging ${modelIdentifier}.fmu in ${FMU_DESTINATION_}"
-    COMMAND ${CMAKE_COMMAND} -E tar c "${FMU_DESTINATION_}" --format=zip ${TAR_INPUTS})
+    COMMAND ${CMAKE_COMMAND} -E echo "${_package_msg}"
+    COMMAND ${CMAKE_COMMAND} -E tar c "${FMU_DESTINATION_}" --format=zip ${TAR_INPUTS}
+    COMMENT "${_package_msg}")
 endmacro()
 
+# Link FMU_LINK_TARGETS into the version target and copy the runtime file of each non-INTERFACE dependency into the
+# FMU's binaries/ folder, so the archive is self-contained.
+#
+# A macro rather than a function: it reads versionTarget, binaryOutputDir and FMU_LINK_TARGETS straight out of the
+# calling generateFMU() scope.
 macro(_bundle_link_libraries)
   target_link_libraries(${versionTarget} PRIVATE ${FMU_LINK_TARGETS})
 
@@ -203,20 +233,27 @@ macro(_bundle_link_libraries)
          "${target_type}"
          STREQUAL
          "INTERFACE_LIBRARY")
+        set(_copy_msg "[generateFMU-${fmiVersion}] Copying runtime of ${dep} to ${binaryOutputDir}")
         add_custom_command(
           TARGET ${versionTarget}
           POST_BUILD
           WORKING_DIRECTORY "${modelOutputDir}"
-          COMMAND ${CMAKE_COMMAND} -E echo "[generateFMU-${fmiVersion}] Copying runtime of ${dep} to ${binaryOutputDir}"
+          COMMAND ${CMAKE_COMMAND} -E echo "${_copy_msg}"
           COMMAND ${CMAKE_COMMAND} -E make_directory "${binaryOutputDir}"
           # copy the target's runtime file (dll/so/dylib) into the binaries folder
           COMMAND ${CMAKE_COMMAND} -E copy_if_different $<TARGET_FILE:${dep}>
-                  "${binaryOutputDir}/$<TARGET_FILE_NAME:${dep}>")
+                  "${binaryOutputDir}/$<TARGET_FILE_NAME:${dep}>"
+          COMMENT "${_copy_msg}")
       endif()
     endif()
   endforeach()
 endmacro()
 
+# Copy the model's C++ sources, the fmu4cpp runtime sources and the FMU_INCLUDE_DIRS headers into the archive's sources/
+# folder, and emit the buildDescription.xml that lets a tool rebuild the FMU from them. FMI 3 only.
+#
+# A macro rather than a function: it reads modelOutputDir, generatedSourcesDir, fmiVersion and the FMU_* argument
+# variables straight out of the calling generateFMU() scope.
 macro(_include_sources_in_fmu)
 
   message("[generateFMU-${fmiVersion}] Including sources in FMU for model '${modelIdentifier}'")
@@ -274,6 +311,9 @@ macro(_include_sources_in_fmu)
     "</fmiBuildDescription>\n")
 endmacro()
 
+# Set targetPlatform in the caller's scope to the binaries/ subdirectory name the given FMI version expects -- the
+# os+bitness tuple for fmi2 (win64, darwin64, linux64), the architecture-os tuple for fmi3 (x86_64-windows,
+# x86_64-darwin, x86_64-linux).
 function(_getTargetPlatform fmiVersion)
   set(_target "")
   if(fmiVersion STREQUAL "fmi2")
