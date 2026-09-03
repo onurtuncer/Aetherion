@@ -44,7 +44,7 @@
 //                           checks it against elapsed simulation time)
 //
 //  OUTPUTS  (valid after fmi2ExitInitializationMode and each fmi2DoStep)
-//    out.alt_m, out.lat_rad, out.lon_rad, out.g_m_s2
+//    out.alt_m, out.lat_deg, out.lon_deg, out.g_m_s2
 //    out.yaw_rad, out.pitch_rad, out.roll_rad
 //    out.p_rad_s, out.q_rad_s, out.r_rad_s, out.altRate_m_s
 //    out.v_north_m_s, out.v_east_m_s, out.v_down_m_s
@@ -83,6 +83,7 @@
 #include <array>
 #include <cmath>
 #include <memory>
+#include <numbers>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -116,6 +117,7 @@ using RocketSimulator = AE_RKT::TwoStageRocketSimulator<>;
 // ── Module-level constants ────────────────────────────────────────────────────
 namespace {
     constexpr double kOmegaEarth_rad_s = Aetherion::Environment::WGS84::kRotationRate_rad_s;
+    constexpr double kRadToDeg         = 180.0 / std::numbers::pi;
 
     // Default initial conditions — NASA TM-2015-218675 Scenario 17 (equatorial
     // gravity-turn ascent). Settable via FMI PARAMETER before
@@ -153,8 +155,8 @@ struct TwoStageRocketState {
 
     // ── Output cache (updated in do_step, registered by pointer) ─────────────
     double alt_m       {};  // altitude above MSL [m]
-    double lat_rad     {};  // geodetic latitude [rad]
-    double lon_rad     {};  // geodetic longitude [rad]
+    double lat_deg     {};  // geodetic latitude [deg]
+    double lon_deg     {};  // geodetic longitude [deg]
     double g_m_s2      {};  // local gravity magnitude [m/s²]
     double yaw_rad     {};  // ZYX Euler yaw   (body → NED) [rad]
     double pitch_rad   {};  // ZYX Euler pitch (body → NED) [rad]
@@ -256,13 +258,13 @@ public:
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED).setDescription("Altitude above MSL [m]");
 
-        register_real("out.lat_rad",     &state_.lat_rad)
+        register_real("out.lat_deg",     &state_.lat_deg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [rad]");
+            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [deg]");
 
-        register_real("out.lon_rad",     &state_.lon_rad)
+        register_real("out.lon_deg",     &state_.lon_deg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [rad]");
+            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [deg]");
 
         register_real("out.g_m_s2",      &state_.g_m_s2)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
@@ -585,8 +587,8 @@ private:
         const auto& fuel = m_sim->stageModel().fuelState();
 
         state_.alt_m       = snap.altitudeMsl_m;
-        state_.lat_rad     = snap.latitude_rad;
-        state_.lon_rad     = snap.longitude_rad;
+        state_.lat_deg     = snap.latitude_rad  * kRadToDeg;
+        state_.lon_deg     = snap.longitude_rad * kRadToDeg;
         state_.g_m_s2      = snap.localGravity_m_s2;
 
         state_.yaw_rad     = snap.eulerAngle_rad_Yaw;
