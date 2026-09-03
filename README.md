@@ -79,15 +79,18 @@ Stage separation, coast phases, and second-stage ignition are all captured with 
 - CI gates: Clang-Format · CMake-Format · CMake-Lint · IWYU · Clang-Tidy · Metrix++ cyclomatic complexity · AddressSanitizer / UBSan
 
 The two CMake gates share their configuration in [`.cmake-format`](.cmake-format) and cover every
-`CMakeLists.txt` and `*.cmake` outside `vendor/`. Reproduce them locally with:
+`CMakeLists.txt` and `*.cmake` outside the pruned `build/`, `out/`, `vendor/` and `.venv/`
+trees. Reproduce them locally with:
 
 ```bash
 pip install cmakelang
 
 bash .run-cmake-format   # rewrites listfiles in place; CI fails if this leaves a diff
 
-mapfile -t listfiles < <(find . \( -path ./out -o -path ./vendor -o -path ./.venv \) -prune \
-  -o -type f \( -name CMakeLists.txt -o -name "*.cmake" \) -print)
+mapfile -t listfiles < <(
+  find . \( -path ./build -o -path ./out -o -path ./vendor -o -path ./.venv \) -prune \
+    -o -type f \( -name CMakeLists.txt -o -name "*.cmake" \) -print
+)
 cmake-lint "${listfiles[@]}" --config-files .cmake-format
 ```
 
