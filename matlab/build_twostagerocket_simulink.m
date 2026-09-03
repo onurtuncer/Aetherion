@@ -22,8 +22,8 @@
 % TwoStageRocket FMU output port map (registration order in
 % TwoStageRocketFMU.cpp; verified against the generated modelDescription.xml):
 %    1  out.alt_m             12  out.v_north_m_s    23  out.aero_My_Nm
-%    2  out.lat_rad           13  out.v_east_m_s      24  out.aero_Mz_Nm
-%    3  out.lon_rad           14  out.v_down_m_s      25  out.mach
+%    2  out.lat_deg           13  out.v_east_m_s      24  out.aero_Mz_Nm
+%    3  out.lon_deg           14  out.v_down_m_s      25  out.mach
 %    4  out.g_m_s2            15  out.a_m_s           26  out.qbar_Pa
 %    5  out.yaw_rad           16  out.rho_kg_m3       27  out.vt_m_s
 %    6  out.pitch_rad         17  out.P_Pa            28  out.thrust_N

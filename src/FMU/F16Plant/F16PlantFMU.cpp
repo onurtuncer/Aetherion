@@ -40,8 +40,8 @@
 //
 //  OUTPUTS  (valid after fmi2ExitInitializationMode and each fmi2DoStep)
 //    out.alt_m        Altitude above MSL                 [m]
-//    out.lat_rad      Geodetic latitude                  [rad]
-//    out.lon_rad      Geodetic longitude                 [rad]
+//    out.lat_deg      Geodetic latitude                  [deg]
+//    out.lon_deg      Geodetic longitude                 [deg]
 //    out.yaw_rad      ZYX Euler yaw   (body → NED)       [rad]
 //    out.pitch_rad    ZYX Euler pitch (body → NED)       [rad]
 //    out.roll_rad     ZYX Euler roll  (body → NED)       [rad]
@@ -149,6 +149,7 @@ namespace {
     constexpr double kFt_m             = 0.3048;
     constexpr double kLbf_N            = 4.448221615260751;
     constexpr double kDeg              = std::numbers::pi / 180.0;
+    constexpr double kRadToDeg         = 180.0 / std::numbers::pi;
 
     // Default initial conditions — NASA TM-2015-218675 Scenario 11 (Kitty Hawk, NC).
     // Settable via FMI PARAMETER before fmi2ExitInitializationMode.
@@ -186,8 +187,8 @@ struct F16PlantState {
 
     // ── Output cache (updated in do_step, registered by pointer) ─────────────
     double alt_m       {};  // altitude above MSL [m]
-    double lat_rad     {};  // geodetic latitude [rad]
-    double lon_rad     {};  // geodetic longitude [rad]
+    double lat_deg     {};  // geodetic latitude [deg]
+    double lon_deg     {};  // geodetic longitude [deg]
     double yaw_rad     {};  // ZYX Euler yaw   (body → NED) [rad]
     double pitch_rad   {};  // ZYX Euler pitch (body → NED) [rad]
     double roll_rad    {};  // ZYX Euler roll  (body → NED) [rad]
@@ -299,13 +300,13 @@ public:
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED).setDescription("Altitude above MSL [m]");
 
-        register_real("out.lat_rad",     &state_.lat_rad)
+        register_real("out.lat_deg",     &state_.lat_deg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [rad]");
+            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [deg]");
 
-        register_real("out.lon_rad",     &state_.lon_rad)
+        register_real("out.lon_deg",     &state_.lon_deg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [rad]");
+            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [deg]");
 
         register_real("out.yaw_rad",     &state_.yaw_rad)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
@@ -651,8 +652,8 @@ private:
             AE_SIM::MakeSnapshot1(t, m_state, theta_GST, vf.gravity, vf.aero);
 
         state_.alt_m       = snap.altitudeMsl_m;
-        state_.lat_rad     = snap.latitude_rad;
-        state_.lon_rad     = snap.longitude_rad;
+        state_.lat_deg     = snap.latitude_rad  * kRadToDeg;
+        state_.lon_deg     = snap.longitude_rad * kRadToDeg;
 
         state_.yaw_rad     = snap.eulerAngle_rad_Yaw;
         state_.pitch_rad   = snap.eulerAngle_rad_Pitch;
