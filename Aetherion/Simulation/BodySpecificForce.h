@@ -81,7 +81,9 @@ namespace Aetherion::Simulation {
         const RigidBody::StateD& s,
         const Pol&               p)
     {
-        return p(s.g, s.nu_B, s.m, t).f.tail<3>();
+        // `template` disambiguator required: p(...) is type-dependent, so without
+        // it a conforming compiler parses `tail < 3` as a comparison.
+        return p(s.g, s.nu_B, s.m, t).f.template tail<3>();
     }
 
     // ─────────────────────────────────────────────────────────────────────────
