@@ -303,6 +303,10 @@ model_info fmu4cpp::get_model_info()
 {
     model_info info;
     info.modelName  = "F16Autopilot";
+    // Aetherion release version, injected by CMake from version.txt. Published as the
+    // FMI `version` attribute so a consumer can enforce a version floor by reading the
+    // shipped modelDescription.xml rather than trusting the build tree it was found in.
+    info.version              = AETHERION_VERSION;
     info.description =
         "Aetherion F-16 LQR autopilot (NASA LaRC F16_control.dml) — "
         "altitude hold, airspeed hold, heading hold with LQR SAS inner loop";

@@ -67,6 +67,16 @@
 //    out.P_Pa         Ambient static pressure            [Pa]
 //    out.a_m_s        Speed of sound                     [m/s]
 //    out.g_m_s2       Local gravity magnitude            [m/s²]
+//    out.thrust_N     Net propulsive force, body +X      [N]
+//    out.mass_kg      Vehicle mass                       [kg]
+//    out.specificForce_x_m_s2   Body-X specific force at CG  [m/s²]
+//    out.specificForce_y_m_s2   Body-Y specific force at CG  [m/s²]
+//    out.specificForce_z_m_s2   Body-Z specific force at CG  [m/s²]
+//
+//  out.specificForce_* is the non-gravitational acceleration an ideal
+//  accelerometer at the CG would sense, (F_aero + F_thrust)/m, in the same body
+//  axes as out.aero_F*_N.  Gravitation is excluded entirely, so it reads zero in
+//  free fall.  See Aetherion/Simulation/BodySpecificForce.h.
 //
 // FMU lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,6 +118,7 @@
 // Snapshot + coordinate output
 #include <Aetherion/Simulation/Snapshot1.h>
 #include <Aetherion/Simulation/MakeSnapshot1.h>
+#include <Aetherion/Simulation/BodySpecificForce.h>
 
 // Initial state construction
 #include <Aetherion/RigidBody/InertialParameters.h>
@@ -214,6 +225,10 @@ struct F16PlantState {
     double P_Pa        {};  // ambient pressure [Pa]
     double a_m_s       {};  // speed of sound [m/s]
     double g_m_s2      {};  // local gravity magnitude [m/s²]
+    double specificForce_x_m_s2{};  // body-X specific force at the CG [m/s²]
+    double specificForce_y_m_s2{};  // body-Y specific force at the CG [m/s²]
+    double specificForce_z_m_s2{};  // body-Z specific force at the CG [m/s²]
+    double thrust_N    {};  // net propulsive force, body +X [N]
 };
 static_assert(std::is_trivially_copyable_v<F16PlantState>,
     "F16PlantState must be trivially copyable for fmu4cpp state save/restore.");
@@ -407,6 +422,40 @@ public:
         register_real("out.g_m_s2",      &state_.g_m_s2)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED).setDescription("Local gravitational acceleration [m/s²]");
+
+        register_real("out.specificForce_x_m_s2", &state_.specificForce_x_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-X specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(x forward). [m/s²]");
+
+        register_real("out.specificForce_y_m_s2", &state_.specificForce_y_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-Y specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(y right). [m/s²]");
+
+        register_real("out.specificForce_z_m_s2", &state_.specificForce_z_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-Z specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(z down). [m/s²]");
+
+        register_real("out.thrust_N",    &state_.thrust_N)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Net propulsive force along body +X [N] "
+                            "(the F-16 engine deck carries no body-Y/Z thrust component)");
+
+        register_real("out.mass_kg",     &state_.mass_kg)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Vehicle mass [kg]");
 
         // ── State registration (enables getFMUState / setFMUState) ────────────
         register_state(&F16PlantFMU::state_);
@@ -684,6 +733,27 @@ private:
         state_.a_m_s       = snap.speedOfSound_m_s;
         state_.g_m_s2      = snap.localGravity_m_s2;
 
+        // Body-frame specific force at the CG — what an ideal accelerometer senses.
+        // Deliberately built as a sum of the non-gravitational wrench forces, so no
+        // gravity term can leak in: snap.localGravity_m_s2 (mass attraction only) is
+        // NOT involved.  The thrust policy is evaluated with the same throttle the
+        // integrator just used; the aero force is taken from the snapshot rather than
+        // re-evaluating the DAVE-ML tables.
+        //
+        // F/m is the specific force at the CG exactly — Newton's second law about the
+        // centre of mass — independent of where the body frame's origin sits.
+        const Eigen::Vector3d F_thrust_B = AE_SIM::PolicyBodyForce_N(t, m_state, vf.thrust);
+        const Eigen::Vector3d F_aero_B(snap.aero_bodyForce_N_X,
+                                       snap.aero_bodyForce_N_Y,
+                                       snap.aero_bodyForce_N_Z);
+        const Eigen::Vector3d specificForce_B =
+            AE_SIM::BodySpecificForce_m_s2(F_aero_B + F_thrust_B, m_state.m);
+
+        state_.specificForce_x_m_s2 = specificForce_B.x();
+        state_.specificForce_y_m_s2 = specificForce_B.y();
+        state_.specificForce_z_m_s2 = specificForce_B.z();
+        state_.thrust_N     = F_thrust_B.x();
+
         // Alpha and beta — same formula as F16AeroPolicy, avoids re-evaluating the
         // full aero model a second time.
         const Eigen::Vector3d omega_E(0.0, 0.0, kOmegaEarth_rad_s);
@@ -734,6 +804,10 @@ model_info fmu4cpp::get_model_info()
 {
     model_info info;
     info.modelName            = "F16Plant";
+    // Aetherion release version, injected by CMake from version.txt. Published as the
+    // FMI `version` attribute so a consumer can enforce a version floor by reading the
+    // shipped modelDescription.xml rather than trusting the build tree it was found in.
+    info.version              = AETHERION_VERSION;
     info.description          = "Aetherion F-16 6-DoF plant "
                                 "(Radau IIA RKMK on SE(3), DAVE-ML aero/prop, J2 gravity)";
     info.canGetAndSetFMUstate = true;

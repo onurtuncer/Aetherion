@@ -22,8 +22,14 @@ std::string fmu_base::make_description() const {
        << "\tgenerationTool=\"fmu4cpp v" << to_string(library_version()) << "\"\n"
        << "\tgenerationDateAndTime=\"" << now() << "\"\n"
        << "\tdescription=\"" << m.description << "\"\n"
-       << "\tauthor=\"" << m.author << "\"\n"
-       << "\tvariableNamingConvention=\"" << m.variableNamingConvention << "\""
+       << "\tauthor=\"" << m.author << "\"\n";
+    // FMI `version` is the *model* version, distinct from generationTool
+    // (which names the exporting library). Emitted only when the model
+    // supplies one, so models leaving it empty produce unchanged XML.
+    if (!m.version.empty()) {
+        ss << "\tversion=\"" << m.version << "\"\n";
+    }
+    ss << "\tvariableNamingConvention=\"" << m.variableNamingConvention << "\""
        << ">\n\n";
 
     ss << std::boolalpha

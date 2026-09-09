@@ -53,8 +53,14 @@
 //    out.aero_Mx_Nm, out.aero_My_Nm, out.aero_Mz_Nm
 //    out.mach, out.qbar_Pa, out.vt_m_s
 //    out.thrust_N, out.mdot_kgs, out.mass_kg
+//    out.specificForce_x_m_s2, out.specificForce_y_m_s2, out.specificForce_z_m_s2
 //    out.stg1_fuel_used_kg, out.stg2_fuel_used_kg
 //    out.staged          Stage-1 separation flag (bool)
+//
+//  out.specificForce_* is the non-gravitational acceleration an ideal
+//  accelerometer at the CG would sense, (F_aero + F_thrust)/m, in the same body
+//  axes as out.aero_F*_N.  Gravitation is excluded entirely, so it reads zero in
+//  free fall.  See Aetherion/Simulation/BodySpecificForce.h.
 //
 // FMU lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
@@ -183,6 +189,9 @@ struct TwoStageRocketState {
     double vt_m_s      {};  // true airspeed [m/s]
     double thrust_N    {};  // total axial thrust, body +x [N]
     double mdot_kgs    {};  // propellant consumption rate [kg/s]
+    double specificForce_x_m_s2{};  // body-X specific force at the CG [m/s²]
+    double specificForce_y_m_s2{};  // body-Y specific force at the CG [m/s²]
+    double specificForce_z_m_s2{};  // body-Z specific force at the CG [m/s²]
 };
 static_assert(std::is_trivially_copyable_v<TwoStageRocketState>,
     "TwoStageRocketState must be trivially copyable for fmu4cpp state save/restore.");
@@ -373,6 +382,30 @@ public:
         register_real("out.mass_kg",     &state_.mass_kg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED).setDescription("Vehicle mass [kg]");
+
+        register_real("out.specificForce_x_m_s2", &state_.specificForce_x_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-X specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(x forward). [m/s²]");
+
+        register_real("out.specificForce_y_m_s2", &state_.specificForce_y_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-Y specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(y right). [m/s²]");
+
+        register_real("out.specificForce_z_m_s2", &state_.specificForce_z_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-Z specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(z down). [m/s²]");
 
         register_real("out.stg1_fuel_used_kg", &state_.stg1_fuel_used_kg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
@@ -624,6 +657,31 @@ private:
         state_.mdot_kgs    = prop.mdot_kgs;
         state_.mass_kg     = m_sim->state().m;
 
+        // Body-frame specific force at the CG — what an ideal accelerometer senses.
+        // Deliberately built as a sum of the non-gravitational wrench forces, so no
+        // gravity term can leak in: snap.localGravity_m_s2 (mass attraction only) is
+        // NOT involved.  The thrust axis is read from the vehicle's own propulsion
+        // policy rather than assumed to be body +X.
+        //
+        // F/m is the specific force at the CG exactly (Newton's second law about the
+        // centre of mass), even though this vehicle integrates its equations of motion
+        // about the moment reference centre, DXCG metres aft of the CG.
+        //
+        // On the step in which stage separation occurs, thrustBodyForce_N() reports the
+        // post-separation stage while out.thrust_N reports the zero-order-hold thrust
+        // that was actually applied over that step; the former is what pairs correctly
+        // with the post-separation out.mass_kg, so specificForce stays free of a spurious
+        // stage-1-thrust-over-stage-2-mass spike.
+        const Eigen::Vector3d F_aero_B(snap.aero_bodyForce_N_X,
+                                       snap.aero_bodyForce_N_Y,
+                                       snap.aero_bodyForce_N_Z);
+        const Eigen::Vector3d specificForce_B = Aetherion::Simulation::BodySpecificForce_m_s2(
+            F_aero_B + m_sim->thrustBodyForce_N(), m_sim->state().m);
+
+        state_.specificForce_x_m_s2 = specificForce_B.x();
+        state_.specificForce_y_m_s2 = specificForce_B.y();
+        state_.specificForce_z_m_s2 = specificForce_B.z();
+
         state_.stg1_fuel_used_kg = fuel.stg1FuelUsed_kg;
         state_.stg2_fuel_used_kg = fuel.stg2FuelUsed_kg;
         state_.staged            = fuel.staged;
@@ -658,6 +716,10 @@ model_info fmu4cpp::get_model_info()
 {
     model_info info;
     info.modelName            = "TwoStageRocket";
+    // Aetherion release version, injected by CMake from version.txt. Published as the
+    // FMI `version` attribute so a consumer can enforce a version floor by reading the
+    // shipped modelDescription.xml rather than trusting the build tree it was found in.
+    info.version              = AETHERION_VERSION;
     info.description          = "Aetherion two-stage rocket 6-DoF plant "
                                 "(Radau IIA RKMK on SE(3), DAVE-ML aero/prop/inertia, "
                                 "J2 gravity, stage separation) — NASA TM-2015-218675 Scenario 17";
