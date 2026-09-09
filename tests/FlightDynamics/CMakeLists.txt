@@ -91,3 +91,20 @@ target_link_libraries(
           Eigen3::Eigen)
 
 catch_discover_tests(test_trim_solver)
+
+# --------------------------------------------------------------------------
+# Trim weight helper tests
+# --------------------------------------------------------------------------
+
+add_executable(test_trim_weight test_TrimWeight.cpp)
+
+target_compile_options(test_trim_weight PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_link_libraries(
+  test_trim_weight
+  PRIVATE Aetherion
+          Catch2::Catch2WithMain
+          CppAD::cppad
+          Eigen3::Eigen)
+
+catch_discover_tests(test_trim_weight)
