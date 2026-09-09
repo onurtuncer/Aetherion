@@ -37,6 +37,7 @@ generatefmu(
   RESOURCE_FOLDER
   "${TWOSTAGE_STAGED_RES}"
   COMPILE_DEFINITIONS
+  AETHERION_VERSION="${PROJECT_VERSION}"
   $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 
 # MSVC-specific compile options not expressible as compile definitions. The generated target name follows the pattern

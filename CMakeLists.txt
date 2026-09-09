@@ -8,6 +8,11 @@ cmake_minimum_required(VERSION 3.26)
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt" projectVersion)
 
+# file(STRINGS) does not register a configure-time dependency, so editing version.txt alone would leave PROJECT_VERSION
+# stale in an incremental build -- and that version is what each FMU stamps into modelDescription.xml for downstream
+# version-floor checks.
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/version.txt")
+
 # version.txt may carry a leading "v"/"V" (e.g. "v0.11.3", matching the git tag convention) -- project(VERSION ...)
 # requires a plain numeric MAJOR.MINOR.PATCH, so strip it before use.
 string(
