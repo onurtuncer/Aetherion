@@ -128,16 +128,15 @@
 
 // Trim solver
 #include <Aetherion/FlightDynamics/Trim/TrimSolver.h>
+#include <Aetherion/FlightDynamics/Trim/TrimWeight.h>
 
 // Serialization (DAVE-ML)
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
 #include <Aetherion/Serialization/DAVEML/LoadInertiaFromDAVEML.h>
 
-// Earth rotation rate + J2 gravity for trim-point weight calculation
+// Earth rotation rate
 #include <Aetherion/Environment/WGS84.h>
-#include <Aetherion/Environment/Gravity.h>
-#include <Aetherion/Coordinate/LocalToInertial.h>
 
 using namespace fmu4cpp;
 
@@ -147,8 +146,6 @@ namespace AE_FD  = Aetherion::FlightDynamics;
 namespace AE_SR  = Aetherion::Serialization;
 namespace AE_SIM = Aetherion::Simulation;
 namespace AE_EX  = Aetherion::Examples::F16SteadyFlight;
-namespace AE_CO  = Aetherion::Coordinate;
-namespace AE_ENV = Aetherion::Environment;
 
 // ── Type aliases ──────────────────────────────────────────────────────────────
 using F16VF      = AE_EX::F16VF;       // VectorField<J2Gravity, F16Aero, F16Prop, ConstMass>
@@ -158,7 +155,6 @@ using F16Stepper = AE_EX::F16Stepper;  // SixDoFStepper<F16VF>
 namespace {
     constexpr double kOmegaEarth_rad_s = Aetherion::Environment::WGS84::kRotationRate_rad_s;
     constexpr double kFt_m             = 0.3048;
-    constexpr double kLbf_N            = 4.448221615260751;
     constexpr double kDeg              = std::numbers::pi / 180.0;
     constexpr double kRadToDeg         = 180.0 / std::numbers::pi;
 
@@ -266,24 +262,16 @@ public:
         m_propModel = std::make_shared<const AE_SR::DAVEMLPropModel>(propPath);
 
         // 3. Earth Rotation Angle at fmi2EnterInitializationMode time — needed
-        //    both for the trim-point gravity calculation and the ECI state below.
+        //    for the ECI initial state below.
         m_theta0 = kOmegaEarth_rad_s * currentTime();
 
-        // 4. Compute J2 gravitational acceleration at the trim geodetic position so
-        //    that weight_lbf fed to the trim solver is consistent with the integrator.
-        const double lat_rad = p_lat0_deg_ * kDeg;
-        const double lon_rad = p_lon0_deg_ * kDeg;
-        const double alt_m   = p_alt0_ft_  * kFt_m;
-        const auto r_ecef  = AE_CO::GeodeticToECEF(lat_rad, lon_rad, alt_m);
-        const auto r_eci0  = AE_CO::ECEFToECI(r_ecef, m_theta0);
-        const AE_ENV::Vec3<double> r_arr{ r_eci0[0], r_eci0[1], r_eci0[2] };
-        const auto g_eci_vec = AE_ENV::J2(r_arr);
-        const double g_local = std::sqrt(g_eci_vec[0]*g_eci_vec[0]
-                                       + g_eci_vec[1]*g_eci_vec[1]
-                                       + g_eci_vec[2]*g_eci_vec[2]);
-
-        // 5. Solve trim: find (alpha, elevator, throttle) for the given flight condition
-        const double weight_lbf = m_ip.mass_kg * g_local / kLbf_N;
+        // 4. Solve trim: find (alpha, elevator, throttle) for the given flight
+        //    condition.  The weight comes from the J2 field at the trim geodetic
+        //    position, so the solver balances the same gravity the integrator's
+        //    J2GravityPolicy applies.  Shared with the examples — see
+        //    Aetherion/FlightDynamics/Trim/TrimWeight.h.
+        const double weight_lbf =
+            AE_FD::TrimWeight_lbf(m_ip.mass_kg, p_lat0_deg_, p_alt0_ft_ * kFt_m);
         AE_FD::TrimInputs tin{};
         tin.vt_fps     = p_vt0_fps_;
         tin.alt_ft     = p_alt0_ft_;
@@ -324,12 +312,12 @@ public:
                         x0vec[L::IDX_V],   x0vec[L::IDX_V+1], x0vec[L::IDX_V+2];
         m_state.m = x0vec[L::IDX_M];
 
-        // 6. Build Newton options from the FMI solver parameters.
+        // 5. Build Newton options from the FMI solver parameters.
         Aetherion::ODE::RKMK::Core::NewtonOptions newton_opts{};
         newton_opts.abs_tol = p_newton_abs_tol_;
         newton_opts.rel_tol = p_newton_rel_tol_;
 
-        // 7. Construct the stepper with a VectorField initialised at trim values
+        // 6. Construct the stepper with a VectorField initialised at trim values
         const double xcg_m = p_xcg_from_ac_ft_ * kFt_m;
         m_stepper.emplace(
             F16VF(m_ip,
@@ -339,13 +327,13 @@ public:
             newton_opts
         );
 
-        // 8. Seed control state from trim (written to state_ for fmu4cpp variable tracking)
+        // 7. Seed control state from trim (written to state_ for fmu4cpp variable tracking)
         state_.el_deg  = trim.el_deg;
         state_.ail_deg = 0.0;
         state_.rdr_deg = 0.0;
         state_.pwr_pct = trim.pwr_pct;
 
-        // 9. Sync POD integration state and populate initial outputs
+        // 8. Sync POD integration state and populate initial outputs
         packState();
         populateOutputCache(currentTime());
     }

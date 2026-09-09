@@ -25,6 +25,7 @@
 #include <Aetherion/Simulation/SnapshotTraits.h>
 #include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/FlightDynamics/Trim/TrimSolver.h>
+#include <Aetherion/FlightDynamics/Trim/TrimWeight.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLControlModel.h>
@@ -63,7 +64,6 @@ namespace {
     constexpr double kHeading_deg  =  90.0;        // East
     constexpr double kTAS_fps      =  563.643;     // True airspeed              [ft/s]
     constexpr double kTAS_mps      =  kTAS_fps * 0.3048;
-    constexpr double kG_mps2       =  9.80665;
     constexpr double kLbf_N        =  4.448221615260751;
     constexpr double kXcgFromAC_m  =  (35.0 - 25.0) / 100.0 * 11.32 * 0.3048;
 
@@ -127,7 +127,10 @@ void CircleNorthPoleApplication::prepareSimulation() const
     auto ctrl_model = std::make_shared<const Serialization::DAVEMLControlModel>(controlPath);
 
     // ── 2. Trim solver at 10 000 ft / 563.643 ft/s ───────────────────────────
-    const double weight_lbf = ip.mass_kg * kG_mps2 / kLbf_N;
+    // Weight from the J2 field at the trim geodetic position — the same gravity
+    // J2GravityPolicy applies during integration.  Trimming against the sea-level
+    // constant 9.80665 m/s² would balance a force the integrator never applies.
+    const double weight_lbf = FlightDynamics::TrimWeight_lbf(ip.mass_kg, kLat_deg, kAlt_m);
     FlightDynamics::TrimInputs tin{};
     tin.vt_fps     = kTAS_fps;
     tin.alt_ft     = kAlt_ft;
