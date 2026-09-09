@@ -205,6 +205,149 @@ public:
     // ── Constructor: register all FMI variables ───────────────────────────────
     FMU4CPP_CTOR(TwoStageRocketFMU)
     {
+        registerParameters();
+        registerOutputs();
+        // ── State registration (enables getFMUState / setFMUState) ────────────
+        register_state(&TwoStageRocketFMU::state_);
+    }
+
+    // ── exit_initialisation_mode ──────────────────────────────────────────────
+    // Called after fmi2ExitInitializationMode: all parameters are set.
+    // Loads DAVE-ML models, queries liftoff inertia, builds the initial ECI
+    // state, and constructs the simulator.
+    void exit_initialisation_mode() override
+    {
+        // 1. Build DML paths from the FMU resources/ folder
+        const std::string res         = resourceLocation().string();
+        const std::string inertiaPath = res + "/twostage_inertia.dml";
+        const std::string propPath    = res + "/twostage_prop.dml";
+        const std::string aeroPath    = res + "/twostage_aero.dml";
+
+        // 2. Load inertia, propulsion, and aero engines
+        auto inertiaDml = std::make_shared<AE_SR::DAVEMLAeroModel>(inertiaPath);
+        auto propDml    = std::make_shared<AE_SR::DAVEMLAeroModel>(propPath);
+        auto aeroDml    = std::make_shared<const AE_SR::DAVEMLAeroModel>(aeroPath);
+
+        // 3. Earth Rotation Angle at fmi2EnterInitializationMode time.
+        m_theta0 = kOmegaEarth_rad_s * currentTime();
+
+        // 4. Query liftoff inertial parameters from a temporary stage model at
+        //    zero fuel usage (mirrors src/Examples/TwoStageRocket/TwoStageRocket.cpp).
+        AE_RKT::RocketStageModel stageModel0(inertiaDml, propDml);
+        const AE_RB::InertialParameters ip = stageModel0.inertialParameters();
+
+        // 5. Build initial 6-DoF state from FMI parameters.
+        AE_RB::Config cfg{};
+        cfg.pose.lat_deg          = p_lat0_deg_;
+        cfg.pose.lon_deg          = p_lon0_deg_;
+        cfg.pose.alt_m            = p_alt0_m_;
+        cfg.pose.azimuth_deg      = p_azimuth0_deg_;
+        cfg.pose.zenith_deg       = 90.0 - p_pitch0_deg_;
+        cfg.pose.roll_deg         = p_roll0_deg_;
+        cfg.velocityNED.north_mps = p_vNorth0_mps_;
+        cfg.velocityNED.east_mps  = p_vEast0_mps_;
+        cfg.velocityNED.down_mps  = p_vDown0_mps_;
+        cfg.bodyRates.roll_rad_s  = 0.0;
+        cfg.bodyRates.pitch_rad_s = 0.0;
+        cfg.bodyRates.yaw_rad_s   = 0.0;
+        cfg.inertialParameters    = ip;
+
+        const auto x0vec = AE_RB::BuildInitialStateVector(cfg, m_theta0);
+        using L = AE_RB::StateLayout;
+
+        AE_RB::StateD x0{};
+        x0.g.p = Eigen::Vector3d(x0vec[L::IDX_P], x0vec[L::IDX_P+1], x0vec[L::IDX_P+2]);
+        const Eigen::Quaterniond q0(x0vec[L::IDX_Q], x0vec[L::IDX_Q+1],
+                                    x0vec[L::IDX_Q+2], x0vec[L::IDX_Q+3]);
+        x0.g.q = q0.normalized();
+        x0.g.R = x0.g.q.toRotationMatrix();
+        x0.nu_B << x0vec[L::IDX_W], x0vec[L::IDX_W+1], x0vec[L::IDX_W+2],
+                   x0vec[L::IDX_V], x0vec[L::IDX_V+1], x0vec[L::IDX_V+2];
+        x0.m = x0vec[L::IDX_M];
+
+        // 6. Construct the simulator (owns its own RocketStageModel built from
+        //    inertiaDml/propDml; aeroDml feeds the RocketAeroPolicy).
+        m_sim.emplace(ip, x0, m_theta0,
+                      std::move(inertiaDml), std::move(propDml), aeroDml,
+                      p_stg2_ignition_time_s_);
+
+        // 7. Sync POD integration state and populate initial outputs.
+        const auto prop0 = m_sim->stageModel().propulsion(m_sim->time());
+        packState();
+        populateOutputCache(prop0);
+    }
+
+    // ── do_step ───────────────────────────────────────────────────────────────
+    // Advances the simulation by dt seconds, optionally subdividing into
+    // sub-steps of at most solver.max_step_s (0 = single step = communication dt).
+    bool do_step(double dt) override
+    {
+        if (!m_sim.has_value())
+            return false;
+
+        const double h = (p_max_step_s_ > 0.0 && p_max_step_s_ < dt)
+                          ? p_max_step_s_ : dt;
+
+        double remaining = dt;
+        AE_RKT::RocketPropulsionResult lastProp{};
+
+        while (remaining > 1.0e-15) {
+            const double step = std::min(remaining, h);
+
+            // Forward the (possibly tuned) S2 ignition gate before each sub-step.
+            m_sim->stageModel().stg2IgnitionTime_s = p_stg2_ignition_time_s_;
+            lastProp = m_sim->stageModel().propulsion(m_sim->time());
+
+            const auto obs = m_sim->step(step);
+            if (!obs.converged) {
+                debugLog(fmiWarning, "TwoStageRocketFMU: Radau IIA Newton did not converge.");
+                return false;
+            }
+            remaining -= step;
+        }
+
+        packState();
+        populateOutputCache(lastProp);
+        return true;
+    }
+
+    // ── setFmuState ───────────────────────────────────────────────────────────
+    // Overridden to keep the simulator's internal state consistent with the
+    // restored state_ (POD).
+    void setFmuState(void* fmuState) override
+    {
+        fmu_base::setFmuState(fmuState);   // copies saved TwoStageRocketState → state_
+        if (m_sim.has_value())
+            unpackState();
+    }
+
+    // ── reset ─────────────────────────────────────────────────────────────────
+    void reset() override
+    {
+        m_sim.reset();
+        m_theta0 = 0.0;
+        state_   = TwoStageRocketState{};
+
+        p_lat0_deg_     = kDefault_lat0_deg;
+        p_lon0_deg_     = kDefault_lon0_deg;
+        p_alt0_m_       = kDefault_alt0_m;
+        p_azimuth0_deg_ = kDefault_azimuth0_deg;
+        p_pitch0_deg_   = kDefault_pitch0_deg;
+        p_roll0_deg_    = kDefault_roll0_deg;
+        p_vNorth0_mps_  = kDefault_vNorth0_mps;
+        p_vEast0_mps_   = kDefault_vEast0_mps;
+        p_vDown0_mps_   = kDefault_vDown0_mps;
+
+        p_stg2_ignition_time_s_ = kDefault_stg2_ignition_time_s;
+        p_max_step_s_           = kDefault_max_step_s;
+    }
+
+private:
+
+    // ── registerParameters ──────────────────────────────────────────────────────
+    // Register the FMI parameters (fixed before exit_initialisation_mode).
+    void registerParameters()
+    {
         // ── Parameters ───────────────────────────────────────────────────────
         register_real("lat0_deg", &p_lat0_deg_)
             .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
@@ -261,7 +404,12 @@ public:
             .setInitial(initial_t::EXACT)
             .setDescription("Absolute sim time at which Stage 2 may ignite [s] "
                             "(0 = ignite immediately once Stage 1 has separated)");
+    }
 
+    // ── registerOutputs ─────────────────────────────────────────────────────────
+    // Register the output cache variables.
+    void registerOutputs()
+    {
         // ── Outputs ───────────────────────────────────────────────────────────
         register_real("out.alt_m",       &state_.alt_m)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
@@ -418,143 +566,7 @@ public:
         register_boolean("out.staged", &state_.staged)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::DISCRETE)
             .setInitial(initial_t::CALCULATED).setDescription("True once Stage 1 has separated");
-
-        // ── State registration (enables getFMUState / setFMUState) ────────────
-        register_state(&TwoStageRocketFMU::state_);
     }
-
-    // ── exit_initialisation_mode ──────────────────────────────────────────────
-    // Called after fmi2ExitInitializationMode: all parameters are set.
-    // Loads DAVE-ML models, queries liftoff inertia, builds the initial ECI
-    // state, and constructs the simulator.
-    void exit_initialisation_mode() override
-    {
-        // 1. Build DML paths from the FMU resources/ folder
-        const std::string res         = resourceLocation().string();
-        const std::string inertiaPath = res + "/twostage_inertia.dml";
-        const std::string propPath    = res + "/twostage_prop.dml";
-        const std::string aeroPath    = res + "/twostage_aero.dml";
-
-        // 2. Load inertia, propulsion, and aero engines
-        auto inertiaDml = std::make_shared<AE_SR::DAVEMLAeroModel>(inertiaPath);
-        auto propDml    = std::make_shared<AE_SR::DAVEMLAeroModel>(propPath);
-        auto aeroDml    = std::make_shared<const AE_SR::DAVEMLAeroModel>(aeroPath);
-
-        // 3. Earth Rotation Angle at fmi2EnterInitializationMode time.
-        m_theta0 = kOmegaEarth_rad_s * currentTime();
-
-        // 4. Query liftoff inertial parameters from a temporary stage model at
-        //    zero fuel usage (mirrors src/Examples/TwoStageRocket/TwoStageRocket.cpp).
-        AE_RKT::RocketStageModel stageModel0(inertiaDml, propDml);
-        const AE_RB::InertialParameters ip = stageModel0.inertialParameters();
-
-        // 5. Build initial 6-DoF state from FMI parameters.
-        AE_RB::Config cfg{};
-        cfg.pose.lat_deg          = p_lat0_deg_;
-        cfg.pose.lon_deg          = p_lon0_deg_;
-        cfg.pose.alt_m            = p_alt0_m_;
-        cfg.pose.azimuth_deg      = p_azimuth0_deg_;
-        cfg.pose.zenith_deg       = 90.0 - p_pitch0_deg_;
-        cfg.pose.roll_deg         = p_roll0_deg_;
-        cfg.velocityNED.north_mps = p_vNorth0_mps_;
-        cfg.velocityNED.east_mps  = p_vEast0_mps_;
-        cfg.velocityNED.down_mps  = p_vDown0_mps_;
-        cfg.bodyRates.roll_rad_s  = 0.0;
-        cfg.bodyRates.pitch_rad_s = 0.0;
-        cfg.bodyRates.yaw_rad_s   = 0.0;
-        cfg.inertialParameters    = ip;
-
-        const auto x0vec = AE_RB::BuildInitialStateVector(cfg, m_theta0);
-        using L = AE_RB::StateLayout;
-
-        AE_RB::StateD x0{};
-        x0.g.p = Eigen::Vector3d(x0vec[L::IDX_P], x0vec[L::IDX_P+1], x0vec[L::IDX_P+2]);
-        const Eigen::Quaterniond q0(x0vec[L::IDX_Q], x0vec[L::IDX_Q+1],
-                                    x0vec[L::IDX_Q+2], x0vec[L::IDX_Q+3]);
-        x0.g.q = q0.normalized();
-        x0.g.R = x0.g.q.toRotationMatrix();
-        x0.nu_B << x0vec[L::IDX_W], x0vec[L::IDX_W+1], x0vec[L::IDX_W+2],
-                   x0vec[L::IDX_V], x0vec[L::IDX_V+1], x0vec[L::IDX_V+2];
-        x0.m = x0vec[L::IDX_M];
-
-        // 6. Construct the simulator (owns its own RocketStageModel built from
-        //    inertiaDml/propDml; aeroDml feeds the RocketAeroPolicy).
-        m_sim.emplace(ip, x0, m_theta0,
-                      std::move(inertiaDml), std::move(propDml), aeroDml,
-                      p_stg2_ignition_time_s_);
-
-        // 7. Sync POD integration state and populate initial outputs.
-        const auto prop0 = m_sim->stageModel().propulsion(m_sim->time());
-        packState();
-        populateOutputCache(prop0);
-    }
-
-    // ── do_step ───────────────────────────────────────────────────────────────
-    // Advances the simulation by dt seconds, optionally subdividing into
-    // sub-steps of at most solver.max_step_s (0 = single step = communication dt).
-    bool do_step(double dt) override
-    {
-        if (!m_sim.has_value())
-            return false;
-
-        const double h = (p_max_step_s_ > 0.0 && p_max_step_s_ < dt)
-                          ? p_max_step_s_ : dt;
-
-        double remaining = dt;
-        AE_RKT::RocketPropulsionResult lastProp{};
-
-        while (remaining > 1.0e-15) {
-            const double step = std::min(remaining, h);
-
-            // Forward the (possibly tuned) S2 ignition gate before each sub-step.
-            m_sim->stageModel().stg2IgnitionTime_s = p_stg2_ignition_time_s_;
-            lastProp = m_sim->stageModel().propulsion(m_sim->time());
-
-            const auto obs = m_sim->step(step);
-            if (!obs.converged) {
-                debugLog(fmiWarning, "TwoStageRocketFMU: Radau IIA Newton did not converge.");
-                return false;
-            }
-            remaining -= step;
-        }
-
-        packState();
-        populateOutputCache(lastProp);
-        return true;
-    }
-
-    // ── setFmuState ───────────────────────────────────────────────────────────
-    // Overridden to keep the simulator's internal state consistent with the
-    // restored state_ (POD).
-    void setFmuState(void* fmuState) override
-    {
-        fmu_base::setFmuState(fmuState);   // copies saved TwoStageRocketState → state_
-        if (m_sim.has_value())
-            unpackState();
-    }
-
-    // ── reset ─────────────────────────────────────────────────────────────────
-    void reset() override
-    {
-        m_sim.reset();
-        m_theta0 = 0.0;
-        state_   = TwoStageRocketState{};
-
-        p_lat0_deg_     = kDefault_lat0_deg;
-        p_lon0_deg_     = kDefault_lon0_deg;
-        p_alt0_m_       = kDefault_alt0_m;
-        p_azimuth0_deg_ = kDefault_azimuth0_deg;
-        p_pitch0_deg_   = kDefault_pitch0_deg;
-        p_roll0_deg_    = kDefault_roll0_deg;
-        p_vNorth0_mps_  = kDefault_vNorth0_mps;
-        p_vEast0_mps_   = kDefault_vEast0_mps;
-        p_vDown0_mps_   = kDefault_vDown0_mps;
-
-        p_stg2_ignition_time_s_ = kDefault_stg2_ignition_time_s;
-        p_max_step_s_           = kDefault_max_step_s;
-    }
-
-private:
 
     // ── packState ─────────────────────────────────────────────────────────────
     // Sync the simulator's integration + fuel state → POD fields in state_.

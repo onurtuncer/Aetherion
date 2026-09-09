@@ -242,221 +242,9 @@ public:
     // ── Constructor: register all FMI variables ───────────────────────────────
     FMU4CPP_CTOR(F16PlantFMU)
     {
-        // ── Parameters ───────────────────────────────────────────────────────
-        register_real("vt0_fps", &p_vt0_fps_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("True airspeed at trim [ft/s]");
-
-        register_real("alt0_ft", &p_alt0_ft_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("Altitude at trim [ft]");
-
-        register_real("lat0_deg", &p_lat0_deg_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("Initial geodetic latitude [deg]");
-
-        register_real("lon0_deg", &p_lon0_deg_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("Initial geodetic longitude [deg]");
-
-        register_real("heading0_deg", &p_heading0_deg_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("Initial heading (azimuth from North) [deg]");
-
-        register_real("roll0_deg", &p_roll0_deg_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("Initial pose roll angle [deg]");
-
-        register_real("xcg_from_ac_ft", &p_xcg_from_ac_ft_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("CG offset aft of aerodynamic reference centre [ft]");
-
-        register_real("solver.abs_tol", &p_newton_abs_tol_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("Radau IIA Newton absolute residual tolerance [-]");
-
-        register_real("solver.rel_tol", &p_newton_rel_tol_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("Radau IIA Newton relative residual tolerance [-]");
-
-        register_real("solver.max_step_s", &p_max_step_s_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
-            .setInitial(initial_t::EXACT)
-            .setDescription("Maximum internal integrator sub-step size [s] (0 = use communication step)");
-
-        // ── Control inputs ────────────────────────────────────────────────────
-        register_real("ctrl.el_deg",  &state_.el_deg)
-            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
-            .setDescription("Elevator deflection [deg]");
-
-        register_real("ctrl.ail_deg", &state_.ail_deg)
-            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
-            .setDescription("Aileron deflection [deg]");
-
-        register_real("ctrl.rdr_deg", &state_.rdr_deg)
-            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
-            .setDescription("Rudder deflection [deg]");
-
-        register_real("ctrl.pwr_pct", &state_.pwr_pct)
-            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
-            .setDescription("Throttle [0–100 %]");
-
-        // ── Outputs ───────────────────────────────────────────────────────────
-        register_real("out.alt_m",       &state_.alt_m)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Altitude above MSL [m]");
-
-        register_real("out.lat_deg",     &state_.lat_deg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [deg]");
-
-        register_real("out.lon_deg",     &state_.lon_deg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [deg]");
-
-        register_real("out.yaw_rad",     &state_.yaw_rad)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler yaw angle (body → NED) [rad]");
-
-        register_real("out.pitch_rad",   &state_.pitch_rad)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler pitch angle (body → NED) [rad]");
-
-        register_real("out.roll_rad",    &state_.roll_rad)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler roll angle (body → NED) [rad]");
-
-        register_real("out.p_rad_s",     &state_.p_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Body roll rate wrt ECI [rad/s]");
-
-        register_real("out.q_rad_s",     &state_.q_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Body pitch rate wrt ECI [rad/s]");
-
-        register_real("out.r_rad_s",     &state_.r_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Body yaw rate wrt ECI [rad/s]");
-
-        register_real("out.v_north_m_s", &state_.v_north_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("NED north velocity [m/s]");
-
-        register_real("out.v_east_m_s",  &state_.v_east_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("NED east velocity [m/s]");
-
-        register_real("out.v_down_m_s",  &state_.v_down_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("NED down velocity [m/s]");
-
-        register_real("out.alpha_deg",   &state_.alpha_deg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Angle of attack [deg]");
-
-        register_real("out.beta_deg",    &state_.beta_deg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Sideslip angle [deg]");
-
-        register_real("out.mach",        &state_.mach)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Mach number [-]");
-
-        register_real("out.qbar_Pa",     &state_.qbar_Pa)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Dynamic pressure [Pa]");
-
-        register_real("out.vt_m_s",      &state_.vt_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("True airspeed [m/s]");
-
-        register_real("out.aero_Fx_N",   &state_.aero_Fx_N)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-X force [N]");
-
-        register_real("out.aero_Fy_N",   &state_.aero_Fy_N)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-Y force [N]");
-
-        register_real("out.aero_Fz_N",   &state_.aero_Fz_N)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-Z force [N]");
-
-        register_real("out.aero_Mx_Nm",  &state_.aero_Mx_Nm)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic roll moment (about AC) [N·m]");
-
-        register_real("out.aero_My_Nm",  &state_.aero_My_Nm)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic pitch moment (about AC) [N·m]");
-
-        register_real("out.aero_Mz_Nm",  &state_.aero_Mz_Nm)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic yaw moment [N·m]");
-
-        register_real("out.rho_kg_m3",   &state_.rho_kg_m3)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Air density [kg/m³]");
-
-        register_real("out.T_K",         &state_.T_K)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Ambient static temperature [K]");
-
-        register_real("out.P_Pa",        &state_.P_Pa)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Ambient static pressure [Pa]");
-
-        register_real("out.a_m_s",       &state_.a_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Speed of sound [m/s]");
-
-        register_real("out.g_m_s2",      &state_.g_m_s2)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Local gravitational acceleration [m/s²]");
-
-        register_real("out.specificForce_x_m_s2", &state_.specificForce_x_m_s2)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED)
-            .setDescription("Body-X specific force at the CG: the non-gravitational acceleration an "
-                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
-                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
-                            "(x forward). [m/s²]");
-
-        register_real("out.specificForce_y_m_s2", &state_.specificForce_y_m_s2)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED)
-            .setDescription("Body-Y specific force at the CG: the non-gravitational acceleration an "
-                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
-                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
-                            "(y right). [m/s²]");
-
-        register_real("out.specificForce_z_m_s2", &state_.specificForce_z_m_s2)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED)
-            .setDescription("Body-Z specific force at the CG: the non-gravitational acceleration an "
-                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
-                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
-                            "(z down). [m/s²]");
-
-        register_real("out.thrust_N",    &state_.thrust_N)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED)
-            .setDescription("Net propulsive force along body +X [N] "
-                            "(the F-16 engine deck carries no body-Y/Z thrust component)");
-
-        register_real("out.mass_kg",     &state_.mass_kg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Vehicle mass [kg]");
-
+        registerParameters();
+        registerInputs();
+        registerOutputs();
         // ── State registration (enables getFMUState / setFMUState) ────────────
         register_state(&F16PlantFMU::state_);
     }
@@ -637,6 +425,236 @@ public:
     }
 
 private:
+
+    // ── registerParameters ──────────────────────────────────────────────────────
+    // Register the FMI parameters (fixed before exit_initialisation_mode).
+    void registerParameters()
+    {
+        // ── Parameters ───────────────────────────────────────────────────────
+        register_real("vt0_fps", &p_vt0_fps_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("True airspeed at trim [ft/s]");
+
+        register_real("alt0_ft", &p_alt0_ft_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Altitude at trim [ft]");
+
+        register_real("lat0_deg", &p_lat0_deg_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Initial geodetic latitude [deg]");
+
+        register_real("lon0_deg", &p_lon0_deg_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Initial geodetic longitude [deg]");
+
+        register_real("heading0_deg", &p_heading0_deg_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Initial heading (azimuth from North) [deg]");
+
+        register_real("roll0_deg", &p_roll0_deg_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Initial pose roll angle [deg]");
+
+        register_real("xcg_from_ac_ft", &p_xcg_from_ac_ft_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("CG offset aft of aerodynamic reference centre [ft]");
+
+        register_real("solver.abs_tol", &p_newton_abs_tol_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Radau IIA Newton absolute residual tolerance [-]");
+
+        register_real("solver.rel_tol", &p_newton_rel_tol_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Radau IIA Newton relative residual tolerance [-]");
+
+        register_real("solver.max_step_s", &p_max_step_s_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Maximum internal integrator sub-step size [s] (0 = use communication step)");
+    }
+
+    // ── registerInputs ──────────────────────────────────────────────────────────
+    // Register the control-surface inputs.
+    void registerInputs()
+    {
+        // ── Control inputs ────────────────────────────────────────────────────
+        register_real("ctrl.el_deg",  &state_.el_deg)
+            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
+            .setDescription("Elevator deflection [deg]");
+
+        register_real("ctrl.ail_deg", &state_.ail_deg)
+            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
+            .setDescription("Aileron deflection [deg]");
+
+        register_real("ctrl.rdr_deg", &state_.rdr_deg)
+            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
+            .setDescription("Rudder deflection [deg]");
+
+        register_real("ctrl.pwr_pct", &state_.pwr_pct)
+            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
+            .setDescription("Throttle [0–100 %]");
+    }
+
+    // ── registerOutputs ─────────────────────────────────────────────────────────
+    // Register the output cache variables.
+    void registerOutputs()
+    {
+        // ── Outputs ───────────────────────────────────────────────────────────
+        register_real("out.alt_m",       &state_.alt_m)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Altitude above MSL [m]");
+
+        register_real("out.lat_deg",     &state_.lat_deg)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [deg]");
+
+        register_real("out.lon_deg",     &state_.lon_deg)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [deg]");
+
+        register_real("out.yaw_rad",     &state_.yaw_rad)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler yaw angle (body → NED) [rad]");
+
+        register_real("out.pitch_rad",   &state_.pitch_rad)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler pitch angle (body → NED) [rad]");
+
+        register_real("out.roll_rad",    &state_.roll_rad)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler roll angle (body → NED) [rad]");
+
+        register_real("out.p_rad_s",     &state_.p_rad_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Body roll rate wrt ECI [rad/s]");
+
+        register_real("out.q_rad_s",     &state_.q_rad_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Body pitch rate wrt ECI [rad/s]");
+
+        register_real("out.r_rad_s",     &state_.r_rad_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Body yaw rate wrt ECI [rad/s]");
+
+        register_real("out.v_north_m_s", &state_.v_north_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("NED north velocity [m/s]");
+
+        register_real("out.v_east_m_s",  &state_.v_east_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("NED east velocity [m/s]");
+
+        register_real("out.v_down_m_s",  &state_.v_down_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("NED down velocity [m/s]");
+
+        register_real("out.alpha_deg",   &state_.alpha_deg)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Angle of attack [deg]");
+
+        register_real("out.beta_deg",    &state_.beta_deg)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Sideslip angle [deg]");
+
+        register_real("out.mach",        &state_.mach)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Mach number [-]");
+
+        register_real("out.qbar_Pa",     &state_.qbar_Pa)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Dynamic pressure [Pa]");
+
+        register_real("out.vt_m_s",      &state_.vt_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("True airspeed [m/s]");
+
+        register_real("out.aero_Fx_N",   &state_.aero_Fx_N)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-X force [N]");
+
+        register_real("out.aero_Fy_N",   &state_.aero_Fy_N)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-Y force [N]");
+
+        register_real("out.aero_Fz_N",   &state_.aero_Fz_N)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-Z force [N]");
+
+        register_real("out.aero_Mx_Nm",  &state_.aero_Mx_Nm)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic roll moment (about AC) [N·m]");
+
+        register_real("out.aero_My_Nm",  &state_.aero_My_Nm)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic pitch moment (about AC) [N·m]");
+
+        register_real("out.aero_Mz_Nm",  &state_.aero_Mz_Nm)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic yaw moment [N·m]");
+
+        register_real("out.rho_kg_m3",   &state_.rho_kg_m3)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Air density [kg/m³]");
+
+        register_real("out.T_K",         &state_.T_K)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Ambient static temperature [K]");
+
+        register_real("out.P_Pa",        &state_.P_Pa)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Ambient static pressure [Pa]");
+
+        register_real("out.a_m_s",       &state_.a_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Speed of sound [m/s]");
+
+        register_real("out.g_m_s2",      &state_.g_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Local gravitational acceleration [m/s²]");
+
+        register_real("out.specificForce_x_m_s2", &state_.specificForce_x_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-X specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(x forward). [m/s²]");
+
+        register_real("out.specificForce_y_m_s2", &state_.specificForce_y_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-Y specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(y right). [m/s²]");
+
+        register_real("out.specificForce_z_m_s2", &state_.specificForce_z_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-Z specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(z down). [m/s²]");
+
+        register_real("out.thrust_N",    &state_.thrust_N)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Net propulsive force along body +X [N] "
+                            "(the F-16 engine deck carries no body-Y/Z thrust component)");
+
+        register_real("out.mass_kg",     &state_.mass_kg)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Vehicle mass [kg]");
+    }
 
     // ── packState ─────────────────────────────────────────────────────────────
     // Sync Eigen integration state (m_state) → POD fields in state_.
