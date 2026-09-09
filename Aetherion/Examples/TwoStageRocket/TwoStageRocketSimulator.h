@@ -59,6 +59,7 @@
 #include <Aetherion/FlightDynamics/Policies/MassPolicies.h>
 #include <Aetherion/Simulation/Snapshot2.h>
 #include <Aetherion/Simulation/MakeSnapshot2.h>
+#include <Aetherion/Simulation/BodySpecificForce.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/ODE/RKMK/Concepts.h>
@@ -174,6 +175,22 @@ public:
         const auto& vf = m_stepper.vectorField();
         return Simulation::MakeSnapshot2(m_time, m_state, theta_gst,
                                          vf.gravity, vf.aero);
+    }
+
+    // ── Derived quantities ────────────────────────────────────────────────────
+
+    /// @brief Propulsive force in body axes at the current state [N].
+    ///
+    /// Read from the AxialThrustPolicy instance the integrator holds, so the
+    /// thrust axis comes from the vehicle model rather than from an assumption
+    /// made by the caller.  The value is the zero-order-hold thrust applied over
+    /// the step just taken; on a step in which staging occurred, @c step() has
+    /// already refreshed it to the post-separation stage, pairing correctly with
+    /// the post-separation @c state().m.
+    [[nodiscard]] Eigen::Vector3d thrustBodyForce_N() const
+    {
+        return Simulation::PolicyBodyForce_N(m_time, m_state,
+                                             m_stepper.vectorField().thrust);
     }
 
     // ── Accessors ─────────────────────────────────────────────────────────────
