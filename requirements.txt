@@ -2,5 +2,5 @@ numpy>=2.5.3
 pandas>=3.0.5
 PyYAML>=6.0.3
 matplotlib>=3.11.1
-fmpy>=0.3.31
+fmpy>=0.3.32
 metrixpp>=1.8.1
