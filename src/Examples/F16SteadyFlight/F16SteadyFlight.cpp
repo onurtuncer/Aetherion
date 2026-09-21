@@ -15,6 +15,7 @@
 #include <Aetherion/Simulation/SnapshotTraits.h>
 #include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/FlightDynamics/Trim/TrimSolver.h>
+#include <Aetherion/FlightDynamics/Trim/TrimBodyRates.h>
 #include <Aetherion/FlightDynamics/Trim/TrimWeight.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
@@ -48,7 +49,7 @@ namespace {
     constexpr double kAlt_m       =  kAlt_ft * 0.3048;   // 3051.9624 m
 
     constexpr double kHeading_deg =  45.0;         // NE
-    constexpr double kRoll_deg    =  -0.172;        // small bank (NASA ref)
+    constexpr double kRoll_deg    =   0.0;          // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
     constexpr double kVelocity_fps=  400.0;         // NE components in ft/s
     constexpr double kVelocity_mps=  kVelocity_fps * 0.3048;  // 121.92 m/s
 
@@ -117,14 +118,20 @@ void F16SteadyFlightApplication::prepareSimulation() const
     auto prop_model = std::make_shared<const Serialization::DAVEMLPropModel>(propPath);
 
     // ── 3. Run trim solver ────────────────────────────────────────────────────
-    // Weight from the J2 field at the trim geodetic position — the same gravity
-    // J2GravityPolicy applies during integration.  Trimming against the sea-level
-    // constant 9.80665 m/s² would balance a force the integrator never applies.
-    const double weight_lbf = FlightDynamics::TrimWeight_lbf(ip.mass_kg, kLat_deg, kAlt_m);
+    // Apparent weight at the trim point: J2 attraction — the same gravity
+    // J2GravityPolicy applies during integration — less the centripetal relief of
+    // level flight over the rotating Earth.  Trimming against the static weight
+    // would leave the vehicle with excess lift on the first step.
+    const double weight_lbf = FlightDynamics::LevelFlightTrimWeight_lbf(
+        ip.mass_kg, kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps);
     FlightDynamics::TrimInputs tin{};
     tin.vt_fps     = kTAS_fps;
     tin.alt_ft     = kAlt_ft;
     tin.weight_lbf = weight_lbf;
+    // Aero damping at the rate F16AeroPolicy will actually see — the transport
+    // rate.  Pitch attitude is not known yet and q does not depend on it.
+    tin.bodyRates  = FlightDynamics::LevelFlightBodyRates(
+        kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, 0.0, kRoll_deg);
 
     AE_CORE_INFO("Running trim solver  (W = {:.1f} lbf, V = {:.2f} ft/s, h = {:.0f} ft) ...",
                  weight_lbf, kTAS_fps, kAlt_ft);
@@ -174,9 +181,10 @@ void F16SteadyFlightApplication::prepareSimulation() const
     cfg.velocityNED.north_mps = kVelocity_mps;
     cfg.velocityNED.east_mps  = kVelocity_mps;
     cfg.velocityNED.down_mps  = 0.0;
-    cfg.bodyRates.roll_rad_s  = 0.0;
-    cfg.bodyRates.pitch_rad_s = 0.0;
-    cfg.bodyRates.yaw_rad_s   = 0.0;
+    // Attitude held fixed against the local-level frame, which tips forward at the
+    // transport rate as the vehicle moves over the curved Earth.
+    cfg.bodyRates = FlightDynamics::LevelFlightBodyRates(
+        kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, trim.alpha_deg, kRoll_deg);
     cfg.inertialParameters    = ip;
 
     const double theta0 = computeInitialERA(simCfg.startTime);

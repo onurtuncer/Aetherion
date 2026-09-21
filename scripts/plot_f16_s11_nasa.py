@@ -1,23 +1,24 @@
 """
-plot_f16_s11_nasa02.py
+plot_f16_s11_nasa.py
 Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 
 Documentation-quality comparison of the Aetherion F-16 Case-11 simulation
-against the NASA TM-2015-218675 Atmos_11_sim_02 reference trajectory.
+against the NASA TM-2015-218675 Atmos_11_sim_05 reference trajectory.
 
 Usage
 -----
 Source-tree (repo root as working directory):
-    python scripts/plot_f16_s11_nasa02.py
+    python scripts/plot_f16_s11_nasa.py [sim_csv] [nasa_ref]
 
 Build directory (after CMake copies this script next to the executable):
-    python plot_f16_s11_nasa02.py [sim_csv]
+    python plot_f16_s11_nasa.py [sim_csv] [nasa_ref]
 
     sim_csv  optional path to the simulation output CSV (default: f16_s11_200s.csv
              in the same directory as this script).
+    nasa_ref  optional NASA reference simulation: 02, 04 or 05 (default: 05).
 
 The script auto-detects its location:
-  - If Atmos_11_sim_02.csv is a sibling (build-dir layout), all paths resolve
+  - If the NASA reference CSV is a sibling (build-dir layout), all paths resolve
     relative to the script's own directory.
   - Otherwise it falls back to the source-tree layout (scripts/ -> repo root).
 
@@ -54,7 +55,14 @@ _HERE = Path(__file__).resolve().parent
 
 # Build-dir layout: NASA CSV is a sibling of this script (copied by CMake).
 # Source-tree layout: this script lives in scripts/, repo root is one level up.
-_BUILD_NASA = _HERE / "Atmos_11_sim_02.csv"
+# NASA reference simulation: 05 unless a second argument says otherwise.
+# Simulations 04 and 05 start from a genuine trim.  Simulation 02 does not — in
+# the open-loop trim checks it drifts tens to hundreds of feet off altitude — so
+# an error measured against it is partly its own.  See "Trimming over a
+# rotating, curved Earth" in doc/examples.rst.
+NASA_REF = sys.argv[2] if len(sys.argv) > 2 else "05"
+
+_BUILD_NASA = _HERE / f"Atmos_11_sim_{NASA_REF}.csv"
 _IN_BUILD_DIR = _BUILD_NASA.exists()
 
 if _IN_BUILD_DIR:
@@ -66,7 +74,7 @@ else:
     # Running from the source tree (scripts/ directory)
     _REPO    = _HERE.parent
     _SIM_DEFAULT = _REPO / "f16_s11_200s.csv"
-    NASA_CSV = _REPO / "data" / "Atmos_11_TrimCheckSubsonicF16" / "Atmos_11_sim_02.csv"
+    NASA_CSV = _REPO / "data" / "Atmos_11_TrimCheckSubsonicF16" / f"Atmos_11_sim_{NASA_REF}.csv"
     OUT_DIR  = _REPO / "doc" / "_static" / "f16_s11"
 
 # Optional positional argument overrides the sim CSV path.
@@ -301,7 +309,7 @@ def overview_dashboard(
                              figsize=(ncols * 3.8, nrows * 2.6),
                              squeeze=False)
     fig.suptitle(
-        "Aetherion F-16 Case 11 — Full Channel Comparison (sim vs. NASA Atmos_11_sim_02)",
+        f"Aetherion F-16 Case 11 — Full Channel Comparison (sim vs. NASA Atmos_11_sim_{NASA_REF})",
         fontsize=12, fontweight="bold", y=1.01,
     )
 

@@ -133,7 +133,7 @@ regeneration path:
 
 ```
 python scripts/regenerate_atmos_figures.py            # scenarios 1,2,3,6,7,8,9,10
-python scripts/plot_f16_s11_nasa02.py <sim.csv>       # and s12, s13p1..p4, s15, s16
+python scripts/plot_f16_s11_nasa.py <sim.csv> [ref]    # and s12, s13p1..p4, s15, s16; ref = 02|04|05, default 05
 python scripts/plot_atmos17_scenario17.py --sim <sim.csv> --ref <ref.csv> --output doc/_static/atmos17
 python doc/_static/atmos17/generate_model_plots.py
 ```

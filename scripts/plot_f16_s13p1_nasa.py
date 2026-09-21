@@ -1,20 +1,21 @@
 """
-plot_f16_s13p1_nasa02.py
+plot_f16_s13p1_nasa.py
 Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 
 Documentation-quality comparison of the Aetherion F-16 Scenario 13.1
-closed-loop simulation against the NASA TM-2015-218675 Atmos_13p1_sim_02
+closed-loop simulation against the NASA TM-2015-218675 Atmos_13p1_sim_05
 reference trajectory (F-16 subsonic altitude change, +100 ft step, 20 s).
 
 Usage
 -----
 Source-tree:
-    python scripts/plot_f16_s13p1_nasa02.py [sim_csv]
+    python scripts/plot_f16_s13p1_nasa.py [sim_csv] [nasa_ref]
 
 Build directory (after CMake copies this script next to the executable):
-    python plot_f16_s13p1_nasa02.py [sim_csv]
+    python plot_f16_s13p1_nasa.py [sim_csv] [nasa_ref]
 
     sim_csv  optional path to the simulation CSV (default: f16_s13p1_200s.csv).
+    nasa_ref  optional NASA reference simulation: 02, 04 or 05 (default: 05).
 
 NOTE: the closed-loop LQR is stiff — use timeStep <= 0.02 s for accurate
 results.  dt = 0.1 s produces a numerical instability (roll divergence,
@@ -22,7 +23,7 @@ results.  dt = 0.1 s produces a numerical instability (roll divergence,
 
     F16AltitudeChange --endTime 20 --timeStep 0.02 --outputFileName f16_s13p1_200s.csv
 
-Outputs (figures/ sub-directory next to this script, or doc/figures/f16_s13p1/):
+Outputs (figures/ sub-directory next to this script, or doc/_static/f16_s13p1/):
     fig_flight_envelope.png   altitude, TAS, Mach
     fig_attitude.png          pitch, roll, yaw
     fig_body_rates.png        p, q, r
@@ -50,7 +51,14 @@ import pandas as pd
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 _HERE = Path(__file__).resolve().parent
-_BUILD_NASA = _HERE / "Atmos_13p1_sim_02.csv"
+# NASA reference simulation: 05 unless a second argument says otherwise.
+# Simulations 04 and 05 start from a genuine trim.  Simulation 02 does not — in
+# the open-loop trim checks it drifts tens to hundreds of feet off altitude — so
+# an error measured against it is partly its own.  See "Trimming over a
+# rotating, curved Earth" in doc/examples.rst.
+NASA_REF = sys.argv[2] if len(sys.argv) > 2 else "05"
+
+_BUILD_NASA = _HERE / f"Atmos_13p1_sim_{NASA_REF}.csv"
 _IN_BUILD_DIR = _BUILD_NASA.exists()
 
 if _IN_BUILD_DIR:
@@ -60,7 +68,7 @@ if _IN_BUILD_DIR:
 else:
     _REPO    = _HERE.parent
     _SIM_DEFAULT = _REPO / "f16_s13p1_200s.csv"
-    NASA_CSV = _REPO / "data" / "Atmos_13p1_SubsonicAltitudeChangeF16" / "Atmos_13p1_sim_02.csv"
+    NASA_CSV = _REPO / "data" / "Atmos_13p1_SubsonicAltitudeChangeF16" / f"Atmos_13p1_sim_{NASA_REF}.csv"
     OUT_DIR  = _REPO / "doc" / "_static" / "f16_s13p1"
 
 SIM_CSV = Path(sys.argv[1]) if len(sys.argv) > 1 else _SIM_DEFAULT
@@ -198,7 +206,7 @@ def overview(t, sim_df, ref_df):
             and pd.api.types.is_numeric_dtype(sim_df[c])]
     nc, nr = 4, int(np.ceil(len(cols) / 4))
     fig, axes = plt.subplots(nr, nc, figsize=(nc * 3.8, nr * 2.6), squeeze=False)
-    fig.suptitle("Aetherion F-16 Scenario 13.1 — Full Channel Comparison vs NASA Atmos_13p1_sim_02",
+    fig.suptitle(f"Aetherion F-16 Scenario 13.1 — Full Channel Comparison vs NASA Atmos_13p1_sim_{NASA_REF}",
                  fontsize=12, fontweight="bold", y=1.01)
     for idx, col in enumerate(cols):
         r, c = divmod(idx, nc)

@@ -40,6 +40,6 @@ endforeach()
 add_custom_command(
   TARGET F16AltitudeChange
   POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/scripts/plot_f16_s13p1_nasa02.py"
-          "$<TARGET_FILE_DIR:F16AltitudeChange>/plot_f16_s13p1_nasa02.py"
-  COMMENT "Copying Case-13.1 plot script plot_f16_s13p1_nasa02.py")
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/scripts/plot_f16_s13p1_nasa.py"
+          "$<TARGET_FILE_DIR:F16AltitudeChange>/plot_f16_s13p1_nasa.py"
+  COMMENT "Copying Case-13.1 plot script plot_f16_s13p1_nasa.py")

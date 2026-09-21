@@ -10,7 +10,7 @@ Atmospheric Scenarios 1, 2, 3, 6, 7, 8, 9 and 10.
 Why this exists
 ---------------
 Every other scenario family had a checked-in regeneration path -- the F-16
-cases have ``plot_f16_s*_nasa02.py`` and the two-stage rocket has
+cases have ``plot_f16_s*_nasa.py`` and the two-stage rocket has
 ``plot_atmos17_scenario17.py`` -- but scenarios 1--10 had none.  Their figures
 under ``doc/_static/atmos01`` ... ``atmos10`` were therefore stranded at
 whatever state they were generated in, and after the RKMK trivialisation fix

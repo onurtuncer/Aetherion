@@ -23,6 +23,7 @@
 #include <cmath>
 #include <numbers>
 
+#include <Aetherion/FlightDynamics/Trim/TrimBodyRates.h>
 #include <Aetherion/FlightDynamics/Trim/TrimWeight.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
 
@@ -138,6 +139,181 @@ TEST_CASE("TrimWeight: latitude and altitude dependence has the right sign",
     // Falls off with altitude.
     CHECK(FlightDynamics::LocalGravityMagnitude_m_s2(kLat_deg, 20000.0)
         < FlightDynamics::LocalGravityMagnitude_m_s2(kLat_deg, 0.0));
+}
+
+// =============================================================================
+// Apparent weight in level flight
+// =============================================================================
+
+TEST_CASE("TrimWeight: apparent gravity at rest is plumb-bob gravity",
+    "[trim][weight][apparent]")
+{
+    // WGS-84 normal gravity on the ellipsoid (Somigliana).  It carries the full
+    // normal field where the helper has J2 only; the truncation is worth up to
+    // 1.2e-4 m/s² (at the pole), hence the 2e-4 m/s² tolerance.
+    for (const double lat_deg : { 0.0, 36.01917, 60.0, 89.95 }) {
+        INFO("lat=" << lat_deg);
+        const double s2    = std::pow(std::sin(lat_deg * kDegRad), 2);
+        const double gamma = 9.7803253359 * (1.0 + 0.00193185265241 * s2)
+                           / std::sqrt(1.0 - Environment::WGS84::kEccentricitySq * s2);
+
+        CHECK_THAT(FlightDynamics::LevelFlightApparentGravity_m_s2(lat_deg, 0.0, 0.0, 0.0),
+                   WithinAbs(gamma, 2.0e-4));
+    }
+}
+
+TEST_CASE("TrimWeight: apparent gravity matches the path acceleration of level flight",
+    "[trim][weight][apparent]")
+{
+    // Independent check of the kinematic relief: fly a constant-altitude path in
+    // geodetic coordinates, map it to ECI with the library transforms, and take
+    // the second difference.  Its component along the geodetic vertical is what
+    // gravity has to supply, so  g_app = G_D − a_down.
+    struct Case { double lat_deg, alt_m, vN, vE; };
+
+    const Case cases[] = {
+        { kLat_deg, kAlt_m,           121.92,   121.92 },  // Scenario 11, heading 045
+        { kLat_deg, 30013.0 * kFt_m,  431.05,   431.05 },  // Scenario 12, Mach 2
+        {  0.0,     10000.0 * kFt_m,    0.0,   -171.80 },  // equator, westbound
+        { 60.0,     5000.0,          -200.0,     50.0  },  // southbound, high latitude
+    };
+
+    constexpr double kOmega = Environment::WGS84::kRotationRate_rad_s;
+    constexpr double kE2    = Environment::WGS84::kEccentricitySq;
+    constexpr double kA     = Environment::WGS84::kSemiMajorAxis_m;
+
+    for (const auto& c : cases) {
+        INFO("lat=" << c.lat_deg << "  alt=" << c.alt_m << "  vN=" << c.vN << "  vE=" << c.vE);
+
+        const double lat0 = c.lat_deg * kDegRad;
+        const double w2   = 1.0 - kE2 * std::sin(lat0) * std::sin(lat0);
+        const double N    = kA / std::sqrt(w2);
+        const double M    = N * (1.0 - kE2) / w2;
+
+        const double latRate = c.vN / (M + c.alt_m);
+        const double lonRate = c.vE / ((N + c.alt_m) * std::cos(lat0));
+
+        const auto r_eci = [&](double t) {
+            const auto r_ecef = Coordinate::GeodeticToECEF(lat0 + latRate * t,
+                                                           lonRate * t, c.alt_m);
+            const auto r      = Coordinate::ECEFToECI(r_ecef, kOmega * t);
+            return Eigen::Vector3d(r[0], r[1], r[2]);
+        };
+
+        constexpr double dt = 1.0;
+        const Eigen::Vector3d a_eci = (r_eci(dt) - 2.0 * r_eci(0.0) + r_eci(-dt)) / (dt * dt);
+        const Eigen::Vector3d down(-std::cos(lat0), 0.0, -std::sin(lat0));
+
+        const double g_static = FlightDynamics::LevelFlightApparentGravity_m_s2(
+            c.lat_deg, c.alt_m, 0.0, 0.0)
+            + std::pow(kOmega * (N + c.alt_m) * std::cos(lat0), 2) / (N + c.alt_m);  // = G_D
+        const double g_app = FlightDynamics::LevelFlightApparentGravity_m_s2(
+            c.lat_deg, c.alt_m, c.vN, c.vE);
+
+        CHECK_THAT(g_static - g_app, WithinAbs(a_eci.dot(down), 1.0e-7));
+    }
+}
+
+TEST_CASE("TrimWeight: Eotvos effect has the right sign", "[trim][weight][apparent]")
+{
+    const double g_rest = FlightDynamics::LevelFlightApparentGravity_m_s2(kLat_deg, kAlt_m, 0.0,    0.0);
+    const double g_east = FlightDynamics::LevelFlightApparentGravity_m_s2(kLat_deg, kAlt_m, 0.0,  200.0);
+    const double g_west = FlightDynamics::LevelFlightApparentGravity_m_s2(kLat_deg, kAlt_m, 0.0, -200.0);
+
+    // Eastbound adds to the surface speed, westbound subtracts from it.
+    CHECK(g_east < g_rest);
+    CHECK(g_west > g_rest);
+
+    // Direction of a meridional leg does not matter.
+    CHECK_THAT(FlightDynamics::LevelFlightApparentGravity_m_s2(kLat_deg, kAlt_m,  200.0, 0.0),
+               WithinRel(FlightDynamics::LevelFlightApparentGravity_m_s2(kLat_deg, kAlt_m, -200.0, 0.0),
+                         1.0e-15));
+}
+
+TEST_CASE("TrimWeight: reproduces the NESC body-Z aero force at trim",
+    "[trim][weight][apparent]")
+{
+    // NASA TM-2015-218675 reference simulations 04 and 05 hold altitude through
+    // the whole trim check, so their t = 0 body-Z aero force is the apparent
+    // weight resolved on body Z (the F-16 thrust line has no Z component):
+    //   −FZ_aero = W_app · cos θ
+    struct Case { double alt_m, v_mps, theta_deg, refFz_lbf; };
+
+    const Case cases[] = {
+        { kAlt_m,           400.0  * kFt_m,       2.6389, 20401.30 },  // Scenario 11
+        { 30013.0 * kFt_m,  1414.2136 * kFt_m,   -0.7416, 20193.83 },  // Scenario 12
+    };
+
+    for (const auto& c : cases) {
+        INFO("alt=" << c.alt_m << "  v=" << c.v_mps);
+        const double w_app = FlightDynamics::LevelFlightTrimWeight_lbf(
+            kMass_kg, kLat_deg, c.alt_m, c.v_mps, c.v_mps);
+
+        CHECK_THAT(w_app * std::cos(c.theta_deg * kDegRad), WithinAbs(c.refFz_lbf, 1.0));
+
+        // The static weight misses by the full relief — 86 lbf and 275 lbf.
+        const double w_static = FlightDynamics::TrimWeight_lbf(kMass_kg, kLat_deg, c.alt_m);
+        CHECK(w_static - w_app > 80.0);
+    }
+}
+
+// =============================================================================
+// Level-flight body rates
+// =============================================================================
+
+TEST_CASE("TrimBodyRates: reproduce the NESC initial inertial pitch and roll rates",
+    "[trim][rates]")
+{
+    // bodyAngularRateWrtEi at t = 0 of NASA TM-2015-218675 reference simulation
+    // 05, [deg/s].  Inertial rate = Earth rate + transport rate, both resolved
+    // on body axes; BuildInitialStateVector supplies the first, the helper the
+    // second.  Yaw is not compared: simulation 05 carries the rhumb-line term
+    // −V_E tan φ/(N+h), which the helper leaves out on purpose.
+    struct Case { double alt_m, v_mps, theta_deg, refRoll_deg_s, refPitch_deg_s; };
+
+    const Case cases[] = {
+        { kAlt_m,           400.0     * kFt_m,  2.63893, 0.002533, -0.003939 },  // Scenario 11
+        { 30013.0 * kFt_m,  1414.2136 * kFt_m, -0.74158, 0.002309, -0.007864 },  // Scenario 12
+    };
+
+    constexpr double kHeading_deg = 45.0;
+    constexpr double kOmega       = Environment::WGS84::kRotationRate_rad_s;
+
+    for (const auto& c : cases) {
+        INFO("alt=" << c.alt_m << "  v=" << c.v_mps);
+
+        const auto rates = FlightDynamics::LevelFlightBodyRates(
+            kLat_deg, c.alt_m, c.v_mps, c.v_mps, kHeading_deg, c.theta_deg, 0.0);
+
+        // Earth rate in NED, then NED → body (yaw, pitch; roll = 0)
+        const double lat = kLat_deg * kDegRad, psi = kHeading_deg * kDegRad,
+                     the = c.theta_deg * kDegRad;
+        const double eN = kOmega * std::cos(lat), eD = -kOmega * std::sin(lat);
+        const double x1 =  std::cos(psi) * eN;
+        const double y1 = -std::sin(psi) * eN;
+        const double earthRoll  = std::cos(the) * x1 - std::sin(the) * eD;
+        const double earthPitch = y1;
+
+        CHECK_THAT((rates.pitch_rad_s + earthPitch) / kDegRad, WithinAbs(c.refPitch_deg_s, 2.0e-6));
+        // Roll differs by the omitted vertical term times sin θ — under 1e-4 °/s.
+        CHECK_THAT((rates.roll_rad_s  + earthRoll)  / kDegRad, WithinAbs(c.refRoll_deg_s,  1.0e-4));
+    }
+}
+
+TEST_CASE("TrimBodyRates: pitch rate is the transport rate, nose-down", "[trim][rates]")
+{
+    // Due north at the equator: the whole transport rate is about body −y.
+    const double v = 171.8, h = 3048.0;
+    const auto rates = FlightDynamics::LevelFlightBodyRates(0.0, h, v, 0.0, 0.0, 0.0, 0.0);
+    const auto radii = FlightDynamics::WGS84CurvatureRadii(0.0);
+
+    CHECK_THAT(rates.pitch_rad_s, WithinRel(-v / (radii.meridian_m + h), 1.0e-14));
+    CHECK_THAT(rates.roll_rad_s,  WithinAbs(0.0, 1.0e-18));
+    CHECK_THAT(rates.yaw_rad_s,   WithinAbs(0.0, 1.0e-18));
+
+    // Finite near the pole, where the rhumb-line yaw term would not be.
+    const auto polar = FlightDynamics::LevelFlightBodyRates(89.95, h, 0.0, v, 90.0, 2.7, 0.0);
+    CHECK(std::abs(polar.yaw_rad_s) < 1.0e-5);
 }
 
 TEST_CASE("TrimWeight: weight is linear in mass", "[trim][weight]")

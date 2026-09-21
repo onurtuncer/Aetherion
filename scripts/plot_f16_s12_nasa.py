@@ -1,24 +1,25 @@
 """
-plot_f16_s12_nasa02.py
+plot_f16_s12_nasa.py
 Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 
 Documentation-quality comparison of the Aetherion F-16 Case-12 simulation
-against the NASA TM-2015-218675 Atmos_12_sim_02 reference trajectory
+against the NASA TM-2015-218675 Atmos_12_sim_05 reference trajectory
 (F-16 supersonic steady straight-and-level flight, Mach ≈ 2.01, 30 013 ft,
 200 s).
 
 Usage
 -----
 Source-tree (repo root as working directory):
-    python scripts/plot_f16_s12_nasa02.py [sim_csv]
+    python scripts/plot_f16_s12_nasa.py [sim_csv] [nasa_ref]
 
 Build directory (after CMake copies this script next to the executable):
-    python plot_f16_s12_nasa02.py [sim_csv]
+    python plot_f16_s12_nasa.py [sim_csv] [nasa_ref]
 
     sim_csv  optional path to the simulation output CSV
              (default: f16_s12_sim.csv in the same directory as this script).
+    nasa_ref  optional NASA reference simulation: 02, 04 or 05 (default: 05).
 
-Outputs (doc/figures/f16_s12/ from source tree, or figures/f16_s12/ in build):
+Outputs (doc/_static/f16_s12/ from source tree, or figures/f16_s12/ in build):
     fig_flight_envelope.png   altitude, TAS, Mach
     fig_attitude.png          pitch, roll, yaw
     fig_body_rates.png        p, q, r
@@ -48,7 +49,14 @@ import pandas as pd
 
 _HERE = Path(__file__).resolve().parent
 
-_BUILD_NASA = _HERE / "Atmos_12_sim_02.csv"
+# NASA reference simulation: 05 unless a second argument says otherwise.
+# Simulations 04 and 05 start from a genuine trim.  Simulation 02 does not — in
+# the open-loop trim checks it drifts tens to hundreds of feet off altitude — so
+# an error measured against it is partly its own.  See "Trimming over a
+# rotating, curved Earth" in doc/examples.rst.
+NASA_REF = sys.argv[2] if len(sys.argv) > 2 else "05"
+
+_BUILD_NASA = _HERE / f"Atmos_12_sim_{NASA_REF}.csv"
 _IN_BUILD_DIR = _BUILD_NASA.exists()
 
 if _IN_BUILD_DIR:
@@ -58,7 +66,7 @@ if _IN_BUILD_DIR:
 else:
     _REPO    = _HERE.parent
     _SIM_DEFAULT = _REPO / "f16_s12_sim.csv"
-    NASA_CSV = _REPO / "data" / "Atmos_12_TrimCheckSupersonicF16" / "Atmos_12_sim_02.csv"
+    NASA_CSV = _REPO / "data" / "Atmos_12_TrimCheckSupersonicF16" / f"Atmos_12_sim_{NASA_REF}.csv"
     OUT_DIR  = _REPO / "doc" / "_static" / "f16_s12"
 
 SIM_CSV = Path(sys.argv[1]) if len(sys.argv) > 1 else _SIM_DEFAULT
@@ -219,7 +227,7 @@ def overview(t, sim_df, ref_df):
     nc, nr = 4, int(np.ceil(len(cols) / 4))
     fig, axes = plt.subplots(nr, nc, figsize=(nc * 3.8, nr * 2.6), squeeze=False)
     fig.suptitle(
-        "Aetherion F-16 Case 12 — Full Channel Comparison vs NASA Atmos_12_sim_02",
+        f"Aetherion F-16 Case 12 — Full Channel Comparison vs NASA Atmos_12_sim_{NASA_REF}",
         fontsize=12, fontweight="bold", y=1.01)
     for idx, col in enumerate(cols):
         r, c = divmod(idx, nc)

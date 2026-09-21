@@ -17,6 +17,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
+#include <Aetherion/Coordinate/LocalToInertial.h>
 #include <Aetherion/Environment/GeometricAltitude.h>
 #include <Aetherion/Environment/WindModels.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
@@ -41,7 +42,7 @@ TEST_CASE("GeometricAltitude_m: exact at equator", "[GeometricAltitude]")
 {
     const double h = 10'000.0;
     Eigen::Vector3d r_eci{ kA + h, 0.0, 0.0 };
-    // sin_gc = 0 → r_surface = a → altitude = h exactly
+    // cos_gc = 1 → r_surface = b/√(1−e²) = a → altitude = h exactly
     CHECK_THAT(Aetherion::Environment::GeometricAltitude_m(r_eci),
                WithinAbs(h, 1e-3));
 }
@@ -51,24 +52,29 @@ TEST_CASE("GeometricAltitude_m: exact at North Pole", "[GeometricAltitude]")
     const double h = 10'000.0;
     const double b = kA * (1.0 - kF);  // polar radius
     Eigen::Vector3d r_eci{ 0.0, 0.0, b + h };
-    // sin_gc = 1 → r_surface = a*(1-f) = b → altitude = h exactly
+    // cos_gc = 0 → r_surface = b → altitude = h exactly
     CHECK_THAT(Aetherion::Environment::GeometricAltitude_m(r_eci),
                WithinAbs(h, 1e-3));
 }
 
-TEST_CASE("GeometricAltitude_m: mid-latitude gives positive altitude", "[GeometricAltitude]")
+TEST_CASE("GeometricAltitude_m: agrees with the geodetic height at flight altitudes",
+          "[GeometricAltitude]")
 {
-    // Build ECI position consistently with the formula so the result is exact.
-    // Geocentric lat = 36 deg, h_geom = 3052 m
-    constexpr double lat_gc = 36.0 * kPi / 180.0;
-    constexpr double h_geom = 3052.0;
-    const double sin_gc  = std::sin(lat_gc);
-    const double r_surf  = kA * (1.0 - kF * sin_gc * sin_gc);
-    const double r       = r_surf + h_geom;
-    Eigen::Vector3d r_eci{ r * std::cos(lat_gc), 0.0, r * std::sin(lat_gc) };
+    // Positions built from the true geodetic height, not from the formula under
+    // test.  The first-order flattening expansion this replaced reads 24 m low
+    // at 36 deg N and 27 m low at 45 deg — 0.25 % in air density, enough to put
+    // a trimmed F-16 50 lbf out of balance on the first step.
+    for (const double lat_deg : { -60.0, 15.0, 36.01917, 45.0, 75.0 }) {
+        for (const double h : { 0.0, 3052.0, 9148.0, 15000.0 }) {
+            INFO("lat=" << lat_deg << "  h=" << h);
+            const auto r = Aetherion::Coordinate::GeodeticToECEF(
+                lat_deg * kPi / 180.0, 0.3, h);
+            const Eigen::Vector3d r_eci{ r[0], r[1], r[2] };
 
-    CHECK_THAT(Aetherion::Environment::GeometricAltitude_m(r_eci),
-               WithinAbs(h_geom, 1.0));
+            CHECK_THAT(Aetherion::Environment::GeometricAltitude_m(r_eci),
+                       WithinAbs(h, 0.1));
+        }
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

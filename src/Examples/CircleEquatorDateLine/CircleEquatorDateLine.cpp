@@ -25,6 +25,7 @@
 #include <Aetherion/Simulation/SnapshotTraits.h>
 #include <Aetherion/RigidBody/BuildInitialState.h>
 #include <Aetherion/FlightDynamics/Trim/TrimSolver.h>
+#include <Aetherion/FlightDynamics/Trim/TrimBodyRates.h>
 #include <Aetherion/FlightDynamics/Trim/TrimWeight.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
@@ -127,14 +128,20 @@ void CircleEquatorDateLineApplication::prepareSimulation() const
     auto ctrl_model = std::make_shared<const Serialization::DAVEMLControlModel>(controlPath);
 
     // ── 2. Trim solver at 10 000 ft / 563.643 ft/s ───────────────────────────
-    // Weight from the J2 field at the trim geodetic position — the same gravity
-    // J2GravityPolicy applies during integration.  Trimming against the sea-level
-    // constant 9.80665 m/s² would balance a force the integrator never applies.
-    const double weight_lbf = FlightDynamics::TrimWeight_lbf(ip.mass_kg, kLat_deg, kAlt_m);
+    // Apparent weight at the trim point: J2 attraction — the same gravity
+    // J2GravityPolicy applies during integration — less the centripetal relief of
+    // level flight over the rotating Earth.  Trimming against the static weight
+    // would leave the vehicle with excess lift on the first step.
+    const double weight_lbf = FlightDynamics::LevelFlightTrimWeight_lbf(
+        ip.mass_kg, kLat_deg, kAlt_m, kTAS_mps, 0.0);
     FlightDynamics::TrimInputs tin{};
     tin.vt_fps     = kTAS_fps;
     tin.alt_ft     = kAlt_ft;
     tin.weight_lbf = weight_lbf;
+    // Aero damping at the rate F16AeroPolicy will actually see — the transport
+    // rate.  Pitch attitude is not known yet and q does not depend on it.
+    tin.bodyRates  = FlightDynamics::LevelFlightBodyRates(
+        kLat_deg, kAlt_m, kTAS_mps, 0.0, kHeading_deg, 0.0, 0.0);
 
     AE_CORE_INFO("Running trim solver ...");
     const double xcg_ft = kXcgFromAC_m / FlightDynamics::TrimSolver::kFt_m;
@@ -159,9 +166,10 @@ void CircleEquatorDateLineApplication::prepareSimulation() const
     cfg.velocityNED.north_mps  = kTAS_mps;
     cfg.velocityNED.east_mps   = 0.0;
     cfg.velocityNED.down_mps   = 0.0;
-    cfg.bodyRates.roll_rad_s   = 0.0;
-    cfg.bodyRates.pitch_rad_s  = 0.0;
-    cfg.bodyRates.yaw_rad_s    = 0.0;
+    // Attitude held fixed against the local-level frame, which tips forward at the
+    // transport rate as the vehicle moves over the curved Earth.
+    cfg.bodyRates = FlightDynamics::LevelFlightBodyRates(
+        kLat_deg, kAlt_m, kTAS_mps, 0.0, kHeading_deg, trim.alpha_deg, 0.0);
     cfg.inertialParameters     = ip;
 
     const double theta0 = computeInitialERA(simCfg.startTime);

@@ -46,8 +46,9 @@ namespace Aetherion::FlightDynamics {
 ///  1. Derives atmosphere-relative airspeed in the body frame (ECI velocity
 ///     minus the Earth surface velocity R^T(ω_E × r_ECI)).
 ///  2. Converts to angle of attack (α), sideslip (β), and TAS in ft/s.
-///  3. Calls DAVEMLAeroModel::evaluate\<S\> with the current body rates and
-///     fixed control-surface deflections.
+///  3. Calls DAVEMLAeroModel::evaluate\<S\> with the body rates relative to the
+///     air mass (ω_B/ECI minus the Earth rate R^T ω_E) and fixed
+///     control-surface deflections.
 ///  4. Scales the dimensionless coefficients by qbar × Sref (and span/chord)
 ///     and converts lbf / ft·lbf → N / N·m.
 class F16AeroPolicy
@@ -118,8 +119,14 @@ public:
         // β = asin(v/V)
         const S beta_deg  = ArcSine(v / vt_mps) * S(180.0 / std::numbers::pi);
 
-        // ── Body angular rates (ECI-relative ≈ aerodynamic rates) ─────────────
-        const Eigen::Matrix<S, 3, 1> omega_B = nu_B.template head<3>();
+        // ── Body angular rates relative to the air mass ───────────────────────
+        // The atmosphere rotates with the Earth, so the rate the damping
+        // derivatives respond to is ω_B/ECEF, not the ECI-relative rate the state
+        // carries.  The difference is only 7.3e-5 rad/s, but it is steady: fed
+        // the inertial rate, roll damping works against the Earth-rate component
+        // along the nose and slowly banks a trimmed aircraft off its heading.
+        const Eigen::Matrix<S, 3, 1> omega_B =
+            nu_B.template head<3>() - g.R.transpose() * omega_E;
 
         // ── Geometric altitude and atmospheric density ────────────────────────
         const S alt_m    = Environment::GeometricAltitude_m(g.p);
