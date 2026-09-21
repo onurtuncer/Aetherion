@@ -8,14 +8,15 @@
 # Builds the F16Autopilot FMI 2.0 Co-Simulation FMU.
 #
 # The FMU wraps the NASA LaRC F16_control.dml LQR autopilot (Bruce Jackson, NASA TM-2015-218675) evaluated via
-# DAVEMLControlModel. F16_control.dml is staged into the FMU archive under resources/.
+# DAVEMLControlModel, and its circumnavigating variant F16_gnc.dml (scenarios 15 and 16), selected by the FMU's
+# `circumnavigate` parameter. Both files are staged into the FMU archive under resources/.
 # ------------------------------------------------------------------------------
 
 set(F16_DATA_DIR "${PROJECT_SOURCE_DIR}/data/F16_S119_source")
 
 set(F16AP_STAGED_RES "${CMAKE_BINARY_DIR}/f16autopilot_resources")
 file(MAKE_DIRECTORY "${F16AP_STAGED_RES}")
-file(COPY "${F16_DATA_DIR}/F16_control.dml" DESTINATION "${F16AP_STAGED_RES}")
+file(COPY "${F16_DATA_DIR}/F16_control.dml" "${F16_DATA_DIR}/F16_gnc.dml" DESTINATION "${F16AP_STAGED_RES}")
 
 generatefmu(
   F16Autopilot
