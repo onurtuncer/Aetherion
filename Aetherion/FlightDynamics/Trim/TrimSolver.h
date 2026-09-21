@@ -52,6 +52,7 @@
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
 #include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/RigidBody/BodyRates.h>
 
 #include <cppad/cppad.hpp>
 #include <Eigen/Dense>
@@ -67,9 +68,17 @@ namespace Aetherion::FlightDynamics {
 struct TrimInputs {
     double vt_fps    {};   ///< True airspeed [ft/s]
     double alt_ft    {};   ///< Geometric altitude [ft]
-    double weight_lbf{};   ///< Aircraft weight at trim [lbf]
+    double weight_lbf{};   ///< Apparent weight at trim [lbf] — see LevelFlightTrimWeight_lbf() in TrimWeight.h
     double beta_deg  {0.0};///< Sideslip angle [deg]  (0 for coordinated flight)
     double phi_deg   {0.0};///< Bank angle [deg]       (0 for wings-level)
+
+    /// Body rates the aero model is evaluated at [rad/s], relative to the air
+    /// mass.  Level flight over a curved Earth is not rate-free: the vehicle
+    /// pitches nose-down at the transport rate to stay level, and the aero
+    /// policy sees it — see LevelFlightBodyRates() in TrimBodyRates.h.  The
+    /// terms are small (C_mq·q̂ ~ 2e-6) but at Mach 2 enough to start a 40 ft
+    /// phugoid.
+    RigidBody::BodyRates bodyRates{};
 };
 
 /// @brief Trim solution returned by TrimSolver::solve().
@@ -162,7 +171,9 @@ TrimSolver::longi_residual(const TrimInputs& in,
     ai.vt_fps    = S(in.vt_fps);
     ai.alpha_deg = alpha_deg;
     ai.beta_deg  = S(in.beta_deg);
-    ai.p_rps = ai.q_rps = ai.r_rps = S(0.0);
+    ai.p_rps     = S(in.bodyRates.roll_rad_s);
+    ai.q_rps     = S(in.bodyRates.pitch_rad_s);
+    ai.r_rps     = S(in.bodyRates.yaw_rad_s);
     ai.el_deg  = el_deg;
     ai.ail_deg = ai.rdr_deg = S(0.0);
     const auto c = m_aero->evaluate<S>(ai);
@@ -194,7 +205,9 @@ TrimSolver::requiredThrust_lbf(const TrimInputs& in,
     ai.vt_fps    = in.vt_fps;
     ai.alpha_deg = alpha_deg;
     ai.beta_deg  = in.beta_deg;
-    ai.p_rps = ai.q_rps = ai.r_rps = 0.0;
+    ai.p_rps     = in.bodyRates.roll_rad_s;
+    ai.q_rps     = in.bodyRates.pitch_rad_s;
+    ai.r_rps     = in.bodyRates.yaw_rad_s;
     ai.el_deg = el_deg;
     ai.ail_deg = ai.rdr_deg = 0.0;
     const auto c = m_aero->evaluate<double>(ai);
@@ -301,7 +314,9 @@ TrimSolver::residual(const TrimInputs& in,
     ai.vt_fps    = in.vt_fps;
     ai.alpha_deg = alpha_deg;
     ai.beta_deg  = in.beta_deg;
-    ai.p_rps = ai.q_rps = ai.r_rps = 0.0;
+    ai.p_rps     = in.bodyRates.roll_rad_s;
+    ai.q_rps     = in.bodyRates.pitch_rad_s;
+    ai.r_rps     = in.bodyRates.yaw_rad_s;
     ai.el_deg = el_deg;
     ai.ail_deg = ai.rdr_deg = 0.0;
     const auto c = m_aero->evaluate<double>(ai);

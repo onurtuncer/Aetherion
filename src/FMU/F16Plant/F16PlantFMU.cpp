@@ -26,7 +26,7 @@
 //    lat0_deg         Geodetic latitude                  [deg]    def  36.019
 //    lon0_deg         Geodetic longitude                 [deg]    def -75.674
 //    heading0_deg     Heading (azimuth from North, NED)  [deg]    def  45.0
-//    roll0_deg        Initial pose roll angle            [deg]    def  -0.172
+//    roll0_deg        Initial pose roll angle            [deg]    def   0.0
 //    xcg_from_ac_ft   CG offset aft of AC (10%×c̄)      [ft]     def   1.132
 //    solver.abs_tol   Newton absolute residual tolerance [-]      def 1e-12
 //    solver.rel_tol   Newton relative residual tolerance [-]      def 1e-10
@@ -128,6 +128,7 @@
 
 // Trim solver
 #include <Aetherion/FlightDynamics/Trim/TrimSolver.h>
+#include <Aetherion/FlightDynamics/Trim/TrimBodyRates.h>
 #include <Aetherion/FlightDynamics/Trim/TrimWeight.h>
 
 // Serialization (DAVE-ML)
@@ -165,7 +166,7 @@ namespace {
     constexpr double kDefault_lat0_deg       =   36.01917;
     constexpr double kDefault_lon0_deg       =  -75.67444;
     constexpr double kDefault_heading0_deg   =   45.0;
-    constexpr double kDefault_roll0_deg      =   -0.172;
+    constexpr double kDefault_roll0_deg      =    0.0;     // wings-level, as NASA sims 04/05
     constexpr double kDefault_xcg_from_ac_ft =    1.132;   // (35%−25%) × 11.32 ft
 
     // Default solver tuning — match NewtonOptions defaults so behaviour is
@@ -266,16 +267,26 @@ public:
         m_theta0 = kOmegaEarth_rad_s * currentTime();
 
         // 4. Solve trim: find (alpha, elevator, throttle) for the given flight
-        //    condition.  The weight comes from the J2 field at the trim geodetic
-        //    position, so the solver balances the same gravity the integrator's
-        //    J2GravityPolicy applies.  Shared with the examples — see
-        //    Aetherion/FlightDynamics/Trim/TrimWeight.h.
-        const double weight_lbf =
-            AE_FD::TrimWeight_lbf(m_ip.mass_kg, p_lat0_deg_, p_alt0_ft_ * kFt_m);
+        //    condition.  The weight is the apparent weight at the trim point: the
+        //    J2 attraction the integrator's J2GravityPolicy applies, less the
+        //    centripetal relief of level flight over the rotating Earth.  Shared
+        //    with the examples — see Aetherion/FlightDynamics/Trim/TrimWeight.h.
+        //    Horizontal TAS decomposed along heading (no wind, no climb at trim).
+        const double vt_mps     = p_vt0_fps_ * kFt_m;
+        const double vNorth_mps = vt_mps * std::cos(p_heading0_deg_ * kDeg);
+        const double vEast_mps  = vt_mps * std::sin(p_heading0_deg_ * kDeg);
+
+        const double weight_lbf = AE_FD::LevelFlightTrimWeight_lbf(
+            m_ip.mass_kg, p_lat0_deg_, p_alt0_ft_ * kFt_m, vNorth_mps, vEast_mps);
         AE_FD::TrimInputs tin{};
         tin.vt_fps     = p_vt0_fps_;
         tin.alt_ft     = p_alt0_ft_;
         tin.weight_lbf = weight_lbf;
+        // Aero damping at the rate the aero policy will actually see: the
+        // transport rate.  Pitch is not known yet and q does not depend on it.
+        tin.bodyRates  = AE_FD::LevelFlightBodyRates(
+            p_lat0_deg_, p_alt0_ft_ * kFt_m, vNorth_mps, vEast_mps,
+            p_heading0_deg_, 0.0, p_roll0_deg_);
 
         AE_FD::TrimSolver solver(*m_aeroModel, *m_propModel, p_xcg_from_ac_ft_);
         const AE_FD::TrimPoint trim = solver.solve(tin);
@@ -290,14 +301,14 @@ public:
         cfg.pose.zenith_deg  = 90.0 - trim.alpha_deg;   // nearly horizontal, nose-up by alpha
         cfg.pose.roll_deg    = p_roll0_deg_;
 
-        // Horizontal TAS decomposed along heading (no downward component at trim)
-        const double vt_mps           = p_vt0_fps_ * kFt_m;
-        cfg.velocityNED.north_mps     = vt_mps * std::cos(p_heading0_deg_ * kDeg);
-        cfg.velocityNED.east_mps      = vt_mps * std::sin(p_heading0_deg_ * kDeg);
+        cfg.velocityNED.north_mps     = vNorth_mps;
+        cfg.velocityNED.east_mps      = vEast_mps;
         cfg.velocityNED.down_mps      = 0.0;
-        cfg.bodyRates.roll_rad_s      = 0.0;
-        cfg.bodyRates.pitch_rad_s     = 0.0;
-        cfg.bodyRates.yaw_rad_s       = 0.0;
+        // Attitude held fixed against the local-level frame, which tips forward
+        // at the transport rate as the vehicle moves over the curved Earth.
+        cfg.bodyRates = AE_FD::LevelFlightBodyRates(
+            p_lat0_deg_, p_alt0_ft_ * kFt_m, vNorth_mps, vEast_mps,
+            p_heading0_deg_, trim.alpha_deg, p_roll0_deg_);
         cfg.inertialParameters        = m_ip;
 
         const auto x0vec = AE_RB::BuildInitialStateVector(cfg, m_theta0);
