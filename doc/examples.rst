@@ -2320,7 +2320,8 @@ Running the solver at the Scenario-11 flight condition:
 
 .. code-block:: text
 
-   W     = 20 509 lbf   (637.16 slug × 32.189 ft/s² local gravity)
+   W     = 20 423 lbf   (637.16 slug × 32.053 ft/s² apparent gravity — static
+                         weight 20 509 lbf less 86 lbf rotating-Earth relief)
    V     = 565.685 ft/s  (335.15 KTAS)
    h     = 10 013 ft
    Mach  = 0.525
@@ -2328,17 +2329,202 @@ Running the solver at the Scenario-11 flight condition:
    x_cg_ac = 1.132 ft
 
    Stage 1 (2D Newton, 6 iterations):
-     α     = 2.656°       (NASA reference: 2.643°,  Δ = 0.013°)
-     δe    = −3.24°
+     α     = 2.6391°      (NASA sims 04 / 05: 2.6387° / 2.6389°)
+     δe    = −3.23°
 
    Stage 2 (bisection, 60 iterations):
-     F_EX_req = 2 368 lbf
-     pwr   = 13.90 %
+     F_EX_req = 2 361 lbf
+     pwr   = 13.87 %
 
-   Final residual: ‖r‖ = 5.3 × 10⁻⁷ lbf   (< 10⁻⁵ convergence threshold)
+   Final residual: ‖r‖ = 4.3 × 10⁻⁷ lbf   (< 10⁻⁵ convergence threshold)
 
-The angle-of-attack error relative to the NASA reference is **0.013°**, well
-within the expected numerical precision of the DAVE-ML table representation.
+The angle of attack lands inside the 0.0002° spread of the two NASA reference
+simulations that hold altitude.  :math:`W` here is the *apparent* weight of
+level flight, not the static one — the subject of the next section.
+
+.. _trim_rotating_earth:
+
+Trimming over a rotating, curved Earth
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Up to release 0.14.1 the solver above was fed the static weight
+:math:`m\,|\mathbf{g}_{J2}|` and returned :math:`\alpha = 2.656°` for
+Scenario 11, against a quoted NASA value of 2.643°.  The gap was put down to
+table precision.  It was not: released open-loop from that "trim", the vehicle
+climbed 89 ft in 180 s, and 714 ft at the Mach 2 Scenario-12 point.  Four
+things were wrong, all of them consequences of integrating in ECI while
+trimming as if the Earth were flat and still.
+
+**1. Apparent weight.**  J2 gravity is mass attraction only.  A vehicle holding
+constant geodetic altitude rides a curved path around a rotating Earth, and
+gravity supplies the centripetal acceleration of that path.  Only the remainder
+is carried by the wing:
+
+.. math::
+
+   g_\mathrm{app}
+   = G_D \;-\; \frac{V_N^2}{M+h}
+         \;-\; \frac{\bigl(V_E + \Omega\,(N+h)\cos\varphi\bigr)^2}{N+h}
+
+with :math:`G_D` the J2 attraction along the geodetic vertical, :math:`M` and
+:math:`N` the meridian and prime-vertical radii of curvature, and
+:math:`V_N, V_E` the Earth-relative velocity.  Expanding the square gives the
+three familiar pieces — centrifugal :math:`\Omega^2 (N+h)\cos^2\varphi`, Eötvös
+:math:`2\,\Omega V_E \cos\varphi`, and path curvature :math:`V^2/R`:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 14 14 14 14 14
+
+   * - Scenario
+     - Centrifugal
+     - Eötvös
+     - Curvature
+     - Relief
+     - Δα
+   * - 11 — M 0.53, heading 045°
+     - 0.0222
+     - 0.0144
+     - 0.0047
+     - 0.42 % (86 lbf)
+     - −0.0173°
+   * - 12 — M 2.0, heading 045°
+     - 0.0222
+     - 0.0509
+     - 0.0582
+     - 1.34 % (275 lbf)
+     - −0.0079°
+   * - 15 — 89.95° N, heading 090°
+     - 0.0000
+     - 0.0000
+     - 0.0046
+     - 0.05 % (10 lbf)
+     - −0.0019°
+   * - 16 — equator, heading 000°
+     - 0.0339
+     - 0.0000
+     - 0.0047
+     - 0.39 % (81 lbf)
+     - −0.0162°
+
+Accelerations are in m/s².  The relief depends on heading — an eastbound trim
+carries less lift than a westbound one — and at Mach 2 it is three times
+larger than subsonic, yet moves :math:`\alpha` by half as much: dynamic pressure
+is six times higher, so :math:`\partial\alpha/\partial W` falls from 0.041° to
+0.0059° per percent of weight.  Implemented as
+:cpp:func:`LevelFlightTrimWeight_lbf` in
+:file:`Aetherion/FlightDynamics/Trim/TrimWeight.h`.
+
+**2. The altitude the aero policy sees.**  :cpp:func:`GeometricAltitude_m`
+subtracted a first-order-in-flattening surface radius,
+:math:`a\,(1 - f\sin^2\lambda)`.  The dropped :math:`a f^2` term is not small:
+the result read 24 m low at 36° N (27 m at 45°), vanishing only at the equator
+and the poles.  The trim solver works from the geodetic altitude, so
+:cpp:class:`F16AeroPolicy` saw air 0.25 % denser than the trim had balanced —
+another 50 lbf of lift.  It now uses the exact ellipse radius
+:math:`b/\sqrt{1 - e^2\cos^2\lambda}`, good to 2 cm at 3 km.
+
+**3. Body rates.**  "Rates = 0" at trim means attitude fixed against the
+local-level frame, which itself tips forward at the transport rate
+:math:`V/(R+h)` as the vehicle moves over the curved surface, on top of the
+Earth's rotation.  :cpp:func:`LevelFlightBodyRates` supplies the transport rate
+to the initial state, and :cpp:member:`TrimInputs::bodyRates` lets the solver
+evaluate the aero damping terms at the same rate the aero policy will see.
+The terms are tiny — :math:`C_{m_q}\hat q \approx 2\times10^{-6}` — but at
+Mach 2 that moment alone starts a 44 ft phugoid.
+
+**4. Rates relative to the air, not to the stars.**  :cpp:class:`F16AeroPolicy`
+fed the ECI-relative body rate to the damping derivatives.  The atmosphere
+rotates with the Earth, so the rate that matters is
+:math:`\boldsymbol\omega_{B/\mathrm{ECEF}}`.  The difference is only
+7.3 × 10⁻⁵ rad/s, but it is steady: roll damping worked against the Earth-rate
+component along the nose and slowly banked the trimmed aircraft off its heading.
+Over 180 s of Scenario 11 that put the heading 0.9° from the NASA reference.
+The examples also inherited an initial bank of −0.172° from simulation 02;
+simulations 04 and 05 start wings-level, and so now do the examples and the
+``F16Plant`` default.
+
+With all four in place the trim agrees with the NASA reference simulations
+that hold altitude, at every F-16 trim point in the check-case set:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 16 16 16 16
+
+   * - Scenario
+     - 0.14.1
+     - Now
+     - NASA sim 04
+     - NASA sim 05
+   * - 11  α
+     - 2.65609°
+     - 2.63894°
+     - 2.63873°
+     - 2.63893°
+   * - 12  α
+     - −0.73376°
+     - −0.74156°
+     - −0.74158°
+     - −0.74158°
+   * - 15  α
+     - 2.68904°
+     - 2.68721°
+     - 2.68710°
+     - 2.68722°
+   * - 16  α
+     - 2.68153°
+     - 2.66540°
+     - 2.66529°
+     - 2.66540°
+   * - 11  F\ :sub:`Z` at t = 0
+     - −20 537.4 lbf
+     - −20 401.3 lbf
+     - −20 401.3 lbf
+     - −20 401.3 lbf
+   * - 12  F\ :sub:`Z` at t = 0
+     - −20 526.6 lbf
+     - −20 193.7 lbf
+     - −20 193.8 lbf
+     - −20 193.8 lbf
+   * - 11  max \|Δh\|, 180 s open loop
+     - 88.9 ft
+     - 0.1 ft
+     - 0.1 ft
+     - 0.1 ft
+   * - 12  max \|Δh\|, 180 s open loop
+     - 714 ft
+     - 0.6 ft
+     - 0.9 ft
+     - 0.1 ft
+   * - 11  heading at 180 s
+     - 43.97°
+     - 45.47°
+     - 45.53°
+     - 45.53°
+   * - 12  heading at 180 s
+     - 45.46°
+     - 46.14°
+     - 46.17°
+     - 46.17°
+
+.. warning::
+
+   **NASA simulation 02 is not a trim reference.**  The 2.643° figure quoted
+   throughout earlier versions of this page is the initial pitch of
+   ``Atmos_11_sim_02.csv``.  That simulation is itself out of trim against the
+   rotating-Earth terms: its body-Z force at t = 0 carries only part of the
+   relief (three quarters of it in Scenario 11, a third in Scenario 12), and
+   within 180 s it wanders 45 ft off altitude in Scenario 11 and 459 ft in
+   Scenario 12, where simulations 04 and 05 stay within a foot.  Matching
+   simulation 02's α therefore means reproducing part of its error.  Compare
+   trim quantities against simulations 04 and 05.
+
+One term is deliberately left out of the initial body rates: the rhumb-line
+part of the transport rate, :math:`-V_E\tan\varphi/(N+h)` about the vertical.
+Wings-level flight follows a great circle, along which the heading drifts on its
+own, and the term is singular at the pole.  NASA simulation 05 includes it and
+simulation 04 does not; their headings agree to 0.003° after 180 s, so it does
+not matter.
 
 Physics Model
 ^^^^^^^^^^^^^
@@ -2495,7 +2681,7 @@ and the CG offset are compile-time definitions in
    constexpr double kLon_deg      = -75.67444;
    constexpr double kAlt_ft       =  10013.0;
    constexpr double kHeading_deg  =  45.0;        // NE course
-   constexpr double kRoll_deg     =  -0.172;       // initial bank (NASA ref)
+   constexpr double kRoll_deg     =   0.0;         // wings-level, as NASA sims 04/05
    constexpr double kTAS_fps      =  565.685;      // 335.15 KTAS
 
    // CG distance aft of the aerodynamic reference centre (AC).
@@ -2526,12 +2712,12 @@ Expected startup log:
      Ixx=12874.8  Iyy=75673.6  Izz=85552.1  Ixz=1331.4  [kg·m²]
    Loading aero model from '.../F16_aero.dml'
    Loading prop model from '.../F16_prop.dml'
-   Running trim solver  (W = 20509.4 lbf, V = 565.68 ft/s, h = 10013 ft) ...
+   Running trim solver  (W = 20423.0 lbf, V = 565.68 ft/s, h = 10013 ft) ...
    Trim converged:
-     alpha = 2.6561 deg      ← within 0.013° of NASA reference (2.643°)
-     el    = -3.2422 deg
-     pwr   = 13.9046 %
-     |r|   = 5.3e-07 lbf
+     alpha = 2.6391 deg      ← NASA sims 04 / 05: 2.6387 / 2.6389 deg
+     el    = -3.2325 deg
+     pwr   = 13.8738 %
+     |r|   = 4.3e-07 lbf
    Propulsive wrench at trim:
      Fx = 9032 N  (2030 lbf)
      Fy = 0.0000 N,  Fz = 0.0000 N
@@ -2551,40 +2737,46 @@ convergence already at dt = 0.1 s:
 
    * - dt [s]
      - alt @ 200 s [ft]
-     - Δ vs NASA [ft]
+     - Δ vs t = 0 [ft]
      - pitch [°]
      - roll [°]
    * - 0.1
-     - 10 108.95
-     - +45.2
-     - 2.673
-     - −0.222
+     - 10 012.85
+     - −0.15
+     - 2.6388
+     - −0.080
    * - 0.05
-     - 10 108.95
-     - +45.2
-     - 2.673
-     - −0.222
+     - 10 012.85
+     - −0.15
+     - 2.6388
+     - −0.080
    * - 0.02
-     - 10 108.95
-     - +45.2
-     - 2.673
-     - −0.222
+     - 10 012.85
+     - −0.15
+     - 2.6388
+     - −0.080
    * - 0.01
-     - 10 108.95
-     - +45.2
-     - 2.673
-     - −0.222
+     - 10 012.85
+     - −0.15
+     - 2.6388
+     - −0.080
 
-The **+45 ft residual** vs the NASA reference at t = 200 s is due to
-slightly different numerical precision in the trim solution (0.013° pitch error at t = 0) and is *not* a time-step convergence issue.  
-The same +45 ft offset is present at all time steps, confirming that the two simulations are perfectly consistent 
-and that the NASA reference is not reporting altitude to the same precision as the DAVE-ML tables.
+The vehicle is released open-loop and stays within **0.15 ft** of the trim
+altitude for the whole 200 s, with pitch constant to 0.0001° — the signature of
+a trim that is a genuine equilibrium of the equations being integrated.  Up to
+release 0.14.1 the same run climbed 96 ft (and sat 45 ft above NASA simulation
+02, which climbs 51 ft itself); see :ref:`trim_rotating_earth` for what was
+missing.  NASA simulations 04 and 05 hold altitude to 0.1 ft over their 180 s.
+The slow roll to −0.08° is physical — the spiral mode answering the Coriolis
+acceleration — and simulation 05 shows the same (−0.073° at 180 s, against
+−0.078° here).
 
 Initial Condition Verification
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-At :math:`t = 0`, Aetherion's initial conditions should match the NASA
-reference to within floating-point precision:
+At :math:`t = 0`, Aetherion's initial conditions against NASA reference
+simulation 05 (simulation 02, plotted below, is not in trim — see
+:ref:`trim_rotating_earth`):
 
 .. list-table::
    :header-rows: 1
@@ -2594,14 +2786,14 @@ reference to within floating-point precision:
      - Aetherion (:math:`t = 0`)
      - NASA reference
    * - Pitch :math:`\theta`
-     - 2.656°
-     - 2.643°
+     - 2.6391°
+     - 2.6389°
    * - Yaw :math:`\psi`
      - 45.000°
      - 45.000°
    * - Roll :math:`\phi`
-     - −0.172°
-     - −0.172°
+     - 0.000°
+     - 0.000° (simulation 02: −0.172°)
    * - TAS
      - 172.42 m/s
      - 172.37 m/s (335.16 kt)
@@ -2615,11 +2807,11 @@ reference to within floating-point precision:
      - 23 100 N·m
      - 23 120 N·m (23 120 ft·lbf)
    * - :math:`F_Z` (aero, lift)
-     - −90 850 N
-     - −90 821 N (−20 424 lbf)
-   * - Body rates :math:`p, q, r`
-     - ≈ 0 (Earth-rate residual)
-     - 0.000°/s
+     - −90 749 N (−20 401.2 lbf)
+     - −90 749 N (−20 401.3 lbf)
+   * - Inertial body rates :math:`p, q`
+     - +0.00250, −0.00394 °/s
+     - +0.00253, −0.00394 °/s  (Earth rate + transport rate)
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^
@@ -2629,63 +2821,63 @@ Validation figures
    :alt: Case 11 simulation overview
 
    Scenario 11 simulation overview.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 .. figure:: _static/f16_s11/fig_flight_envelope.png
    :width: 100%
    :alt: Case 11 flight envelope (altitude, TAS, Mach)
 
    Scenario 11 flight envelope — altitude, TAS, Mach.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 .. figure:: _static/f16_s11/fig_attitude.png
    :width: 100%
    :alt: Case 11 Euler attitude angles
 
    Scenario 11 Euler attitude angles — pitch, roll, yaw.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 .. figure:: _static/f16_s11/fig_body_rates.png
    :width: 100%
    :alt: Case 11 body angular rates
 
    Scenario 11 body angular rates — roll, pitch, yaw rates.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 .. figure:: _static/f16_s11/fig_position.png
    :width: 100%
    :alt: Case 11 geodetic position
 
    Scenario 11 geodetic position — altitude, latitude, longitude.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 .. figure:: _static/f16_s11/fig_ned_velocity.png
    :width: 100%
    :alt: Case 11 NED velocity components
 
    Scenario 11 NED velocity components — North, East, Down.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 .. figure:: _static/f16_s11/fig_aero_forces.png
    :width: 100%
    :alt: Case 11 aerodynamic body forces
 
    Scenario 11 aerodynamic body forces — X, Y, Z.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 .. figure:: _static/f16_s11/fig_aero_moments.png
    :width: 100%
    :alt: Case 11 aerodynamic body moments
 
    Scenario 11 aerodynamic body moments — L, M, N.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 .. figure:: _static/f16_s11/fig_atmosphere.png
    :width: 100%
    :alt: Case 11 atmosphere
 
    Scenario 11 atmosphere — temperature, density, pressure.
-   Aetherion (blue dashed) vs NASA Atmos_11_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_11_sim_05 (red).
 
 
 .. _f16-case-12:
@@ -2706,11 +2898,14 @@ Key aerodynamic differences from Case 11:
 
 * At supersonic speed, wave drag dominates.  The required throttle rises from
   13.9 % (subsonic) to **56.9 %** to overcome the much higher drag.
-* The trim angle of attack is **−0.733°** (slightly nose-down) rather than
-  +2.643° (nose-up), because supersonic lift is generated more efficiently at
+* The trim angle of attack is **−0.742°** (slightly nose-down) rather than
+  +2.639° (nose-up), because supersonic lift is generated more efficiently at
   a lower α.
-* The trim elevator deflection is **−1.532°** (smaller and opposite direction
-  to the subsonic −3.242°) due to the different moment balance at Mach 2.
+* The trim elevator deflection is **−1.528°** (smaller than the subsonic
+  −3.233°) due to the different moment balance at Mach 2.
+* The rotating-Earth relief is three times larger than in Case 11 — 1.34 % of
+  the weight, 275 lbf — because both the Eötvös and the path-curvature terms
+  grow with speed.  See :ref:`trim_rotating_earth`.
 
 The reused class is ``F16SteadyFlightSimulator``; the only differences from
 Case 11 are the flight-condition constants compiled into
@@ -2756,22 +2951,22 @@ Trim Result
      - 2.0104
      - 2.01045
    * - α (trim)
-     - −0.733°
-     - −0.737°
+     - −0.7415°
+     - −0.7416° (sims 04 and 05; sim 02: −0.7366°)
    * - δ\ :sub:`e` (trim)
-     - −1.532°
+     - −1.528°
      - n/a (not tabulated in CSV)
    * - Throttle (trim)
-     - 56.90 %
+     - 56.89 %
      - n/a
    * - Thrust (trim)
-     - 54 099 N  (12 162 lbf)
+     - 54 083 N  (12 158 lbf)
      - n/a
    * - Speed of sound
      - 303.11 m/s  (994.44 ft/s)
      - 994.79 ft/s
 
-The trim solution agress with NASA solution within 0.004°.
+The trim solution agrees with NASA simulations 04 and 05 within 0.0001°.
 
 Step-Size Convergence
 ^^^^^^^^^^^^^^^^^^^^^
@@ -2790,20 +2985,20 @@ integrator converges to the same trajectory for all tested step sizes:
      - Mach
      - pitch [°]
    * - **0.10**
-     - **30 517.5**
-     - **+504.5** ✓
-     - **2.017266**
-     - **−0.496**
+     - **30 012.3**
+     - **−0.7** ✓
+     - **2.010434**
+     - **−0.742**
    * - 0.05
-     - 30 517.5
-     - +504.5 ✓
-     - 2.017266
-     - −0.496
+     - 30 012.3
+     - −0.7 ✓
+     - 2.010434
+     - −0.742
    * - 0.02
-     - 30 517.5
-     - +504.5 ✓
-     - 2.017266
-     - −0.496
+     - 30 012.3
+     - −0.7 ✓
+     - 2.010434
+     - −0.742
 
 dt = 0.1 s is recommended for Case 12 (10× faster than the closed-loop cases,
 no accuracy penalty).
@@ -2817,7 +3012,7 @@ Recommended Run Command
                      --outputFileName f16_s12_sim.csv
 
 The reference CSVs ``Atmos_12_sim_02/04/05.csv`` and the plot script
-``plot_f16_s12_nasa02.py`` are copied to the build directory post-build.
+``plot_f16_s12_nasa.py`` are copied to the build directory post-build.
 
 Validation Results at t = 200 s
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -2828,40 +3023,40 @@ Validation Results at t = 200 s
 
    * - Quantity
      - Aetherion
-     - NASA ref
+     - NASA sim 02
    * - Altitude
-     - 30 517.5 ft (9 301.7 m)
+     - 30 012.3 ft (9 147.8 m)
      - 30 256.9 ft (9 222.1 m)
    * - Δ altitude
-     - +504.5 ft
+     - −0.7 ft
      - +243.9 ft
    * - TAS
-     - 609.60 m/s  (1 184.9 KTAS)
+     - 609.59 m/s  (1 185.0 KTAS)
      - 610.06 m/s  (1 186.3 KTAS)
    * - Mach
-     - 2.017266
+     - 2.010434
      - 2.014849
    * - Pitch θ
-     - −0.496°
+     - −0.742°
      - −0.616°
    * - Roll φ
-     - −0.479°
+     - −0.177°
      - −0.559°
    * - Yaw ψ
-     - 45.470°
+     - 46.248°
      - 45.657°
 
 .. note::
 
-   Both simulations show a slow altitude climb over 200 s — this is the
-   phugoid (long-period) oscillation excited by the small trim mismatch.
-   Aetherion's drift (+504 ft) is approximately twice the NASA reference
-   (+244 ft). A trim α difference by 0.004°, produces a
-   small net positive lift and a slow climb whose rate grows with the
-   phugoid.  All remaining quantities (TAS, Mach, body rates) track the
-   NASA reference.
+   Simulation 02 is the only NASA reference that runs to 200 s, and it is not
+   in trim: it climbs 244 ft, peaking 459 ft high on the way.  Aetherion holds
+   the trim altitude to 0.7 ft over the same 200 s, as NASA simulations 04 and
+   05 do over their 180 s (0.9 ft and 0.1 ft).  Up to release 0.14.1 Aetherion
+   climbed 505 ft here; see :ref:`trim_rotating_earth`.  Against simulation 05 at
+   t = 180 s: yaw 46.143° vs 46.172°, roll −0.165° vs −0.149°, pitch
+   −0.7417° vs −0.7417°.  The figures below plot against simulation 05.
 
- 
+
 Validation Figures
 ^^^^^^^^^^^^^^^^^^
 
@@ -2870,63 +3065,63 @@ Validation Figures
    :alt: Case 12 simulation overview
 
    Case 12 simulation overview.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 .. figure:: _static/f16_s12/fig_flight_envelope.png
    :width: 100%
    :alt: Case 12 flight envelope (altitude, TAS, Mach)
 
    Case 12 flight envelope — altitude, TAS, Mach.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 .. figure:: _static/f16_s12/fig_attitude.png
    :width: 100%
    :alt: Case 12 Euler attitude angles
 
    Case 12 Euler attitude angles — pitch, roll, yaw.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 .. figure:: _static/f16_s12/fig_body_rates.png
    :width: 100%
    :alt: Case 12 body angular rates
 
    Case 12 body angular rates — roll, pitch, yaw rates.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 .. figure:: _static/f16_s12/fig_position.png
    :width: 100%
    :alt: Case 12 geodetic position
 
    Case 12 geodetic position — altitude, latitude, longitude.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 .. figure:: _static/f16_s12/fig_ned_velocity.png
    :width: 100%
    :alt: Case 12 NED velocity components
 
    Case 12 NED velocity components — North, East, Down.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 .. figure:: _static/f16_s12/fig_aero_forces.png
    :width: 100%
    :alt: Case 12 aerodynamic body forces
 
    Case 12 aerodynamic body forces — X, Y, Z.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 .. figure:: _static/f16_s12/fig_aero_moments.png
    :width: 100%
    :alt: Case 12 aerodynamic body moments
 
    Case 12 aerodynamic body moments — L, M, N.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 .. figure:: _static/f16_s12/fig_atmosphere.png
    :width: 100%
    :alt: Case 12 atmosphere
 
    Case 12 atmosphere — temperature, density, pressure.
-   Aetherion (blue dashed) vs NASA Atmos_12_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_12_sim_05 (red).
 
 
 .. _f16-scenario-13p1:
@@ -3027,7 +3222,7 @@ Recommended run command
                      --outputFileName f16_s13p1.csv
 
 The reference CSVs ``Atmos_13p1_sim_02/04/05.csv`` and the plot script
-``plot_f16_s13p1_nasa02.py`` are copied to the build directory post-build.
+``plot_f16_s13p1_nasa.py`` are copied to the build directory post-build.
 
 Controller architecture
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -3096,13 +3291,13 @@ Identical to Scenario 11 (same initial conditions):
      - Aetherion
      - NASA ref
    * - α (trim)
-     - 2.656°
-     - 2.643°
+     - 2.6391°
+     - 2.6389° (sim 05; sim 02: 2.6433°, not in trim)
    * - δ\ :sub:`e` (trim)
-     - −3.242°
+     - −3.233°
      - −3.24°
    * - Throttle (trim)
-     - 13.90 %
+     - 13.87 %
      - 13.90 %
 
 Validation results at t = 20 s (dt = 0.02 s)
@@ -3114,13 +3309,13 @@ Validation results at t = 20 s (dt = 0.02 s)
 
    * - Quantity
      - Aetherion
-     - NASA ref
+     - NASA sim 05
    * - Altitude
-     - 10 113.1 ft (3 082.5 m)
-     - 10 112.8 ft (3 082.4 m)
+     - 10 112.9 ft (3 082.4 m)
+     - 10 112.6 ft (3 082.3 m)
    * - Δ altitude (change from t=0)
-     - +100.1 ft
-     - +99.8 ft
+     - +99.9 ft
+     - +99.6 ft
    * - TAS
      - 172.69 m/s
      - 172.69 m/s
@@ -3128,17 +3323,17 @@ Validation results at t = 20 s (dt = 0.02 s)
      - 0.5261
      - 0.5261
    * - Pitch θ
-     - 2.650°
-     - 2.657°
+     - 2.660°
+     - 2.660°
    * - Roll φ
      - −0.10°
-     - −0.24°
+     - −0.10°
 
-Peak errors during the transient (t ≈ 5–15 s): altitude ±0.28 m, pitch
-±0.64°, roll ±0.16°.  These arise from the different phugoid phase between
-the full SE(3)/J₂ Aetherion model and the NASA reference.  The final state
-(t = 20 s) agrees to within **0.4 ft altitude**, **0.007° pitch**, and
-**0.14° roll**.
+Peak errors against simulation 05 over the 20 s: altitude ±0.11 m, pitch
+±0.63°, roll ±0.004°.  The pitch peak is confined to the first half
+second after the step, where the two zero-order-hold controllers sample the
+command at different instants.  The final state (t = 20 s) agrees to within
+**0.3 ft altitude** and **0.001°** in both pitch and roll.
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^
@@ -3148,63 +3343,63 @@ Validation figures
    :alt: Case 13.1 simulation overview
 
    Scenario 13.1 simulation overview.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 .. figure:: _static/f16_s13p1/fig_flight_envelope.png
    :width: 100%
    :alt: Case 13.1 flight envelope (altitude, TAS, Mach)
 
    Scenario 13.1 flight envelope — altitude, TAS, Mach.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 .. figure:: _static/f16_s13p1/fig_attitude.png
    :width: 100%
    :alt: Case 13.1 Euler attitude angles
 
    Scenario 13.1 Euler attitude angles — pitch, roll, yaw.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 .. figure:: _static/f16_s13p1/fig_body_rates.png
    :width: 100%
    :alt: Case 13.1 body angular rates
 
    Scenario 13.1 body angular rates — roll, pitch, yaw rates.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 .. figure:: _static/f16_s13p1/fig_position.png
    :width: 100%
    :alt: Case 13.1 geodetic position
 
    Scenario 13.1 geodetic position — altitude, latitude, longitude.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 .. figure:: _static/f16_s13p1/fig_ned_velocity.png
    :width: 100%
    :alt: Case 13.1 NED velocity components
 
    Scenario 13.1 NED velocity components — North, East, Down.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 .. figure:: _static/f16_s13p1/fig_aero_forces.png
    :width: 100%
    :alt: Case 13.1 aerodynamic body forces
 
    Scenario 13.1 aerodynamic body forces — X, Y, Z.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 .. figure:: _static/f16_s13p1/fig_aero_moments.png
    :width: 100%
    :alt: Case 13.1 aerodynamic body moments
 
    Scenario 13.1 aerodynamic body moments — L, M, N.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 .. figure:: _static/f16_s13p1/fig_atmosphere.png
    :width: 100%
    :alt: Case 13.1 atmosphere
 
    Scenario 13.1 atmosphere — temperature, density, pressure.
-   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p1_sim_05 (red).
 
 
 .. _f16-scenario-13p2:
@@ -3268,7 +3463,7 @@ Recommended run command
                      --outputFileName f16_s13p2_sim.csv
 
 The reference CSVs ``Atmos_13p2_sim_02/04/05.csv`` and the plot script
-``plot_f16_s13p2_nasa02.py`` are copied to the build directory post-build.
+``plot_f16_s13p2_nasa.py`` are copied to the build directory post-build.
 
 Validation results at t = 20 s (dt = 0.02 s)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3279,30 +3474,40 @@ Validation results at t = 20 s (dt = 0.02 s)
 
    * - Quantity
      - Aetherion
-     - NASA ref
+     - NASA sim 02
    * - Altitude
-     - 10 006.7 ft (3 050.1 m)
      - 10 006.4 ft (3 050.0 m)
+     - 10 006.4 ft (3 049.9 m)
    * - KEAS
      - 277.02 kt
      - 277.02 kt
    * - TAS
-     - 165.84 m/s (322.37 kt)
+     - 165.84 m/s (322.36 kt)
      - 165.84 m/s (322.37 kt)
    * - Mach
-     - 0.505014
+     - 0.505012
      - 0.505024
    * - Pitch θ
-     - 2.957°
+     - 2.970°
      - 2.969°
    * - Roll φ
      - −0.10°
      - −0.24°
 
 The final KEAS converges to **277.02 kt** against the 277.0 kt command
-(0.02 kt error). Altitude holds to within **0.3 ft** of the initial value.
-The transient altitude excursion during deceleration (t ≈ 5–15 s) is
-≤ 2.1 m, matching the NASA reference closely.
+(0.02 kt error).  The transient altitude excursion during deceleration
+(t ≈ 5–15 s) is ≤ 2.2 m, matching the NASA reference closely; the altitude loop
+is still recovering from it at t = 20 s.
+
+.. note::
+
+   This is the one F-16 scenario still compared against NASA simulation 02.
+   The NASA simulations do not fly the same manoeuvre here: simulation 02 steps
+   the command to 277 kt (−11 kt), which is what ``F16AirspeedChange``
+   reproduces, while simulations 04 and 05 step to 283 kt (−5 kt) and settle at
+   Mach 0.516.  Simulation 02 starts banked −0.172° and slightly out of trim
+   (see :ref:`trim_rotating_earth`), which is the whole of the 0.14° roll
+   difference above; the closed loop hides the rest.
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^
@@ -3448,7 +3653,7 @@ Recommended run command
                     --outputFileName f16_s13p3_sim.csv
 
 The reference CSVs ``Atmos_13p3_sim_02/04/05.csv`` and the plot script
-``plot_f16_s13p3_nasa02.py`` are copied to the build directory post-build.
+``plot_f16_s13p3_nasa.py`` are copied to the build directory post-build.
 
 Validation results at t = 30 s (dt = 0.02 s, chi step at t = 15 s)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3459,28 +3664,31 @@ Validation results at t = 30 s (dt = 0.02 s, chi step at t = 15 s)
 
    * - Quantity
      - Aetherion
-     - NASA ref
+     - NASA sim 05
    * - Altitude
-     - 10 013.8 ft (3 052.2 m)
+     - 10 013.6 ft (3 052.1 m)
      - 10 013.3 ft (3 052.0 m)
    * - TAS
      - 172.42 m/s (335.16 kt)
      - 172.42 m/s (335.16 kt)
    * - Mach
-     - 0.525077
      - 0.525075
+     - 0.525070
    * - Yaw ψ
      - 59.92°
-     - 59.94°
+     - 59.92°
    * - Pitch θ
-     - 2.617°
-     - 2.628°
+     - 2.627°
+     - 2.627°
    * - Roll φ
      - +0.82°
-     - +0.64°
+     - +0.79°
 
-The final yaw agrees to within **0.02°** of the NASA reference.
-TAS, Mach, and altitude match to within 0.002 kt and 0.5 ft throughout.
+The final yaw agrees to within **0.003°** of simulation 05, and altitude to
+0.7 ft throughout.  The peak errors — yaw ±2.5°, roll ±4.1° — last 0.6 s:
+the aircraft rolls into the turn at over 100 °/s, and the two zero-order-hold
+controllers sample the step at different instants.  Against simulation 02 the
+same roll peak is 14°.
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^
@@ -3490,7 +3698,7 @@ Validation figures
    :alt: Case 13.3 simulation overview
 
    Scenario 13.3 simulation overview.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 .. figure:: _static/f16_s13p3/fig_heading.png
    :width: 100%
@@ -3505,56 +3713,56 @@ Validation figures
    :alt: Case 13.3 flight envelope (altitude, TAS, Mach)
 
    Scenario 13.3 flight envelope — altitude, TAS, Mach.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 .. figure:: _static/f16_s13p3/fig_attitude.png
    :width: 100%
    :alt: Case 13.3 Euler attitude angles
 
    Scenario 13.3 Euler attitude angles — pitch, roll, yaw.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 .. figure:: _static/f16_s13p3/fig_body_rates.png
    :width: 100%
    :alt: Case 13.3 body angular rates
 
    Scenario 13.3 body angular rates — roll, pitch, yaw rates.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 .. figure:: _static/f16_s13p3/fig_position.png
    :width: 100%
    :alt: Case 13.3 geodetic position
 
    Scenario 13.3 geodetic position — altitude, latitude, longitude.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 .. figure:: _static/f16_s13p3/fig_ned_velocity.png
    :width: 100%
    :alt: Case 13.3 NED velocity components
 
    Scenario 13.3 NED velocity components — North, East, Down.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 .. figure:: _static/f16_s13p3/fig_aero_forces.png
    :width: 100%
    :alt: Case 13.3 aerodynamic body forces
 
    Scenario 13.3 aerodynamic body forces — X, Y, Z.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 .. figure:: _static/f16_s13p3/fig_aero_moments.png
    :width: 100%
    :alt: Case 13.3 aerodynamic body moments
 
    Scenario 13.3 aerodynamic body moments — L, M, N.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 .. figure:: _static/f16_s13p3/fig_atmosphere.png
    :width: 100%
    :alt: Case 13.3 atmosphere
 
    Scenario 13.3 atmosphere — temperature, density, pressure.
-   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p3_sim_05 (red).
 
 
 .. _f16-scenario-13p4:
@@ -3623,7 +3831,7 @@ Recommended run command
                       --outputFileName f16_s13p4.csv
 
 The reference CSVs ``Atmos_13p4_sim_02/04/05.csv`` and the plot script
-``plot_f16_s13p4_nasa02.py`` are copied to the build directory post-build.
+``plot_f16_s13p4_nasa.py`` are copied to the build directory post-build.
 
 Validation results at t = 60 s (dt = 0.02 s, lat step at t = 20 s)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -3634,10 +3842,10 @@ Validation results at t = 60 s (dt = 0.02 s, lat step at t = 20 s)
 
    * - Quantity
      - Aetherion
-     - NASA ref
+     - NASA sim 05
    * - Altitude
-     - 10 013.5 ft (3 052.1 m)
-     - 10 013.1 ft (3 052.0 m)
+     - 10 013.3 ft (3 052.1 m)
+     - 10 013.0 ft (3 052.0 m)
    * - TAS
      - 172.42 m/s (335.16 kt)
      - 172.42 m/s (335.16 kt)
@@ -3646,19 +3854,20 @@ Validation results at t = 60 s (dt = 0.02 s, lat step at t = 20 s)
      - 0.5251
    * - Yaw ψ
      - 45.28°
-     - 45.15°
+     - 45.17°
    * - Roll φ
      - −0.74°
-     - −0.87°
+     - −0.72°
    * - Lateral deviation
      - 1 980 ft
      - —
 
-The aircraft returns to within **0.28°** of the base course heading at t = 60 s.
-Altitude holds to within **0.6 ft** of the commanded 10 013 ft throughout.
-Peak errors during the turn (t ≈ 20–45 s): yaw ±2.9°, roll ±14.2° — these
-arise from the different lateral-dynamics phugoid phase between the full
-SE(3)/J₂ Aetherion model and the NASA reference running at dt = 0.1 s.
+The aircraft returns to within **0.28°** of the base course heading at t = 60 s
+(simulation 05: 0.17°).  Altitude stays within **6.5 ft** of the commanded 10 013 ft
+through the manoeuvre, and within 0.7 ft of simulation 05.  Peak errors during
+the turn entry: yaw ±2.3°, roll ±3.7° — 0.6 s of different zero-order-hold
+sampling while the aircraft rolls at over 100 °/s; against simulation 02 the same
+roll peak is 14°.
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^
@@ -3668,7 +3877,7 @@ Validation figures
    :alt: Case 13.4 simulation overview
 
    Scenario 13.4 simulation overview.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 .. figure:: _static/f16_s13p4/fig_lateral.png
    :width: 100%
@@ -3682,56 +3891,56 @@ Validation figures
    :alt: Case 13.4 flight envelope (altitude, TAS, Mach)
 
    Scenario 13.4 flight envelope — altitude, TAS, Mach.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 .. figure:: _static/f16_s13p4/fig_attitude.png
    :width: 100%
    :alt: Case 13.4 Euler attitude angles
 
    Scenario 13.4 Euler attitude angles — pitch, roll, yaw.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 .. figure:: _static/f16_s13p4/fig_body_rates.png
    :width: 100%
    :alt: Case 13.4 body angular rates
 
    Scenario 13.4 body angular rates — roll, pitch, yaw rates.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 .. figure:: _static/f16_s13p4/fig_position.png
    :width: 100%
    :alt: Case 13.4 geodetic position
 
    Scenario 13.4 geodetic position — altitude, latitude, longitude.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 .. figure:: _static/f16_s13p4/fig_ned_velocity.png
    :width: 100%
    :alt: Case 13.4 NED velocity components
 
    Scenario 13.4 NED velocity components — North, East, Down.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 .. figure:: _static/f16_s13p4/fig_aero_forces.png
    :width: 100%
    :alt: Case 13.4 aerodynamic body forces
 
    Scenario 13.4 aerodynamic body forces — X, Y, Z.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 .. figure:: _static/f16_s13p4/fig_aero_moments.png
    :width: 100%
    :alt: Case 13.4 aerodynamic body moments
 
    Scenario 13.4 aerodynamic body moments — L, M, N.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 .. figure:: _static/f16_s13p4/fig_atmosphere.png
    :width: 100%
    :alt: Case 13.4 atmosphere
 
    Scenario 13.4 atmosphere — temperature, density, pressure.
-   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_13p4_sim_05 (red).
 
 
 .. _f16-scenario-15:
@@ -3893,7 +4102,7 @@ Recommended run command
 The reference CSVs ``Atmos_15_sim_02/04/05.csv`` are copied to the build
 directory post-build.
 
-Validation results (NASA reference ``Atmos_15_sim_02``)
+Validation results (NASA reference ``Atmos_15_sim_05``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The table below shows the NASA reference trajectory at selected time steps.
@@ -3917,66 +4126,66 @@ circumnavigation (constant altitude, roll, and TAS) for the remaining 150 s.
      - 89.9500
      - −45.000
      - 90.00
-     - 2.689
-     - −0.083
+     - 2.687
+     - 0.000
      - 0.5231
    * - 30
-     - 9 995.15
-     - 89.9485
-     - +7.029
-     - 88.53
-     - 2.876
-     - −29.993
+     - 9 994.28
+     - 89.9486
+     - +6.889
+     - 88.26
+     - 2.861
+     - −29.996
      - 0.5231
    * - 60
-     - 9 995.75
+     - 9 994.93
      - 89.9488
-     - +58.704
+     - +58.449
      - 88.57
-     - 2.854
-     - −28.106
+     - 2.839
+     - −28.027
      - 0.5231
    * - 90
-     - 9 995.71
+     - 9 994.91
      - 89.9488
-     - +110.497
-     - 88.61
-     - 2.855
-     - −28.211
+     - +110.075
+     - 88.59
+     - 2.840
+     - −28.077
      - 0.5231
    * - 120
-     - 9 995.71
+     - 9 994.91
      - 89.9488
-     - +162.292
-     - 88.61
-     - 2.855
-     - −28.212
+     - +161.701
+     - 88.59
+     - 2.840
+     - −28.077
      - 0.5231
    * - 150
-     - 9 995.71
+     - 9 994.91
      - 89.9488
-     - −145.913
-     - 88.61
-     - 2.855
-     - −28.212
+     - −146.673
+     - 88.59
+     - 2.840
+     - −28.077
      - 0.5231
    * - 180
-     - 9 995.71
+     - 9 994.91
      - 89.9488
-     - −94.119
-     - 88.61
-     - 2.855
-     - −28.212
+     - −95.046
+     - 88.59
+     - 2.840
+     - −28.077
      - 0.5231
 
 Key observations from the reference trajectory:
 
-* **Altitude** holds within **5 ft** of the commanded 10 000 ft after the
+* **Altitude** holds within **6 ft** of the commanded 10 000 ft after the
   initial transient, confirming the altitude-hold autopilot is functioning.
-* **Bank angle** stabilises at **−28.2°** (left bank) from t ≈ 60 s onward,
+* **Bank angle** stabilises at **−28.1°** (left bank) from t ≈ 60 s onward,
   consistent with the analytical prediction of −28.3° for a 3-nmi radius turn.
-* **Longitude** advances by ≈ **51.8°** per 30 s at steady state
-  (longitude rate ≈ 1.73°/s), equivalent to a ~203-second orbital period
+* **Longitude** advances by ≈ **51.6°** per 30 s at steady state
+  (longitude rate ≈ 1.72°/s), equivalent to a ~209-second orbital period
   and a ground-track of 34 900 m per circuit.
 * The vehicle crosses the **antimeridian (±180°)** between t = 120 s and
   t = 150 s without any discontinuity in the physical trajectory, confirming
@@ -4009,62 +4218,63 @@ tolerance at all checkpoints.
      - 89.9500
      - −45.000
      - 90.00
-     - 2.682
-     - −0.000
+     - 2.687
+     - 0.000
      - 0.5231
    * - 30
-     - 9 994.8
+     - 9 994.26
      - 89.9486
-     - +7.162
-     - 88.70
-     - 2.878
-     - −30.00
-     - 0.5232
+     - +6.884
+     - 88.30
+     - 2.862
+     - −29.995
+     - 0.5231
    * - 60
-     - 9 995.6
+     - 9 994.91
      - 89.9488
-     - +58.777
-     - 88.59
-     - 2.854
-     - −28.10
+     - +58.436
+     - 88.57
+     - 2.840
+     - −28.042
      - 0.5231
    * - 90
-     - 9 995.5
+     - 9 994.89
      - 89.9488
-     - +110.556
+     - +110.061
      - 88.59
-     - 2.855
-     - −28.10
+     - 2.841
+     - −28.098
      - 0.5231
    * - 120
-     - 9 995.5
+     - 9 994.89
      - 89.9488
-     - +162.349
-     - 88.60
-     - 2.856
-     - −28.10
+     - +161.686
+     - 88.59
+     - 2.841
+     - −28.099
      - 0.5231
    * - 150
-     - 9 995.5
+     - 9 994.89
      - 89.9488
-     - −145.859
-     - 88.60
-     - 2.856
-     - −28.10
+     - −146.688
+     - 88.59
+     - 2.841
+     - −28.099
      - 0.5231
    * - 180
-     - 9 995.1
+     - 9 994.89
      - 89.9488
-     - −95.062
-     - 88.60
+     - −95.063
+     - 88.59
      - 2.841
-     - −28.10
+     - −28.099
      - 0.5231
 
-The maximum latitude error is **< 0.0003°** (< 20 m) throughout the
-trajectory.  The steady-state roll error is **< 0.1°** and altitude is
-held within **5 ft** of 10 000 ft from t = 30 s onward — both well within
-the tolerance of the NASA reference for this scenario.
+Against simulation 05 the maximum latitude error is **0.000017°** (2 m) and the
+maximum longitude error **0.0164°** over the whole trajectory; altitude agrees to
+**0.10 ft**.  Roll agrees to 0.02° from t = 60 s onward (0.6° peak while the
+circle is being captured), and altitude is held within **5.7 ft** of 10 000 ft from
+t = 30 s onward.
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^
@@ -4076,14 +4286,14 @@ Validation figures
    Scenario 15 orbit radius (top) and longitude progression (bottom).
    The circumnavigator holds the aircraft within **< 0.003 nmi** of the
    commanded 3-nmi circle from t ≈ 30 s onward.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_overview.png
    :width: 100%
    :alt: Case 15 simulation overview
 
    Scenario 15 simulation overview — 180 s north-pole circumnavigation.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_position.png
    :width: 100%
@@ -4091,7 +4301,7 @@ Validation figures
 
    Scenario 15 geodetic position — altitude, latitude, and longitude (note
    the antimeridian crossing near t = 135 s).
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_attitude.png
    :width: 100%
@@ -4099,49 +4309,49 @@ Validation figures
 
    Scenario 15 Euler attitude angles — pitch, roll, yaw.
    The roll settles to ≈ −28° once the vehicle intercepts the circular track.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_flight_envelope.png
    :width: 100%
    :alt: Case 15 flight envelope
 
    Scenario 15 flight envelope — altitude, TAS, Mach.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_body_rates.png
    :width: 100%
    :alt: Case 15 body angular rates
 
    Scenario 15 body angular rates — roll, pitch, yaw rates.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_ned_velocity.png
    :width: 100%
    :alt: Case 15 NED velocity components
 
    Scenario 15 NED velocity components — North, East, Down.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_aero_forces.png
    :width: 100%
    :alt: Case 15 aerodynamic body forces
 
    Scenario 15 aerodynamic body forces — X, Y, Z.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_aero_moments.png
    :width: 100%
    :alt: Case 15 aerodynamic body moments
 
    Scenario 15 aerodynamic body moments — L, M, N.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. figure:: _static/f16_s15/fig_atmosphere.png
    :width: 100%
    :alt: Case 15 atmosphere
 
    Scenario 15 atmosphere — temperature, density, pressure.
-   Aetherion (blue dashed) vs NASA Atmos_15_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_15_sim_05 (red).
 
 .. _f16-scenario-16:
 
@@ -4309,7 +4519,7 @@ Recommended run command
 The reference CSVs ``Atmos_16_sim_02/04/05.csv`` are copied to the build
 directory post-build.
 
-Validation results (NASA reference ``Atmos_16_sim_02``)
+Validation results (NASA reference ``Atmos_16_sim_05``)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The table below compares NASA and Aetherion trajectories at selected
@@ -4333,56 +4543,56 @@ sustains steady-state circumnavigation for the remaining 150 s.
      - 0.0000
      - −179.950
      - 0.00
-     - 2.667
+     - 2.665
      - 0.000
      - 0.5231
    * - 30
-     - 9 995.01
-     - +0.0407
+     - 9 994.56
+     - +0.0408
      - −179.968
-     - −53.30
-     - 2.862
-     - −29.993
+     - −53.73
+     - 2.847
+     - −29.996
      - 0.5231
    * - 60
-     - 9 995.61
-     - +0.0498
+     - 9 995.25
+     - +0.0497
      - +179.988
-     - −105.10
-     - 2.839
-     - −27.966
+     - −105.36
+     - 2.825
+     - −27.785
      - 0.5231
    * - 90
-     - 9 995.63
-     - +0.0213
+     - 9 995.19
+     - +0.0209
      - +179.953
-     - −156.81
-     - 2.838
-     - −28.193
+     - −157.08
+     - 2.825
+     - −28.316
      - 0.5231
    * - 120
-     - 9 995.80
-     - −0.0234
+     - 9 995.33
+     - −0.0240
      - +179.955
-     - +151.39
-     - 2.829
-     - −28.249
+     - +150.53
+     - 2.818
+     - −28.449
      - 0.5231
    * - 150
-     - 9 995.91
-     - −0.0503
-     - +179.990
-     - +99.59
-     - 2.824
-     - −28.281
+     - 9 995.55
+     - −0.0504
+     - +179.991
+     - +98.59
+     - 2.809
+     - −28.126
      - 0.5231
    * - 180
-     - 9 995.88
-     - −0.0387
-     - −179.967
-     - +47.80
-     - 2.826
-     - −28.267
+     - 9 995.50
+     - −0.0382
+     - −179.966
+     - +47.03
+     - 2.811
+     - −28.206
      - 0.5231
 
 Key observations from the reference trajectory:
@@ -4415,66 +4625,67 @@ Aetherion simulation results
      - Roll [°]
      - Mach
    * - 0
-     - 10 000.03
-     - 0.0001
+     - 10 000.00
+     - 0.0000
      - −179.950
      - 0.00
-     - 2.669
-     - −0.175
-     - 0.5232
+     - 2.665
+     - 0.000
+     - 0.5231
    * - 30
-     - 9 994.56
-     - +0.0409
+     - 9 994.55
+     - +0.0408
      - −179.968
-     - −53.29
+     - −53.69
      - 2.848
-     - −30.00
+     - −29.995
      - 0.5231
    * - 60
-     - 9 995.25
+     - 9 995.24
      - +0.0497
      - +179.988
-     - −104.97
+     - −105.35
      - 2.825
-     - −27.79
+     - −27.785
      - 0.5231
    * - 90
-     - 9 995.18
+     - 9 995.17
      - +0.0209
      - +179.953
-     - −156.59
+     - −157.06
      - 2.826
-     - −28.34
+     - −28.337
      - 0.5231
    * - 120
-     - 9 995.31
-     - −0.0241
+     - 9 995.32
+     - −0.0240
      - +179.955
-     - +151.53
+     - +150.55
      - 2.819
-     - −28.47
+     - −28.471
      - 0.5231
    * - 150
      - 9 995.54
      - −0.0504
      - +179.991
-     - +99.71
+     - +98.62
      - 2.810
-     - −28.15
+     - −28.147
      - 0.5231
    * - 180
-     - 9 995.48
+     - 9 995.49
      - −0.0382
      - −179.966
-     - +47.81
+     - +47.05
      - 2.812
-     - −28.23
+     - −28.227
      - 0.5231
 
-The maximum latitude error is **< 0.0006°** (< 65 m) throughout the
-trajectory.  Longitude error is **< 0.002°** at all checkpoints.
-The steady-state roll error is **< 0.3°** and altitude is held within
-**7 ft** of 10 000 ft from t = 30 s onward.
+Against simulation 05 the maximum latitude error is **0.000019°** (2 m) and the
+maximum longitude error **0.0000°** over the whole trajectory; altitude agrees to
+**0.12 ft**.  Roll agrees to 0.02° from t = 60 s onward (0.8° peak while the
+circle is being captured), and altitude is held within **5.5 ft** of 10 000 ft from
+t = 30 s onward.
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^
@@ -4487,14 +4698,14 @@ Validation figures
    latitude oscillation (bottom).  The circumnavigator holds the aircraft
    within **< 0.01 nmi** of the commanded 3-nmi circle from t ≈ 30 s
    onward, and the orbit straddles the equator symmetrically.
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_overview.png
    :width: 100%
    :alt: Case 16 simulation overview
 
    Scenario 16 simulation overview — 180 s equator/date-line
-   circumnavigation.  Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   circumnavigation.  Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_position.png
    :width: 100%
@@ -4502,7 +4713,7 @@ Validation figures
 
    Scenario 16 geodetic position — altitude, latitude, and longitude
    (note the two date-line crossings near t = 45 s and t = 165 s).
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_attitude.png
    :width: 100%
@@ -4511,49 +4722,49 @@ Validation figures
    Scenario 16 Euler attitude angles — pitch, roll, yaw.
    The roll settles to ≈ −28° once the vehicle intercepts the circular
    track; the yaw wraps through ±180° during the orbit.
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_flight_envelope.png
    :width: 100%
    :alt: Case 16 flight envelope
 
    Scenario 16 flight envelope — altitude, TAS, Mach.
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_body_rates.png
    :width: 100%
    :alt: Case 16 body angular rates
 
    Scenario 16 body angular rates — roll, pitch, yaw rates.
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_ned_velocity.png
    :width: 100%
    :alt: Case 16 NED velocity components
 
    Scenario 16 NED velocity components — North, East, Down.
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_aero_forces.png
    :width: 100%
    :alt: Case 16 aerodynamic body forces
 
    Scenario 16 aerodynamic body forces — X, Y, Z.
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_aero_moments.png
    :width: 100%
    :alt: Case 16 aerodynamic body moments
 
    Scenario 16 aerodynamic body moments — L, M, N.
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. figure:: _static/f16_s16/fig_atmosphere.png
    :width: 100%
    :alt: Case 16 atmosphere
 
    Scenario 16 atmosphere — temperature, density, pressure.
-   Aetherion (blue dashed) vs NASA Atmos_16_sim_02 (red).
+   Aetherion (blue dashed) vs NASA Atmos_16_sim_05 (red).
 
 .. _example_two_stage_rocket:
 

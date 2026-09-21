@@ -37,7 +37,8 @@ the concrete interface contract: the port names a consumer binds against.
    * - ``F16Autopilot``
      - Controller
      - LQR SAS inner loop with altitude, airspeed and heading hold, from the
-       NASA LaRC ``F16_control.dml`` gain set.
+       NASA LaRC ``F16_control.dml`` gain set; optionally the circumnavigating
+       ``F16_gnc.dml`` variant for scenarios 15 and 16.
    * - ``TwoStageRocket``
      - Truth plant
      - Two-stage rocket 6-DoF with variable inertia, propellant burn and stage
@@ -76,7 +77,10 @@ build step that packages the archive, so the two cannot disagree.
    coincide because fmu4cpp is built as part of this project.
 
 ``specificForce_{x,y,z}_m_s2`` on ``F16Plant`` and ``TwoStageRocket`` first ship
-in **0.14.0**.
+in **0.14.0**.  ``circumnavigate``, ``cmd.circlePoleSW``, ``fb.lat_deg`` and
+``fb.lon_deg`` on ``F16Autopilot`` first ship in the release after **0.14.1**;
+the same release is the first in which ``F16Plant`` trims against the
+level-flight apparent weight (see :ref:`fmu_f16plant`).
 
 .. _fmu_conventions:
 
@@ -97,7 +101,10 @@ axes.
 
 **Body rates.** ``out.{p,q,r}_rad_s`` are with respect to the **ECI** frame, not
 the local level frame.  The difference is Earth's rotation rate, 7.29 × 10⁻⁵
-rad/s, which matters for a strapdown gyro model and not much else.
+rad/s, which matters for a strapdown gyro model and — because it is steady — for
+aerodynamic damping: ``F16Plant`` evaluates its damping derivatives at the rate
+relative to the air mass, :math:`\omega_{B/\mathrm{ECEF}}`, not at these
+outputs.
 
 **Units** are SI in the ``out.`` block, with the unit carried in the port name
 suffix.  Initial-condition parameters keep the units of the source NASA scenario
@@ -177,6 +184,14 @@ condition, and seeds the integration state from the trim point; the elevator and
 throttle inputs are initialised to their trim values, so an open-loop run with
 untouched inputs starts in trim.
 
+The trim balances the **apparent** weight of level flight, not the static one:
+J2 attraction at ``lat0_deg`` / ``alt0_ft``, less the centripetal acceleration
+of a constant-altitude path over the rotating Earth at ``vt0_fps`` along
+``heading0_deg``.  The relief is 0.42 % of the weight at the scenario-11
+defaults and 1.34 % at the Mach 2 scenario-12 point, and it depends on heading:
+an eastbound trim carries less lift than a westbound one.  See
+:file:`Aetherion/FlightDynamics/Trim/TrimWeight.h`.
+
 Parameters
 ~~~~~~~~~~
 
@@ -210,8 +225,10 @@ Parameters
      - Initial heading, azimuth from North in NED.
    * - ``roll0_deg``
      - deg
-     - −0.172
-     - Initial pose roll angle.
+     - 0
+     - Initial pose roll angle.  Wings-level, as NASA reference simulations 04
+       and 05; up to 0.14.1 the default was −0.172°, the initial bank of
+       simulation 02.
    * - ``xcg_from_ac_ft``
      - ft
      - 1.132
@@ -374,19 +391,66 @@ F16Autopilot
 ------------
 
 LQR stability-augmentation inner loop with altitude, airspeed and heading hold,
-driving ``F16Plant`` in closed loop.  The FMU is stateless apart from the
-controller's own integrators; it has no parameters.
+driving ``F16Plant`` in closed loop.  The control law is purely algebraic, so
+the FMU carries no state.
 
 Wiring is direct: every ``fb.*`` input is fed from the identically named
 ``F16Plant`` output, and the four ``ctrl.*`` outputs go back to the plant's
 ``ctrl.*`` inputs.
 
-.. note::
+Every input starts at the scenario-11 trim point, so the initial outputs are at
+trim when the master sets nothing.  Values written during initialisation mode
+are honoured — up to 0.14.1 the FMU re-seeded its inputs on
+``fmi2ExitInitializationMode``, which silently replaced, for instance, a
+10 000 ft altitude command with 10 013 ft unless the master wrote it again
+before the first step.
 
-   The circumnavigator inputs of ``F16_gnc.dml`` (ownship north/east offset,
-   pole-crossing flag) are currently hardcoded off.  The polar and date-line
-   scenarios, Atmos_15 and Atmos_16, need that path exposed before they can be
-   flown closed-loop against the NASA reference steering.
+Control law selection
+~~~~~~~~~~~~~~~~~~~~~
+
+The archive carries two NASA control laws.  ``F16_gnc.dml`` is
+``F16_control.dml`` with a navigator in front of the heading loop: the course
+and lateral-offset commands stop being inputs and are computed from the ownship
+position so as to fly a 3 nmi counter-clockwise circle.  The DAVE-ML model has
+no "navigator off" state — its switch only picks *which* circle — so the choice
+between the two laws is a parameter, fixed at initialisation.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 22 54
+
+   * - ``circumnavigate``
+     - Control law
+     - Steering
+   * - ``false`` (default)
+     - ``F16_control.dml``
+     - ``cmd.baseChiCmd_deg`` and ``cmd.latOffset_ft``.  Atmos_13.1–13.4.
+       ``cmd.circlePoleSW``, ``fb.lat_deg`` and ``fb.lon_deg`` are inert.
+   * - ``true``
+     - ``F16_gnc.dml``
+     - Navigator, from ``fb.lat_deg`` / ``fb.lon_deg``.
+       ``cmd.circlePoleSW`` > 0.5 circles the North Pole (Atmos_15); otherwise
+       the equator / date-line crossing (Atmos_16).  ``cmd.baseChiCmd_deg`` and
+       ``cmd.latOffset_ft`` are ignored.
+
+The closed-loop scenarios 15 and 16 are exercised against the NASA reference
+trajectories in :file:`src/FMU/F16Autopilot/test_f16autopilot.py`.
+
+Parameters
+~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 26 10 14 50
+
+   * - Port
+     - Unit
+     - Default
+     - Meaning
+   * - ``circumnavigate``
+     - Boolean
+     - false
+     - Load ``F16_gnc.dml`` instead of ``F16_control.dml``.  See above.
 
 Inputs
 ~~~~~~
@@ -416,21 +480,26 @@ Inputs
      - ft
      - 0
      - Commanded lateral track offset.
+   * - ``cmd.circlePoleSW``
+     - –
+     - 0
+     - Navigator select, the DAVE-ML ``circlePoleSW``.  Read only when
+       ``circumnavigate`` is true.
    * - ``fb.alt_m``
      - m
-     - 0
+     - 3051.96
      - Altitude feedback, from ``F16Plant out.alt_m``.
    * - ``fb.vt_m_s``
      - m/s
-     - 0
+     - 172.42
      - True airspeed feedback.
    * - ``fb.rho_kg_m3``
      - kg/m³
-     - 1.225
+     - 0.9042
      - Air density feedback, used for the TAS → EAS conversion.
    * - ``fb.alpha_deg``
      - deg
-     - 0
+     - 2.6538
      - Angle-of-attack feedback.
    * - ``fb.beta_deg``
      - deg
@@ -442,11 +511,11 @@ Inputs
      - Roll-attitude feedback.
    * - ``fb.pitch_rad``
      - rad
-     - 0
+     - 0.0463
      - Pitch-attitude feedback.
    * - ``fb.yaw_rad``
      - rad
-     - 0
+     - 0.7854
      - Yaw-attitude feedback.
    * - ``fb.p_rad_s``
      - rad/s
@@ -460,6 +529,16 @@ Inputs
      - rad/s
      - 0
      - Yaw-rate feedback.
+   * - ``fb.lat_deg``
+     - deg
+     - 36.0192
+     - Geodetic latitude feedback, from ``F16Plant out.lat_deg``.  Read only
+       when ``circumnavigate`` is true.
+   * - ``fb.lon_deg``
+     - deg
+     - −75.6744
+     - Geodetic longitude feedback, from ``F16Plant out.lon_deg``.  Read only
+       when ``circumnavigate`` is true.
 
 Outputs
 ~~~~~~~

@@ -1,20 +1,21 @@
 """
-plot_f16_s15_nasa02.py
+plot_f16_s15_nasa.py
 Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 
 Documentation-quality comparison of the Aetherion F-16 Scenario 15
-closed-loop simulation against the NASA TM-2015-218675 Atmos_15_sim_02
+closed-loop simulation against the NASA TM-2015-218675 Atmos_15_sim_05
 reference trajectory (F-16 north-pole circumnavigation, 3-nmi radius, 180 s).
 
 Usage
 -----
 Source-tree:
-    python scripts/plot_f16_s15_nasa02.py [sim_csv]
+    python scripts/plot_f16_s15_nasa.py [sim_csv] [nasa_ref]
 
 Build directory (after CMake copies this script next to the executable):
-    python plot_f16_s15_nasa02.py [sim_csv]
+    python plot_f16_s15_nasa.py [sim_csv] [nasa_ref]
 
     sim_csv  optional path to the simulation CSV (default: atmos_15_output.csv).
+    nasa_ref  optional NASA reference simulation: 02, 04 or 05 (default: 05).
 
 NOTE: the closed-loop LQR is stiff — use timeStep <= 0.02 s for accurate
 results.  The default sim CSV is produced by:
@@ -50,7 +51,14 @@ import pandas as pd
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 _HERE = Path(__file__).resolve().parent
-_BUILD_NASA = _HERE / "Atmos_15_sim_02.csv"
+# NASA reference simulation: 05 unless a second argument says otherwise.
+# Simulations 04 and 05 start from a genuine trim.  Simulation 02 does not — in
+# the open-loop trim checks it drifts tens to hundreds of feet off altitude — so
+# an error measured against it is partly its own.  See "Trimming over a
+# rotating, curved Earth" in doc/examples.rst.
+NASA_REF = sys.argv[2] if len(sys.argv) > 2 else "05"
+
+_BUILD_NASA = _HERE / f"Atmos_15_sim_{NASA_REF}.csv"
 _IN_BUILD_DIR = _BUILD_NASA.exists()
 
 if _IN_BUILD_DIR:
@@ -60,7 +68,7 @@ if _IN_BUILD_DIR:
 else:
     _REPO    = _HERE.parent
     _SIM_DEFAULT = _REPO / "atmos_15_output.csv"
-    NASA_CSV = _REPO / "data" / "Atmos_15_CircleNorthPole" / "Atmos_15_sim_02.csv"
+    NASA_CSV = _REPO / "data" / "Atmos_15_CircleNorthPole" / f"Atmos_15_sim_{NASA_REF}.csv"
     OUT_DIR  = _REPO / "doc" / "_static" / "f16_s15"
 
 SIM_CSV = Path(sys.argv[1]) if len(sys.argv) > 1 else _SIM_DEFAULT
@@ -198,7 +206,7 @@ def overview(t, sim_df, ref_df):
             and pd.api.types.is_numeric_dtype(sim_df[c])]
     nc, nr = 4, int(np.ceil(len(cols) / 4))
     fig, axes = plt.subplots(nr, nc, figsize=(nc * 3.8, nr * 2.6), squeeze=False)
-    fig.suptitle("Aetherion F-16 Scenario 15 — Full Channel Comparison vs NASA Atmos_15_sim_02",
+    fig.suptitle(f"Aetherion F-16 Scenario 15 — Full Channel Comparison vs NASA Atmos_15_sim_{NASA_REF}",
                  fontsize=12, fontweight="bold", y=1.01)
     for idx, col in enumerate(cols):
         r, c = divmod(idx, nc)

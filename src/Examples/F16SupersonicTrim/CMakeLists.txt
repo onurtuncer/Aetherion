@@ -36,6 +36,6 @@ endforeach()
 add_custom_command(
   TARGET F16SupersonicTrim
   POST_BUILD
-  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/scripts/plot_f16_s12_nasa02.py"
-          "$<TARGET_FILE_DIR:F16SupersonicTrim>/plot_f16_s12_nasa02.py"
-  COMMENT "Copying Case-12 plot script plot_f16_s12_nasa02.py")
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/scripts/plot_f16_s12_nasa.py"
+          "$<TARGET_FILE_DIR:F16SupersonicTrim>/plot_f16_s12_nasa.py"
+  COMMENT "Copying Case-12 plot script plot_f16_s12_nasa.py")

@@ -1,28 +1,30 @@
 """
-plot_f16_s13p3_nasa02.py
+plot_f16_s13p4_nasa.py
 Copyright (c) 2025-2026, Onur Tuncer, PhD, Istanbul Technical University
 
-Documentation-quality comparison of the Aetherion F-16 Scenario 13.3
-closed-loop simulation against the NASA TM-2015-218675 Atmos_13p3_sim_02
-reference trajectory (F-16 subsonic heading change, +20° course step, 30 s).
+Documentation-quality comparison of the Aetherion F-16 Scenario 13.4
+closed-loop simulation against the NASA TM-2015-218675 Atmos_13p4_sim_05
+reference trajectory (F-16 subsonic lateral side step, 2 000 ft right of
+course at t = 20 s, 60 s total).
 
 Usage
 -----
 Source-tree:
-    python scripts/plot_f16_s13p3_nasa02.py [sim_csv]
+    python scripts/plot_f16_s13p4_nasa.py [sim_csv] [nasa_ref]
 
 Build directory (after CMake copies this script next to the executable):
-    python plot_f16_s13p3_nasa02.py [sim_csv]
+    python plot_f16_s13p4_nasa.py [sim_csv] [nasa_ref]
 
-    sim_csv  optional path to the simulation CSV (default: f16_s13p3_sim.csv).
+    sim_csv  optional path to the simulation CSV (default: f16_s13p4_sim.csv).
+    nasa_ref  optional NASA reference simulation: 02, 04 or 05 (default: 05).
 
 NOTE: the closed-loop LQR is stiff — use timeStep <= 0.02 s for accurate
 results.  The default sim CSV is produced by:
 
-    F16HeadingChange --endTime 30 --timeStep 0.02 --outputFileName f16_s13p3_sim.csv
+    F16LateralSideStep --endTime 60 --timeStep 0.02 --outputFileName f16_s13p4_sim.csv
 
-Outputs (figures/ sub-directory next to this script, or doc/figures/f16_s13p3/):
-    fig_heading.png           yaw (course) angle vs command
+Outputs (doc/_static/f16_s13p4/ or build-dir figures/f16_s13p4/):
+    fig_lateral.png           lateral deviation from courseline vs 2 000 ft cmd
     fig_flight_envelope.png   altitude, TAS, Mach
     fig_attitude.png          pitch, roll, yaw
     fig_body_rates.png        p, q, r
@@ -36,7 +38,7 @@ Outputs (figures/ sub-directory next to this script, or doc/figures/f16_s13p3/):
 """
 
 from __future__ import annotations
-import os, sys
+import sys
 from pathlib import Path
 
 import matplotlib
@@ -50,18 +52,25 @@ import pandas as pd
 # ── Paths ─────────────────────────────────────────────────────────────────────
 
 _HERE = Path(__file__).resolve().parent
-_BUILD_NASA = _HERE / "Atmos_13p3_sim_02.csv"
+# NASA reference simulation: 05 unless a second argument says otherwise.
+# Simulations 04 and 05 start from a genuine trim.  Simulation 02 does not — in
+# the open-loop trim checks it drifts tens to hundreds of feet off altitude — so
+# an error measured against it is partly its own.  See "Trimming over a
+# rotating, curved Earth" in doc/examples.rst.
+NASA_REF = sys.argv[2] if len(sys.argv) > 2 else "05"
+
+_BUILD_NASA = _HERE / f"Atmos_13p4_sim_{NASA_REF}.csv"
 _IN_BUILD_DIR = _BUILD_NASA.exists()
 
 if _IN_BUILD_DIR:
-    _SIM_DEFAULT = _HERE / "f16_s13p3_sim.csv"
+    _SIM_DEFAULT = _HERE / "f16_s13p4_sim.csv"
     NASA_CSV = _BUILD_NASA
-    OUT_DIR  = _HERE / "figures" / "f16_s13p3"
+    OUT_DIR  = _HERE / "figures" / "f16_s13p4"
 else:
     _REPO    = _HERE.parent
-    _SIM_DEFAULT = _REPO / "f16_s13p3_sim.csv"
-    NASA_CSV = _REPO / "data" / "Atmos_13p3_SubsonicHeadingChangeF16" / "Atmos_13p3_sim_02.csv"
-    OUT_DIR  = _REPO / "doc" / "figures" / "f16_s13p3"
+    _SIM_DEFAULT = _REPO / "f16_s13p4_sim.csv"
+    NASA_CSV = _REPO / "data" / "Atmos_13p4_SubsonicLateralSideStepF16" / f"Atmos_13p4_sim_{NASA_REF}.csv"
+    OUT_DIR  = _REPO / "doc" / "_static" / "f16_s13p4"
 
 SIM_CSV = Path(sys.argv[1]) if len(sys.argv) > 1 else _SIM_DEFAULT
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -145,6 +154,14 @@ def align(sim, ref):
     r = merged[["time"] + [f"{c}_r" for c in shared]].rename(columns={f"{c}_r": c for c in shared})
     return s, r
 
+def lateral_deviation_ft(df, lat0_rad, lon0_rad, psi0_rad):
+    """Compute lateral deviation from course through (lat0, lon0) at heading psi0 [ft, +RT]."""
+    kRE_m = 6_371_000.0
+    dp_N = (df["latitude_rad"].values  - lat0_rad) * kRE_m
+    dp_E = (df["longitude_rad"].values - lon0_rad) * kRE_m * np.cos(lat0_rad)
+    lat_dev_m = -dp_N * np.sin(psi0_rad) + dp_E * np.cos(psi0_rad)
+    return lat_dev_m / kFt
+
 # ── Plot helpers ──────────────────────────────────────────────────────────────
 
 def _signal_error_row(ax_sig, ax_err, t, sim, ref, ylabel, unit="", scale=1.0):
@@ -198,7 +215,7 @@ def overview(t, sim_df, ref_df):
             and pd.api.types.is_numeric_dtype(sim_df[c])]
     nc, nr = 4, int(np.ceil(len(cols) / 4))
     fig, axes = plt.subplots(nr, nc, figsize=(nc * 3.8, nr * 2.6), squeeze=False)
-    fig.suptitle("Aetherion F-16 Scenario 13.3 — Full Channel Comparison vs NASA Atmos_13p3_sim_02",
+    fig.suptitle(f"Aetherion F-16 Scenario 13.4 — Full Channel Comparison vs NASA Atmos_13p4_sim_{NASA_REF}",
                  fontsize=12, fontweight="bold", y=1.01)
     for idx, col in enumerate(cols):
         r, c = divmod(idx, nc)
@@ -252,72 +269,81 @@ def main():
 
     r2d = 180.0 / np.pi
 
-    # ── Heading (yaw) time-history — the primary channel for Scenario 13.3 ────
-    if "eulerAngle_rad_Yaw" in sim_df.columns and "eulerAngle_rad_Yaw" in ref_df.columns:
-        yaw_sim = sim_df["eulerAngle_rad_Yaw"].values.astype(float) * r2d
-        yaw_ref = ref_df["eulerAngle_rad_Yaw"].values.astype(float) * r2d
-        fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 5), sharex=True)
-        fig.suptitle("Scenario 13.3 — Heading Response  (cmd = 65°)", fontsize=11, fontweight="bold")
-        ax1.plot(t, yaw_ref, color=REF_COLOR, lw=LW_MAIN, label="NASA ref")
-        ax1.plot(t, yaw_sim, color=SIM_COLOR, lw=LW_MAIN, ls="--", label="Aetherion")
-        ax1.axhline(65.0, color="#F59E0B", lw=1.0, ls=":", label="cmd 65°")
-        ax1.set_ylabel("Yaw ψ [deg]"); ax1.legend(loc="best")
-        ax2.plot(t, yaw_sim - yaw_ref, color=ERR_COLOR, lw=LW_ERR)
-        ax2.axhline(0, color="#9CA3AF", lw=0.7, ls=":")
-        ax2.set_ylabel("Yaw error [deg]", color=ERR_COLOR)
-        ax2.set_xlabel("Time [s]")
-        fig.tight_layout()
-        out = OUT_DIR / "fig_heading.png"
-        fig.savefig(out, dpi=DPI, bbox_inches="tight"); plt.close(fig)
-        print(f"  {out.name}")
+    # ── Lateral deviation (primary channel for Scenario 13.4) ─────────────────
+    # Compute from both sim and NASA trajectories relative to the initial position
+    lat0_s = sim_df["latitude_rad"].values[0]
+    lon0_s = sim_df["longitude_rad"].values[0]
+    lat0_r = ref_df["latitude_rad"].values[0]
+    lon0_r = ref_df["longitude_rad"].values[0]
+    psi0 = 45.0 * np.pi / 180.0
+
+    lat_dev_s = lateral_deviation_ft(sim_df, lat0_s, lon0_s, psi0)
+    lat_dev_r = lateral_deviation_ft(ref_df, lat0_r, lon0_r, psi0)
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(9, 5), sharex=True)
+    fig.suptitle("Scenario 13.4 — Lateral Deviation  (cmd = 2 000 ft at t = 20 s)",
+                 fontsize=11, fontweight="bold")
+    ax1.plot(t, lat_dev_r, color=REF_COLOR, lw=LW_MAIN, label="NASA ref")
+    ax1.plot(t, lat_dev_s, color=SIM_COLOR, lw=LW_MAIN, ls="--", label="Aetherion")
+    ax1.axhline(2000.0, color="#F59E0B", lw=1.0, ls=":", label="cmd 2 000 ft")
+    ax1.axvline(20.0,   color="#9CA3AF", lw=0.8, ls="--", alpha=0.6, label="step t=20 s")
+    ax1.set_ylabel("Lateral deviation [ft, +RT]"); ax1.legend(loc="best")
+    ax2.plot(t, lat_dev_s - lat_dev_r, color=ERR_COLOR, lw=LW_ERR)
+    ax2.axhline(0, color="#9CA3AF", lw=0.7, ls=":")
+    ax2.set_ylabel("Lateral dev error [ft]", color=ERR_COLOR)
+    ax2.set_xlabel("Time [s]")
+    fig.tight_layout()
+    out = OUT_DIR / "fig_lateral.png"
+    fig.savefig(out, dpi=DPI, bbox_inches="tight"); plt.close(fig)
+    print(f"  {out.name}")
 
     out = multi_panel(t, [
         ("altitudeMsl_m",    "Altitude MSL",  "m",   1.0),
         ("trueAirspeed_m_s", "True airspeed", "m/s", 1.0),
         ("mach",             "Mach",          "-",   1.0),
-    ], sim_df, ref_df, "Scenario 13.3 — Flight Envelope", "fig_flight_envelope.png")
+    ], sim_df, ref_df, "Scenario 13.4 — Flight Envelope", "fig_flight_envelope.png")
     print(f"  {out.name}")
 
     out = multi_panel(t, [
         ("eulerAngle_rad_Pitch", "Pitch theta", "deg", r2d),
         ("eulerAngle_rad_Roll",  "Roll phi",    "deg", r2d),
         ("eulerAngle_rad_Yaw",   "Yaw psi",     "deg", r2d),
-    ], sim_df, ref_df, "Scenario 13.3 — Euler Attitude Angles", "fig_attitude.png")
+    ], sim_df, ref_df, "Scenario 13.4 — Euler Attitude Angles", "fig_attitude.png")
     print(f"  {out.name}")
 
     out = multi_panel(t, [
         ("bodyAngularRateWrtEi_rad_s_Roll",  "Roll rate p",  "deg/s", r2d),
         ("bodyAngularRateWrtEi_rad_s_Pitch", "Pitch rate q", "deg/s", r2d),
         ("bodyAngularRateWrtEi_rad_s_Yaw",   "Yaw rate r",   "deg/s", r2d),
-    ], sim_df, ref_df, "Scenario 13.3 — Body Angular Rates", "fig_body_rates.png")
+    ], sim_df, ref_df, "Scenario 13.4 — Body Angular Rates", "fig_body_rates.png")
     print(f"  {out.name}")
 
     out = multi_panel(t, [
         ("latitude_rad",  "Latitude",  "deg", r2d),
         ("longitude_rad", "Longitude", "deg", r2d),
         ("altitudeMsl_m", "Altitude",  "m",   1.0),
-    ], sim_df, ref_df, "Scenario 13.3 — Geographic Position", "fig_position.png")
+    ], sim_df, ref_df, "Scenario 13.4 — Geographic Position", "fig_position.png")
     print(f"  {out.name}")
 
     out = multi_panel(t, [
         ("feVelocity_m_s_X", "v_N", "m/s", 1.0),
         ("feVelocity_m_s_Y", "v_E", "m/s", 1.0),
         ("feVelocity_m_s_Z", "v_D", "m/s", 1.0),
-    ], sim_df, ref_df, "Scenario 13.3 — NED Velocity", "fig_ned_velocity.png")
+    ], sim_df, ref_df, "Scenario 13.4 — NED Velocity", "fig_ned_velocity.png")
     print(f"  {out.name}")
 
     out = multi_panel(t, [
         ("aero_bodyForce_N_X", "Aero Fx", "N", 1.0),
         ("aero_bodyForce_N_Y", "Aero Fy", "N", 1.0),
         ("aero_bodyForce_N_Z", "Aero Fz", "N", 1.0),
-    ], sim_df, ref_df, "Scenario 13.3 — Aerodynamic Body Forces", "fig_aero_forces.png")
+    ], sim_df, ref_df, "Scenario 13.4 — Aerodynamic Body Forces", "fig_aero_forces.png")
     print(f"  {out.name}")
 
     out = multi_panel(t, [
-        ("aero_bodyMoment_Nm_L", "Roll moment L",  "N·m", 1.0),
-        ("aero_bodyMoment_Nm_M", "Pitch moment M", "N·m", 1.0),
-        ("aero_bodyMoment_Nm_N", "Yaw moment N",   "N·m", 1.0),
-    ], sim_df, ref_df, "Scenario 13.3 — Aerodynamic Body Moments", "fig_aero_moments.png")
+        ("aero_bodyMoment_Nm_L", "Roll moment L",  "N*m", 1.0),
+        ("aero_bodyMoment_Nm_M", "Pitch moment M", "N*m", 1.0),
+        ("aero_bodyMoment_Nm_N", "Yaw moment N",   "N*m", 1.0),
+    ], sim_df, ref_df, "Scenario 13.4 — Aerodynamic Body Moments", "fig_aero_moments.png")
     print(f"  {out.name}")
 
     out = multi_panel(t, [
@@ -325,7 +351,7 @@ def main():
         ("airDensity_kg_m3",    "Air density",    "kg/m3", 1.0),
         ("ambientPressure_Pa",  "Static pressure","Pa",    1.0),
         ("ambientTemperature_K","Temperature",    "K",     1.0),
-    ], sim_df, ref_df, "Scenario 13.3 — Atmospheric State", "fig_atmosphere.png",
+    ], sim_df, ref_df, "Scenario 13.4 — Atmospheric State", "fig_atmosphere.png",
     h_per_row=2.1)
     print(f"  {out.name}")
 

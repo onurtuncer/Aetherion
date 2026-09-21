@@ -100,7 +100,7 @@ note there says so, but the figures should be regenerated for consistency:
 
 ```
 python scripts/plot_atmos17_scenario17.py <sim.csv>
-python scripts/plot_f16_s11_nasa02.py <sim.csv>      # and s12, s13p1..p4, s15, s16
+python scripts/plot_f16_s11_nasa.py <sim.csv>      # and s12, s13p1..p4, s15, s16
 python doc/_static/atmos17/generate_model_plots.py
 ```
 
