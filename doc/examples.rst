@@ -86,43 +86,55 @@ among the NASA runs themselves over the same interval.  Cases 1–10 run for
    * - 11
      - F-16 subsonic trim
      - 180
-     - 13.2
+     - 0.019
      - 13.7
    * - 12
      - F-16 supersonic trim
      - 180
-     - 97.5
+     - 0.137
      - 140
    * - 13.1
      - F-16 altitude change
      - 180
-     - 0.171
+     - 0.105
      - 0.316
    * - 13.2
      - F-16 airspeed change
      - 180
-     - 0.138
+     - 0.073
      - 1.21
    * - 13.3
      - F-16 heading change
      - 180
-     - 0.178
+     - 0.115
      - 0.288
    * - 13.4
      - F-16 lateral side step
      - 180
-     - 0.172
+     - 0.118
      - 0.295
    * - 15
      - F-16 polar circumnavigation
      - 180
-     - 0.030
+     - 0.031
      - 0.430
    * - 16
      - F-16 equatorial circuit
      - 180
-     - 0.036
+     - 0.038
      - 0.293
+
+The F-16 rows compare over the interval all reference runs share — 180 s for
+cases 11, 12, 15 and 16, but only 20, 20, 30 and 60 s for cases 13.1–13.4,
+where one of the runs stops early.
+
+For the two open-loop trim checks the NASA spread is not a disagreement about
+dynamics.  One of the three reference runs (simulation 02) does not start from
+a trim and drifts 13.7 m and 140 m off altitude; the other two agree with each
+other to 0.05 m and 0.3 m, and Aetherion with them to 0.02 m and 0.14 m.  Up to
+release 0.14.1 Aetherion's own trim was out of equilibrium in the same way, and
+these two rows read 13.2 m and 97.5 m — inside the envelope, but only because
+the envelope was that wide.  See :ref:`trim_rotating_earth`.
 
 Aetherion lies inside the reference envelope in every case.  For the ballistic
 cases 6–10, where the NASA runs disagree among themselves by 0.27–1.3 m,
