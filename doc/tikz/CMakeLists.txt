@@ -7,7 +7,7 @@ if(NOT PDFLATEX_EXECUTABLE)
   message(
     WARNING "pdflatex not found; skipping TikZ figure generation. Pre-built figures in doc/sphinx/_static will be used."
   )
-  add_custom_target(tikz_figures)
+  add_custom_target(tikz_figures COMMENT "TikZ figures skipped (pdflatex not found); using pre-built PDFs")
   return()
 endif()
 
@@ -57,4 +57,4 @@ foreach(tex ${TIKZ_TEX_FILES})
 endforeach()
 
 # Aggregate target: build + copy all figures
-add_custom_target(tikz_figures ALL DEPENDS ${TIKZ_COPIED_PDFS})
+add_custom_target(tikz_figures ALL DEPENDS ${TIKZ_COPIED_PDFS} COMMENT "Building TikZ figures")

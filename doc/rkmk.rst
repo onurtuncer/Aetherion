@@ -261,6 +261,11 @@ where the :math:`\ad^{3}` term vanishes because :math:`B_3 = 0`.
    twist actually varies in time --- for example a torque-free *asymmetric*
    body.  See :ref:`rkmk_order_verification`.
 
+   To keep the negation out of call sites, ``SE3`` provides
+   ``dexp_inv_left(eta)`` :math:`= d\exp^{-1}(-\eta)`; RKMK stage corrections
+   in Aetherion call this left-trivialised form rather than negating the
+   argument of ``dexp_inv`` manually.
+
 RKMK on :math:`G\times \R^n`: coupled stage equations
 -----------------------------------------------------
 

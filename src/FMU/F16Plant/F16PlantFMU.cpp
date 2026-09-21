@@ -40,8 +40,8 @@
 //
 //  OUTPUTS  (valid after fmi2ExitInitializationMode and each fmi2DoStep)
 //    out.alt_m        Altitude above MSL                 [m]
-//    out.lat_rad      Geodetic latitude                  [rad]
-//    out.lon_rad      Geodetic longitude                 [rad]
+//    out.lat_deg      Geodetic latitude                  [deg]
+//    out.lon_deg      Geodetic longitude                 [deg]
 //    out.yaw_rad      ZYX Euler yaw   (body → NED)       [rad]
 //    out.pitch_rad    ZYX Euler pitch (body → NED)       [rad]
 //    out.roll_rad     ZYX Euler roll  (body → NED)       [rad]
@@ -67,6 +67,16 @@
 //    out.P_Pa         Ambient static pressure            [Pa]
 //    out.a_m_s        Speed of sound                     [m/s]
 //    out.g_m_s2       Local gravity magnitude            [m/s²]
+//    out.thrust_N     Net propulsive force, body +X      [N]
+//    out.mass_kg      Vehicle mass                       [kg]
+//    out.specificForce_x_m_s2   Body-X specific force at CG  [m/s²]
+//    out.specificForce_y_m_s2   Body-Y specific force at CG  [m/s²]
+//    out.specificForce_z_m_s2   Body-Z specific force at CG  [m/s²]
+//
+//  out.specificForce_* is the non-gravitational acceleration an ideal
+//  accelerometer at the CG would sense, (F_aero + F_thrust)/m, in the same body
+//  axes as out.aero_F*_N.  Gravitation is excluded entirely, so it reads zero in
+//  free fall.  See Aetherion/Simulation/BodySpecificForce.h.
 //
 // FMU lifecycle
 // ─────────────────────────────────────────────────────────────────────────────
@@ -108,6 +118,7 @@
 // Snapshot + coordinate output
 #include <Aetherion/Simulation/Snapshot1.h>
 #include <Aetherion/Simulation/MakeSnapshot1.h>
+#include <Aetherion/Simulation/BodySpecificForce.h>
 
 // Initial state construction
 #include <Aetherion/RigidBody/InertialParameters.h>
@@ -117,16 +128,15 @@
 
 // Trim solver
 #include <Aetherion/FlightDynamics/Trim/TrimSolver.h>
+#include <Aetherion/FlightDynamics/Trim/TrimWeight.h>
 
 // Serialization (DAVE-ML)
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
 #include <Aetherion/Serialization/DAVEML/LoadInertiaFromDAVEML.h>
 
-// Earth rotation rate + J2 gravity for trim-point weight calculation
+// Earth rotation rate
 #include <Aetherion/Environment/WGS84.h>
-#include <Aetherion/Environment/Gravity.h>
-#include <Aetherion/Coordinate/LocalToInertial.h>
 
 using namespace fmu4cpp;
 
@@ -136,8 +146,6 @@ namespace AE_FD  = Aetherion::FlightDynamics;
 namespace AE_SR  = Aetherion::Serialization;
 namespace AE_SIM = Aetherion::Simulation;
 namespace AE_EX  = Aetherion::Examples::F16SteadyFlight;
-namespace AE_CO  = Aetherion::Coordinate;
-namespace AE_ENV = Aetherion::Environment;
 
 // ── Type aliases ──────────────────────────────────────────────────────────────
 using F16VF      = AE_EX::F16VF;       // VectorField<J2Gravity, F16Aero, F16Prop, ConstMass>
@@ -147,8 +155,8 @@ using F16Stepper = AE_EX::F16Stepper;  // SixDoFStepper<F16VF>
 namespace {
     constexpr double kOmegaEarth_rad_s = Aetherion::Environment::WGS84::kRotationRate_rad_s;
     constexpr double kFt_m             = 0.3048;
-    constexpr double kLbf_N            = 4.448221615260751;
     constexpr double kDeg              = std::numbers::pi / 180.0;
+    constexpr double kRadToDeg         = 180.0 / std::numbers::pi;
 
     // Default initial conditions — NASA TM-2015-218675 Scenario 11 (Kitty Hawk, NC).
     // Settable via FMI PARAMETER before fmi2ExitInitializationMode.
@@ -186,8 +194,8 @@ struct F16PlantState {
 
     // ── Output cache (updated in do_step, registered by pointer) ─────────────
     double alt_m       {};  // altitude above MSL [m]
-    double lat_rad     {};  // geodetic latitude [rad]
-    double lon_rad     {};  // geodetic longitude [rad]
+    double lat_deg     {};  // geodetic latitude [deg]
+    double lon_deg     {};  // geodetic longitude [deg]
     double yaw_rad     {};  // ZYX Euler yaw   (body → NED) [rad]
     double pitch_rad   {};  // ZYX Euler pitch (body → NED) [rad]
     double roll_rad    {};  // ZYX Euler roll  (body → NED) [rad]
@@ -213,6 +221,10 @@ struct F16PlantState {
     double P_Pa        {};  // ambient pressure [Pa]
     double a_m_s       {};  // speed of sound [m/s]
     double g_m_s2      {};  // local gravity magnitude [m/s²]
+    double specificForce_x_m_s2{};  // body-X specific force at the CG [m/s²]
+    double specificForce_y_m_s2{};  // body-Y specific force at the CG [m/s²]
+    double specificForce_z_m_s2{};  // body-Z specific force at the CG [m/s²]
+    double thrust_N    {};  // net propulsive force, body +X [N]
 };
 static_assert(std::is_trivially_copyable_v<F16PlantState>,
     "F16PlantState must be trivially copyable for fmu4cpp state save/restore.");
@@ -225,6 +237,186 @@ public:
 
     // ── Constructor: register all FMI variables ───────────────────────────────
     FMU4CPP_CTOR(F16PlantFMU)
+    {
+        registerParameters();
+        registerInputs();
+        registerOutputs();
+        // ── State registration (enables getFMUState / setFMUState) ────────────
+        register_state(&F16PlantFMU::state_);
+    }
+
+    // ── exit_initialisation_mode ──────────────────────────────────────────────
+    // Called after fmi2ExitInitializationMode: all parameters are set.
+    // Loads DAVE-ML models, runs trim, builds initial ECI state, emplaces stepper.
+    void exit_initialisation_mode() override
+    {
+        // 1. Build DML paths from the FMU resources/ folder
+        const std::string res         = resourceLocation().string();
+        const std::string inertiaPath = res + "/F16_inertia.dml";
+        const std::string aeroPath    = res + "/F16_aero.dml";
+        const std::string propPath    = res + "/F16_prop.dml";
+
+        // 2. Load inertia, aero, and propulsion models
+        m_ip        = AE_SR::LoadInertiaFromDAVEML(inertiaPath);
+        m_aeroModel = std::make_shared<const AE_SR::DAVEMLAeroModel>(aeroPath);
+        m_propModel = std::make_shared<const AE_SR::DAVEMLPropModel>(propPath);
+
+        // 3. Earth Rotation Angle at fmi2EnterInitializationMode time — needed
+        //    for the ECI initial state below.
+        m_theta0 = kOmegaEarth_rad_s * currentTime();
+
+        // 4. Solve trim: find (alpha, elevator, throttle) for the given flight
+        //    condition.  The weight comes from the J2 field at the trim geodetic
+        //    position, so the solver balances the same gravity the integrator's
+        //    J2GravityPolicy applies.  Shared with the examples — see
+        //    Aetherion/FlightDynamics/Trim/TrimWeight.h.
+        const double weight_lbf =
+            AE_FD::TrimWeight_lbf(m_ip.mass_kg, p_lat0_deg_, p_alt0_ft_ * kFt_m);
+        AE_FD::TrimInputs tin{};
+        tin.vt_fps     = p_vt0_fps_;
+        tin.alt_ft     = p_alt0_ft_;
+        tin.weight_lbf = weight_lbf;
+
+        AE_FD::TrimSolver solver(*m_aeroModel, *m_propModel, p_xcg_from_ac_ft_);
+        const AE_FD::TrimPoint trim = solver.solve(tin);
+        if (!trim.converged)
+            throw std::runtime_error("F16PlantFMU: trim solver did not converge.");
+
+        AE_RB::Config cfg{};
+        cfg.pose.lat_deg     = p_lat0_deg_;
+        cfg.pose.lon_deg     = p_lon0_deg_;
+        cfg.pose.alt_m       = p_alt0_ft_ * kFt_m;
+        cfg.pose.azimuth_deg = p_heading0_deg_;
+        cfg.pose.zenith_deg  = 90.0 - trim.alpha_deg;   // nearly horizontal, nose-up by alpha
+        cfg.pose.roll_deg    = p_roll0_deg_;
+
+        // Horizontal TAS decomposed along heading (no downward component at trim)
+        const double vt_mps           = p_vt0_fps_ * kFt_m;
+        cfg.velocityNED.north_mps     = vt_mps * std::cos(p_heading0_deg_ * kDeg);
+        cfg.velocityNED.east_mps      = vt_mps * std::sin(p_heading0_deg_ * kDeg);
+        cfg.velocityNED.down_mps      = 0.0;
+        cfg.bodyRates.roll_rad_s      = 0.0;
+        cfg.bodyRates.pitch_rad_s     = 0.0;
+        cfg.bodyRates.yaw_rad_s       = 0.0;
+        cfg.inertialParameters        = m_ip;
+
+        const auto x0vec = AE_RB::BuildInitialStateVector(cfg, m_theta0);
+        using L = AE_RB::StateLayout;
+
+        m_state.g.p = Eigen::Vector3d(x0vec[L::IDX_P],   x0vec[L::IDX_P+1], x0vec[L::IDX_P+2]);
+        const Eigen::Quaterniond q0(x0vec[L::IDX_Q], x0vec[L::IDX_Q+1],
+                                    x0vec[L::IDX_Q+2], x0vec[L::IDX_Q+3]);
+        m_state.g.q = q0.normalized();
+        m_state.g.R = m_state.g.q.toRotationMatrix();
+        m_state.nu_B << x0vec[L::IDX_W],   x0vec[L::IDX_W+1], x0vec[L::IDX_W+2],
+                        x0vec[L::IDX_V],   x0vec[L::IDX_V+1], x0vec[L::IDX_V+2];
+        m_state.m = x0vec[L::IDX_M];
+
+        // 5. Build Newton options from the FMI solver parameters.
+        Aetherion::ODE::RKMK::Core::NewtonOptions newton_opts{};
+        newton_opts.abs_tol = p_newton_abs_tol_;
+        newton_opts.rel_tol = p_newton_rel_tol_;
+
+        // 6. Construct the stepper with a VectorField initialised at trim values
+        const double xcg_m = p_xcg_from_ac_ft_ * kFt_m;
+        m_stepper.emplace(
+            F16VF(m_ip,
+                  AE_FD::J2GravityPolicy{},
+                  AE_FD::F16AeroPolicy(m_aeroModel, trim.el_deg, 0.0, 0.0, xcg_m),
+                  AE_FD::F16PropPolicy(m_propModel, trim.pwr_pct)),
+            newton_opts
+        );
+
+        // 7. Seed control state from trim (written to state_ for fmu4cpp variable tracking)
+        state_.el_deg  = trim.el_deg;
+        state_.ail_deg = 0.0;
+        state_.rdr_deg = 0.0;
+        state_.pwr_pct = trim.pwr_pct;
+
+        // 8. Sync POD integration state and populate initial outputs
+        packState();
+        populateOutputCache(currentTime());
+    }
+
+    // ── do_step ───────────────────────────────────────────────────────────────
+    // Advances the simulation by dt seconds, optionally subdividing into
+    // sub-steps of at most solver.max_step_s (0 = single step = communication dt).
+    // The FMI master has already written any updated ctrl.* inputs before this call.
+    bool do_step(double dt) override
+    {
+        if (!m_stepper.has_value())
+            return false;
+
+        const double t0 = currentTime();
+        const double h  = (p_max_step_s_ > 0.0 && p_max_step_s_ < dt)
+                          ? p_max_step_s_ : dt;
+
+        double t_local   = t0;
+        double remaining = dt;
+
+        while (remaining > 1.0e-15) {
+            const double step = std::min(remaining, h);
+
+            // Push the latest control inputs into the VectorField policies
+            auto& vf = m_stepper->vectorField();
+            vf.aero.setControls(state_.el_deg, state_.ail_deg, state_.rdr_deg);
+            vf.thrust.pwr_pct = state_.pwr_pct;
+
+            const auto res = m_stepper->step(t_local, m_state, step);
+            if (!res.converged) {
+                debugLog(fmiWarning, "F16PlantFMU: Radau IIA Newton did not converge.");
+                return false;
+            }
+            m_state   = F16Stepper::unpack(res);
+            t_local  += step;
+            remaining -= step;
+        }
+
+        // Sync integration state back into POD and update output variables.
+        // Pass t0+dt because fmu_base advances time_ only after do_step returns.
+        packState();
+        populateOutputCache(t0 + dt);
+        return true;
+    }
+
+    // ── setFmuState ───────────────────────────────────────────────────────────
+    // Overridden to keep m_state (Eigen) consistent with the restored state_ (POD).
+    void setFmuState(void* fmuState) override
+    {
+        fmu_base::setFmuState(fmuState);   // copies saved F16PlantState → state_
+        if (m_stepper.has_value())
+            unpackState();                 // re-derives m_state from state_
+    }
+
+    // ── reset ─────────────────────────────────────────────────────────────────
+    void reset() override
+    {
+        m_stepper.reset();
+        m_aeroModel.reset();
+        m_propModel.reset();
+        m_ip     = {};
+        m_theta0 = 0.0;
+        m_state  = {};
+        state_   = F16PlantState{};
+
+        p_vt0_fps_        = kDefault_vt0_fps;
+        p_alt0_ft_        = kDefault_alt0_ft;
+        p_lat0_deg_       = kDefault_lat0_deg;
+        p_lon0_deg_       = kDefault_lon0_deg;
+        p_heading0_deg_   = kDefault_heading0_deg;
+        p_roll0_deg_      = kDefault_roll0_deg;
+        p_xcg_from_ac_ft_ = kDefault_xcg_from_ac_ft;
+
+        p_newton_abs_tol_ = kDefault_newton_abs_tol;
+        p_newton_rel_tol_ = kDefault_newton_rel_tol;
+        p_max_step_s_     = kDefault_max_step_s;
+    }
+
+private:
+
+    // ── registerParameters ──────────────────────────────────────────────────────
+    // Register the FMI parameters (fixed before exit_initialisation_mode).
+    void registerParameters()
     {
         // ── Parameters ───────────────────────────────────────────────────────
         register_real("vt0_fps", &p_vt0_fps_)
@@ -276,7 +468,12 @@ public:
             .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Maximum internal integrator sub-step size [s] (0 = use communication step)");
+    }
 
+    // ── registerInputs ──────────────────────────────────────────────────────────
+    // Register the control-surface inputs.
+    void registerInputs()
+    {
         // ── Control inputs ────────────────────────────────────────────────────
         register_real("ctrl.el_deg",  &state_.el_deg)
             .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
@@ -293,19 +490,24 @@ public:
         register_real("ctrl.pwr_pct", &state_.pwr_pct)
             .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
             .setDescription("Throttle [0–100 %]");
+    }
 
+    // ── registerOutputs ─────────────────────────────────────────────────────────
+    // Register the output cache variables.
+    void registerOutputs()
+    {
         // ── Outputs ───────────────────────────────────────────────────────────
         register_real("out.alt_m",       &state_.alt_m)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED).setDescription("Altitude above MSL [m]");
 
-        register_real("out.lat_rad",     &state_.lat_rad)
+        register_real("out.lat_deg",     &state_.lat_deg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [rad]");
+            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [deg]");
 
-        register_real("out.lon_rad",     &state_.lon_rad)
+        register_real("out.lon_deg",     &state_.lon_deg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [rad]");
+            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [deg]");
 
         register_real("out.yaw_rad",     &state_.yaw_rad)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
@@ -407,186 +609,40 @@ public:
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED).setDescription("Local gravitational acceleration [m/s²]");
 
-        // ── State registration (enables getFMUState / setFMUState) ────────────
-        register_state(&F16PlantFMU::state_);
+        register_real("out.specificForce_x_m_s2", &state_.specificForce_x_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-X specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(x forward). [m/s²]");
+
+        register_real("out.specificForce_y_m_s2", &state_.specificForce_y_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-Y specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(y right). [m/s²]");
+
+        register_real("out.specificForce_z_m_s2", &state_.specificForce_z_m_s2)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body-Z specific force at the CG: the non-gravitational acceleration an "
+                            "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
+                            "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
+                            "(z down). [m/s²]");
+
+        register_real("out.thrust_N",    &state_.thrust_N)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Net propulsive force along body +X [N] "
+                            "(the F-16 engine deck carries no body-Y/Z thrust component)");
+
+        register_real("out.mass_kg",     &state_.mass_kg)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED).setDescription("Vehicle mass [kg]");
     }
-
-    // ── exit_initialisation_mode ──────────────────────────────────────────────
-    // Called after fmi2ExitInitializationMode: all parameters are set.
-    // Loads DAVE-ML models, runs trim, builds initial ECI state, emplaces stepper.
-    void exit_initialisation_mode() override
-    {
-        // 1. Build DML paths from the FMU resources/ folder
-        const std::string res         = resourceLocation().string();
-        const std::string inertiaPath = res + "/F16_inertia.dml";
-        const std::string aeroPath    = res + "/F16_aero.dml";
-        const std::string propPath    = res + "/F16_prop.dml";
-
-        // 2. Load inertia, aero, and propulsion models
-        m_ip        = AE_SR::LoadInertiaFromDAVEML(inertiaPath);
-        m_aeroModel = std::make_shared<const AE_SR::DAVEMLAeroModel>(aeroPath);
-        m_propModel = std::make_shared<const AE_SR::DAVEMLPropModel>(propPath);
-
-        // 3. Earth Rotation Angle at fmi2EnterInitializationMode time — needed
-        //    both for the trim-point gravity calculation and the ECI state below.
-        m_theta0 = kOmegaEarth_rad_s * currentTime();
-
-        // 4. Compute J2 gravitational acceleration at the trim geodetic position so
-        //    that weight_lbf fed to the trim solver is consistent with the integrator.
-        const double lat_rad = p_lat0_deg_ * kDeg;
-        const double lon_rad = p_lon0_deg_ * kDeg;
-        const double alt_m   = p_alt0_ft_  * kFt_m;
-        const auto r_ecef  = AE_CO::GeodeticToECEF(lat_rad, lon_rad, alt_m);
-        const auto r_eci0  = AE_CO::ECEFToECI(r_ecef, m_theta0);
-        const AE_ENV::Vec3<double> r_arr{ r_eci0[0], r_eci0[1], r_eci0[2] };
-        const auto g_eci_vec = AE_ENV::J2(r_arr);
-        const double g_local = std::sqrt(g_eci_vec[0]*g_eci_vec[0]
-                                       + g_eci_vec[1]*g_eci_vec[1]
-                                       + g_eci_vec[2]*g_eci_vec[2]);
-
-        // 5. Solve trim: find (alpha, elevator, throttle) for the given flight condition
-        const double weight_lbf = m_ip.mass_kg * g_local / kLbf_N;
-        AE_FD::TrimInputs tin{};
-        tin.vt_fps     = p_vt0_fps_;
-        tin.alt_ft     = p_alt0_ft_;
-        tin.weight_lbf = weight_lbf;
-
-        AE_FD::TrimSolver solver(*m_aeroModel, *m_propModel, p_xcg_from_ac_ft_);
-        const AE_FD::TrimPoint trim = solver.solve(tin);
-        if (!trim.converged)
-            throw std::runtime_error("F16PlantFMU: trim solver did not converge.");
-
-        AE_RB::Config cfg{};
-        cfg.pose.lat_deg     = p_lat0_deg_;
-        cfg.pose.lon_deg     = p_lon0_deg_;
-        cfg.pose.alt_m       = p_alt0_ft_ * kFt_m;
-        cfg.pose.azimuth_deg = p_heading0_deg_;
-        cfg.pose.zenith_deg  = 90.0 - trim.alpha_deg;   // nearly horizontal, nose-up by alpha
-        cfg.pose.roll_deg    = p_roll0_deg_;
-
-        // Horizontal TAS decomposed along heading (no downward component at trim)
-        const double vt_mps           = p_vt0_fps_ * kFt_m;
-        cfg.velocityNED.north_mps     = vt_mps * std::cos(p_heading0_deg_ * kDeg);
-        cfg.velocityNED.east_mps      = vt_mps * std::sin(p_heading0_deg_ * kDeg);
-        cfg.velocityNED.down_mps      = 0.0;
-        cfg.bodyRates.roll_rad_s      = 0.0;
-        cfg.bodyRates.pitch_rad_s     = 0.0;
-        cfg.bodyRates.yaw_rad_s       = 0.0;
-        cfg.inertialParameters        = m_ip;
-
-        const auto x0vec = AE_RB::BuildInitialStateVector(cfg, m_theta0);
-        using L = AE_RB::StateLayout;
-
-        m_state.g.p = Eigen::Vector3d(x0vec[L::IDX_P],   x0vec[L::IDX_P+1], x0vec[L::IDX_P+2]);
-        const Eigen::Quaterniond q0(x0vec[L::IDX_Q], x0vec[L::IDX_Q+1],
-                                    x0vec[L::IDX_Q+2], x0vec[L::IDX_Q+3]);
-        m_state.g.q = q0.normalized();
-        m_state.g.R = m_state.g.q.toRotationMatrix();
-        m_state.nu_B << x0vec[L::IDX_W],   x0vec[L::IDX_W+1], x0vec[L::IDX_W+2],
-                        x0vec[L::IDX_V],   x0vec[L::IDX_V+1], x0vec[L::IDX_V+2];
-        m_state.m = x0vec[L::IDX_M];
-
-        // 6. Build Newton options from the FMI solver parameters.
-        Aetherion::ODE::RKMK::Core::NewtonOptions newton_opts{};
-        newton_opts.abs_tol = p_newton_abs_tol_;
-        newton_opts.rel_tol = p_newton_rel_tol_;
-
-        // 7. Construct the stepper with a VectorField initialised at trim values
-        const double xcg_m = p_xcg_from_ac_ft_ * kFt_m;
-        m_stepper.emplace(
-            F16VF(m_ip,
-                  AE_FD::J2GravityPolicy{},
-                  AE_FD::F16AeroPolicy(m_aeroModel, trim.el_deg, 0.0, 0.0, xcg_m),
-                  AE_FD::F16PropPolicy(m_propModel, trim.pwr_pct)),
-            newton_opts
-        );
-
-        // 8. Seed control state from trim (written to state_ for fmu4cpp variable tracking)
-        state_.el_deg  = trim.el_deg;
-        state_.ail_deg = 0.0;
-        state_.rdr_deg = 0.0;
-        state_.pwr_pct = trim.pwr_pct;
-
-        // 9. Sync POD integration state and populate initial outputs
-        packState();
-        populateOutputCache(currentTime());
-    }
-
-    // ── do_step ───────────────────────────────────────────────────────────────
-    // Advances the simulation by dt seconds, optionally subdividing into
-    // sub-steps of at most solver.max_step_s (0 = single step = communication dt).
-    // The FMI master has already written any updated ctrl.* inputs before this call.
-    bool do_step(double dt) override
-    {
-        if (!m_stepper.has_value())
-            return false;
-
-        const double t0 = currentTime();
-        const double h  = (p_max_step_s_ > 0.0 && p_max_step_s_ < dt)
-                          ? p_max_step_s_ : dt;
-
-        double t_local   = t0;
-        double remaining = dt;
-
-        while (remaining > 1.0e-15) {
-            const double step = std::min(remaining, h);
-
-            // Push the latest control inputs into the VectorField policies
-            auto& vf = m_stepper->vectorField();
-            vf.aero.setControls(state_.el_deg, state_.ail_deg, state_.rdr_deg);
-            vf.thrust.pwr_pct = state_.pwr_pct;
-
-            const auto res = m_stepper->step(t_local, m_state, step);
-            if (!res.converged) {
-                debugLog(fmiWarning, "F16PlantFMU: Radau IIA Newton did not converge.");
-                return false;
-            }
-            m_state   = F16Stepper::unpack(res);
-            t_local  += step;
-            remaining -= step;
-        }
-
-        // Sync integration state back into POD and update output variables.
-        // Pass t0+dt because fmu_base advances time_ only after do_step returns.
-        packState();
-        populateOutputCache(t0 + dt);
-        return true;
-    }
-
-    // ── setFmuState ───────────────────────────────────────────────────────────
-    // Overridden to keep m_state (Eigen) consistent with the restored state_ (POD).
-    void setFmuState(void* fmuState) override
-    {
-        fmu_base::setFmuState(fmuState);   // copies saved F16PlantState → state_
-        if (m_stepper.has_value())
-            unpackState();                 // re-derives m_state from state_
-    }
-
-    // ── reset ─────────────────────────────────────────────────────────────────
-    void reset() override
-    {
-        m_stepper.reset();
-        m_aeroModel.reset();
-        m_propModel.reset();
-        m_ip     = {};
-        m_theta0 = 0.0;
-        m_state  = {};
-        state_   = F16PlantState{};
-
-        p_vt0_fps_        = kDefault_vt0_fps;
-        p_alt0_ft_        = kDefault_alt0_ft;
-        p_lat0_deg_       = kDefault_lat0_deg;
-        p_lon0_deg_       = kDefault_lon0_deg;
-        p_heading0_deg_   = kDefault_heading0_deg;
-        p_roll0_deg_      = kDefault_roll0_deg;
-        p_xcg_from_ac_ft_ = kDefault_xcg_from_ac_ft;
-
-        p_newton_abs_tol_ = kDefault_newton_abs_tol;
-        p_newton_rel_tol_ = kDefault_newton_rel_tol;
-        p_max_step_s_     = kDefault_max_step_s;
-    }
-
-private:
 
     // ── packState ─────────────────────────────────────────────────────────────
     // Sync Eigen integration state (m_state) → POD fields in state_.
@@ -651,8 +707,8 @@ private:
             AE_SIM::MakeSnapshot1(t, m_state, theta_GST, vf.gravity, vf.aero);
 
         state_.alt_m       = snap.altitudeMsl_m;
-        state_.lat_rad     = snap.latitude_rad;
-        state_.lon_rad     = snap.longitude_rad;
+        state_.lat_deg     = snap.latitude_rad  * kRadToDeg;
+        state_.lon_deg     = snap.longitude_rad * kRadToDeg;
 
         state_.yaw_rad     = snap.eulerAngle_rad_Yaw;
         state_.pitch_rad   = snap.eulerAngle_rad_Pitch;
@@ -682,6 +738,27 @@ private:
         state_.P_Pa        = snap.ambientPressure_Pa;
         state_.a_m_s       = snap.speedOfSound_m_s;
         state_.g_m_s2      = snap.localGravity_m_s2;
+
+        // Body-frame specific force at the CG — what an ideal accelerometer senses.
+        // Deliberately built as a sum of the non-gravitational wrench forces, so no
+        // gravity term can leak in: snap.localGravity_m_s2 (mass attraction only) is
+        // NOT involved.  The thrust policy is evaluated with the same throttle the
+        // integrator just used; the aero force is taken from the snapshot rather than
+        // re-evaluating the DAVE-ML tables.
+        //
+        // F/m is the specific force at the CG exactly — Newton's second law about the
+        // centre of mass — independent of where the body frame's origin sits.
+        const Eigen::Vector3d F_thrust_B = AE_SIM::PolicyBodyForce_N(t, m_state, vf.thrust);
+        const Eigen::Vector3d F_aero_B(snap.aero_bodyForce_N_X,
+                                       snap.aero_bodyForce_N_Y,
+                                       snap.aero_bodyForce_N_Z);
+        const Eigen::Vector3d specificForce_B =
+            AE_SIM::BodySpecificForce_m_s2(F_aero_B + F_thrust_B, m_state.m);
+
+        state_.specificForce_x_m_s2 = specificForce_B.x();
+        state_.specificForce_y_m_s2 = specificForce_B.y();
+        state_.specificForce_z_m_s2 = specificForce_B.z();
+        state_.thrust_N     = F_thrust_B.x();
 
         // Alpha and beta — same formula as F16AeroPolicy, avoids re-evaluating the
         // full aero model a second time.
@@ -733,6 +810,10 @@ model_info fmu4cpp::get_model_info()
 {
     model_info info;
     info.modelName            = "F16Plant";
+    // Aetherion release version, injected by CMake from version.txt. Published as the
+    // FMI `version` attribute so a consumer can enforce a version floor by reading the
+    // shipped modelDescription.xml rather than trusting the build tree it was found in.
+    info.version              = AETHERION_VERSION;
     info.description          = "Aetherion F-16 6-DoF plant "
                                 "(Radau IIA RKMK on SE(3), DAVE-ML aero/prop, J2 gravity)";
     info.canGetAndSetFMUstate = true;

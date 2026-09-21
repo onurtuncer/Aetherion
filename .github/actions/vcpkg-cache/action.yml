@@ -1,0 +1,25 @@
+name: vcpkg binary cache
+description: >
+  Point vcpkg at a workspace-local binary cache and persist it between runs, so the dependencies
+  declared in vcpkg.json are compiled once rather than on every job.
+
+runs:
+  using: composite
+  steps:
+    - name: Prepare binary cache directory
+      shell: bash
+      run: |
+        mkdir -p "${{ github.workspace }}/.vcpkg-cache"
+        echo "VCPKG_DEFAULT_BINARY_CACHE=${{ github.workspace }}/.vcpkg-cache" >> "$GITHUB_ENV"
+
+    - name: Restore / save vcpkg binary cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ github.workspace }}/.vcpkg-cache
+        # The commit suffix makes every run save a fresh entry; the restore-keys fall back to the
+        # newest entry for the same manifest, so a compiler or image bump refreshes the cache
+        # instead of missing it forever.
+        key: vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}-${{ github.sha }}
+        restore-keys: |
+          vcpkg-${{ runner.os }}-${{ hashFiles('vcpkg.json') }}-
+          vcpkg-${{ runner.os }}-

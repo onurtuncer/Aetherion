@@ -17,8 +17,7 @@ target_compile_definitions(
   PRIVATE "F16_INERTIA_FILE=\"${F16_DATA_DIR}/F16_inertia.dml\"" "F16_AERO_FILE=\"${F16_DATA_DIR}/F16_aero.dml\""
           "F16_PROP_FILE=\"${F16_DATA_DIR}/F16_prop.dml\"")
 
-target_include_directories(F16SupersonicTrim PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
-                                                     "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(F16SupersonicTrim PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(F16SupersonicTrim PRIVATE Aetherion::Aetherion Aetherion::Simulation CppAD::cppad)
 

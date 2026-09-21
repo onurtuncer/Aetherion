@@ -41,6 +41,7 @@ Flight Dynamics with Spatial Vector Algebra
    unified_notation
    aero_wind_policies
    daveml
+   fmus
    appendices
    api
    examples

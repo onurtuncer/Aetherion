@@ -23,6 +23,9 @@ __pycache__/
 *.log
 *.aux
 *.pdf 
+*.bbl
+*.blg
+*.spl
 
 # Prerequisites
 *.d
@@ -58,3 +61,7 @@ __pycache__/
 
 # debug information files
 *.dwo
+
+# vcpkg
+vcpkg_installed/
+.vcpkg-cache/

@@ -14,6 +14,4 @@ target_sources(
           ${PUGIXML_DIR}/pugixml.cpp # compile pugixml into Aetherion
 )
 
-target_include_directories(
-  Aetherion PRIVATE ${PUGIXML_DIR} ${PROJECT_SOURCE_DIR}/vendor/CppAD/include # for CppAD::Value / CondExp
-)
+target_include_directories(Aetherion PRIVATE ${PUGIXML_DIR})

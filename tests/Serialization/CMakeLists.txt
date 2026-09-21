@@ -54,8 +54,7 @@ target_compile_definitions(test_daveml_aero_model PRIVATE "DAVEML_AERO_FILE=\"${
 
 target_compile_options(test_daveml_aero_model PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(test_daveml_aero_model PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml"
-                                                          "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_daveml_aero_model PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(test_daveml_aero_model PRIVATE Aetherion Catch2::Catch2WithMain CppAD::cppad)
 
@@ -85,8 +84,7 @@ target_compile_definitions(test_daveml_prop_model PRIVATE "DAVEML_PROP_FILE=\"${
 
 target_compile_options(test_daveml_prop_model PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
-target_include_directories(test_daveml_prop_model PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml"
-                                                          "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
+target_include_directories(test_daveml_prop_model PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(test_daveml_prop_model PRIVATE Aetherion Catch2::Catch2WithMain CppAD::cppad)
 

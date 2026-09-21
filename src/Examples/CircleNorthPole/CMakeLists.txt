@@ -19,8 +19,7 @@ target_compile_definitions(
           "F16_PROP_FILE=\"${F16_DATA_DIR}/F16_prop.dml\""
           "F16_CONTROL_FILE=\"${F16_DATA_DIR}/F16_gnc.dml\"")
 
-target_include_directories(CircleNorthPole PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include"
-                                                   "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+target_include_directories(CircleNorthPole PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
 
 target_link_libraries(CircleNorthPole PRIVATE Aetherion::Aetherion Aetherion::Simulation CppAD::cppad)
 

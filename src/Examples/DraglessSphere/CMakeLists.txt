@@ -33,7 +33,8 @@ add_custom_command(
     "${PROJECT_SOURCE_DIR}/data/Atmos_01_DroppedSphere/nasa_2015_scenario1_dragless_sphere.json"
     "$<TARGET_FILE_DIR:DraglessSphere>/nasa_2015_scenario1_dragless_sphere.json"
   COMMAND
-    ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/data/Atmos_01_DroppedSphere/Atmos_01_sim_01_si_units.csv"
+    ${CMAKE_COMMAND} -E copy_if_different
+    "${PROJECT_SOURCE_DIR}/data/Atmos_01_DroppedSphere/Atmos_01_sim_01_si_units.csv"
     "$<TARGET_FILE_DIR:DraglessSphere>/Atmos_01_sim_01_si_units.csv"
   COMMAND ${CMAKE_COMMAND} -E copy_if_different "${PROJECT_SOURCE_DIR}/scripts/compare_sim_validation.py"
           "$<TARGET_FILE_DIR:DraglessSphere>/compare_sim_validation.py"

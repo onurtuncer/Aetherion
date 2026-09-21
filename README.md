@@ -37,7 +37,7 @@ The flagship simulation is a full 6-DOF two-stage rocket gravity-turn ascent fro
   <img src="doc/_static/atmos17/trajectory_3d.png" width="680" alt="Two-Stage Rocket 3D Trajectory — Aetherion vs. NASA Sim 06"/>
 </p>
 
-Stage separation, coast phases, and second-stage ignition are all captured with sub-percent error versus the NASA reference (Δt = 1 ms). Final altitude error: **0.87 %** · Final speed error: **0.14 %**.
+Stage separation, coast phases, and second-stage ignition are all captured with sub-percent error versus the NASA reference (Δt = 1 ms). Final altitude error: **0.87 %** · Final speed error: **0.14 %** (8 392 vs 8 381 m/s true airspeed).
 
 ---
 
@@ -77,6 +77,26 @@ Stage separation, coast phases, and second-stage ignition are all captured with 
 - **Post-modern C++23** design throughout
 - Enforces a **practical subset of the JSF AV C++ coding standard**
 - CI gates: Clang-Format · CMake-Format · CMake-Lint · IWYU · Clang-Tidy · Metrix++ cyclomatic complexity · AddressSanitizer / UBSan
+
+The two CMake gates share their configuration in [`.cmake-format`](.cmake-format) and cover every
+`CMakeLists.txt` and `*.cmake` outside the pruned `build/`, `out/`, `vendor/` and `.venv/`
+trees. Reproduce them locally with:
+
+```bash
+pip install cmakelang
+
+bash .run-cmake-format   # rewrites listfiles in place; CI fails if this leaves a diff
+
+mapfile -t listfiles < <(
+  find . \( -path ./build -o -path ./out -o -path ./vendor -o -path ./.venv \) -prune \
+    -o -type f \( -name CMakeLists.txt -o -name "*.cmake" \) -print
+)
+cmake-lint "${listfiles[@]}" --config-files .cmake-format
+```
+
+`--config-files` takes a variable number of arguments, so the listfiles have to come *before* it:
+piping them in as `xargs cmake-lint --config-files .cmake-format` makes them look like extra config
+files and the run checks nothing at all.
 
 ---
 
@@ -164,13 +184,13 @@ notation for spatial transforms, keeping the frame algebra explicit and AD-frien
 
 ## Dependencies
 
-| Library | Purpose |
-|---------|---------|
-| [Eigen](https://eigen.tuxfamily.org) | Linear algebra |
-| [CppAD](https://coin-or.github.io/CppAD/) | Algorithmic differentiation |
-| [fmu4cpp](https://github.com/markaren/fmu4cpp) | FMI/FMU export |
-| [ecos](https://github.com/Ecos-platform/ecos) | FMI co-simulation engine (FMU smoke testing) |
-| [Catch2 v3](https://github.com/catchorg/Catch2) | Unit testing |
+| Library | Purpose | Provided by |
+|---------|---------|-------------|
+| [Eigen](https://eigen.tuxfamily.org) | Linear algebra | vendored (`vendor/eigen`) |
+| [CppAD](https://coin-or.github.io/CppAD/) | Algorithmic differentiation | vcpkg (`vcpkg.json`) |
+| [fmu4cpp](https://github.com/markaren/fmu4cpp) | FMI/FMU export | vendored (`vendor/fmu4cpp`) |
+| [ecos](https://github.com/Ecos-platform/ecos) | FMI co-simulation engine (FMU smoke testing) | submodule (`vendor/ecos`) |
+| [Catch2 v3](https://github.com/catchorg/Catch2) | Unit testing | fetched at configure time |
 
 ---
 
@@ -191,6 +211,27 @@ git clone https://github.com/onurtuncer/Aetherion.git
 cd Aetherion
 git submodule update --init --recursive
 ```
+
+CppAD is consumed through [vcpkg](https://vcpkg.io) on every platform, so a vcpkg clone is
+the only external prerequisite:
+
+```bash
+git clone https://github.com/microsoft/vcpkg.git ~/vcpkg   # or C:\vcpkg on Windows
+~/vcpkg/bootstrap-vcpkg.sh                                 # bootstrap-vcpkg.bat on Windows
+export VCPKG_ROOT=~/vcpkg                                  # setx VCPKG_ROOT C:\vcpkg
+```
+
+CMake picks the toolchain up from `VCPKG_ROOT` (or `VCPKG_INSTALLATION_ROOT`, which
+GitHub-hosted runners already set) and installs the dependencies pinned in `vcpkg.json`
+at configure time — no separate `vcpkg install` step. Two caveats:
+
+- `vcvarsall.bat`, and therefore every Visual Studio developer prompt, overwrites
+  `VCPKG_ROOT` with the port-less vcpkg stub bundled inside Visual Studio. That stub is
+  detected and skipped; if it is the only candidate, pass
+  `-DAETHERION_VCPKG_ROOT=<path>` or set `VCPKG_INSTALLATION_ROOT`, which `vcvarsall`
+  leaves alone.
+- To build against a CppAD that is already installed system-wide, configure with
+  `-DAETHERION_USE_VCPKG=OFF` and make sure the prefix is on `CMAKE_PREFIX_PATH`.
 
 ### Windows — Visual Studio
 

@@ -30,7 +30,6 @@ generatefmu(
   INCLUDE_DIRS
   "${PROJECT_SOURCE_DIR}" # <Aetherion/...> headers
   "${PROJECT_SOURCE_DIR}/vendor/eigen" # <Eigen/...>
-  "${PROJECT_SOURCE_DIR}/vendor/CppAD/include" # <cppad/...>
   "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml" # DAVEMLReader → pugixml
   LINK_TARGETS
   Aetherion::Aetherion
@@ -38,6 +37,7 @@ generatefmu(
   RESOURCE_FOLDER
   "${F16_STAGED_RES}"
   COMPILE_DEFINITIONS
+  AETHERION_VERSION="${PROJECT_VERSION}"
   $<$<CXX_COMPILER_ID:MSVC>:_CRT_SECURE_NO_WARNINGS>)
 
 # MSVC-specific compile options not expressible as compile definitions. The generated target name follows the pattern

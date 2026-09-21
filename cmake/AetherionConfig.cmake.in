@@ -19,20 +19,23 @@ if(NOT TARGET Eigen3::Eigen)
 endif()
 
 # ── CppAD ─────────────────────────────────────────────────────────────────────
+# One path on every platform: FindCppAD.cmake is installed next to this file and
+# builds the CppAD::cppad imported target from whatever prefix CppAD lives in --
+# the consumer's own (vcpkg, distribution package, …) if there is one, otherwise
+# the copy bundled with this installation.
 if(NOT TARGET CppAD::cppad)
-  if(WIN32)
-    add_library(CppAD::cppad STATIC IMPORTED GLOBAL)
-    set_target_properties(CppAD::cppad PROPERTIES
-      IMPORTED_CONFIGURATIONS        "Debug;Release"
-      IMPORTED_LOCATION_RELEASE      "${PACKAGE_PREFIX_DIR}/lib/cppad_lib.lib"
-      IMPORTED_LOCATION_DEBUG        "${PACKAGE_PREFIX_DIR}/lib/debug/cppad_lib.lib"
-      INTERFACE_INCLUDE_DIRECTORIES  "${PACKAGE_PREFIX_DIR}/include")
-  else()
-    # Header-only on non-Windows (cppad_lib not required in this configuration)
-    add_library(CppAD::cppad INTERFACE IMPORTED GLOBAL)
-    target_include_directories(CppAD::cppad INTERFACE
-      "${PACKAGE_PREFIX_DIR}/include")
-  endif()
+  set(_aetherion_saved_module_path "${CMAKE_MODULE_PATH}")
+  set(_aetherion_saved_prefix_path "${CMAKE_PREFIX_PATH}")
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}")
+  list(APPEND CMAKE_PREFIX_PATH "${PACKAGE_PREFIX_DIR}")
+
+  find_package(CppAD MODULE REQUIRED)
+
+  # Do not leak the search paths into the consuming project.
+  set(CMAKE_MODULE_PATH "${_aetherion_saved_module_path}")
+  set(CMAKE_PREFIX_PATH "${_aetherion_saved_prefix_path}")
+  unset(_aetherion_saved_module_path)
+  unset(_aetherion_saved_prefix_path)
 endif()
 
 # ── Aetherion targets (Aetherion::Aetherion, Aetherion::fmu4cpp_base, …) ─────

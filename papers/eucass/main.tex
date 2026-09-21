@@ -189,9 +189,18 @@ independent exponential maps to each factor \citep{stevens2016aircraft}.
 This approach loses the screw-motion coupling that $\SE$ encodes natively and
 requires two separate tangent-space corrections.
 
-\textbf{Contributions.}  This paper makes five specific contributions:
+\textbf{Contributions.}  This paper makes six specific contributions:
 
 \begin{enumerate}[leftmargin=*, label=(\arabic*)]
+  \item An explicit treatment of the \emph{trivialization convention} in the
+    $\dexp^{-1}$ stage correction (Section~\ref{sec:trivialization}).  We show
+    that the right-trivialized form---the one usually tabulated---reduces a
+    left-trivialized body-frame integrator to order two irrespective of the
+    tableau, that this is invisible to the diagnostics normally used to
+    validate such an integrator, and that exposing it requires a test problem
+    whose body twist is time-varying.  We give the test problem and the
+    measured orders.  We believe this is the contribution most immediately
+    useful to a reader implementing RKMK.
   \item An RKMK integrator that treats $g \in \SE$ as a \emph{single} Lie
     group throughout, with one $\se$-valued stage increment per stage and a
     single $\SE$ exponential map at the update step.
@@ -202,14 +211,6 @@ requires two separate tangent-space corrections.
     \citep{cppad}, reducing Newton convergence failures caused by
     finite-difference truncation and enabling AD-transparent sensitivity
     propagation.
-  \item An explicit treatment of the \emph{trivialization convention} in the
-    $\dexp^{-1}$ stage correction (Section~\ref{sec:trivialization}).  We show
-    that the right-trivialized form---the one usually tabulated---reduces a
-    left-trivialized body-frame integrator to order two irrespective of the
-    tableau, that this is invisible to the diagnostics normally used to
-    validate such an integrator, and that exposing it requires a test problem
-    whose body twist is time-varying.  We give the test problem and the
-    measured orders.
   \item A controlled attribution of structure preservation
     (Section~\ref{sec:constraint}).  Comparisons of a Lie-group integrator
     against an explicit flat-state one vary the manifold treatment, the
@@ -915,10 +916,10 @@ Aetherion remains inside that envelope
 This is the primary validation scenario for launch-vehicle dynamics.  A
 two-stage rocket undergoes:
 \begin{enumerate}[label=(\roman*)]
-  \item S1 burn with variable thrust and mass-flow;
-  \item post-burnout coast of $\SI{7}{s}$;
+  \item S1 burn with variable thrust and mass-flow (to $t = \SI{37.4}{s}$);
+  \item post-burnout ballistic coast to $t = \SI{131.8}{s}$;
   \item staging (S1 jettison, S2 ignition);
-  \item S2 burn until apogee.
+  \item S2 burn to $t = \SI{193}{s}$, then coast.
 \end{enumerate}
 Aerodynamics are provided via DAVE-ML tables (axial/normal force coefficients
 as functions of Mach and $\alpha$).  The reference trajectories run to

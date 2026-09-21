@@ -13,8 +13,6 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_atmosphere PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
-
 include(Catch)
 catch_discover_tests(test_atmosphere)
 
@@ -29,8 +27,6 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-target_include_directories(test_gravity PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
-
 include(Catch)
 catch_discover_tests(test_gravity)
 
@@ -44,8 +40,6 @@ target_link_libraries(
           Catch2::Catch2WithMain
           CppAD::cppad
           Eigen3::Eigen)
-
-target_include_directories(test_wind_geometry PRIVATE "${PROJECT_SOURCE_DIR}/vendor/CppAD/include")
 
 include(Catch)
 catch_discover_tests(test_wind_geometry)
