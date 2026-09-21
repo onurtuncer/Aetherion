@@ -78,9 +78,9 @@ build step that packages the archive, so the two cannot disagree.
 
 ``specificForce_{x,y,z}_m_s2`` on ``F16Plant`` and ``TwoStageRocket`` first ship
 in **0.14.0**.  ``circumnavigate``, ``cmd.circlePoleSW``, ``fb.lat_deg`` and
-``fb.lon_deg`` on ``F16Autopilot`` first ship in the release after **0.14.1**;
-the same release is the first in which ``F16Plant`` trims against the
-level-flight apparent weight (see :ref:`fmu_f16plant`).
+``fb.lon_deg`` on ``F16Autopilot`` first ship in **0.15.0**; the same release
+is the first in which ``F16Plant`` trims against the level-flight apparent
+weight and starts wings-level (see :ref:`fmu_f16plant`).
 
 .. _fmu_conventions:
 
