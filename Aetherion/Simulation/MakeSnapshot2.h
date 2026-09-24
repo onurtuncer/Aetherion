@@ -87,7 +87,13 @@ Snapshot2 MakeSnapshot2(
     snap.localGravity_m_s2 = (s.g.R * a_body).norm();
 
     // ── 5. Atmosphere ─────────────────────────────────────────────────────
-    const auto atm = Env::US1976Atmosphere(alt_m);
+    // On a non-standard day the aero policy carries the offsets; use them so
+    // the reported pressure and density are the ones the forces used.
+    Env::AtmosphereOffsets atmOffsets{};
+    if constexpr (requires { aero.atmosphereOffsets(); }) {
+        atmOffsets = aero.atmosphereOffsets();
+    }
+    const auto atm = Env::US1976Atmosphere(alt_m, atmOffsets);
     snap.speedOfSound_m_s    = atm.a;
     snap.airDensity_kg_m3    = atm.rho;
     snap.ambientPressure_Pa  = atm.p;
@@ -129,7 +135,18 @@ Snapshot2 MakeSnapshot2(
     snap.bodyAngularRateWrtEi_rad_s_Yaw   = s.nu_B(2);
 
     // ── 9. Air data ───────────────────────────────────────────────────────
-    const double tas = snap.feVelocity_m_s.norm();
+    // Air-relative: subtract the policy's steady wind (ECEF → NED) when set.
+    // Calm air leaves the ground-relative value untouched, bit for bit.
+    Vec3d v_air_ned = snap.feVelocity_m_s;
+    if constexpr (requires { aero.windECEF(); }) {
+        const Eigen::Vector3d& w_ecef = aero.windECEF();
+        if (w_ecef.squaredNorm() > 0.0) {
+            const CArr3 w_ecef_arr{ w_ecef.x(), w_ecef.y(), w_ecef.z() };
+            const CArr3 w_ned_arr = Coord::ECEFToNED(w_ecef_arr, lat_rad, lon_rad);
+            v_air_ned -= Vec3d(w_ned_arr[0], w_ned_arr[1], w_ned_arr[2]);
+        }
+    }
+    const double tas = v_air_ned.norm();
     snap.trueAirspeed_m_s  = tas;
     snap.mach               = tas / atm.a;
     snap.dynamicPressure_Pa = 0.5 * atm.rho * tas * tas;

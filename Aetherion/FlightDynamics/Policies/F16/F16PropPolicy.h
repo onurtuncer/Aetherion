@@ -11,13 +11,23 @@
 // Propulsion wrench policy backed by the F-16 DAVE-ML propulsion model.
 //
 // At each call:
-//   1. Derives atmosphere-relative TAS in the body frame.
-//   2. Computes geometric altitude and Mach number from the US 1976 atmosphere.
+//   1. Derives atmosphere-relative TAS in the body frame, through the same
+//      AirRelativeVelocity_B() the aero policy uses (Earth rotation, steady
+//      wind and gust all subtracted).
+//   2. Computes geometric altitude and Mach number; the speed of sound comes
+//      from the US 1976 atmosphere with this policy's AtmosphereOffsets.
 //   3. Queries DAVEMLPropModel::evaluate<S> at the stored throttle setting.
 //   4. Returns a body-frame wrench with thrust forces (N) and moments (N·m).
 //
 // The throttle (pwr_pct [0–100]) is stored as a member and may be updated
-// between integration steps by a controller.
+// between integration steps by a controller.  The environment (wind, gust,
+// atmosphere offsets) is set the same way and must match the aero policy's,
+// or the engine and the airframe fly in different air: before 0.16.0 this
+// policy formed Mach from the ground-relative velocity, which put a tailwind
+// or a hot day out of trim by tens of pounds of thrust.
+//
+// The engine deck itself is indexed on geometric altitude and Mach for a
+// standard day; the offsets change only the Mach it is looked up at.
 //
 // Satisfies PropulsionPolicy (alias of AeroPolicy) for S = double and
 // S = CppAD::AD<double>.
@@ -27,7 +37,9 @@
 
 #include <Aetherion/Serialization/DAVEML/DAVEMLPropModel.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
+#include <Aetherion/FlightDynamics/Policies/AirRelative.h>
 #include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Environment/DrydenTurbulence.h>
 #include <Aetherion/Environment/GeometricAltitude.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
@@ -54,27 +66,35 @@ public:
                            double throttle   = 0.0)
         : m_model(std::move(model)), pwr_pct(throttle) {}
 
+    // ── Environment (must match the aero policy's) ────────────────────────────
+
+    void setWindECEF(const Eigen::Vector3d& v_wind_ecef) noexcept { m_windECEF = v_wind_ecef; }
+    [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return m_windECEF; }
+
+    void setGust(const Environment::GustState& g) noexcept { m_gust = g; }
+    [[nodiscard]] const Environment::GustState& gust() const noexcept { return m_gust; }
+
+    void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
+    [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
+
     // ── PropulsionPolicy interface ────────────────────────────────────────────
 
     template<class S>
     Spatial::Wrench<S>
     operator()(const ODE::RKMK::Lie::SE3<S>& g,
                const Eigen::Matrix<S, 6, 1>& nu_B,
-               S /*mass*/, S /*t*/) const
+               S /*mass*/, S t) const
     {
         using Environment::detail::SquareRoot;
 
         // ── Atmosphere-relative TAS ───────────────────────────────────────────
-        constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
-        const Eigen::Matrix<S, 3, 1> omega_E(S(0), S(0), S(kOmegaE));
-        const Eigen::Matrix<S, 3, 1> v_surface = g.R.transpose() * omega_E.cross(g.p);
-        const Eigen::Matrix<S, 3, 1> v_rel = nu_B.template tail<3>() - v_surface;
+        const Eigen::Matrix<S, 3, 1> v_rel = AirRelativeVelocity_B(g, nu_B, t, m_windECEF, m_gust);
         const S vt_mps = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
 
         // ── Geometric altitude (ft) and Mach ─────────────────────────────────
         const S alt_m  = Environment::GeometricAltitude_m(g.p);
         const S alt_ft = alt_m / S(kFt_m);
-        const S a_mps  = Environment::US1976Atmosphere(alt_m).a;
+        const S a_mps  = Environment::US1976Atmosphere(alt_m, m_atm).a;
         const S mach   = vt_mps / a_mps;
 
         // ── Evaluate propulsion model ─────────────────────────────────────────
@@ -99,6 +119,9 @@ public:
 
 private:
     std::shared_ptr<const Serialization::DAVEMLPropModel> m_model;
+    Eigen::Vector3d                m_windECEF{ Eigen::Vector3d::Zero() }; ///< Steady wind, ECEF [m/s]
+    Environment::GustState         m_gust{};                              ///< Gust, body axes
+    Environment::AtmosphereOffsets m_atm{};                               ///< ISA + dT, dP_sl
 };
 
 static_assert(PropulsionPolicy<F16PropPolicy>);

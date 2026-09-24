@@ -202,6 +202,56 @@ namespace Aetherion::Simulation {
         // Delegate all kinematic/atmospheric fields to the single-policy form.
         Snapshot1 snap = MakeSnapshot1(t, s, theta_gst, gravity);
 
+        // ── Environment carried by the aero policy ───────────────────────────
+        // A policy that flies on a non-standard day and/or through wind
+        // (F16AeroPolicy) exposes its offsets, steady wind and gust.  Re-derive
+        // the atmosphere and the air data from them so that what is reported
+        // is what the forces were computed from.  Both blocks leave every
+        // number bit-identical when the environment is the default.
+        namespace Env = Aetherion::Environment;
+        double a_sound = snap.speedOfSound_m_s;
+        double rho     = snap.airDensity_kg_m3;
+        bool   airDataDirty = false;
+        if constexpr (requires { aero.atmosphereOffsets(); }) {
+            if (!aero.atmosphereOffsets().isStandard()) {
+                const auto atm = Env::US1976Atmosphere(snap.altitudeMsl_m, aero.atmosphereOffsets());
+                snap.ambientTemperature_K = atm.T;
+                snap.ambientPressure_Pa   = atm.p;
+                snap.airDensity_kg_m3     = atm.rho;
+                snap.speedOfSound_m_s     = atm.a;
+                a_sound = atm.a;
+                rho     = atm.rho;
+                airDataDirty = true;
+            }
+        }
+        if constexpr (requires { aero.windECEF(); aero.gust(); }) {
+            namespace Coord = Aetherion::Coordinate;
+            const Eigen::Vector3d& w_ecef = aero.windECEF();
+            const Eigen::Vector3d  gust_B = aero.gust().linear();
+            if (w_ecef.squaredNorm() > 0.0 || gust_B.squaredNorm() > 0.0) {
+                const Coord::Vec3<double> w_ecef_arr = { w_ecef.x(), w_ecef.y(), w_ecef.z() };
+                const Coord::Vec3<double> w_ned_arr  =
+                    Coord::ECEFToNED(w_ecef_arr, snap.latitude_rad, snap.longitude_rad);
+                // Gust is in body axes: rotate to NED through R_NB = R_IN^T R_IB.
+                const Coord::Mat3<double> R_IN_arr =
+                    Coord::NEDToInertialRotationMatrix(snap.latitude_rad, snap.longitude_rad, theta_gst);
+                Eigen::Matrix3d R_IN;
+                for (int r = 0; r < 3; ++r)
+                    for (int c = 0; c < 3; ++c)
+                        R_IN(r, c) = R_IN_arr[3 * r + c];
+                const Eigen::Vector3d gust_ned = R_IN.transpose() * s.g.R * gust_B;
+                const Eigen::Vector3d v_air_ned =
+                    snap.feVelocity_m_s - Eigen::Vector3d(w_ned_arr[0], w_ned_arr[1], w_ned_arr[2]) - gust_ned;
+                snap.trueAirspeed_m_s = v_air_ned.norm();
+                airDataDirty = true;
+            }
+        }
+        if (airDataDirty) {
+            const double tas = snap.trueAirspeed_m_s;
+            snap.mach               = tas / a_sound;
+            snap.dynamicPressure_Pa = 0.5 * rho * tas * tas;
+        }
+
         // Evaluate aero wrench at the current state.
         // Wrench layout (Featherstone): [moment(0:2); force(3:5)]
         using SE3d = ODE::RKMK::Lie::SE3<double>;

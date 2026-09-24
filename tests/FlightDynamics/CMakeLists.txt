@@ -93,6 +93,28 @@ target_link_libraries(
 catch_discover_tests(test_trim_solver)
 
 # --------------------------------------------------------------------------
+# F-16 aero policy in wind, gusts and on a non-standard day (DAVE-ML required)
+# --------------------------------------------------------------------------
+
+add_executable(test_f16_environment test_F16Environment.cpp)
+
+target_compile_definitions(test_f16_environment PRIVATE "DAVEML_F16_AERO_FILE=\"${DAVEML_F16_AERO}\""
+                                                        "DAVEML_F16_PROP_FILE=\"${DAVEML_F16_PROP}\"")
+
+target_compile_options(test_f16_environment PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_include_directories(test_f16_environment PRIVATE "${PROJECT_SOURCE_DIR}/vendor/Janus/ThirdParty/pugixml")
+
+target_link_libraries(
+  test_f16_environment
+  PRIVATE Aetherion
+          Catch2::Catch2WithMain
+          CppAD::cppad
+          Eigen3::Eigen)
+
+catch_discover_tests(test_f16_environment)
+
+# --------------------------------------------------------------------------
 # Trim weight helper tests
 # --------------------------------------------------------------------------
 

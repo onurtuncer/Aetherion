@@ -1,5 +1,10 @@
 # TODO — resume here
 
+See also `TODO-wind-turbulence-atmosphere.md`: steady wind, Dryden turbulence
+and ISA offsets for the F-16 and rocket plants, requested by Hemerion. Done
+2026-09-24 on `feat/wind-turbulence-atmosphere`, version bumped to v0.16.0;
+the file records what shipped and the deviations from the plan.
+
 Branch: **`fix/rkmk-left-trivialisation`** (2 commits, not yet pushed or merged)
 
 ## What happened

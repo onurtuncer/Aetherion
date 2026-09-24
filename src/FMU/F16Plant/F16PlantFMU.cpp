@@ -31,6 +31,18 @@
 //    solver.abs_tol   Newton absolute residual tolerance [-]      def 1e-12
 //    solver.rel_tol   Newton relative residual tolerance [-]      def 1e-10
 //    solver.max_step_s Max internal integrator step      [s]      def 0.0 (= comm. step)
+//    wind.north_mps   Steady wind, NED north             [m/s]    def   0.0
+//    wind.east_mps    Steady wind, NED east              [m/s]    def   0.0
+//    wind.down_mps    Steady wind, NED down              [m/s]    def   0.0
+//    turb.sigma_u_mps Dryden RMS gust, body x            [m/s]    def   0.0  (all three 0 = off)
+//    turb.sigma_v_mps Dryden RMS gust, body y            [m/s]    def   0.0
+//    turb.sigma_w_mps Dryden RMS gust, body z            [m/s]    def   0.0
+//    turb.L_u_m       Dryden scale length, u             [m]      def 533.4  (1750 ft)
+//    turb.L_v_m       Dryden scale length, v             [m]      def 533.4
+//    turb.L_w_m       Dryden scale length, w             [m]      def 533.4
+//    turb.seed        Dryden noise seed, integer-valued  [-]      def   1
+//    atm.deltaT_K     ISA temperature offset             [K]      def   0.0
+//    atm.deltaP_sl_Pa Sea-level pressure offset          [Pa]     def   0.0
 //
 //  INPUTS  (may be set between fmi2DoStep calls)
 //    ctrl.el_deg      Elevator deflection                [deg]
@@ -72,6 +84,24 @@
 //    out.specificForce_x_m_s2   Body-X specific force at CG  [m/s²]
 //    out.specificForce_y_m_s2   Body-Y specific force at CG  [m/s²]
 //    out.specificForce_z_m_s2   Body-Z specific force at CG  [m/s²]
+//
+//    out.wind_north_m_s, out.wind_east_m_s, out.wind_down_m_s
+//                     Total wind at the CG (steady + gust), NED         [m/s]
+//    out.gust_u_m_s, out.gust_v_m_s, out.gust_w_m_s
+//                     Dryden gust velocity, body axes                    [m/s]
+//    out.gust_p_rad_s, out.gust_q_rad_s, out.gust_r_rad_s
+//                     Angular velocity of the gust field, body axes      [rad/s]
+//
+//  Environment: the steady wind is fixed in NED at the initial position and
+//  converted to ECEF once (ConstantECEFWind::from_ned).  The trim is
+//  air-relative and unchanged by wind; the initial ground velocity is the
+//  trim airspeed along the heading plus the wind.  Turbulence (Dryden,
+//  MIL-F-8785C) is stepped once per integrator sub-step at the current
+//  airspeed and held constant over the step; its eight filter states are in
+//  the saved FMU state, the noise stream is not rewound by setFMUState.
+//  atm.* shifts the US1976 atmosphere for the forces, the trim and out.P_Pa,
+//  out.T_K, out.rho_kg_m3, out.a_m_s alike.  All defaults reproduce the
+//  calm, standard-day plant bit for bit.
 //
 //  out.specificForce_* is the non-gravitational acceleration an ideal
 //  accelerometer at the CG would sense, (F_aero + F_thrust)/m, in the same body
@@ -139,6 +169,13 @@
 // Earth rotation rate
 #include <Aetherion/Environment/WGS84.h>
 
+// Environment: atmosphere offsets, steady wind, Dryden turbulence
+#include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Environment/DrydenTurbulence.h>
+#include <Aetherion/Environment/WindModels.h>
+#include <Aetherion/Coordinate/InertialToLocal.h>
+#include <cstdint>
+
 using namespace fmu4cpp;
 
 // ── Namespace aliases ─────────────────────────────────────────────────────────
@@ -147,6 +184,7 @@ namespace AE_FD  = Aetherion::FlightDynamics;
 namespace AE_SR  = Aetherion::Serialization;
 namespace AE_SIM = Aetherion::Simulation;
 namespace AE_EX  = Aetherion::Examples::F16SteadyFlight;
+namespace AE_ENV = Aetherion::Environment;
 
 // ── Type aliases ──────────────────────────────────────────────────────────────
 using F16VF      = AE_EX::F16VF;       // VectorField<J2Gravity, F16Aero, F16Prop, ConstMass>
@@ -174,6 +212,14 @@ namespace {
     constexpr double kDefault_newton_abs_tol = 1.0e-12;
     constexpr double kDefault_newton_rel_tol = 1.0e-10;
     constexpr double kDefault_max_step_s     = 0.0;  // 0 → use the communication step directly
+
+    // Environment defaults: calm air on a standard day.
+    constexpr double kDefault_wind_mps       = 0.0;
+    constexpr double kDefault_turb_sigma_mps = 0.0;    // all three zero = turbulence off
+    constexpr double kDefault_turb_L_m       = 533.4;  // 1750 ft, MIL-F-8785C above 2000 ft
+    constexpr double kDefault_turb_seed      = 1.0;
+    constexpr double kDefault_atm_deltaT_K   = 0.0;
+    constexpr double kDefault_atm_deltaP_Pa  = 0.0;
 }
 
 // ── FMU state (trivially copyable POD) ───────────────────────────────────────
@@ -226,6 +272,20 @@ struct F16PlantState {
     double specificForce_y_m_s2{};  // body-Y specific force at the CG [m/s²]
     double specificForce_z_m_s2{};  // body-Z specific force at the CG [m/s²]
     double thrust_N    {};  // net propulsive force, body +X [N]
+
+    // ── Environment outputs ───────────────────────────────────────────────────
+    double wind_north_m_s{};  // total wind at the CG, NED north (steady + gust) [m/s]
+    double wind_east_m_s {};  // total wind at the CG, NED east  [m/s]
+    double wind_down_m_s {};  // total wind at the CG, NED down  [m/s]
+    double gust_u_m_s    {};  // Dryden gust, body x [m/s]
+    double gust_v_m_s    {};  // Dryden gust, body y [m/s]
+    double gust_w_m_s    {};  // Dryden gust, body z [m/s]
+    double gust_p_rad_s  {};  // angular velocity of the gust field, body x [rad/s]
+    double gust_q_rad_s  {};  // angular velocity of the gust field, body y [rad/s]
+    double gust_r_rad_s  {};  // angular velocity of the gust field, body z [rad/s]
+
+    // ── Turbulence filter states (preserved across save/restore) ─────────────
+    std::array<double, 8> turb_x{};
 };
 static_assert(std::is_trivially_copyable_v<F16PlantState>,
     "F16PlantState must be trivially copyable for fmu4cpp state save/restore.");
@@ -271,10 +331,18 @@ public:
         //    J2 attraction the integrator's J2GravityPolicy applies, less the
         //    centripetal relief of level flight over the rotating Earth.  Shared
         //    with the examples — see Aetherion/FlightDynamics/Trim/TrimWeight.h.
-        //    Horizontal TAS decomposed along heading (no wind, no climb at trim).
+        //    Horizontal TAS decomposed along heading (no sideslip, no climb at
+        //    trim) is the air-relative velocity.  The ground velocity that the
+        //    initial state, the apparent weight and the transport rate need is
+        //    that plus the steady wind: the aircraft crabs in a crosswind and
+        //    its ground speed drops in a headwind, while the trim, which is
+        //    air-relative, is unchanged.
         const double vt_mps     = p_vt0_fps_ * kFt_m;
-        const double vNorth_mps = vt_mps * std::cos(p_heading0_deg_ * kDeg);
-        const double vEast_mps  = vt_mps * std::sin(p_heading0_deg_ * kDeg);
+        const double vNorthAir  = vt_mps * std::cos(p_heading0_deg_ * kDeg);
+        const double vEastAir   = vt_mps * std::sin(p_heading0_deg_ * kDeg);
+        const double vNorth_mps = vNorthAir + p_wind_north_mps_;
+        const double vEast_mps  = vEastAir  + p_wind_east_mps_;
+        const double vDown_mps  = p_wind_down_mps_;
 
         const double weight_lbf = AE_FD::LevelFlightTrimWeight_lbf(
             m_ip.mass_kg, p_lat0_deg_, p_alt0_ft_ * kFt_m, vNorth_mps, vEast_mps);
@@ -289,6 +357,7 @@ public:
             p_heading0_deg_, 0.0, p_roll0_deg_);
 
         AE_FD::TrimSolver solver(*m_aeroModel, *m_propModel, p_xcg_from_ac_ft_);
+        solver.setAtmosphereOffsets(atmosphereOffsets());
         const AE_FD::TrimPoint trim = solver.solve(tin);
         if (!trim.converged)
             throw std::runtime_error("F16PlantFMU: trim solver did not converge.");
@@ -303,7 +372,7 @@ public:
 
         cfg.velocityNED.north_mps     = vNorth_mps;
         cfg.velocityNED.east_mps      = vEast_mps;
-        cfg.velocityNED.down_mps      = 0.0;
+        cfg.velocityNED.down_mps      = vDown_mps;
         // Attitude held fixed against the local-level frame, which tips forward
         // at the transport rate as the vehicle moves over the curved Earth.
         cfg.bodyRates = AE_FD::LevelFlightBodyRates(
@@ -337,6 +406,29 @@ public:
                   AE_FD::F16PropPolicy(m_propModel, trim.pwr_pct)),
             newton_opts
         );
+
+        // 6b. Environment on the aero policy: steady wind (NED at the start
+        //     point, converted to ECEF once), atmosphere offsets, and the Dryden
+        //     filter bank if any gust intensity is non-zero.
+        {
+            auto& vf = m_stepper->vectorField();
+            vf.aero.setWindECEF(windECEF());
+            vf.aero.setAtmosphereOffsets(atmosphereOffsets());
+            vf.aero.setGust(AE_ENV::GustState{});
+            // The engine forms its Mach from the same air the airframe flies in.
+            vf.thrust.setWindECEF(windECEF());
+            vf.thrust.setAtmosphereOffsets(atmosphereOffsets());
+            vf.thrust.setGust(AE_ENV::GustState{});
+
+            m_turb.reset();
+            m_turbStep_s     = 0.0;
+            m_turbStepWarned = false;
+            state_.turb_x.fill(0.0);
+            const AE_ENV::DrydenParameters tp = turbulenceParameters();
+            if (!tp.isOff()) {
+                m_turb.emplace(tp, static_cast<std::uint64_t>(std::llround(p_turb_seed_)));
+            }
+        }
 
         // 7. Seed control state from trim (written to state_ for fmu4cpp variable tracking)
         state_.el_deg  = trim.el_deg;
@@ -372,6 +464,24 @@ public:
             auto& vf = m_stepper->vectorField();
             vf.aero.setControls(state_.el_deg, state_.ail_deg, state_.rdr_deg);
             vf.thrust.pwr_pct = state_.pwr_pct;
+
+            // Turbulence: advance the Dryden filters by this sub-step at the
+            // current airspeed and hold the gust constant over the step.  The
+            // filters are defined for a fixed step; warn once if it varies.
+            if (m_turb.has_value()) {
+                if (m_turbStep_s == 0.0) {
+                    m_turbStep_s = step;
+                } else if (std::abs(step - m_turbStep_s) > 1.0e-12 && !m_turbStepWarned) {
+                    debugLog(fmiWarning, "F16PlantFMU: turbulence is being stepped at a varying dt; "
+                                         "the Dryden statistics are defined for a fixed step.");
+                    m_turbStepWarned = true;
+                }
+                const Aetherion::ODE::RKMK::Lie::SE3<double> g_now(m_state.g.R, m_state.g.p);
+                const double V = vf.aero.airRelativeVelocity_B<double>(g_now, m_state.nu_B, t_local).norm();
+                const AE_ENV::GustState gust = m_turb->step(step, V);
+                vf.aero.setGust(gust);
+                vf.thrust.setGust(gust);
+            }
 
             const auto res = m_stepper->step(t_local, m_state, step);
             if (!res.converged) {
@@ -421,6 +531,22 @@ public:
         p_newton_abs_tol_ = kDefault_newton_abs_tol;
         p_newton_rel_tol_ = kDefault_newton_rel_tol;
         p_max_step_s_     = kDefault_max_step_s;
+
+        p_wind_north_mps_ = kDefault_wind_mps;
+        p_wind_east_mps_  = kDefault_wind_mps;
+        p_wind_down_mps_  = kDefault_wind_mps;
+        p_turb_sigma_u_   = kDefault_turb_sigma_mps;
+        p_turb_sigma_v_   = kDefault_turb_sigma_mps;
+        p_turb_sigma_w_   = kDefault_turb_sigma_mps;
+        p_turb_L_u_m_     = kDefault_turb_L_m;
+        p_turb_L_v_m_     = kDefault_turb_L_m;
+        p_turb_L_w_m_     = kDefault_turb_L_m;
+        p_turb_seed_      = kDefault_turb_seed;
+        p_atm_deltaT_K_   = kDefault_atm_deltaT_K;
+        p_atm_deltaP_Pa_  = kDefault_atm_deltaP_Pa;
+        m_turb.reset();
+        m_turbStep_s     = 0.0;
+        m_turbStepWarned = false;
     }
 
 private:
@@ -479,6 +605,67 @@ private:
             .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Maximum internal integrator sub-step size [s] (0 = use communication step)");
+
+        // ── Environment ──────────────────────────────────────────────────────
+        register_real("wind.north_mps", &p_wind_north_mps_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Steady wind, NED north component at the initial position [m/s]. Positive = blowing northward. Fixed in NED at the start point and converted to ECEF once.");
+
+        register_real("wind.east_mps", &p_wind_east_mps_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Steady wind, NED east component [m/s]. Positive = blowing eastward.");
+
+        register_real("wind.down_mps", &p_wind_down_mps_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Steady wind, NED down component [m/s]. Positive = downward.");
+
+        register_real("turb.sigma_u_mps", &p_turb_sigma_u_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Dryden turbulence RMS gust along body x [m/s]. All three sigmas zero = turbulence off. MIL-F-8785C spectra; see Aetherion/Environment/DrydenTurbulence.h.");
+
+        register_real("turb.sigma_v_mps", &p_turb_sigma_v_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Dryden turbulence RMS gust along body y [m/s].");
+
+        register_real("turb.sigma_w_mps", &p_turb_sigma_w_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Dryden turbulence RMS gust along body z (down) [m/s].");
+
+        register_real("turb.L_u_m", &p_turb_L_u_m_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Dryden longitudinal scale length L_u [m]; MIL-F-8785C: 1750 ft above 2000 ft.");
+
+        register_real("turb.L_v_m", &p_turb_L_v_m_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Dryden lateral scale length L_v [m] (MIL-F-8785C definition).");
+
+        register_real("turb.L_w_m", &p_turb_L_w_m_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Dryden vertical scale length L_w [m] (MIL-F-8785C definition).");
+
+        register_real("turb.seed", &p_turb_seed_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Seed of the turbulence noise stream (integer-valued). The same seed and parameters reproduce the same gust record.");
+
+        register_real("atm.deltaT_K", &p_atm_deltaT_K_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("ISA temperature deviation [K], added uniformly to the US1976 profile. Shifts density, speed of sound and pressure consistently (hydrostatic re-integration) for the forces, the trim and out.P_Pa/out.T_K/out.rho_kg_m3/out.a_m_s. The propulsion table stays indexed on geometric altitude.");
+
+        register_real("atm.deltaP_sl_Pa", &p_atm_deltaP_Pa_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Sea-level pressure minus 101 325 Pa (QNH offset) [Pa]. A barometer inverting the standard ISA reads about 8.4 m per 100 Pa of offset at low altitude.");
     }
 
     // ── registerInputs ──────────────────────────────────────────────────────────
@@ -650,6 +837,52 @@ private:
             .setDescription("Net propulsive force along body +X [N] "
                             "(the F-16 engine deck carries no body-Y/Z thrust component)");
 
+        // ── Environment ──────────────────────────────────────────────────────
+        register_real("out.wind_north_m_s", &state_.wind_north_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Total wind at the CG, NED north: steady wind plus gust [m/s]");
+
+        register_real("out.wind_east_m_s", &state_.wind_east_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Total wind at the CG, NED east: steady wind plus gust [m/s]");
+
+        register_real("out.wind_down_m_s", &state_.wind_down_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Total wind at the CG, NED down: steady wind plus gust [m/s]");
+
+        register_real("out.gust_u_m_s", &state_.gust_u_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Dryden gust velocity along body x [m/s]");
+
+        register_real("out.gust_v_m_s", &state_.gust_v_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Dryden gust velocity along body y [m/s]");
+
+        register_real("out.gust_w_m_s", &state_.gust_w_m_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Dryden gust velocity along body z (down) [m/s]");
+
+        register_real("out.gust_p_rad_s", &state_.gust_p_rad_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Angular velocity of the gust field about body x [rad/s]; the aero sees p minus this");
+
+        register_real("out.gust_q_rad_s", &state_.gust_q_rad_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Angular velocity of the gust field about body y [rad/s]");
+
+        register_real("out.gust_r_rad_s", &state_.gust_r_rad_s)
+            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Angular velocity of the gust field about body z [rad/s]");
+
         register_real("out.mass_kg",     &state_.mass_kg)
             .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED).setDescription("Vehicle mass [kg]");
@@ -671,6 +904,7 @@ private:
         for (int i = 0; i < 6; ++i)
             state_.nu_B[i] = m_state.nu_B(i);
         state_.mass_kg = m_state.m;
+        state_.turb_x  = m_turb.has_value() ? m_turb->states() : std::array<double, 8>{};
     }
 
     // ── unpackState ───────────────────────────────────────────────────────────
@@ -688,6 +922,11 @@ private:
         for (int i = 0; i < 6; ++i)
             m_state.nu_B(i) = state_.nu_B[i];
         m_state.m = state_.mass_kg;
+        // Turbulence filter states come back with the checkpoint; the noise
+        // stream does not, so a restored run diverges from the original
+        // realisation after the first turbulent step.
+        if (m_turb.has_value())
+            m_turb->setStates(state_.turb_x);
 
         // Re-sync control surface state into VF (also restored from POD)
         if (!m_stepper.has_value()) return;
@@ -771,16 +1010,74 @@ private:
         state_.specificForce_z_m_s2 = specificForce_B.z();
         state_.thrust_N     = F_thrust_B.x();
 
-        // Alpha and beta — same formula as F16AeroPolicy, avoids re-evaluating the
-        // full aero model a second time.
-        const Eigen::Vector3d omega_E(0.0, 0.0, kOmegaEarth_rad_s);
-        const Eigen::Vector3d v_surface = m_state.g.R.transpose() * omega_E.cross(m_state.g.p);
-        const Eigen::Vector3d v_rel     = m_state.nu_B.tail<3>() - v_surface;
+        // Alpha and beta from the same air-relative velocity the aero policy
+        // formed its forces from (Earth-surface velocity, steady wind and gust
+        // all subtracted), so out.alpha_deg agrees with out.aero_F*_N.
+        const Aetherion::ODE::RKMK::Lie::SE3<double> g_now(m_state.g.R, m_state.g.p);
+        const Eigen::Vector3d v_rel = vf.aero.airRelativeVelocity_B<double>(g_now, m_state.nu_B, t);
         const double vt = std::sqrt(v_rel.squaredNorm() + 1.0e-30);
         state_.alpha_deg = std::atan2(v_rel.z(), v_rel.x() + 1.0e-12)
                            * (180.0 / std::numbers::pi);
         state_.beta_deg  = std::asin(std::clamp(v_rel.y() / vt, -1.0, 1.0))
                            * (180.0 / std::numbers::pi);
+
+        // Environment outputs: the total wind at the CG in NED (steady wind
+        // plus the gust rotated body → NED) and the gust itself in body axes.
+        {
+            namespace Coord = Aetherion::Coordinate;
+            const Eigen::Vector3d& w_ecef = vf.aero.windECEF();
+            const Coord::Vec3<double> w_ecef_arr{ w_ecef.x(), w_ecef.y(), w_ecef.z() };
+            const Coord::Vec3<double> w_ned =
+                Coord::ECEFToNED(w_ecef_arr, snap.latitude_rad, snap.longitude_rad);
+
+            const AE_ENV::GustState& gust = vf.aero.gust();
+            const Coord::Mat3<double> R_IN_arr =
+                Coord::NEDToInertialRotationMatrix(snap.latitude_rad, snap.longitude_rad, theta_GST);
+            Eigen::Matrix3d R_IN;
+            for (int r = 0; r < 3; ++r)
+                for (int c = 0; c < 3; ++c)
+                    R_IN(r, c) = R_IN_arr[3 * r + c];
+            const Eigen::Vector3d gust_ned = R_IN.transpose() * m_state.g.R * gust.linear();
+
+            state_.wind_north_m_s = w_ned[0] + gust_ned.x();
+            state_.wind_east_m_s  = w_ned[1] + gust_ned.y();
+            state_.wind_down_m_s  = w_ned[2] + gust_ned.z();
+            state_.gust_u_m_s     = gust.u_mps;
+            state_.gust_v_m_s     = gust.v_mps;
+            state_.gust_w_m_s     = gust.w_mps;
+            state_.gust_p_rad_s   = gust.p_rad_s;
+            state_.gust_q_rad_s   = gust.q_rad_s;
+            state_.gust_r_rad_s   = gust.r_rad_s;
+        }
+    }
+
+    // ── Environment helpers ───────────────────────────────────────────────────
+
+    /// Steady wind as an ECEF vector: the NED parameters at the initial position.
+    [[nodiscard]] Eigen::Vector3d windECEF() const
+    {
+        const auto w = AE_ENV::ConstantECEFWind::from_ned(
+            p_wind_north_mps_, p_wind_east_mps_, p_wind_down_mps_,
+            p_lat0_deg_ * kDeg, p_lon0_deg_ * kDeg);
+        return { w.vx, w.vy, w.vz };
+    }
+
+    [[nodiscard]] AE_ENV::AtmosphereOffsets atmosphereOffsets() const noexcept
+    {
+        return { p_atm_deltaT_K_, p_atm_deltaP_Pa_ };
+    }
+
+    [[nodiscard]] AE_ENV::DrydenParameters turbulenceParameters() const
+    {
+        AE_ENV::DrydenParameters tp{};
+        tp.sigma_u_mps = p_turb_sigma_u_;
+        tp.sigma_v_mps = p_turb_sigma_v_;
+        tp.sigma_w_mps = p_turb_sigma_w_;
+        tp.L_u_m       = p_turb_L_u_m_;
+        tp.L_v_m       = p_turb_L_v_m_;
+        tp.L_w_m       = p_turb_L_w_m_;
+        tp.wingspan_m  = m_aeroModel ? m_aeroModel->bspanFt() * kFt_m : 9.144;
+        return tp;
     }
 
     // ── Parameters ────────────────────────────────────────────────────────────
@@ -795,6 +1092,24 @@ private:
     double p_newton_abs_tol_ { kDefault_newton_abs_tol };
     double p_newton_rel_tol_ { kDefault_newton_rel_tol };
     double p_max_step_s_     { kDefault_max_step_s     };
+
+    double p_wind_north_mps_ { kDefault_wind_mps       };
+    double p_wind_east_mps_  { kDefault_wind_mps       };
+    double p_wind_down_mps_  { kDefault_wind_mps       };
+    double p_turb_sigma_u_   { kDefault_turb_sigma_mps };
+    double p_turb_sigma_v_   { kDefault_turb_sigma_mps };
+    double p_turb_sigma_w_   { kDefault_turb_sigma_mps };
+    double p_turb_L_u_m_     { kDefault_turb_L_m       };
+    double p_turb_L_v_m_     { kDefault_turb_L_m       };
+    double p_turb_L_w_m_     { kDefault_turb_L_m       };
+    double p_turb_seed_      { kDefault_turb_seed      };
+    double p_atm_deltaT_K_   { kDefault_atm_deltaT_K   };
+    double p_atm_deltaP_Pa_  { kDefault_atm_deltaP_Pa  };
+
+    // Dryden filter bank; engaged only when a gust intensity is non-zero.
+    std::optional<AE_ENV::DrydenTurbulence> m_turb;
+    double m_turbStep_s     { 0.0 };
+    bool   m_turbStepWarned { false };
 
     // ── Runtime objects ───────────────────────────────────────────────────────
     // Models kept alive after exit_initialisation_mode so that setFmuState /

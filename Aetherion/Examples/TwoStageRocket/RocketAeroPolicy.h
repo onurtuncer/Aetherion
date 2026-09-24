@@ -39,6 +39,7 @@
 
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
+#include <Aetherion/FlightDynamics/Policies/AirRelative.h>
 #include <Aetherion/Environment/Atmosphere.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
@@ -78,13 +79,23 @@ public:
         : m_model(model)
     {}
 
+    // ── Environment (optional; defaults to calm air on a standard day) ────────
+
+    /// @brief Steady wind as an ECEF vector [m/s] (see ConstantECEFWind::from_ned).
+    void setWindECEF(const Eigen::Vector3d& v_wind_ecef) noexcept { m_windECEF = v_wind_ecef; }
+    [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return m_windECEF; }
+
+    /// @brief ISA + dT and sea-level pressure offset for the density.
+    void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
+    [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
+
     // ── AeroPolicy interface ──────────────────────────────────────────────────
 
     template<class S>
     Spatial::Wrench<S>
     operator()(const ODE::RKMK::Lie::SE3<S>& g,
                const Eigen::Matrix<S, 6, 1>& nu_B,
-               S /*mass*/, S /*t*/) const
+               S /*mass*/, S t) const
     {
         using Environment::detail::SquareRoot;
         using Environment::detail::ArcTangent;
@@ -96,10 +107,12 @@ public:
         constexpr double kPi     = std::numbers::pi;
 
         // ── Atmosphere-relative velocity in body frame ────────────────────────
-        const Eigen::Matrix<S, 3, 1> omega_E(S(0), S(0), S(kOmegaE));
-        const Eigen::Matrix<S, 3, 1> v_surface = g.R.transpose() * omega_E.cross(g.p);
-        const Eigen::Matrix<S, 3, 1> v_B   = nu_B.template tail<3>();
-        const Eigen::Matrix<S, 3, 1> v_rel = v_B - v_surface;
+        // Earth-surface velocity and the steady wind, through the shared helper
+        // (FlightDynamics/Policies/AirRelative.h); no gust on the rocket.
+        (void)kOmegaE;
+        const Environment::GustState noGust{};
+        const Eigen::Matrix<S, 3, 1> v_rel =
+            FlightDynamics::AirRelativeVelocity_B(g, nu_B, t, m_windECEF, noGust);
 
         const S& u  = v_rel(0);
         const S& v  = v_rel(1);
@@ -128,7 +141,7 @@ public:
         const S r_surf   = SquareRoot(S(a2 * b2) /
             (S(b2) * cos2_gc + S(a2) * sin_gc * sin_gc + S(1.0e-30)));
         const S alt      = r - r_surf;
-        const S rho      = Environment::US1976Atmosphere(alt).rho;
+        const S rho      = Environment::US1976Atmosphere(alt, m_atm).rho;
         const S qbar = S(0.5) * rho * vt * vt;
         const S qS   = qbar * S(kSref_m2);
 
@@ -180,6 +193,8 @@ public:
 
 private:
     std::shared_ptr<const Serialization::DAVEMLAeroModel> m_model;
+    Eigen::Vector3d                m_windECEF{ Eigen::Vector3d::Zero() }; ///< Steady wind, ECEF [m/s]
+    Environment::AtmosphereOffsets m_atm{};                               ///< ISA + dT, dP_sl
 };
 
 static_assert(FlightDynamics::AeroPolicy<RocketAeroPolicy>);

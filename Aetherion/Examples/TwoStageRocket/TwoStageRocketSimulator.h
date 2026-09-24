@@ -203,6 +203,11 @@ public:
     /// previously-saved fuel/staging checkpoint.
     [[nodiscard]] RocketStageModel& stageModel() noexcept { return m_stageModel; }
 
+    /// @brief The aero policy the integrator holds, for setting the steady wind
+    /// and the atmosphere offsets (see RocketAeroPolicy) before stepping.
+    [[nodiscard]] RocketAeroPolicy&       aero()       noexcept { return m_stepper.vectorField().aero; }
+    [[nodiscard]] const RocketAeroPolicy& aero() const noexcept { return m_stepper.vectorField().aero; }
+
     /// @brief Directly overwrite the integration state and elapsed time.
     ///
     /// Used by an FMU wrapper's @c setFmuState to restore a checkpoint. Bypasses

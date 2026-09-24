@@ -59,7 +59,8 @@ Stage separation, coast phases, and second-stage ignition are all captured with 
 - Auto-Jacobians fed directly into the EKF/UKF linearisation pipeline
 
 ### Environment Models
-- **US1976 Standard Atmosphere** (temperature, pressure, density, speed of sound)
+- **US1976 Standard Atmosphere** (temperature, pressure, density, speed of sound), with ISA + dT and sea-level pressure offsets re-integrated hydrostatically
+- **Steady wind and Dryden turbulence (MIL-F-8785C)** on the F-16 and rocket plants, exposed as FMU ports
 - **WGS84 gravity model** with ECI/ECEF/geodetic coordinate conversions
 - **Branch-free formulations** designed for AD and Kalman filtering
 
