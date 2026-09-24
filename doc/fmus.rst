@@ -80,7 +80,11 @@ build step that packages the archive, so the two cannot disagree.
 in **0.14.0**.  ``circumnavigate``, ``cmd.circlePoleSW``, ``fb.lat_deg`` and
 ``fb.lon_deg`` on ``F16Autopilot`` first ship in **0.15.0**; the same release
 is the first in which ``F16Plant`` trims against the level-flight apparent
-weight and starts wings-level (see :ref:`fmu_f16plant`).
+weight and starts wings-level (see :ref:`fmu_f16plant`).  The environment
+ports — ``wind.*``, ``atm.*`` on both plants and ``turb.*``, ``out.wind_*``,
+``out.gust_*`` on ``F16Plant`` — first ship in **0.16.0** (see
+:ref:`vehicle_environment`); at their defaults every earlier output is
+unchanged bit for bit.
 
 .. _fmu_conventions:
 
@@ -246,6 +250,68 @@ Parameters
      - s
      - 0
      - Maximum internal sub-step.  0 uses the communication step directly.
+   * - ``wind.north_mps``
+     - m/s
+     - 0
+     - Steady wind, NED north component at the initial position (positive =
+       blowing northward).  Fixed in NED at the start point and converted to
+       ECEF once.  The trim is air-relative; the initial ground velocity is the
+       trim airspeed along the heading plus the wind.
+   * - ``wind.east_mps``
+     - m/s
+     - 0
+     - Steady wind, NED east component.
+   * - ``wind.down_mps``
+     - m/s
+     - 0
+     - Steady wind, NED down component.
+   * - ``turb.sigma_u_mps``
+     - m/s
+     - 0
+     - Dryden RMS gust along body x.  All three sigmas zero = turbulence off.
+       MIL-F-8785C spectra, see :ref:`vehicle_environment`.
+   * - ``turb.sigma_v_mps``
+     - m/s
+     - 0
+     - Dryden RMS gust along body y.
+   * - ``turb.sigma_w_mps``
+     - m/s
+     - 0
+     - Dryden RMS gust along body z (down).
+   * - ``turb.L_u_m``
+     - m
+     - 533.4
+     - Dryden longitudinal scale length (MIL-F-8785C definition; 1750 ft above
+       2000 ft).
+   * - ``turb.L_v_m``
+     - m
+     - 533.4
+     - Dryden lateral scale length.
+   * - ``turb.L_w_m``
+     - m
+     - 533.4
+     - Dryden vertical scale length.
+   * - ``turb.seed``
+     - –
+     - 1
+     - Seed of the turbulence noise stream, integer-valued.  The same seed and
+       parameters reproduce the same gust record.  The filters are stepped
+       once per integrator sub-step at the current airspeed; keep the step
+       fixed (the FMU warns once if it varies).
+   * - ``atm.deltaT_K``
+     - K
+     - 0
+     - ISA temperature deviation, added uniformly to the US1976 profile.
+       Density, pressure and speed of sound are re-integrated hydrostatically
+       for the forces, the trim and the ``out.P_Pa`` / ``out.T_K`` /
+       ``out.rho_kg_m3`` / ``out.a_m_s`` outputs alike.  The propulsion table
+       stays indexed on geometric altitude.
+   * - ``atm.deltaP_sl_Pa``
+     - Pa
+     - 0
+     - Sea-level pressure minus 101 325 Pa (a QNH offset).  A barometer that
+       inverts the standard ISA reads about 84 m high per −1000 Pa at low
+       altitude.
 
 Inputs
 ~~~~~~
@@ -384,6 +450,35 @@ Outputs
      - kg
      - Vehicle mass.  Constant for this vehicle; published for debugging and
        for symmetry with ``TwoStageRocket``.
+   * - ``out.wind_north_m_s``
+     - m/s
+     - Total wind at the CG, NED north: the steady wind plus the gust rotated
+       body → NED.
+   * - ``out.wind_east_m_s``
+     - m/s
+     - Total wind at the CG, NED east.
+   * - ``out.wind_down_m_s``
+     - m/s
+     - Total wind at the CG, NED down.
+   * - ``out.gust_u_m_s``
+     - m/s
+     - Dryden gust velocity along body x.
+   * - ``out.gust_v_m_s``
+     - m/s
+     - Dryden gust velocity along body y.
+   * - ``out.gust_w_m_s``
+     - m/s
+     - Dryden gust velocity along body z (down).
+   * - ``out.gust_p_rad_s``
+     - rad/s
+     - Angular velocity of the gust field about body x.  The aero model sees
+       ``out.p_rad_s`` minus this (and likewise for q and r).
+   * - ``out.gust_q_rad_s``
+     - rad/s
+     - Angular velocity of the gust field about body y.
+   * - ``out.gust_r_rad_s``
+     - rad/s
+     - Angular velocity of the gust field about body z.
 
 .. _fmu_f16autopilot:
 
@@ -631,6 +726,30 @@ Parameters
        immediately once stage 1 has separated.  Set to
        (end time − S2 burn duration) to reproduce the NASA TM coast-then-fire
        sequencing.
+   * - ``wind.north_mps``
+     - m/s
+     - 0
+     - Steady wind, NED north component at the launch point (positive =
+       blowing northward), converted to ECEF once.  The aero is air-relative;
+       ``out.vt_m_s``, ``out.mach`` and ``out.qbar_Pa`` follow.
+   * - ``wind.east_mps``
+     - m/s
+     - 0
+     - Steady wind, NED east component.
+   * - ``wind.down_mps``
+     - m/s
+     - 0
+     - Steady wind, NED down component.
+   * - ``atm.deltaT_K``
+     - K
+     - 0
+     - ISA temperature deviation, as on ``F16Plant``.  Applies to the aero
+       forces and to ``out.P_Pa`` / ``out.T_K`` / ``out.rho_kg_m3`` /
+       ``out.a_m_s``.
+   * - ``atm.deltaP_sl_Pa``
+     - Pa
+     - 0
+     - Sea-level pressure minus 101 325 Pa.
 
 Outputs
 ~~~~~~~

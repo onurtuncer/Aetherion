@@ -31,7 +31,10 @@ struct Config
     InertialParameters    inertialParameters;    ///< Mass and inertia properties of the rigid body.
     AerodynamicParameters aerodynamicParameters;///< Reference geometry and aerodynamic coefficients.
     Environment::ConstantWind wind;             ///< Ambient wind in NED frame [m/s]; defaults to calm (zero).
-    Environment::WindShear    windShear;        ///< Altitude-varying wind profile; h_ref_m=0 means unused.
+                                                ///< Parsed from JSON ("wind"); consumers convert it with
+                                                ///< ConstantECEFWind::from_ned() at the initial position.
+    Environment::WindShear    windShear;        ///< Linear altitude wind shear (NED); all zero means unused.
+                                                ///< Parsed from JSON ("windShear"); see LinearWindShear.
 };
 
 } // namespace Aetherion::RigidBody

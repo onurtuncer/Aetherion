@@ -19,6 +19,21 @@
 // (trim or open-loop use).  A flight-control layer should update them between
 // integration steps for closed-loop simulations.
 //
+// Environment (all optional, all default to calm air on a standard day):
+//   - a steady wind, held as an ECEF vector and rotated to ECI by the Earth
+//     rotation angle at the evaluation time (setWindECEF);
+//   - a gust in body axes from a turbulence model, held constant over an
+//     integration sub-step (setGust), see Environment/DrydenTurbulence.h;
+//   - atmosphere offsets, ISA + dT and a sea-level pressure offset
+//     (setAtmosphereOffsets), see Environment/Atmosphere.h.
+//
+//     v_rel     = v_B - R^T (omega_E x r) - R^T R_ECEF->ECI(t) v_wind - v_gust
+//     omega_air = omega_B - R^T omega_E - omega_gust
+//
+// airRelativeVelocity_B() and airRelativeRates_B() are public so that
+// whoever reports alpha, beta and TAS (the FMU, the snapshot) uses the same
+// vector the forces were computed from.
+//
 // Satisfies AeroPolicy for both S = double and S = CppAD::AD<double>.
 // ------------------------------------------------------------------------------
 
@@ -26,7 +41,9 @@
 
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
+#include <Aetherion/FlightDynamics/Policies/AirRelative.h>
 #include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Environment/DrydenTurbulence.h>
 #include <Aetherion/Environment/GeometricAltitude.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
@@ -44,11 +61,12 @@ namespace Aetherion::FlightDynamics {
 ///
 /// At each call:
 ///  1. Derives atmosphere-relative airspeed in the body frame (ECI velocity
-///     minus the Earth surface velocity R^T(ω_E × r_ECI)).
+///     minus the Earth surface velocity R^T(ω_E × r_ECI), minus the steady
+///     wind and the gust).
 ///  2. Converts to angle of attack (α), sideslip (β), and TAS in ft/s.
 ///  3. Calls DAVEMLAeroModel::evaluate\<S\> with the body rates relative to the
-///     air mass (ω_B/ECI minus the Earth rate R^T ω_E) and fixed
-///     control-surface deflections.
+///     air mass (ω_B/ECI minus the Earth rate R^T ω_E, minus the angular gust)
+///     and fixed control-surface deflections.
 ///  4. Scales the dimensionless coefficients by qbar × Sref (and span/chord)
 ///     and converts lbf / ft·lbf → N / N·m.
 class F16AeroPolicy
@@ -88,24 +106,64 @@ public:
     /// @brief CG-aft-of-AC offset [m] used for the AC→CG moment transfer.
     [[nodiscard]] double xcgFromAcM() const noexcept { return m_xcgFromAcM; }
 
+    // ── Environment ───────────────────────────────────────────────────────────
+
+    /// @brief Steady wind as an ECEF vector [m/s] (see ConstantECEFWind::from_ned).
+    void setWindECEF(const Eigen::Vector3d& v_wind_ecef) noexcept { m_windECEF = v_wind_ecef; }
+    [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return m_windECEF; }
+
+    /// @brief Gust (body axes) held constant over the next integration sub-step.
+    void setGust(const Environment::GustState& g) noexcept { m_gust = g; }
+    [[nodiscard]] const Environment::GustState& gust() const noexcept { return m_gust; }
+
+    /// @brief ISA + dT and sea-level pressure offset for the density and speed of sound.
+    void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
+    [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
+
+    /// @brief Atmosphere at geometric altitude, with this policy's offsets applied.
+    template<class S>
+    [[nodiscard]] Environment::Us1976State<S> atmosphere(const S& alt_m) const
+    {
+        return Environment::US1976Atmosphere(alt_m, m_atm);
+    }
+
+    /// @brief Air-relative velocity in body axes: v_B minus the Earth-surface
+    /// velocity, the steady wind and the gust.  This is the vector alpha, beta
+    /// and TAS are formed from.
+    template<class S>
+    [[nodiscard]] Eigen::Matrix<S, 3, 1>
+    airRelativeVelocity_B(const ODE::RKMK::Lie::SE3<S>& g,
+                          const Eigen::Matrix<S, 6, 1>& nu_B,
+                          const S& t) const
+    {
+        return AirRelativeVelocity_B(g, nu_B, t, m_windECEF, m_gust);
+    }
+
+    /// @brief Body angular rate relative to the air mass: ω_B/ECI minus the
+    /// Earth rate (the atmosphere rotates with the Earth) minus the angular
+    /// velocity of the gust field.
+    template<class S>
+    [[nodiscard]] Eigen::Matrix<S, 3, 1>
+    airRelativeRates_B(const ODE::RKMK::Lie::SE3<S>& g,
+                       const Eigen::Matrix<S, 6, 1>& nu_B) const
+    {
+        return AirRelativeRates_B(g, nu_B, m_gust);
+    }
+
     // ── AeroPolicy interface ──────────────────────────────────────────────────
 
     template<class S>
     Spatial::Wrench<S>
     operator()(const ODE::RKMK::Lie::SE3<S>& g,
                const Eigen::Matrix<S, 6, 1>& nu_B,
-               S /*mass*/, S /*t*/) const
+               S /*mass*/, S t) const
     {
         using Environment::detail::SquareRoot;
         using Environment::detail::ArcTangent;
         using Environment::detail::ArcSine;
 
         // ── Atmosphere-relative velocity in body frame ────────────────────────
-        constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
-        const Eigen::Matrix<S, 3, 1> omega_E(S(0), S(0), S(kOmegaE));
-        const Eigen::Matrix<S, 3, 1> v_surface = g.R.transpose() * omega_E.cross(g.p);
-        const Eigen::Matrix<S, 3, 1> v_B   = nu_B.template tail<3>();
-        const Eigen::Matrix<S, 3, 1> v_rel = v_B - v_surface;
+        const Eigen::Matrix<S, 3, 1> v_rel = airRelativeVelocity_B(g, nu_B, t);
 
         // ── Aerodynamic angles and TAS ────────────────────────────────────────
         const S& u      = v_rel(0);
@@ -125,12 +183,11 @@ public:
         // carries.  The difference is only 7.3e-5 rad/s, but it is steady: fed
         // the inertial rate, roll damping works against the Earth-rate component
         // along the nose and slowly banks a trimmed aircraft off its heading.
-        const Eigen::Matrix<S, 3, 1> omega_B =
-            nu_B.template head<3>() - g.R.transpose() * omega_E;
+        const Eigen::Matrix<S, 3, 1> omega_B = airRelativeRates_B(g, nu_B);
 
         // ── Geometric altitude and atmospheric density ────────────────────────
         const S alt_m    = Environment::GeometricAltitude_m(g.p);
-        const S rho_slug = Environment::US1976Atmosphere(alt_m).rho / S(kSlugFt3_kg_m3);
+        const S rho_slug = atmosphere(alt_m).rho / S(kSlugFt3_kg_m3);
 
         // ── Dynamic pressure [lbf/ft²] ────────────────────────────────────────
         const S qbar_psf = S(0.5) * rho_slug * vt_fps * vt_fps;
@@ -180,6 +237,10 @@ private:
     ///   My_CG = CM × qS × c̄ + xcg_from_ac × FZ_aero
     /// For the F-16 standard loading: (35%−25%) × 11.32 ft × 0.3048 = 0.345 m.
     double m_xcgFromAcM;
+
+    Eigen::Vector3d                m_windECEF{ Eigen::Vector3d::Zero() }; ///< Steady wind, ECEF [m/s]
+    Environment::GustState         m_gust{};                              ///< Gust, body axes
+    Environment::AtmosphereOffsets m_atm{};                               ///< ISA + dT, dP_sl
 };
 
 static_assert(AeroPolicy<F16AeroPolicy>);

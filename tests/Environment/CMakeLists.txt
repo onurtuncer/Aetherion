@@ -4,7 +4,7 @@
 # SPDX-License-Identifier: MIT License-Filename: LICENSE
 # ------------------------------------------------------------------------------
 
-add_executable(test_atmosphere test_atmosphere.cpp)
+add_executable(test_atmosphere test_atmosphere.cpp test_atmosphere_offsets.cpp)
 
 target_link_libraries(
   test_atmosphere
@@ -43,3 +43,21 @@ target_link_libraries(
 
 include(Catch)
 catch_discover_tests(test_wind_geometry)
+
+# --------------------------------------------------------------------------
+# Dryden turbulence statistics
+# --------------------------------------------------------------------------
+
+add_executable(test_dryden_turbulence test_DrydenTurbulence.cpp)
+
+target_compile_options(test_dryden_turbulence PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
+
+target_link_libraries(
+  test_dryden_turbulence
+  PRIVATE Aetherion
+          Catch2::Catch2WithMain
+          CppAD::cppad
+          Eigen3::Eigen)
+
+include(Catch)
+catch_discover_tests(test_dryden_turbulence)

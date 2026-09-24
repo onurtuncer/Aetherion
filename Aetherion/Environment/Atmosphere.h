@@ -25,6 +25,103 @@ namespace Aetherion::Environment {
         Scalar a;    // Speed of sound [m/s]
     };
 
+    /// Deviations from the standard day, applied to US1976Atmosphere().
+    ///
+    /// - deltaT_K: uniform temperature offset added to every layer base
+    ///   temperature ("ISA + dT" day). The lapse rates are unchanged.
+    /// - deltaP_sl_Pa: sea-level pressure minus 101 325 Pa (a QNH offset).
+    ///
+    /// The pressure profile is re-integrated hydrostatically from the shifted
+    /// sea-level pressure through the shifted temperature profile, so
+    /// dp/dH = -rho g0 holds inside every layer for any offsets, and density
+    /// follows from the gas law. Both members zero reproduces the standard
+    /// atmosphere bit for bit.
+    struct AtmosphereOffsets {
+        double deltaT_K     { 0.0 };
+        double deltaP_sl_Pa { 0.0 };
+
+        [[nodiscard]] constexpr bool isStandard() const noexcept
+        {
+            return deltaT_K == 0.0 && deltaP_sl_Pa == 0.0;
+        }
+    };
+
+    namespace detail {
+
+        /// Layer tables of the US1976 homosphere (0..84.852 km geopotential).
+        struct Us1976Layers {
+            static constexpr std::array<double, 8> Hb_km = {
+                0.0, 11.0, 20.0, 32.0, 47.0, 51.0, 71.0, 84.852 };
+            static constexpr std::array<double, 8> Tb_K = {
+                288.15, 216.65, 216.65, 228.65, 270.65, 270.65, 214.65, 186.946 };
+            static constexpr std::array<double, 8> Pb_Pa = {
+                101325.0, 22632.1, 5474.89, 868.019, 110.906, 66.9389, 3.95642, 0.3734 };
+            static constexpr std::array<double, 8> Lb_K_per_km = {
+                -6.5, 0.0, 1.0, 2.8, 0.0, -2.8, -2.0, 0.0 };
+            static constexpr double g0    = 9.80665;
+            static constexpr double R     = 287.05287;
+            static constexpr double gamma = 1.4;
+            static constexpr double p_sl  = 101325.0;
+        };
+
+        /// Walk the layers from sea level and return the base pressure of each
+        /// layer for a temperature profile shifted by deltaT_K and a sea-level
+        /// pressure p_sl_Pa. Pure double: the offsets are parameters, never AD
+        /// variables.
+        inline std::array<double, 8> Us1976BasePressures(double deltaT_K, double p_sl_Pa)
+        {
+            using L = Us1976Layers;
+            std::array<double, 8> p{};
+            p[0] = p_sl_Pa;
+            for (std::size_t b = 0; b + 1 < 8; ++b) {
+                const double Tb  = L::Tb_K[b] + deltaT_K;
+                const double Lb  = L::Lb_K_per_km[b] * 1.0e-3;               // [K/m]
+                const double dH  = (L::Hb_km[b + 1] - L::Hb_km[b]) * 1000.0; // [m]
+                if (Lb == 0.0) {
+                    p[b + 1] = p[b] * std::exp(-L::g0 * dH / (L::R * Tb));
+                } else {
+                    const double Tnext = Tb + Lb * dH;
+                    p[b + 1] = p[b] * std::pow(Tnext / Tb, -L::g0 / (Lb * L::R));
+                }
+            }
+            return p;
+        }
+
+        /// Base pressures actually used by US1976Atmosphere for given offsets.
+        ///
+        /// The standard table carries the published (rounded) base pressures.
+        /// For a non-standard day each base is the published value scaled by the
+        /// ratio of the re-integrated base pressure with offsets to the
+        /// re-integrated base pressure without, so the profile stays continuous
+        /// with the table and reduces to it exactly when the offsets vanish.
+        inline std::array<double, 8> Us1976OffsetBasePressures(const AtmosphereOffsets& off)
+        {
+            using L = Us1976Layers;
+            if (off.isStandard()) {
+                return L::Pb_Pa;
+            }
+            // The atmosphere is evaluated once per aero call inside an implicit
+            // integrator's Newton iteration, always with the same offsets; a
+            // one-entry memo makes the non-standard day as cheap as the table.
+            thread_local AtmosphereOffsets      memo_off{};
+            thread_local std::array<double, 8>  memo_p = L::Pb_Pa;
+            if (memo_off.deltaT_K == off.deltaT_K && memo_off.deltaP_sl_Pa == off.deltaP_sl_Pa
+                && !memo_off.isStandard()) {
+                return memo_p;
+            }
+            const auto p_off = Us1976BasePressures(off.deltaT_K, L::p_sl + off.deltaP_sl_Pa);
+            const auto p_std = Us1976BasePressures(0.0, L::p_sl);
+            std::array<double, 8> out{};
+            for (std::size_t b = 0; b < 8; ++b) {
+                out[b] = L::Pb_Pa[b] * (p_off[b] / p_std[b]);
+            }
+            memo_off = off;
+            memo_p   = out;
+            return out;
+        }
+
+    } // namespace detail
+
     /// U.S. Standard Atmosphere 1976, 0-86 km (geometric altitude).
     /// - Input:  geometric altitude above MSL in meters (approx; internally converted to geopotential).
     /// - Output: temperature T [K], pressure p [Pa], density rho [kg/m^3], speed of sound a [m/s].
@@ -35,8 +132,12 @@ namespace Aetherion::Environment {
     /// - There *is* piecewise behavior via `if` on altitude; for AD, the tape records the branch
     ///   corresponding to the evaluation altitude. This is fine as long as you don't differentiate
     ///   *through* layer boundaries.
+    ///
+    /// The two-argument overload applies AtmosphereOffsets (ISA + dT, sea-level
+    /// pressure offset); the one-argument form is the standard day.
     template <class Scalar>
-    inline Us1976State<Scalar> US1976Atmosphere(const Scalar& altitude_m_in)
+    inline Us1976State<Scalar> US1976Atmosphere(const Scalar& altitude_m_in,
+                                                const AtmosphereOffsets& offsets)
     {
         using detail::Exponential;
         using detail::Power;
@@ -65,7 +166,7 @@ namespace Aetherion::Environment {
         auto above_decay = Scalar(1.0);     // multiplier applied to p and rho
         if (h > h_max) {
             // Isothermal scale height at T_top = 186.946 K
-            const auto H_scale = Scalar(287.05287 * 186.946 / 9.80665); // ≈5 480 m
+            const auto H_scale = Scalar(287.05287 * (186.946 + offsets.deltaT_K) / 9.80665); // ≈5 480 m on a standard day
             above_decay = Exponential(-(h - h_max) / H_scale);
             h = h_max;
         }
@@ -76,53 +177,13 @@ namespace Aetherion::Environment {
         const Scalar H_km = H * Scalar(1.0e-3);  // [km]
 
         // ---- US1976 base values per layer (0..7) -------------------------------
-        // Geopotential base heights [km]
-        static constexpr std::array<double, 8> Hb_km_arr = {
-            0.0,    // 0: 0 km
-            11.0,   // 1: 11 km
-            20.0,   // 2: 20 km
-            32.0,   // 3: 32 km
-            47.0,   // 4: 47 km
-            51.0,   // 5: 51 km
-            71.0,   // 6: 71 km
-            84.852  // 7: 84.852 km
-        };
-
-        // Base temperatures [K]
-        static constexpr std::array<double, 8> Tb_arr = {
-            288.15,   // 0
-            216.65,   // 1
-            216.65,   // 2
-            228.65,   // 3
-            270.65,   // 4
-            270.65,   // 5
-            214.65,   // 6
-            186.946   // 7
-        };
-
-        // Base pressures [Pa]
-        static constexpr std::array<double, 8> Pb_arr = {
-            101325.0,   // 0
-            22632.1,    // 1
-            5474.89,    // 2
-            868.019,    // 3
-            110.906,    // 4
-            66.9389,    // 5
-            3.95642,    // 6
-            0.3734      // 7  (top of model I)
-        };
-
-        // Temperature lapse rates Lb = dT/dH [K/km]
-        static constexpr std::array<double, 8> Lb_K_per_km_arr = {
-            -6.5,   // 0: 0-11 km
-            0.0,    // 1: 11-20 km (isothermal)
-            1.0,    // 2: 20-32 km
-            2.8,    // 3: 32-47 km
-            0.0,    // 4: 47-51 km
-            -2.8,   // 5: 51-71 km
-            -2.0,   // 6: 71-84.852 km
-            0.0     // 7: >=84.852 km (not really used here)
-        };
+        using Layers = detail::Us1976Layers;
+        const auto& Hb_km_arr        = Layers::Hb_km;
+        const auto& Tb_arr           = Layers::Tb_K;
+        const auto& Lb_K_per_km_arr  = Layers::Lb_K_per_km;
+        // Base pressures for this day (the published table when offsets are zero).
+        const std::array<double, 8> Pb_arr = detail::Us1976OffsetBasePressures(offsets);
+        const double dT = offsets.deltaT_K;
 
         // ---- Find the layer index b such that Hb <= H < H_{b+1} ----------------
         std::size_t b = 0;
@@ -138,7 +199,7 @@ namespace Aetherion::Environment {
 
         const auto Hb_km = Scalar(Hb_km_arr[b]);
         const Scalar Hb = Hb_km * Scalar(1000.0);   // [m]
-        const auto Tb = Scalar(Tb_arr[b]);        // [K]
+        const auto Tb = Scalar(Tb_arr[b] + dT);   // [K], shifted by deltaT_K
         const auto Pb = Scalar(Pb_arr[b]);        // [Pa]
         const Scalar Lb = Scalar(Lb_K_per_km_arr[b]) * Scalar(1.0e-3); // [K/m]
 
@@ -171,6 +232,13 @@ namespace Aetherion::Environment {
 
         Us1976State<Scalar> out{ T, p, rho, a };
         return out;
+    }
+
+    /// Standard-day US1976 atmosphere (no offsets).
+    template <class Scalar>
+    inline Us1976State<Scalar> US1976Atmosphere(const Scalar& altitude_m_in)
+    {
+        return US1976Atmosphere(altitude_m_in, AtmosphereOffsets{});
     }
 
 } // namespace Aetherion::Environment

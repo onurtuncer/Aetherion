@@ -36,6 +36,14 @@
 //    vEast0_mps        Initial NED east  velocity            [m/s]  def   0.0
 //    vDown0_mps        Initial NED down  velocity            [m/s]  def   0.0
 //    solver.max_step_s Max internal integrator step          [s]    def   0.0 (= comm. step)
+//    wind.north_mps    Steady wind, NED north                [m/s]  def   0.0
+//    wind.east_mps     Steady wind, NED east                 [m/s]  def   0.0
+//    wind.down_mps     Steady wind, NED down                 [m/s]  def   0.0
+//    atm.deltaT_K      ISA temperature offset                [K]    def   0.0
+//    atm.deltaP_sl_Pa  Sea-level pressure offset             [Pa]   def   0.0
+//                      (wind fixed in NED at the launch point; the aero
+//                      is air-relative, out.vt_m_s/mach/qbar follow; atm.*
+//                      shifts the forces and out.P_Pa/T_K/rho/a alike)
 //
 //  PARAMETER (TUNABLE — may also be changed between fmi2DoStep calls)
 //    stg2.ignition_time_s   Absolute sim time gating S2 ignition [s]  def 0.0
@@ -110,6 +118,10 @@
 // Earth rotation rate (Earth Rotation Angle at t=0)
 #include <Aetherion/Environment/WGS84.h>
 
+// Environment: atmosphere offsets and steady wind
+#include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Environment/WindModels.h>
+
 using namespace fmu4cpp;
 
 // ── Namespace aliases ─────────────────────────────────────────────────────────
@@ -140,6 +152,11 @@ namespace {
 
     constexpr double kDefault_stg2_ignition_time_s = 0.0;  // ignite immediately after staging
     constexpr double kDefault_max_step_s           = 0.0;  // 0 → use the communication step directly
+
+    // Environment defaults: calm air on a standard day.
+    constexpr double kDefault_wind_mps      = 0.0;
+    constexpr double kDefault_atm_deltaT_K  = 0.0;
+    constexpr double kDefault_atm_deltaP_Pa = 0.0;
 }
 
 // ── FMU state (trivially copyable POD) ───────────────────────────────────────
@@ -271,6 +288,18 @@ public:
                       std::move(inertiaDml), std::move(propDml), aeroDml,
                       p_stg2_ignition_time_s_);
 
+        // 6b. Environment on the aero policy: steady wind (NED at the launch
+        //     point, converted to ECEF once) and atmosphere offsets.
+        {
+            namespace Env = Aetherion::Environment;
+            constexpr double kDeg = std::numbers::pi / 180.0;
+            const auto w = Env::ConstantECEFWind::from_ned(
+                p_wind_north_mps_, p_wind_east_mps_, p_wind_down_mps_,
+                p_lat0_deg_ * kDeg, p_lon0_deg_ * kDeg);
+            m_sim->aero().setWindECEF(Eigen::Vector3d(w.vx, w.vy, w.vz));
+            m_sim->aero().setAtmosphereOffsets(Env::AtmosphereOffsets{ p_atm_deltaT_K_, p_atm_deltaP_Pa_ });
+        }
+
         // 7. Sync POD integration state and populate initial outputs.
         const auto prop0 = m_sim->stageModel().propulsion(m_sim->time());
         packState();
@@ -340,6 +369,12 @@ public:
 
         p_stg2_ignition_time_s_ = kDefault_stg2_ignition_time_s;
         p_max_step_s_           = kDefault_max_step_s;
+
+        p_wind_north_mps_ = kDefault_wind_mps;
+        p_wind_east_mps_  = kDefault_wind_mps;
+        p_wind_down_mps_  = kDefault_wind_mps;
+        p_atm_deltaT_K_   = kDefault_atm_deltaT_K;
+        p_atm_deltaP_Pa_  = kDefault_atm_deltaP_Pa;
     }
 
 private:
@@ -404,6 +439,32 @@ private:
             .setInitial(initial_t::EXACT)
             .setDescription("Absolute sim time at which Stage 2 may ignite [s] "
                             "(0 = ignite immediately once Stage 1 has separated)");
+
+        // ── Environment ──────────────────────────────────────────────────────
+        register_real("wind.north_mps", &p_wind_north_mps_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Steady wind, NED north component at the launch point [m/s]. Positive = blowing northward. Fixed in NED at the launch point and converted to ECEF once.");
+
+        register_real("wind.east_mps", &p_wind_east_mps_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Steady wind, NED east component [m/s]. Positive = blowing eastward.");
+
+        register_real("wind.down_mps", &p_wind_down_mps_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Steady wind, NED down component [m/s]. Positive = downward.");
+
+        register_real("atm.deltaT_K", &p_atm_deltaT_K_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("ISA temperature deviation [K], added uniformly to the US1976 profile; density and pressure re-integrated hydrostatically. Applies to the aero forces and to out.P_Pa/out.T_K/out.rho_kg_m3/out.a_m_s.");
+
+        register_real("atm.deltaP_sl_Pa", &p_atm_deltaP_Pa_)
+            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("Sea-level pressure minus 101 325 Pa (QNH offset) [Pa].");
     }
 
     // ── registerOutputs ─────────────────────────────────────────────────────────
@@ -712,6 +773,12 @@ private:
 
     double p_stg2_ignition_time_s_ { kDefault_stg2_ignition_time_s };
     double p_max_step_s_           { kDefault_max_step_s           };
+
+    double p_wind_north_mps_ { kDefault_wind_mps      };
+    double p_wind_east_mps_  { kDefault_wind_mps      };
+    double p_wind_down_mps_  { kDefault_wind_mps      };
+    double p_atm_deltaT_K_   { kDefault_atm_deltaT_K  };
+    double p_atm_deltaP_Pa_  { kDefault_atm_deltaP_Pa };
 
     // ── Runtime objects ───────────────────────────────────────────────────────
     double m_theta0 { 0.0 };   ///< Earth Rotation Angle at t=0 [rad].

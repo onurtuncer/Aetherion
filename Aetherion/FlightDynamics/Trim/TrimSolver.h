@@ -118,6 +118,11 @@ public:
                double xcg_from_ac_ft = 0.0)
         : m_aero(&aero), m_prop(&prop), m_xcg_ft(xcg_from_ac_ft) {}
 
+    /// @brief Trim on a non-standard day (ISA + dT, sea-level pressure offset).
+    /// Must match the offsets given to the F16AeroPolicy the trim is used with.
+    void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
+    [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
+
     // ── Main interface ────────────────────────────────────────────────────────
 
     /// @brief Find the two-stage trim for straight-and-level flight.
@@ -152,6 +157,7 @@ private:
     const Serialization::DAVEMLAeroModel* m_aero;
     const Serialization::DAVEMLPropModel* m_prop;
     double                                m_xcg_ft;  ///< CG aft of AC [ft]
+    Environment::AtmosphereOffsets m_atm{};   ///< Non-standard-day offsets (default: standard)
 };
 
 // ── Stage-1 longitudinal residual ─────────────────────────────────────────────
@@ -247,7 +253,7 @@ TrimSolver::solve(const TrimInputs& in, double alpha0, double el0) const
 
     // ── Atmosphere (double, not taped) ────────────────────────────────────────
     const double alt_m    = in.alt_ft * kFt_m;
-    const auto   atm      = Environment::US1976Atmosphere(alt_m);
+    const auto   atm      = Environment::US1976Atmosphere(alt_m, m_atm);
     const double rho_slug = atm.rho / kSlugFt3_kg_m3;
     const double a_fps    = atm.a   / kFt_m;
     const double qbar_psf = 0.5 * rho_slug * in.vt_fps * in.vt_fps;
@@ -302,7 +308,7 @@ TrimSolver::residual(const TrimInputs& in,
                      double alpha_deg, double el_deg, double pwr_pct) const
 {
     const double alt_m    = in.alt_ft * kFt_m;
-    const auto   atm      = Environment::US1976Atmosphere(alt_m);
+    const auto   atm      = Environment::US1976Atmosphere(alt_m, m_atm);
     const double rho_slug = atm.rho / kSlugFt3_kg_m3;
     const double a_fps    = atm.a   / kFt_m;
     const double qbar_psf = 0.5 * rho_slug * in.vt_fps * in.vt_fps;
