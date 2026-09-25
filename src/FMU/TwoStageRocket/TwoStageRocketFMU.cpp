@@ -297,7 +297,7 @@ public:
                 p_wind_north_mps_, p_wind_east_mps_, p_wind_down_mps_,
                 p_lat0_deg_ * kDeg, p_lon0_deg_ * kDeg);
             m_sim->aero().setWindECEF(Eigen::Vector3d(w.vx, w.vy, w.vz));
-            m_sim->aero().setAtmosphereOffsets(Env::AtmosphereOffsets{ p_atm_deltaT_K_, p_atm_deltaP_Pa_ });
+            m_sim->aero().setAtmosphereOffsets(Env::AtmosphereOffsets{ .deltaT_K = p_atm_deltaT_K_, .deltaP_sl_Pa = p_atm_deltaP_Pa_ });
         }
 
         // 7. Sync POD integration state and populate initial outputs.
@@ -640,7 +640,7 @@ private:
 
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j)
-                state_.R[i * 3 + j] = x.g.R(i, j);
+                state_.R[(i * 3) + j] = x.g.R(i, j);
         state_.r_I[0] = x.g.p.x();
         state_.r_I[1] = x.g.p.y();
         state_.r_I[2] = x.g.p.z();
@@ -665,7 +665,7 @@ private:
         AE_RB::StateD x{};
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j)
-                x.g.R(i, j) = state_.R[i * 3 + j];
+                x.g.R(i, j) = state_.R[(i * 3) + j];
         x.g.q = Eigen::Quaterniond(x.g.R).normalized();
         x.g.p = Eigen::Vector3d(state_.r_I[0], state_.r_I[1], state_.r_I[2]);
         for (int i = 0; i < 6; ++i)

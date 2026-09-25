@@ -44,6 +44,7 @@
 #include <Aetherion/RigidBody/StateLayout.h>
 #include <Aetherion/Simulation/MakeSnapshot1.h>
 
+#include <array>
 #include <cmath>
 #include <memory>
 #include <numbers>
@@ -139,7 +140,7 @@ namespace {
         return F16AeroPolicy(s.aero, s.trim.el_deg, 0.0, 0.0, kXcg_ft * kFt_m);
     }
 
-    SE3d pose(const RigidBody::StateD& st) { return SE3d(st.g.R, st.g.p); }
+    SE3d pose(const RigidBody::StateD& st) { return { st.g.R, st.g.p }; }
 }
 
 TEST_CASE("F16Environment: model files are present", "[f16env][smoke]")
@@ -180,8 +181,10 @@ TEST_CASE("F16Environment: steady wind shifts the ground velocity and nothing el
     // Headwind, crosswind and a vertical component; at t = 0 and at a large
     // Earth rotation angle, so the ECEF -> ECI(t) step is exercised.
     struct W { double n, e, d; };
-    const W winds[] = { { -7.0711, -7.0711, 0.0 }, { 7.0711, -7.0711, 0.0 }, { 3.0, -4.0, 1.5 } };
-    const double thetas[] = { 0.0, 0.3, 2.9 };
+    const std::array<W, 3> winds{ { W{ .n = -7.0711, .e = -7.0711, .d = 0.0 },
+                                    W{ .n =  7.0711, .e = -7.0711, .d = 0.0 },
+                                    W{ .n =  3.0,    .e = -4.0,    .d = 1.5 } } };
+    const std::array<double, 3> thetas{ { 0.0, 0.3, 2.9 } };
 
     for (const auto& w : winds) {
         for (double theta : thetas) {
@@ -288,7 +291,7 @@ TEST_CASE("F16Environment: a hot day scales the aero forces by the density ratio
     const auto st = makeState(s, v, v, 0.0, 0.0);
     const double alt_m = Environment::GeometricAltitude_m(st.g.p);
 
-    const Environment::AtmosphereOffsets hot{ 20.0, 0.0 };
+    const Environment::AtmosphereOffsets hot{ .deltaT_K = 20.0, .deltaP_sl_Pa = 0.0 };
     F16AeroPolicy std_ = makePolicy(s), hot_ = makePolicy(s);
     hot_.setAtmosphereOffsets(hot);
     const auto w0 = std_(pose(st), st.nu_B, kMass_kg, 0.0);
@@ -306,7 +309,7 @@ TEST_CASE("F16Environment: a hot day trims at a higher alpha", "[f16env][atm]")
 {
     if (kAeroFile.empty() || kPropFile.empty()) return;
     const Scene stdDay = makeScene();
-    const Scene hotDay = makeScene(Environment::AtmosphereOffsets{ 20.0, 0.0 });
+    const Scene hotDay = makeScene(Environment::AtmosphereOffsets{ .deltaT_K = 20.0, .deltaP_sl_Pa = 0.0 });
     INFO("standard: alpha=" << stdDay.trim.alpha_deg << " pwr=" << stdDay.trim.pwr_pct
          << "  hot: alpha=" << hotDay.trim.alpha_deg << " pwr=" << hotDay.trim.pwr_pct);
     CHECK(hotDay.trim.alpha_deg > stdDay.trim.alpha_deg + 0.05);
@@ -324,7 +327,7 @@ TEST_CASE("F16Environment: the snapshot reports the air data the forces used", "
     const double v = kV_fps * kFt_m;
     const double theta = 0.3, t = theta / kOmegaE;
 
-    const Environment::AtmosphereOffsets atm{ 12.0, -600.0 };
+    const Environment::AtmosphereOffsets atm{ .deltaT_K = 12.0, .deltaP_sl_Pa = -600.0 };
     const double wn = 6.0, we = -8.0, wd = 0.5;
     const auto st = makeState(s, v + wn, v + we, wd, theta);
 
@@ -347,7 +350,7 @@ TEST_CASE("F16Environment: the snapshot reports the air data the forces used", "
     CHECK_THAT(snap.dynamicPressure_Pa,   WithinRel(0.5 * a.rho * v_rel.squaredNorm(), 1e-9));
 
     // Ground speed is what the NED velocity still reports.
-    CHECK_THAT(snap.feVelocity_m_s.norm(), WithinRel(std::sqrt((v + wn) * (v + wn) + (v + we) * (v + we) + wd * wd), 1e-6));
+    CHECK_THAT(snap.feVelocity_m_s.norm(), WithinRel(std::sqrt(((v + wn) * (v + wn)) + ((v + we) * (v + we)) + (wd * wd)), 1e-6));
 }
 
 TEST_CASE("F16Environment: the engine flies in the same air as the airframe", "[f16env][prop]")
@@ -375,7 +378,7 @@ TEST_CASE("F16Environment: the engine flies in the same air as the airframe", "[
     CHECK(std::abs(Tleak.f(3) - T0.f(3)) > 20.0);
 
     // Hot day: Mach is formed with the hot speed of sound.
-    const Environment::AtmosphereOffsets hot{ 20.0, 0.0 };
+    const Environment::AtmosphereOffsets hot{ .deltaT_K = 20.0, .deltaP_sl_Pa = 0.0 };
     F16PropPolicy hotProp(s.prop, s.trim.pwr_pct);
     hotProp.setAtmosphereOffsets(hot);
     const auto Th = hotProp(pose(stCalm), stCalm.nu_B, kMass_kg, t);
@@ -404,7 +407,7 @@ TEST_CASE("F16Environment: evaluates with CppAD::AD<double> in wind, gust and of
     F16AeroPolicy pol = makePolicy(s);
     const auto wecef = Environment::ConstantECEFWind::from_ned(5.0, -3.0, 0.0, kLat_deg * kDeg, kLon_deg * kDeg);
     pol.setWindECEF(Eigen::Vector3d(wecef.vx, wecef.vy, wecef.vz));
-    pol.setAtmosphereOffsets(Environment::AtmosphereOffsets{ -10.0, 400.0 });
+    pol.setAtmosphereOffsets(Environment::AtmosphereOffsets{ .deltaT_K = -10.0, .deltaP_sl_Pa = 400.0 });
     Environment::GustState g{}; g.v_mps = 2.0; g.p_rad_s = 0.01; g.q_rad_s = -0.02;
     pol.setGust(g);
 

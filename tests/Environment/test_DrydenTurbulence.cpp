@@ -56,7 +56,7 @@ namespace {
         double s2 = 0.0;
         for (double v : x) s2 += (v - m) * (v - m);
         s2 /= static_cast<double>(x.size() - 1);
-        return { m, s2 };
+        return Stats{ .mean = m, .var = s2 };
     }
 
     // MIL-F-8785C one-sided spectra, converted to temporal frequency omega [rad/s]
@@ -186,8 +186,9 @@ TEST_CASE("DrydenTurbulence: statistics do not depend on the step size", "[dryde
 {
     const auto prm = testParams(1.0, 2.0, 3.0);
     const double T = 1.0e5;
-    Stats s[2]; double vr[2];
-    const double dts[2] = { 0.01, 0.04 };
+    std::array<Stats, 2>  s{};
+    std::array<double, 2> vr{};
+    const std::array<double, 2> dts{ { 0.01, 0.04 } };
     for (int k = 0; k < 2; ++k) {
         DrydenTurbulence t(prm, 11 + k);
         const int N = static_cast<int>(T / dts[k]);
@@ -226,7 +227,7 @@ TEST_CASE("DrydenLowAltitudeParameters: MIL-F-8785C low-altitude rules", "[dryde
     // h = 100 ft, W20 = 15 kt (light): sigma_w = 0.1 W20, denominator 0.177 + 0.0823.
     const double W20 = 15.0 * 0.514444;
     const auto p = DrydenLowAltitudeParameters(100.0 * 0.3048, W20);
-    const double denom = 0.177 + 0.000823 * 100.0;
+    const double denom = 0.177 + (0.000823 * 100.0);
     CHECK_THAT(p.sigma_w_mps, WithinRel(0.1 * W20, 1e-12));
     CHECK_THAT(p.sigma_u_mps, WithinRel(0.1 * W20 / std::pow(denom, 0.4), 1e-12));
     CHECK(p.sigma_v_mps == p.sigma_u_mps);

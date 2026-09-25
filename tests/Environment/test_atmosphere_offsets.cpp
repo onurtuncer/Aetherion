@@ -41,8 +41,8 @@ TEST_CASE("AtmosphereOffsets: zero offsets are bit-identical to the standard day
     const AtmosphereOffsets zero{};
     REQUIRE(zero.isStandard());
 
-    const double probe[] = { 0.0, 500.0, 11019.0, 15000.0, 20063.0, 32162.0, 47350.0,
-                             51413.0, 71802.0, 84852.0, 86000.0, 95000.0 };
+    const std::array<double, 12> probe{ { 0.0, 500.0, 11019.0, 15000.0, 20063.0, 32162.0, 47350.0,
+                                          51413.0, 71802.0, 84852.0, 86000.0, 95000.0 } };
     for (double h : probe) {
         const auto a = US1976Atmosphere(h);
         const auto b = US1976Atmosphere(h, zero);
@@ -60,7 +60,7 @@ TEST_CASE("AtmosphereOffsets: zero offsets are bit-identical to the standard day
 
 TEST_CASE("AtmosphereOffsets: ISA + 15 K at sea level", "[US1976][offsets]")
 {
-    const auto s = US1976Atmosphere(0.0, AtmosphereOffsets{ 15.0, 0.0 });
+    const auto s = US1976Atmosphere(0.0, AtmosphereOffsets{ .deltaT_K = 15.0, .deltaP_sl_Pa = 0.0 });
     CHECK_THAT(s.T,   WithinAbs(303.15, 1e-9));
     CHECK_THAT(s.p,   WithinAbs(101325.0, 1e-6));
     CHECK_THAT(s.rho, WithinRel(101325.0 / (kR * 303.15), 1e-9));   // 1.1644 kg/m^3
@@ -71,7 +71,7 @@ TEST_CASE("AtmosphereOffsets: a 10 hPa low reads 84 m high on a standard-ISA bar
           "[US1976][offsets]")
 {
     // p at the surface on the low-pressure day
-    const double p_surface = US1976Atmosphere(0.0, AtmosphereOffsets{ 0.0, -1000.0 }).p;
+    const double p_surface = US1976Atmosphere(0.0, AtmosphereOffsets{ .deltaT_K = 0.0, .deltaP_sl_Pa = -1000.0 }).p;
     CHECK_THAT(p_surface, WithinAbs(100325.0, 1e-6));
 
     // Altitude at which the STANDARD atmosphere has that pressure: bisection.
@@ -89,9 +89,13 @@ TEST_CASE("AtmosphereOffsets: pressure is hydrostatic for any offsets", "[US1976
     // dp/dh = -rho g0 (Re/(Re+h))^2, the last factor converting the geopotential
     // gradient to geometric altitude.  A scaled-instead-of-reintegrated pressure
     // fails this the moment deltaT_K is non-zero.
-    const AtmosphereOffsets cases[] = {
-        { 0.0, 0.0 }, { 15.0, 0.0 }, { 0.0, -1000.0 }, { -20.0, 800.0 }, { 30.0, -2500.0 } };
-    const double alts[] = { 500.0, 5000.0, 15000.0, 25000.0, 40000.0, 49000.0, 60000.0, 80000.0 };
+    const std::array<AtmosphereOffsets, 5> cases{ {
+        AtmosphereOffsets{ .deltaT_K = 0.0, .deltaP_sl_Pa = 0.0 },
+        AtmosphereOffsets{ .deltaT_K = 15.0, .deltaP_sl_Pa = 0.0 },
+        AtmosphereOffsets{ .deltaT_K = 0.0, .deltaP_sl_Pa = -1000.0 },
+        AtmosphereOffsets{ .deltaT_K = -20.0, .deltaP_sl_Pa = 800.0 },
+        AtmosphereOffsets{ .deltaT_K = 30.0, .deltaP_sl_Pa = -2500.0 } } };
+    const std::array<double, 8> alts{ { 500.0, 5000.0, 15000.0, 25000.0, 40000.0, 49000.0, 60000.0, 80000.0 } };
 
     for (const auto& off : cases) {
         for (double h : alts) {
@@ -108,8 +112,10 @@ TEST_CASE("AtmosphereOffsets: pressure is hydrostatic for any offsets", "[US1976
 
 TEST_CASE("AtmosphereOffsets: pressure is continuous across layer bases", "[US1976][offsets]")
 {
-    const AtmosphereOffsets cases[] = { { 15.0, -1000.0 }, { -30.0, 2000.0 } };
-    const double H_bases[] = { 11000.0, 20000.0, 32000.0, 47000.0, 51000.0, 71000.0 };
+    const std::array<AtmosphereOffsets, 2> cases{ {
+        AtmosphereOffsets{ .deltaT_K = 15.0, .deltaP_sl_Pa = -1000.0 },
+        AtmosphereOffsets{ .deltaT_K = -30.0, .deltaP_sl_Pa = 2000.0 } } };
+    const std::array<double, 6> H_bases{ { 11000.0, 20000.0, 32000.0, 47000.0, 51000.0, 71000.0 } };
     for (const auto& off : cases) {
         for (double H : H_bases) {
             const double h  = geometricOf(H);
@@ -129,32 +135,34 @@ TEST_CASE("AtmosphereOffsets: a hot day is thinner near the surface and denser a
     // surface the temperature wins and the hot day is thinner; a few km up the
     // higher pressure wins and the hot day is denser.  Both are physics, not a
     // bug, and both must hold.
-    for (double h = 0.0; h <= 4000.0; h += 1000.0) {
+    for (int i = 0; i <= 4; ++i) {
+        const double h = 1000.0 * static_cast<double>(i);
         const double rho_std  = US1976Atmosphere(h).rho;
-        const double rho_hot  = US1976Atmosphere(h, AtmosphereOffsets{ 20.0, 0.0 }).rho;
-        const double rho_cold = US1976Atmosphere(h, AtmosphereOffsets{ -20.0, 0.0 }).rho;
+        const double rho_hot  = US1976Atmosphere(h, AtmosphereOffsets{ .deltaT_K = 20.0, .deltaP_sl_Pa = 0.0 }).rho;
+        const double rho_cold = US1976Atmosphere(h, AtmosphereOffsets{ .deltaT_K = -20.0, .deltaP_sl_Pa = 0.0 }).rho;
         INFO("h = " << h);
         CHECK(rho_hot  < rho_std);
         CHECK(rho_cold > rho_std);
     }
-    for (double h = 10000.0; h <= 30000.0; h += 5000.0) {
+    for (int i = 0; i <= 4; ++i) {
+        const double h = 10000.0 + (5000.0 * static_cast<double>(i));
         const double rho_std  = US1976Atmosphere(h).rho;
-        const double rho_hot  = US1976Atmosphere(h, AtmosphereOffsets{ 20.0, 0.0 }).rho;
-        const double rho_cold = US1976Atmosphere(h, AtmosphereOffsets{ -20.0, 0.0 }).rho;
+        const double rho_hot  = US1976Atmosphere(h, AtmosphereOffsets{ .deltaT_K = 20.0, .deltaP_sl_Pa = 0.0 }).rho;
+        const double rho_cold = US1976Atmosphere(h, AtmosphereOffsets{ .deltaT_K = -20.0, .deltaP_sl_Pa = 0.0 }).rho;
         INFO("h = " << h);
         CHECK(rho_hot  > rho_std);
         CHECK(rho_cold < rho_std);
     }
     // A pressure offset alone scales the whole column.
-    const double ratio0 = US1976Atmosphere(0.0,     AtmosphereOffsets{ 0.0, 2000.0 }).p / US1976Atmosphere(0.0).p;
-    const double ratio1 = US1976Atmosphere(10000.0, AtmosphereOffsets{ 0.0, 2000.0 }).p / US1976Atmosphere(10000.0).p;
+    const double ratio0 = US1976Atmosphere(0.0,     AtmosphereOffsets{ .deltaT_K = 0.0, .deltaP_sl_Pa = 2000.0 }).p / US1976Atmosphere(0.0).p;
+    const double ratio1 = US1976Atmosphere(10000.0, AtmosphereOffsets{ .deltaT_K = 0.0, .deltaP_sl_Pa = 2000.0 }).p / US1976Atmosphere(10000.0).p;
     CHECK_THAT(ratio1, WithinRel(ratio0, 1e-9));
 }
 
 TEST_CASE("AtmosphereOffsets: memo returns the right table when offsets alternate", "[US1976][offsets]")
 {
-    const AtmosphereOffsets A{ 12.0, -300.0 };
-    const AtmosphereOffsets B{ -7.0, 1200.0 };
+    const AtmosphereOffsets A{ .deltaT_K = 12.0, .deltaP_sl_Pa = -300.0 };
+    const AtmosphereOffsets B{ .deltaT_K = -7.0, .deltaP_sl_Pa = 1200.0 };
     const double h = 8000.0;
     const double pA = US1976Atmosphere(h, A).p;
     const double pB = US1976Atmosphere(h, B).p;
@@ -169,7 +177,7 @@ TEST_CASE("AtmosphereOffsets: memo returns the right table when offsets alternat
 TEST_CASE("AtmosphereOffsets: evaluates with CppAD::AD<double>", "[US1976][offsets][AD]")
 {
     using AD = CppAD::AD<double>;
-    const AtmosphereOffsets off{ 10.0, -500.0 };
+    const AtmosphereOffsets off{ .deltaT_K = 10.0, .deltaP_sl_Pa = -500.0 };
     const AD h(5000.0);
     const auto s  = US1976Atmosphere(h, off);
     const auto sd = US1976Atmosphere(5000.0, off);

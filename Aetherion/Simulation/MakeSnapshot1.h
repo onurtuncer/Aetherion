@@ -152,7 +152,7 @@ namespace Aetherion::Simulation {
         Eigen::Matrix3d R_IN;
         for (int r = 0; r < 3; ++r)
             for (int c = 0; c < 3; ++c)
-                R_IN(r, c) = R_IN_arr[3 * r + c];
+                R_IN(r, c) = R_IN_arr[(3 * r) + c];
 
         const Eigen::Matrix3d R_NB = R_IN.transpose() * s.g.R;
 
@@ -238,7 +238,7 @@ namespace Aetherion::Simulation {
                 Eigen::Matrix3d R_IN;
                 for (int r = 0; r < 3; ++r)
                     for (int c = 0; c < 3; ++c)
-                        R_IN(r, c) = R_IN_arr[3 * r + c];
+                        R_IN(r, c) = R_IN_arr[(3 * r) + c];
                 const Eigen::Vector3d gust_ned = R_IN.transpose() * s.g.R * gust_B;
                 const Eigen::Vector3d v_air_ned =
                     snap.feVelocity_m_s - Eigen::Vector3d(w_ned_arr[0], w_ned_arr[1], w_ned_arr[2]) - gust_ned;
