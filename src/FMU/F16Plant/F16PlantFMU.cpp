@@ -897,7 +897,7 @@ private:
     {
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j)
-                state_.R[i * 3 + j] = m_state.g.R(i, j);
+                state_.R[(i * 3) + j] = m_state.g.R(i, j);
         state_.r_I[0] = m_state.g.p.x();
         state_.r_I[1] = m_state.g.p.y();
         state_.r_I[2] = m_state.g.p.z();
@@ -915,7 +915,7 @@ private:
     {
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j)
-                m_state.g.R(i, j) = state_.R[i * 3 + j];
+                m_state.g.R(i, j) = state_.R[(i * 3) + j];
         // Re-derive quaternion from rotation matrix (SE3 keeps both in sync)
         m_state.g.q = Eigen::Quaterniond(m_state.g.R).normalized();
         m_state.g.p = Eigen::Vector3d(state_.r_I[0], state_.r_I[1], state_.r_I[2]);
@@ -947,7 +947,7 @@ private:
     {
         if (!m_stepper.has_value()) return;
 
-        const double theta_GST = m_theta0 + kOmegaEarth_rad_s * t;
+        const double theta_GST = m_theta0 + (kOmegaEarth_rad_s * t);
         const auto&  vf        = m_stepper->vectorField();
 
         // MakeSnapshot1 (two-policy overload) fills kinematics, atmosphere, and
@@ -1036,7 +1036,7 @@ private:
             Eigen::Matrix3d R_IN;
             for (int r = 0; r < 3; ++r)
                 for (int c = 0; c < 3; ++c)
-                    R_IN(r, c) = R_IN_arr[3 * r + c];
+                    R_IN(r, c) = R_IN_arr[(3 * r) + c];
             const Eigen::Vector3d gust_ned = R_IN.transpose() * m_state.g.R * gust.linear();
 
             state_.wind_north_m_s = w_ned[0] + gust_ned.x();
@@ -1064,7 +1064,7 @@ private:
 
     [[nodiscard]] AE_ENV::AtmosphereOffsets atmosphereOffsets() const noexcept
     {
-        return { p_atm_deltaT_K_, p_atm_deltaP_Pa_ };
+        return { .deltaT_K = p_atm_deltaT_K_, .deltaP_sl_Pa = p_atm_deltaP_Pa_ };
     }
 
     [[nodiscard]] AE_ENV::DrydenParameters turbulenceParameters() const

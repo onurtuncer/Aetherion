@@ -166,7 +166,7 @@ namespace Aetherion::Environment {
         auto above_decay = Scalar(1.0);     // multiplier applied to p and rho
         if (h > h_max) {
             // Isothermal scale height at T_top = 186.946 K
-            const auto H_scale = Scalar(287.05287 * (186.946 + offsets.deltaT_K) / 9.80665); // ≈5 480 m on a standard day
+            const auto H_scale = Scalar((287.05287 * (186.946 + offsets.deltaT_K)) / 9.80665); // ≈5 480 m on a standard day
             above_decay = Exponential(-(h - h_max) / H_scale);
             h = h_max;
         }

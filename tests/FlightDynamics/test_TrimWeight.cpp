@@ -20,6 +20,7 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <Eigen/Dense>
+#include <array>
 #include <cmath>
 #include <numbers>
 
@@ -67,7 +68,7 @@ namespace {
         const auto r_ecef = Coordinate::GeodeticToECEF(lat_deg * kDegRad,
                                                        lon_deg * kDegRad, alt_m);
         const auto r_eci  = Coordinate::ECEFToECI(r_ecef, era_rad);
-        return Eigen::Vector3d(r_eci[0], r_eci[1], r_eci[2]);
+        return { r_eci[0], r_eci[1], r_eci[2] };
     }
 
 } // namespace
@@ -96,13 +97,13 @@ TEST_CASE("TrimWeight: matches the gravity J2GravityPolicy applies at the same p
 {
     struct Case { double lat_deg, lon_deg, alt_m, era_rad; };
 
-    const Case cases[] = {
-        { kLat_deg,  kLon_deg,  kAlt_m,           0.0   },  // Scenario 11
-        { kLat_deg,  kLon_deg,  kAlt_m,           1.234 },  // ... hours later
-        {  0.0,     -179.95,    10000.0 * kFt_m,  0.0   },  // equator, Scenario 16
-        { 89.95,     -45.0,     10000.0 * kFt_m,  2.5   },  // near pole, Scenario 15
-        {-42.0,       137.0,    30013.0 * kFt_m,  4.7   },  // southern, supersonic alt
-    };
+    const std::array<Case, 5> cases{ {
+        Case{ .lat_deg = kLat_deg, .lon_deg = kLon_deg, .alt_m = kAlt_m, .era_rad = 0.0 },  // Scenario 11
+        Case{ .lat_deg = kLat_deg, .lon_deg = kLon_deg, .alt_m = kAlt_m, .era_rad = 1.234 },  // ... hours later
+        Case{ .lat_deg = 0.0, .lon_deg = -179.95, .alt_m = 10000.0 * kFt_m, .era_rad = 0.0 },  // equator, Scenario 16
+        Case{ .lat_deg = 89.95, .lon_deg = -45.0, .alt_m = 10000.0 * kFt_m, .era_rad = 2.5 },  // near pole, Scenario 15
+        Case{ .lat_deg = -42.0, .lon_deg = 137.0, .alt_m = 30013.0 * kFt_m, .era_rad = 4.7 },  // southern, supersonic alt
+    } };
 
     for (const auto& c : cases) {
         INFO("lat=" << c.lat_deg << "  lon=" << c.lon_deg
@@ -155,7 +156,7 @@ TEST_CASE("TrimWeight: apparent gravity at rest is plumb-bob gravity",
         INFO("lat=" << lat_deg);
         const double s2    = std::pow(std::sin(lat_deg * kDegRad), 2);
         const double gamma = 9.7803253359 * (1.0 + 0.00193185265241 * s2)
-                           / std::sqrt(1.0 - Environment::WGS84::kEccentricitySq * s2);
+                           / std::sqrt(1.0 - (Environment::WGS84::kEccentricitySq * s2));
 
         CHECK_THAT(FlightDynamics::LevelFlightApparentGravity_m_s2(lat_deg, 0.0, 0.0, 0.0),
                    WithinAbs(gamma, 2.0e-4));
@@ -171,12 +172,12 @@ TEST_CASE("TrimWeight: apparent gravity matches the path acceleration of level f
     // gravity has to supply, so  g_app = G_D − a_down.
     struct Case { double lat_deg, alt_m, vN, vE; };
 
-    const Case cases[] = {
-        { kLat_deg, kAlt_m,           121.92,   121.92 },  // Scenario 11, heading 045
-        { kLat_deg, 30013.0 * kFt_m,  431.05,   431.05 },  // Scenario 12, Mach 2
-        {  0.0,     10000.0 * kFt_m,    0.0,   -171.80 },  // equator, westbound
-        { 60.0,     5000.0,          -200.0,     50.0  },  // southbound, high latitude
-    };
+    const std::array<Case, 4> cases{ {
+        Case{ .lat_deg = kLat_deg, .alt_m = kAlt_m, .vN = 121.92, .vE = 121.92 },  // Scenario 11, heading 045
+        Case{ .lat_deg = kLat_deg, .alt_m = 30013.0 * kFt_m, .vN = 431.05, .vE = 431.05 },  // Scenario 12, Mach 2
+        Case{ .lat_deg = 0.0, .alt_m = 10000.0 * kFt_m, .vN = 0.0, .vE = -171.80 },  // equator, westbound
+        Case{ .lat_deg = 60.0, .alt_m = 5000.0, .vN = -200.0, .vE = 50.0 },  // southbound, high latitude
+    } };
 
     constexpr double kOmega = Environment::WGS84::kRotationRate_rad_s;
     constexpr double kE2    = Environment::WGS84::kEccentricitySq;
@@ -186,18 +187,18 @@ TEST_CASE("TrimWeight: apparent gravity matches the path acceleration of level f
         INFO("lat=" << c.lat_deg << "  alt=" << c.alt_m << "  vN=" << c.vN << "  vE=" << c.vE);
 
         const double lat0 = c.lat_deg * kDegRad;
-        const double w2   = 1.0 - kE2 * std::sin(lat0) * std::sin(lat0);
+        const double w2   = 1.0 - (kE2 * std::sin(lat0) * std::sin(lat0));
         const double N    = kA / std::sqrt(w2);
         const double M    = N * (1.0 - kE2) / w2;
 
         const double latRate = c.vN / (M + c.alt_m);
         const double lonRate = c.vE / ((N + c.alt_m) * std::cos(lat0));
 
-        const auto r_eci = [&](double t) {
-            const auto r_ecef = Coordinate::GeodeticToECEF(lat0 + latRate * t,
+        const auto r_eci = [&](double t) -> Eigen::Vector3d {
+            const auto r_ecef = Coordinate::GeodeticToECEF(lat0 + (latRate * t),
                                                            lonRate * t, c.alt_m);
             const auto r      = Coordinate::ECEFToECI(r_ecef, kOmega * t);
-            return Eigen::Vector3d(r[0], r[1], r[2]);
+            return { r[0], r[1], r[2] };
         };
 
         constexpr double dt = 1.0;
@@ -206,7 +207,7 @@ TEST_CASE("TrimWeight: apparent gravity matches the path acceleration of level f
 
         const double g_static = FlightDynamics::LevelFlightApparentGravity_m_s2(
             c.lat_deg, c.alt_m, 0.0, 0.0)
-            + std::pow(kOmega * (N + c.alt_m) * std::cos(lat0), 2) / (N + c.alt_m);  // = G_D
+            + (std::pow(kOmega * (N + c.alt_m) * std::cos(lat0), 2) / (N + c.alt_m));  // = G_D
         const double g_app = FlightDynamics::LevelFlightApparentGravity_m_s2(
             c.lat_deg, c.alt_m, c.vN, c.vE);
 
@@ -239,10 +240,10 @@ TEST_CASE("TrimWeight: reproduces the NESC body-Z aero force at trim",
     //   −FZ_aero = W_app · cos θ
     struct Case { double alt_m, v_mps, theta_deg, refFz_lbf; };
 
-    const Case cases[] = {
-        { kAlt_m,           400.0  * kFt_m,       2.6389, 20401.30 },  // Scenario 11
-        { 30013.0 * kFt_m,  1414.2136 * kFt_m,   -0.7416, 20193.83 },  // Scenario 12
-    };
+    const std::array<Case, 2> cases{ {
+        Case{ .alt_m = kAlt_m, .v_mps = 400.0  * kFt_m, .theta_deg = 2.6389, .refFz_lbf = 20401.30 },  // Scenario 11
+        Case{ .alt_m = 30013.0 * kFt_m, .v_mps = 1414.2136 * kFt_m, .theta_deg = -0.7416, .refFz_lbf = 20193.83 },  // Scenario 12
+    } };
 
     for (const auto& c : cases) {
         INFO("alt=" << c.alt_m << "  v=" << c.v_mps);
@@ -271,10 +272,10 @@ TEST_CASE("TrimBodyRates: reproduce the NESC initial inertial pitch and roll rat
     // −V_E tan φ/(N+h), which the helper leaves out on purpose.
     struct Case { double alt_m, v_mps, theta_deg, refRoll_deg_s, refPitch_deg_s; };
 
-    const Case cases[] = {
-        { kAlt_m,           400.0     * kFt_m,  2.63893, 0.002533, -0.003939 },  // Scenario 11
-        { 30013.0 * kFt_m,  1414.2136 * kFt_m, -0.74158, 0.002309, -0.007864 },  // Scenario 12
-    };
+    const std::array<Case, 2> cases{ {
+        Case{ .alt_m = kAlt_m, .v_mps = 400.0     * kFt_m, .theta_deg = 2.63893, .refRoll_deg_s = 0.002533, .refPitch_deg_s = -0.003939 },  // Scenario 11
+        Case{ .alt_m = 30013.0 * kFt_m, .v_mps = 1414.2136 * kFt_m, .theta_deg = -0.74158, .refRoll_deg_s = 0.002309, .refPitch_deg_s = -0.007864 },  // Scenario 12
+    } };
 
     constexpr double kHeading_deg = 45.0;
     constexpr double kOmega       = Environment::WGS84::kRotationRate_rad_s;
@@ -291,7 +292,7 @@ TEST_CASE("TrimBodyRates: reproduce the NESC initial inertial pitch and roll rat
         const double eN = kOmega * std::cos(lat), eD = -kOmega * std::sin(lat);
         const double x1 =  std::cos(psi) * eN;
         const double y1 = -std::sin(psi) * eN;
-        const double earthRoll  = std::cos(the) * x1 - std::sin(the) * eD;
+        const double earthRoll  = (std::cos(the) * x1) - (std::sin(the) * eD);
         const double earthPitch = y1;
 
         CHECK_THAT((rates.pitch_rad_s + earthPitch) / kDegRad, WithinAbs(c.refPitch_deg_s, 2.0e-6));

@@ -34,6 +34,7 @@
 #include <Aetherion/RigidBody/Config.h>
 #include <Aetherion/RigidBody/StateLayout.h>
 
+#include <array>
 #include <memory>
 
 using namespace Aetherion::FlightDynamics;
@@ -128,12 +129,12 @@ TEST_CASE("TrimSolver: apparent-weight trim matches the altitude-holding NESC si
         double lat_deg, alt_ft, heading_deg, vNorth_fps, vEast_fps, refAlpha_deg;
     };
 
-    const Case cases[] = {
-        { "11 subsonic, heading 045",    36.01917, 10013.0, 45.0,  400.0,      400.0,      2.63893 },
-        { "12 Mach 2, heading 045",      36.01917, 30013.0, 45.0, 1414.2136,  1414.2136,  -0.74158 },
-        { "15 near pole, heading 090",   89.95,    10000.0, 90.0,    0.0,      563.643,    2.68722 },
-        { "16 equator, heading 000",      0.0,     10000.0,  0.0,  563.643,      0.0,      2.66540 },
-    };
+    const std::array<Case, 4> cases{ {
+        Case{ .name = "11 subsonic, heading 045", .lat_deg = 36.01917, .alt_ft = 10013.0, .heading_deg = 45.0, .vNorth_fps = 400.0, .vEast_fps = 400.0, .refAlpha_deg = 2.63893 },
+        Case{ .name = "12 Mach 2, heading 045", .lat_deg = 36.01917, .alt_ft = 30013.0, .heading_deg = 45.0, .vNorth_fps = 1414.2136, .vEast_fps = 1414.2136, .refAlpha_deg = -0.74158 },
+        Case{ .name = "15 near pole, heading 090", .lat_deg = 89.95, .alt_ft = 10000.0, .heading_deg = 90.0, .vNorth_fps = 0.0, .vEast_fps = 563.643, .refAlpha_deg = 2.68722 },
+        Case{ .name = "16 equator, heading 000", .lat_deg = 0.0, .alt_ft = 10000.0, .heading_deg = 0.0, .vNorth_fps = 563.643, .vEast_fps = 0.0, .refAlpha_deg = 2.66540 },
+    } };
 
     constexpr double kMass_kg = 9298.6439;  // 637.1596 slug, from F16_inertia.dml
     constexpr double kFt_m    = TrimSolver::kFt_m;
@@ -184,7 +185,8 @@ TEST_CASE("TrimSolver: the trim point is an equilibrium of F16AeroPolicy", "[tri
     // produces there.  Mid-latitude on purpose: a 24 m altitude error in the
     // policy (0.25 % in density, 50 lbf) vanished at the equator and the poles.
     struct Case { const char* name; double alt_ft, v_fps; };
-    const Case cases[] = { { "11", 10013.0,  400.0 }, { "12", 30013.0, 1414.2136 } };
+    const std::array<Case, 2> cases{ { Case{ .name = "11", .alt_ft = 10013.0, .v_fps = 400.0 },
+                                       Case{ .name = "12", .alt_ft = 30013.0, .v_fps = 1414.2136 } } };
 
     constexpr double kLat_deg = 36.01917, kLon_deg = -75.67444, kHeading_deg = 45.0;
     constexpr double kMass_kg = 9298.6439;

@@ -133,7 +133,7 @@ inline DrydenParameters DrydenLowAltitudeParameters(double alt_agl_m, double W20
 {
     constexpr double kFt_m = 0.3048;
     const double h_ft = std::clamp(alt_agl_m, 10.0 * kFt_m, 1000.0 * kFt_m) / kFt_m;
-    const double denom = 0.177 + 0.000823 * h_ft;
+    const double denom = 0.177 + (0.000823 * h_ft);
 
     DrydenParameters p{};
     p.sigma_w_mps = 0.1 * W20_mps;
@@ -282,8 +282,8 @@ public:
         {
             const double a   = V / m_params.L_u_m;
             const double phi = std::exp(-a * dt);
-            m_x[0] = phi * m_x[0]
-                   + m_params.sigma_u_mps * std::sqrt(std::max(0.0, 1.0 - phi * phi)) * gaussian();
+            m_x[0] = (phi * m_x[0])
+                   + (m_params.sigma_u_mps * std::sqrt(std::max(0.0, 1.0 - (phi * phi))) * gaussian());
         }
 
         // ── p: first-order Gauss-Markov on MIL-F-8785C Phi_p, exact ZOH ──────
@@ -293,8 +293,8 @@ public:
             const double var  = 0.8 * m_params.sigma_w_mps * m_params.sigma_w_mps * kPi * kPi
                               * std::cbrt(kPi * Lw / (4.0 * b)) / (16.0 * b * Lw);
             const double phi  = std::exp(-a * dt);
-            m_x[7] = phi * m_x[7]
-                   + std::sqrt(var) * std::sqrt(std::max(0.0, 1.0 - phi * phi)) * gaussian();
+            m_x[7] = (phi * m_x[7])
+                   + (std::sqrt(var) * std::sqrt(std::max(0.0, 1.0 - (phi * phi))) * gaussian());
         }
 
         // ── v with r lag (corner pi V / 3b), w with q lag (corner pi V / 4b) ─
@@ -325,17 +325,17 @@ private:
     {
         const double a = V / L;
         const double K = sigma / std::sqrt(a);
-        return K * (a * a * x1 + std::numbers::sqrt3 * a * x2);
+        return K * ((a * a * x1) + (std::numbers::sqrt3 * a * x2));
     }
 
     // Exact ZOH step of the 3-state system: second-order shaping filter
-    // (x1, x2) plus the first-order lag xl on its time derivative divided by V.
+    // (x1, x2) plus the first-order lag xlag on its time derivative divided by V.
     //   x1' = x2
     //   x2' = -a^2 x1 - 2a x2 + xi
-    //   xl' = -al xl + al * (d/dt output) / V
+    //   xlag' = -al xlag + al * (d/dt output) / V
     // where d/dt output = K(-sqrt3 a^3 x1 + a^2 (1 - 2 sqrt3) x2 + sqrt3 a xi).
     void stepSecondOrderWithLag(double sigma, double L, double V, double al, double dt,
-                                double& x1, double& x2, double& xl, LagCache& cache)
+                                double& x1, double& x2, double& xlag, LagCache& cache)
     {
         if (cache.sigma != sigma || cache.L != L || cache.V != V || cache.al != al || cache.dt != dt) {
             const double a  = V / L;
@@ -347,7 +347,7 @@ private:
             A(1, 0) = -a * a;
             A(1, 1) = -2.0 * a;
             A(2, 0) = -al * K * s3 * a * a * a / V;
-            A(2, 1) =  al * K * a * a * (1.0 - 2.0 * s3) / V;
+            A(2, 1) =  al * K * a * a * (1.0 - (2.0 * s3)) / V;
             A(2, 2) = -al;
 
             const Eigen::Vector3d B(0.0, 1.0, al * K * s3 * a / V);
@@ -358,10 +358,10 @@ private:
             cache.sigma = sigma; cache.L = L; cache.V = V; cache.al = al; cache.dt = dt;
         }
 
-        const Eigen::Vector3d x(x1, x2, xl);
+        const Eigen::Vector3d x(x1, x2, xlag);
         const Eigen::Vector3d n(gaussian(), gaussian(), gaussian());
-        const Eigen::Vector3d xn = cache.Phi * x + cache.Lc * n;
-        x1 = xn(0); x2 = xn(1); xl = xn(2);
+        const Eigen::Vector3d xn = (cache.Phi * x) + (cache.Lc * n);
+        x1 = xn(0); x2 = xn(1); xlag = xn(2);
     }
 
     // Box-Muller on the top 53 bits of mt19937_64: platform-independent.
