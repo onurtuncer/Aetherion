@@ -80,6 +80,8 @@ addpath(plantFmuDir, apFmuDir);
 % Communication step size for the co-simulation master (both FMUs are
 % FMI 2.0 CS).  1 ms keeps the plant/autopilot coupling tight enough for
 % the LQR inner loop while remaining cheap (30 k steps for the 30 s run).
+% The FMU block has no step-size parameter of its own: a CS FMU block
+% inherits its sample time, so this is imposed as the model's fixed step.
 CS_STEP = '0.001';
 
 %% Trim-point commands (match F16_control.dml design point / F16PlantFMU defaults)
@@ -97,8 +99,11 @@ MDL = 'F16_Autopilot';
 if bdIsLoaded(MDL), close_system(MDL, 0); end
 new_system(MDL);
 
-% Continuous-time, variable-step, 30 s
-set_param(MDL, 'Solver','ode45', 'StopTime','30', 'RelTol','1e-4', 'AbsTol','1e-6');
+% Discrete fixed-step, 30 s.  Neither FMU contributes continuous states, so
+% a variable-step solver would stride at its default max step of
+% StopTime/50 = 0.6 s, a single Radau step far too long for the plant's
+% Newton iteration to converge (fmi2Discard at t = 0.6 s).
+set_param(MDL, 'Solver','FixedStepDiscrete', 'FixedStep',CS_STEP, 'StopTime','30');
 
 p = @(x,y,w,h) [x, y, x+w, y+h];  % position helper
 
@@ -111,7 +116,6 @@ addFMUBlock(PLANT, p(480, 80, 160, 360));
 set_param(PLANT, 'FMUName', plantFmu);
 setParamIfPresent(PLANT, 'FMUInputMapping', 'Flat');
 setParamIfPresent(PLANT, 'FMUOutputMapping', 'Flat');
-setParamIfPresent(PLANT, 'CommunicationStepSize', CS_STEP);
 
 % ── F16Autopilot FMU block ──────────────────────────────────────────────────
 AP = [MDL '/F16Autopilot'];
@@ -119,7 +123,6 @@ addFMUBlock(AP, p(130, 80, 160, 310));
 set_param(AP, 'FMUName', apFmu);
 setParamIfPresent(AP, 'FMUInputMapping', 'Flat');
 setParamIfPresent(AP, 'FMUOutputMapping', 'Flat');
-setParamIfPresent(AP, 'CommunicationStepSize', CS_STEP);
 
 fprintf('F16Plant ports [in out]: %s\n', mat2str(get_param(PLANT, 'Ports')));
 fprintf('F16Autopilot ports [in out]: %s\n', mat2str(get_param(AP, 'Ports')));
