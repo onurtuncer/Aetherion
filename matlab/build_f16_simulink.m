@@ -186,10 +186,24 @@ add_line(MDL, 'F16Plant/3',  'F16Autopilot/18', 'autorouting','on');  % lon_deg
 % ── Wire: autopilot FMU outputs → plant FMU control inputs ──────────────────
 % AP output ports: 1=ctrl.el_deg  2=ctrl.ail_deg  3=ctrl.rdr_deg  4=ctrl.pwr_pct
 % Plant input ports: 1=ctrl.el_deg  2=ctrl.ail_deg  3=ctrl.rdr_deg  4=ctrl.pwr_pct
-add_line(MDL, 'F16Autopilot/1', 'F16Plant/1', 'autorouting','on');  % el_deg
-add_line(MDL, 'F16Autopilot/2', 'F16Plant/2', 'autorouting','on');  % ail_deg
-add_line(MDL, 'F16Autopilot/3', 'F16Plant/3', 'autorouting','on');  % rdr_deg
-add_line(MDL, 'F16Autopilot/4', 'F16Plant/4', 'autorouting','on');  % pwr_pct
+%
+% Simulink treats every FMU block as direct feedthrough, so the closed loop
+% is an algebraic loop.  Its solver iterates by re-evaluating both FMUs with
+% trial inputs, which steps the stateful CS plant repeatedly and diverges
+% within a few steps.  A one-step delay on each control line breaks the loop
+% the way a Jacobi co-simulation master does: the plant integrates over
+% [t, t+h] with the controls computed from its outputs at t-h.  The 1 ms lag
+% is negligible against the LQR loop bandwidth, and zero controls over the
+% first step barely disturb the trim.
+ctrlNames = {'el_deg', 'ail_deg', 'rdr_deg', 'pwr_pct'};
+for k = 1:numel(ctrlNames)
+    dly = ['Z_' ctrlNames{k}];
+    add_block('simulink/Discrete/Unit Delay', [MDL '/' dly], ...
+        'SampleTime', CS_STEP, 'InitialCondition', '0', ...
+        'Position', p(360, 80 + 40*k, 30, 25));
+    add_line(MDL, sprintf('F16Autopilot/%d', k), [dly '/1'], 'autorouting','on');
+    add_line(MDL, [dly '/1'], sprintf('F16Plant/%d', k), 'autorouting','on');
+end
 
 % ── Wire: plant outputs → workspace sinks ───────────────────────────────────
 add_line(MDL, 'F16Plant/1',  'TW_Alt/1', 'autorouting','on');   % out.alt_m
