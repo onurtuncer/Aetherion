@@ -40,8 +40,8 @@
 //   e_rot(h) = ||R_num(T) - R_ref(T)||_F      (Frobenius)
 //   e_pos(h) = ||p_num(T) - p_ref(T)||_2      [m]
 //
-// CSV output (if AETHERION_SOURCE_DIR is defined via CMake):
-//   ${AETHERION_SOURCE_DIR}/papers/eucass/data/convergence_order.csv
+// CSV output (if AETHERION_PAPER_DATA_DIR is defined via CMake):
+//   ${AETHERION_PAPER_DATA_DIR}/convergence_order.csv
 //   Columns: h, rot_radau5, pos_radau5, rot_rk4, pos_rk4
 //
 #include <catch2/catch_test_macros.hpp>
@@ -362,9 +362,9 @@ TEST_CASE("Convergence order: write CSV for paper figure",
     WARN("mean order RK4  : rot = " << mean_order(h, e_rk4.rot)
          << ", pos = " << mean_order(h, e_rk4.pos));
 
-#ifdef AETHERION_SOURCE_DIR
+#ifdef AETHERION_PAPER_DATA_DIR
     const std::string csv_path =
-        std::string(AETHERION_SOURCE_DIR) + "/papers/eucass/data/convergence_order.csv";
+        std::string(AETHERION_PAPER_DATA_DIR) + "/convergence_order.csv";
 
     std::ofstream ofs(csv_path);
     if (ofs.is_open()) {
@@ -377,9 +377,9 @@ TEST_CASE("Convergence order: write CSV for paper figure",
         WARN("CSV written to: " << csv_path);
     } else {
         WARN("Could not write CSV to: " << csv_path
-             << " -- ensure papers/eucass/data/ exists.");
+             << " -- ensure AETHERION_PAPER_DATA_DIR exists.");
     }
 #else
-    WARN("AETHERION_SOURCE_DIR not defined -- no CSV written.");
+    WARN("AETHERION_PAPER_DATA_DIR not defined -- no CSV written.");
 #endif
 }

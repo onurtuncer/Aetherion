@@ -3,7 +3,8 @@
 compare_atmos17_errors.py
 -------------------------
 Scenario 17 (two-stage rocket to orbit) validation errors against the NASA
-TM-2015-218675 reference runs, for the table in papers/eucass/main.tex.
+TM-2015-218675 reference runs, for the table in the EUCASS paper
+(AetherionPapers repository, eucass/main.tex).
 
 Reports, for each quantity, the peak absolute difference between an Aetherion
 run and each reference sim, plus the peak spread *among* the reference sims
