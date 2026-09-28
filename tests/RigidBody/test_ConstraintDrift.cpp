@@ -26,8 +26,8 @@
 //
 // Metric:  d(t) = || R(t)^T R(t) - I ||_F
 //
-// CSV output (if AETHERION_SOURCE_DIR is defined via CMake):
-//   ${AETHERION_SOURCE_DIR}/papers/eucass/data/constraint_drift.csv
+// CSV output (if AETHERION_PAPER_DATA_DIR is defined via CMake):
+//   ${AETHERION_PAPER_DATA_DIR}/constraint_drift.csv
 //   Columns: t, rkmk_se3, quat_rk4_plain, quat_rk4_renorm
 //
 #include <catch2/catch_test_macros.hpp>
@@ -288,9 +288,9 @@ TEST_CASE("Constraint drift: write CSV for paper figure", "[drift][csv]")
          << "  quat RK4 (plain): "        << d.quat_plain.back()
          << "  quat RK4 (renormalised): " << d.quat_renorm.back());
 
-#ifdef AETHERION_SOURCE_DIR
+#ifdef AETHERION_PAPER_DATA_DIR
     const std::string csv_path =
-        std::string(AETHERION_SOURCE_DIR) + "/papers/eucass/data/constraint_drift.csv";
+        std::string(AETHERION_PAPER_DATA_DIR) + "/constraint_drift.csv";
 
     std::ofstream ofs(csv_path);
     if (ofs.is_open()) {
@@ -303,9 +303,9 @@ TEST_CASE("Constraint drift: write CSV for paper figure", "[drift][csv]")
         WARN("CSV written to: " << csv_path);
     } else {
         WARN("Could not write CSV to: " << csv_path
-             << " -- ensure papers/eucass/data/ exists.");
+             << " -- ensure AETHERION_PAPER_DATA_DIR exists.");
     }
 #else
-    WARN("AETHERION_SOURCE_DIR not defined -- no CSV written.");
+    WARN("AETHERION_PAPER_DATA_DIR not defined -- no CSV written.");
 #endif
 }

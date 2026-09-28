@@ -635,11 +635,11 @@ TEST_CASE("Stiff regime: manifold membership and L-stability are exclusive witho
 // ---------------------------------------------------------------------------
 TEST_CASE("Manifold factorial: write CSV", "[factorial][csv]")
 {
-#ifdef AETHERION_SOURCE_DIR
+#ifdef AETHERION_PAPER_DATA_DIR
     const DriftResult& d = drift_result();
     const OrderResult& r = order_result();
 
-    const std::string dir = std::string(AETHERION_SOURCE_DIR) + "/papers/eucass/data/";
+    const std::string dir = std::string(AETHERION_PAPER_DATA_DIR) + "/";
 
     std::ofstream f1(dir + "manifold_factorial_drift.csv");
     if (f1.is_open()) {
@@ -678,6 +678,6 @@ TEST_CASE("Manifold factorial: write CSV", "[factorial][csv]")
         WARN("wrote " << dir << "manifold_factorial_order.csv");
     }
 #else
-    WARN("AETHERION_SOURCE_DIR not defined -- no CSV written.");
+    WARN("AETHERION_PAPER_DATA_DIR not defined -- no CSV written.");
 #endif
 }
