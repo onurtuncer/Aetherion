@@ -27,10 +27,9 @@ target_link_libraries(
           CppAD::cppad
           Eigen3::Eigen)
 
-# The paper benchmarks write their CSVs into the EUCASS paper in the separate
-# AetherionPapers repository, assumed to be checked out next to this one.
-set(AETHERION_PAPER_DATA_DIR
-    "${PROJECT_SOURCE_DIR}/../AetherionPapers/eucass/data"
+# The paper benchmarks write their CSVs into the EUCASS paper in the separate AetherionPapers repository, assumed to be
+# checked out next to this one.
+set(AETHERION_PAPER_DATA_DIR "${PROJECT_SOURCE_DIR}/../AetherionPapers/eucass/data"
     CACHE PATH "Directory the paper benchmarks write their CSVs into")
 target_compile_definitions(test_rigidBody PRIVATE AETHERION_PAPER_DATA_DIR="${AETHERION_PAPER_DATA_DIR}")
 
