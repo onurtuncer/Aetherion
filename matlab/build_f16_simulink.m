@@ -27,18 +27,23 @@
 %
 % ─────────────────────────────────────────────────────────────────────────────
 % F16Plant FMU output port map (registration order in F16PlantFMU.cpp):
-%   1  out.alt_m        4  out.yaw_rad      5  out.pitch_rad
-%   6  out.roll_rad     7  out.p_rad_s      8  out.q_rad_s
-%   9  out.r_rad_s     13  out.alpha_deg   14  out.beta_deg
-%  17  out.vt_m_s      24  out.rho_kg_m3
+%   1  out.alt_m        2  out.lat_deg      3  out.lon_deg
+%   4  out.yaw_rad      5  out.pitch_rad    6  out.roll_rad
+%   7  out.p_rad_s      8  out.q_rad_s      9  out.r_rad_s
+%  13  out.alpha_deg   14  out.beta_deg    17  out.vt_m_s
+%  24  out.rho_kg_m3
 %
 % F16Autopilot FMU input port map (registration order in F16AutopilotFMU.cpp):
 %   1  cmd.altCmd_ft    2  cmd.keasCmd_kt  3  cmd.baseChiCmd_deg
-%   4  cmd.latOffset_ft
-%   5  fb.alt_m         6  fb.vt_m_s       7  fb.rho_kg_m3
-%   8  fb.alpha_deg     9  fb.beta_deg    10  fb.roll_rad
-%  11  fb.pitch_rad    12  fb.yaw_rad     13  fb.p_rad_s
-%  14  fb.q_rad_s      15  fb.r_rad_s
+%   4  cmd.latOffset_ft 5  cmd.circlePoleSW
+%   6  fb.alt_m         7  fb.vt_m_s       8  fb.rho_kg_m3
+%   9  fb.alpha_deg    10  fb.beta_deg    11  fb.roll_rad
+%  12  fb.pitch_rad    13  fb.yaw_rad     14  fb.p_rad_s
+%  15  fb.q_rad_s      16  fb.r_rad_s     17  fb.lat_deg
+%  18  fb.lon_deg
+%
+% The circumnavigate parameter is left at its default (false), so the FMU
+% runs F16_control.dml: circlePoleSW, lat and lon are wired but ignored.
 %
 % F16Autopilot FMU output port map:
 %   1  ctrl.el_deg      2  ctrl.ail_deg    3  ctrl.rdr_deg
@@ -119,6 +124,13 @@ setParamIfPresent(AP, 'CommunicationStepSize', CS_STEP);
 fprintf('F16Plant ports [in out]: %s\n', mat2str(get_param(PLANT, 'Ports')));
 fprintf('F16Autopilot ports [in out]: %s\n', mat2str(get_param(AP, 'Ports')));
 
+% The wiring below is by port index, i.e. by FMU variable registration
+% order.  A variable added to or removed from either FMU shifts the indices
+% silently and the autopilot then flies on crossed feedbacks, which surfaces
+% only as a plant divergence and a NaN algebraic loop.  Fail here instead.
+checkPorts(PLANT, 4, 42);
+checkPorts(AP,   18,  4);
+
 % ── Autopilot command constants ─────────────────────────────────────────────
 add_block('simulink/Sources/Constant', [MDL '/AltCmd'], ...
     'Value', num2str(ALT_CMD_FT),   'Position', p(30, 55,  65, 25));
@@ -128,6 +140,8 @@ add_block('simulink/Sources/Constant', [MDL '/HdgCmd'], ...
     'Value', num2str(HDG_CMD_DEG),  'Position', p(30, 155, 65, 25));
 add_block('simulink/Sources/Constant', [MDL '/LatOffset'], ...
     'Value', num2str(LAT_OFFSET_FT),'Position', p(30, 205, 65, 25));
+add_block('simulink/Sources/Constant', [MDL '/CirclePoleSW'], ...
+    'Value', '0',                   'Position', p(30, 255, 65, 25));
 
 % ── To-Workspace sinks ──────────────────────────────────────────────────────
 add_block('simulink/Sinks/To Workspace', [MDL '/TW_Alt'], ...
@@ -139,27 +153,32 @@ add_block('simulink/Sinks/To Workspace', [MDL '/TW_Hdg'], ...
 
 % ── Wire: command constants → autopilot FMU inputs ──────────────────────────
 % AP input ports: 1=altCmd_ft  2=keasCmd_kt  3=baseChiCmd_deg  4=latOffset_ft
-add_line(MDL, 'AltCmd/1',    'F16Autopilot/1', 'autorouting','on');
-add_line(MDL, 'KeasCmd/1',   'F16Autopilot/2', 'autorouting','on');
-add_line(MDL, 'HdgCmd/1',    'F16Autopilot/3', 'autorouting','on');
-add_line(MDL, 'LatOffset/1', 'F16Autopilot/4', 'autorouting','on');
+%                 5=circlePoleSW
+add_line(MDL, 'AltCmd/1',       'F16Autopilot/1', 'autorouting','on');
+add_line(MDL, 'KeasCmd/1',      'F16Autopilot/2', 'autorouting','on');
+add_line(MDL, 'HdgCmd/1',       'F16Autopilot/3', 'autorouting','on');
+add_line(MDL, 'LatOffset/1',    'F16Autopilot/4', 'autorouting','on');
+add_line(MDL, 'CirclePoleSW/1', 'F16Autopilot/5', 'autorouting','on');
 
 % ── Wire: plant FMU outputs → autopilot FMU feedback inputs ─────────────────
-% AP input ports: 5=fb.alt_m  6=fb.vt_m_s  7=fb.rho_kg_m3
-%                 8=fb.alpha_deg  9=fb.beta_deg
-%                10=fb.roll_rad  11=fb.pitch_rad  12=fb.yaw_rad
-%                13=fb.p_rad_s   14=fb.q_rad_s    15=fb.r_rad_s
-add_line(MDL, 'F16Plant/1',  'F16Autopilot/5',  'autorouting','on');  % alt_m
-add_line(MDL, 'F16Plant/17', 'F16Autopilot/6',  'autorouting','on');  % vt_m_s
-add_line(MDL, 'F16Plant/24', 'F16Autopilot/7',  'autorouting','on');  % rho_kg_m3
-add_line(MDL, 'F16Plant/13', 'F16Autopilot/8',  'autorouting','on');  % alpha_deg
-add_line(MDL, 'F16Plant/14', 'F16Autopilot/9',  'autorouting','on');  % beta_deg
-add_line(MDL, 'F16Plant/6',  'F16Autopilot/10', 'autorouting','on');  % roll_rad
-add_line(MDL, 'F16Plant/5',  'F16Autopilot/11', 'autorouting','on');  % pitch_rad
-add_line(MDL, 'F16Plant/4',  'F16Autopilot/12', 'autorouting','on');  % yaw_rad
-add_line(MDL, 'F16Plant/7',  'F16Autopilot/13', 'autorouting','on');  % p_rad_s
-add_line(MDL, 'F16Plant/8',  'F16Autopilot/14', 'autorouting','on');  % q_rad_s
-add_line(MDL, 'F16Plant/9',  'F16Autopilot/15', 'autorouting','on');  % r_rad_s
+% AP input ports: 6=fb.alt_m  7=fb.vt_m_s  8=fb.rho_kg_m3
+%                 9=fb.alpha_deg 10=fb.beta_deg
+%                11=fb.roll_rad  12=fb.pitch_rad  13=fb.yaw_rad
+%                14=fb.p_rad_s   15=fb.q_rad_s    16=fb.r_rad_s
+%                17=fb.lat_deg   18=fb.lon_deg
+add_line(MDL, 'F16Plant/1',  'F16Autopilot/6',  'autorouting','on');  % alt_m
+add_line(MDL, 'F16Plant/17', 'F16Autopilot/7',  'autorouting','on');  % vt_m_s
+add_line(MDL, 'F16Plant/24', 'F16Autopilot/8',  'autorouting','on');  % rho_kg_m3
+add_line(MDL, 'F16Plant/13', 'F16Autopilot/9',  'autorouting','on');  % alpha_deg
+add_line(MDL, 'F16Plant/14', 'F16Autopilot/10', 'autorouting','on');  % beta_deg
+add_line(MDL, 'F16Plant/6',  'F16Autopilot/11', 'autorouting','on');  % roll_rad
+add_line(MDL, 'F16Plant/5',  'F16Autopilot/12', 'autorouting','on');  % pitch_rad
+add_line(MDL, 'F16Plant/4',  'F16Autopilot/13', 'autorouting','on');  % yaw_rad
+add_line(MDL, 'F16Plant/7',  'F16Autopilot/14', 'autorouting','on');  % p_rad_s
+add_line(MDL, 'F16Plant/8',  'F16Autopilot/15', 'autorouting','on');  % q_rad_s
+add_line(MDL, 'F16Plant/9',  'F16Autopilot/16', 'autorouting','on');  % r_rad_s
+add_line(MDL, 'F16Plant/2',  'F16Autopilot/17', 'autorouting','on');  % lat_deg
+add_line(MDL, 'F16Plant/3',  'F16Autopilot/18', 'autorouting','on');  % lon_deg
 
 % ── Wire: autopilot FMU outputs → plant FMU control inputs ──────────────────
 % AP output ports: 1=ctrl.el_deg  2=ctrl.ail_deg  3=ctrl.rdr_deg  4=ctrl.pwr_pct
@@ -305,6 +324,17 @@ end
 % Prefer the shortest match (plain "FMU" over "FMU Multirate" etc.)
 [~, idx] = min(cellfun(@numel, hits));
 blkPath = hits{idx};
+end
+
+function checkPorts(blk, nIn, nOut)
+% Guard the index-based wiring against FMU interface changes.
+ports = get_param(blk, 'Ports');
+if ports(1) ~= nIn || ports(2) ~= nOut
+    error('build_f16_simulink:portMismatch', ...
+        ['%s has %d inputs / %d outputs, expected %d / %d. The FMU''s ' ...
+         'variables changed: update the port maps and add_line indices.'], ...
+        blk, ports(1), ports(2), nIn, nOut);
+end
 end
 
 function setParamIfPresent(blk, name, value)
