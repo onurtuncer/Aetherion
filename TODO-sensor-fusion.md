@@ -85,17 +85,34 @@ readable from either.
 
 ### Step 2 — Block scheme and log contract (shared; this repo is the source of truth)
 
-- [ ] Write the block library definition: for each block its name, dimension,
-      units, frame, process model and canonical position. Blocks needed now:
-      navigation core, gyro bias, accel bias, baro bias.
-- [ ] Define the vehicle configuration (which blocks, which measurements) and
-      a configuration hash computed from it.
-- [ ] Each measurement model declares the blocks it depends on; a model is
-      valid only on a configuration that carries them.
-- [ ] Adopt Hemerion's existing logs as the replay format rather than
-      inventing one: `gps_fixes.csv`, `imu_samples.csv`, `baro_samples.csv`,
-      the truth CSV, and the `.config` sidecars. Record the column names this
-      repo reads, so a rename on the Hemerion side fails loudly.
+- [x] Block library: `Aetherion/Estimation/Blocks.h` (`kBlockLibrary`:
+      name, dimension, units, frame, process model, canonical rank; nav core
+      in right-invariant tangent order phi, nu, rho).
+- [x] Vehicle configuration and hash: `Aetherion/Estimation/Configuration.h`.
+      Hash is FNV-1a 64 over a canonical text descriptor that also names
+      group, error convention and frame. First configuration
+      `kNavBaroGnss16`, hash `0x1e59a990edd19e83`, pinned in
+      `tests/Estimation/test_Configuration.cpp`.
+- [x] Measurement → block dependencies (`kMeasurementLibrary`);
+      `Configuration::valid()` rejects a measurement without its blocks.
+- [x] Log contract: `Aetherion/Estimation/LogContract.h`. Columns bound by
+      name, all missing ones reported at once; required columns depend on
+      the configuration. Tested against the header lines Hemerion `c4a3178`
+      writes.
+- [ ] **Hemerion: log GNSS velocity.** `GpsFix` decodes only `gSpeed` and
+      course, although `UbxEmitter` already encodes velN/E/D and sAcc. Until
+      `gps_fixes.csv` carries `vel_north_mps`, `vel_east_mps`,
+      `vel_down_mps`, `speed_accuracy_mps` (names proposed here),
+      `kNavBaroGnss16` does not bind; the contract test asserts that failure.
+      Ground speed and course are not a substitute (singular at low speed,
+      no vertical component).
+- [ ] **Hemerion: GPS altitude datum.** `GpsFix::altitude_m` is documented as
+      MSL, but `ubxParser` reads NAV-PVT `height` (offset 32, ellipsoidal),
+      and the FMU is driven with Aetherion's geodetic altitude. The
+      measurement model assumes ellipsoidal; fix the comment on that side.
+- [ ] **Hemerion: rocket truth log has no attitude.** `rocket_gps_ecos` logs
+      no Euler angles at all (besides the plant only publishing Euler
+      angles). Needed before the rocket configuration.
 
 ### Step 5 — Process and measurement models
 
