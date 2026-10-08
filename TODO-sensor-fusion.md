@@ -71,8 +71,17 @@ readable from either.
 
 ## Still open
 
-- [ ] **Error convention: left- or right-invariant.** Not decided; fix
-      before step 5, since every Jacobian inherits it, and update the
+- [ ] **Error convention: left- or right-invariant.** Not decided, and no
+      longer blocking: step 5 takes it as a template parameter. Evidence so
+      far: `scripts/iekf_convention_mc.py` (NumPy Monte Carlo, paired LI/RI
+      runs; results in `doc/sensor_fusion.rst`, 2026-10-08): equivalent in
+      normal operation; RI clearly better under large corrections (45° and
+      120° initial heading error, and at the onset of heading
+      observability, where LI becomes overconfident); RI fails in float32
+      with a Joseph-form covariance (every run), LI unaffected. Next:
+      covariance reset after updates in both; RI with UD / square-root in
+      float32; initial-heading sweep (5–20°) for LI; rocket trajectory.
+      When decided, update the
       `error=` line of the configuration descriptor and the pinned hash
       (currently provisional `right-invariant`). Trade-off is written up in
       `doc/sensor_fusion.rst`: LI gives constant GNSS position/velocity
@@ -121,6 +130,16 @@ readable from either.
 - [ ] Fill `EstimationState.h` and `ProcessModel.h`: scalar-templated and
       AD-friendly, in the same style as the dynamics, so one definition serves
       the reference filter and the generator.
+- [ ] **Error convention as a template parameter** (decided 2026-10-08) of
+      the process and measurement models and of the reset, so LI and RI both
+      exist from the start and the choice is made on evidence; each gets its
+      own configuration hash. Only the configuration generated in step 8 has
+      to commit to one.
+- [ ] Discretise the error-state transition with F averaged over the step
+      (trapezoidal), not evaluated at its start: the RI bias coupling
+      −Ad_X̂ varies within a step at a rate ~ |p̂||ω|, so a start-of-step F is
+      only first-order accurate for RI (found by the prototype's
+      finite-difference check; LI is second-order either way).
 - [ ] Fill `MeasurementModels.h`, written against what Hemerion's drivers
       decode, not against idealised quantities:
       - GNSS position from UBX-NAV-PVT latitude, longitude, altitude;
