@@ -23,7 +23,7 @@ Flight Dynamics with Spatial Vector Algebra
    Istanbul Technical University, Dept. of Aeronautical Engineering<br>
    Maslak, Istanbul, Türkiye<br>
    <a href="mailto:onur.tuncer@itu.edu.tr">onur.tuncer@itu.edu.tr</a><br>
-   <strong>Version:</strong> 0.16.0 (September 24th, 2026)</p>
+   <strong>Version:</strong> 0.16.1 (October 8th, 2026)</p>
 
 .. toctree::
    :maxdepth: 2
@@ -38,6 +38,7 @@ Flight Dynamics with Spatial Vector Algebra
    product_manifolds
    group_exp_log
    rkmk
+   sensor_fusion
    unified_notation
    aero_wind_policies
    daveml

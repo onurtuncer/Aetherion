@@ -52,11 +52,11 @@ Stage separation, coast phases, and second-stage ignition are all captured with 
 ### Numerical Methods
 - **Lie-structure-preserving Runge-Kutta-Munthe-Kaas (RKMK) integrator** on SE(3)
 - **Fully implicit RADAU-IIA solver** for stiff ascent phases
-- **Discrete Extended Kalman Filter on a product manifold** containing Lie groups
+- *(Planned)* **Discrete Extended Kalman Filter on a product manifold** containing Lie groups
 
 ### Algorithmic Differentiation
 - **AD-friendly formulations** throughout — compatible with CppAD, dual numbers, and similar libraries
-- Auto-Jacobians fed directly into the EKF/UKF linearisation pipeline
+- *(Planned)* Auto-Jacobians fed directly into the EKF/UKF linearisation pipeline
 
 ### Environment Models
 - **US1976 Standard Atmosphere** (temperature, pressure, density, speed of sound), with ISA + dT and sea-level pressure offsets re-integrated hydrostatically
