@@ -44,17 +44,11 @@ readable from either.
   height, so it drifts in a climb).
 - **No magnetometer block or measurement** until Hemerion's replay
   equivalence (step 9) has passed once.
-- **Group and error convention: right-invariant EKF on SE₂(3) × ℝ⁷.** The
-  navigation core is one SE₂(3) element (R, v, p; 9 error states), and the
-  strapdown kinematics are group-affine on it (up to the gravity gradient in
-  the LCI frame, below), so the navigation error dynamics are essentially
-  independent of the estimate. Right-invariant error
-  η = X X̂⁻¹ because every update in the first configuration is world-frame
-  (GNSS position, GNSS velocity, barometric altitude). Biases (gyro 3, accel
-  3, baro 1) stay Euclidean ("imperfect IEKF"); their coupling terms depend
-  on the estimate. Revisit the convention when the magnetometer (a body-frame
-  measurement) arrives. SE₂(3) reuses the SO(3) exp/log and Jacobians in
-  `ODE/RKMK/Lie/`.
+- **Group: SE₂(3) × ℝ⁷.** The navigation core is one SE₂(3) element
+  (R, v, p; 9 error states); the strapdown kinematics are group-affine on
+  it (up to the gravity gradient in the LCI frame, below). Biases (gyro 3,
+  accel 3, baro 1) stay Euclidean ("imperfect IEKF"). SE₂(3) reuses the
+  SO(3) exp/log and Jacobians in `ODE/RKMK/Lie/`.
 - **Navigation frame: launch-centred inertial (LCI).** Origin at the launch /
   take-off point, axes equal to local NED at t₀, then frozen in inertial
   space. Related to ECI by a constant rotation and translation.
@@ -77,6 +71,14 @@ readable from either.
 
 ## Still open
 
+- [ ] **Error convention: left- or right-invariant.** Not decided; fix
+      before step 5, since every Jacobian inherits it, and update the
+      `error=` line of the configuration descriptor and the pinned hash
+      (currently provisional `right-invariant`). Trade-off is written up in
+      `doc/sensor_fusion.rst`: LI gives constant GNSS position/velocity
+      Jacobians and constant bias coupling (−I), and avoids the [p̂]× terms
+      (‖p̂‖ up to ~1e5 m in LCI); RI gives constant navigation error dynamics
+      and a constant magnetometer Jacobian, but bias coupling −Ad_X̂.
 - [ ] **Rates.** Hemerion's README intends 500 Hz predict / 18 Hz GPS; its
       examples run a 100 Hz IMU and 10 Hz GPS. Hemerion's decision (its
       step 4), but the process-noise tuning here depends on it.

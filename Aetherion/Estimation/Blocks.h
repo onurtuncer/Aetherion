@@ -17,16 +17,18 @@
 // configurations that share a block agree on its layout relative to the
 // blocks before it.
 //
-// Filter form: right-invariant EKF on SE2(3) x R^n, navigation frame
+// Filter form: invariant EKF on SE2(3) x R^n, navigation frame
 // launch-centred inertial (LCI): origin at the launch point, axes equal to
-// local NED at t0 and then frozen in inertial space.
+// local NED at t0 and then frozen in inertial space. The error convention
+// (left- or right-invariant) is not decided yet; right-invariant is
+// provisional. See doc/sensor_fusion.rst for the trade-off.
 //
 // The navigation core is one SE2(3) element X = (R, v, p), R body -> LCI,
-// v and p in LCI. Its 9 error states are the right-invariant tangent vector
-// xi = (phi, nu, rho) of eta = X * Xhat^-1, in that order. nu and rho carry
-// units of velocity and position but are not plain differences of v and p:
-// v - vhat = nu + [phi]x vhat to first order (likewise rho). Bias blocks are
-// Euclidean and additive.
+// v and p in LCI. Its 9 error states are the tangent vector
+// xi = (phi, nu, rho) of the invariant error, in that order: with the
+// right-invariant eta = X * Xhat^-1, v - vhat = nu + [phi]x vhat to first
+// order; with the left-invariant eta = Xhat^-1 * X, v - vhat = Rhat * nu
+// (likewise rho). Bias blocks are Euclidean and additive.
 // ------------------------------------------------------------------------------
 
 #pragma once
@@ -91,7 +93,7 @@ inline constexpr std::array<BlockSpec, kBlockCount> kBlockLibrary{ {
   return "?";
 }
 
-// Offsets inside the navigation core (right-invariant tangent order).
+// Offsets inside the navigation core (tangent order phi, nu, rho).
 namespace NavCoreLayout
 {
 inline constexpr int kAttitude = 0;  ///< phi, rad

@@ -38,6 +38,7 @@ Flight Dynamics with Spatial Vector Algebra
    product_manifolds
    group_exp_log
    rkmk
+   sensor_fusion
    unified_notation
    aero_wind_policies
    daveml

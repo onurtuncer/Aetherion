@@ -78,6 +78,8 @@ static_assert(
 // Fixed parts of the filter form; part of the hash.
 inline constexpr std::string_view kDescriptorVersion = "aetherion.estimation/1";
 inline constexpr std::string_view kGroup = "SE2(3)";
+// Provisional: left- vs right-invariant is still open (doc/sensor_fusion.rst).
+// Changing it changes every configuration hash.
 inline constexpr std::string_view kErrorConvention = "right-invariant";
 inline constexpr std::string_view kNavigationFrame = "LCI";
 
