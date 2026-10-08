@@ -201,12 +201,15 @@ Error convention (open)
 
 .. important::
 
-   **Not yet decided.** The choice between the left- and right-invariant
-   error must be fixed before the models of step 5 are written, because
-   every Jacobian inherits it. The configuration descriptor of step 2 names
-   the convention, so the decision changes the configuration hash. The
+   **Not yet decided, and deliberately not blocking.** Step 5 is written
+   with the convention as a *template parameter* of the process and
+   measurement models, so both filters exist from the first commit and the
+   decision is taken on evidence (:ref:`sensor-fusion-convention-evidence`),
+   not in advance. The configuration descriptor of step 2 names the
+   convention, so each choice has its own configuration hash; the
    implementation currently carries ``right-invariant`` as a provisional
-   value.
+   value. Only the configuration that is generated for the flight computer
+   (step 8) has to commit to one.
 
 The two candidate errors on the navigation core, with :math:`\hat X` the
 estimate and :math:`\zeta = b - \hat b` the bias error, are
@@ -327,9 +330,196 @@ on the estimate either way.
 
 The first configuration is updated by world-frame measurements only (GNSS
 position, GNSS velocity, barometric altitude) and carries biases, which
-points to LI. The RI form keeps the navigation block constant and
-anticipates the magnetometer. The coupling size matters for the float32
-rerun of step 7b. The decision is to be taken in step 2 and recorded here.
+points to LI on structural grounds. The RI form keeps the navigation block
+constant and anticipates the magnetometer. The structural arguments do not
+settle the question, so it is settled on evidence (below).
+
+First-order equivalence
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The two errors are related exactly by the adjoint of the estimate,
+:math:`\eta_R = \hat X \eta_L \hat X^{-1}`, so
+:math:`\xi_R = \Ad_{\hat X}\,\xi_L` and
+:math:`P_R = \Ad_{\hat X} P_L \Ad_{\hat X}^{\mathsf T}`. Pushing this map
+through every step of the filter: the propagation matrices, the bias
+couplings and the process noise map onto each other exactly, and so do the
+measurement Jacobians (:math:`H_R \Ad_{\hat X} = H_L`, up to the rotation of
+the innovation by :math:`\hat R^{\mathsf T}`), the gains and the corrected
+state (because :math:`\hat X \Exp(\xi) \hat X^{-1} = \Exp(\Ad_{\hat X}\xi)`).
+The one place they differ is **after an update**: the estimate jumps from
+:math:`\hat X^-` to :math:`\hat X^+`, each filter keeps its covariance
+unchanged, and the two are then no longer related by
+:math:`\Ad_{\hat X^+}` but differ by about
+:math:`\Ad_{\Exp(\delta)} \approx I + \ad_\delta`. The difference is
+second order in the correction :math:`\delta`: negligible for small
+corrections, decisive for large ones.
+
+So the conventions differ in two respects only: behaviour under **large
+corrections** (initial heading error, onset of heading observability,
+reacquisition after an outage) and **numerics** (the coordinates the
+covariance is stored in).
+
+.. _sensor-fusion-convention-evidence:
+
+Evidence: Monte Carlo prototype
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``scripts/iekf_convention_mc.py`` is a NumPy prototype of the first
+configuration with the convention as a switch. Both conventions see the same
+truth, the same sensor samples and the same initial error (paired runs), so
+every difference is the convention's.
+
+* **Model.** LCI frame, point-mass gravity with its gradient, MEMS-class IMU
+  (gyro 5·10⁻⁵ rad/s/√Hz, accelerometer 7·10⁻⁴ m/s²/√Hz, random-walk
+  biases), GNSS position (1.5 m horizontal, 3 m vertical) and velocity
+  (0.1 m/s) at 5 Hz, barometric height with random-walk bias at 10 Hz, IMU at
+  50 Hz. Truth is an F-16-like flight at 250 m/s: 30 s straight, then S-turns
+  up to about 35° of bank, with light turbulence; or straight throughout.
+  Initial covariance is given in physical coordinates and mapped to each
+  convention, so both start equivalent. Joseph-form update, no covariance
+  reset after updates (standard IEKF practice).
+* **Not modelled.** Geodetic and ECEF mapping, latency, lever arm. These are
+  the same for both conventions.
+* **Verification.** Every entry of :math:`F` and :math:`H` in both
+  conventions was checked against central finite differences of the full
+  nonlinear propagation and measurement functions. This check found that RI
+  needs :math:`F` averaged over the step: its bias coupling
+  :math:`-\Ad_{\hat X}` contains :math:`[\hat p]_\times \hat R`, which changes
+  within one IMU step at a rate of about :math:`\lVert\hat p\rVert
+  \lVert\omega\rVert`, so a start-of-step :math:`F` is only first-order
+  accurate (an error of about :math:`\tfrac12\, dt\, \lVert\hat p\rVert
+  \lVert\omega\rVert` in that entry). LI is second-order either way, because
+  the corresponding variation sits inside :math:`A_L`. With a trapezoidal
+  :math:`F` both match the finite differences to :math:`O(dt^2)`. This is an
+  implementation requirement for step 5.
+
+Results, 30 paired runs per scenario, 300 s each (``--runs 30 --seed 1``).
+ANEES is averaged over the last two thirds of the run (1 is consistent);
+"converged" is the median time after which the yaw error stays below 1°;
+"failed" counts runs whose covariance lost positive definiteness.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 24 8 12 12 14 14 8
+
+   * - Scenario
+     - Conv.
+     - ANEES
+     - Final yaw RMS [°]
+     - Final pos. RMS [m]
+     - Converged [s]
+     - Failed
+   * - Nominal (yaw σ 2°)
+     - LI / RI
+     - 1.06 / 1.00
+     - 0.052 / 0.052
+     - 0.31 / 0.31
+     - 30 / 30
+     - 0 / 0
+   * - Heading error 45°
+     - LI / RI
+     - 20.1 / 1.26
+     - 0.058 / 0.051
+     - 0.32 / 0.31
+     - 77 / 37
+     - 0 / 0
+   * - Heading error 120°
+     - LI / RI
+     - 2.8·10⁴ / 13.3
+     - 0.53 / 0.054
+     - 2.7 / 0.32
+     - 80 (2 never) / 48
+     - 0 / 0
+   * - GNSS outage 100–160 s
+     - LI / RI
+     - 1.07 / 0.97
+     - 0.049 / 0.049
+     - 0.34 / 0.34
+     - 30 / 30
+     - 0 / 0
+   * - 158 km out, straight, yaw σ 10°, float64
+     - LI / RI
+     - 7.3 / 14.9
+     - 45 / 57
+     - 0.31 / 0.31
+     - never / never
+     - 0 / 0
+   * - Same, float32 covariance
+     - LI / RI
+     - 7.3 / 1.8·10¹⁴
+     - 45 / 80
+     - 0.31 / 5.4·10⁴
+     - never / never
+     - 0 / 30
+   * - Nominal, float32 covariance
+     - LI / RI
+     - 1.06 / 7.5·10⁸
+     - 0.052 / 48
+     - 0.31 / 300
+     - 30 / never
+     - 0 / 30
+
+During the outage the maximum position error was 59 m (LI) and 51 m (RI);
+ANEES in the 20 s after reacquisition was 1.06 and 0.96.
+
+.. figure:: _static/iekf_convention_mc.png
+   :alt: Yaw RMS and ANEES against time for LI and RI in seven scenarios
+   :align: center
+   :width: 95%
+
+   Yaw RMS (left) and ANEES (right) against time, LI blue, RI red; grey band
+   is the GNSS outage.
+
+**Findings.**
+
+1. **Equivalent in normal operation**, as the first-order argument predicts:
+   same final accuracy, same behaviour through a 60 s GNSS outage and at
+   reacquisition.
+2. **RI handles large corrections better.** With 45° and 120° of initial
+   heading error RI converges about twice as fast and stays close to
+   consistent. LI becomes badly overconfident when heading first becomes
+   observable, and with 120° two LI runs never converge. The effect is
+   visible even in the nominal case: at the first turn (t = 30 s), when
+   heading becomes observable, LI's ANEES spikes to about 30 and takes some
+   70 s to recover, while RI stays at 1.
+3. **LI is robust in float32; RI is not.** With a plain Joseph-form
+   covariance in float32, RI loses positive definiteness in every run: at
+   the first update when 158 km from the origin, and within 3–10 s (at
+   :math:`\lVert\hat p\rVert` of 1–2.5 km) in the nominal case, after which
+   the estimate diverges. LI in float32 reproduces its float64 results to
+   every printed digit. This confirms the conditioning argument above: RI
+   stores world-frame coordinates coupled through :math:`[\hat p]_\times`
+   and :math:`[\hat v]_\times`.
+4. **Long unobservable yaw: both overconfident.** In 300 s of straight
+   flight, yaw and the vertical gyro bias are unobservable and the yaw error
+   grows to about 50°. Both filters become overconfident, RI more so (ANEES
+   14.9 against 7.3).
+
+**Caveats.** One trajectory family and one sensor grade; no covariance
+reset after updates; float32 tested only with the Joseph form. A covariance
+reset (re-anchoring :math:`P` with :math:`\Ad_{\Exp(\delta)}` or the
+corresponding Jacobian after each update) acts exactly on the second-order
+term where the conventions differ, and may narrow finding 2. A UD or
+square-root covariance may rescue RI in float32 (finding 3). Both are the
+next experiments.
+
+**Implications.** The evidence does not pick a single winner. It frames the
+decision as **robustness to large heading errors (RI) against
+single-precision robustness (LI)**:
+
+* Without a magnetometer, initial heading is the hard part of the first
+  configuration outside simulation, which favours RI.
+* If the flight computer runs the filter in float32, RI needs a
+  square-root or UD covariance at least, and that is unproven; LI works with
+  the Joseph form.
+* Remaining experiments, in order: covariance reset in both conventions; RI
+  with UD / square-root covariance in float32; a sweep of initial heading
+  error (5°, 10°, 20°) to find where LI stops being consistent, since a
+  heading initialiser only needs to beat that bound; a second trajectory
+  family (the rocket ascent).
+
+Step 5 keeps both conventions behind the template parameter until these are
+done.
 
 
 .. _sensor-fusion-frame:

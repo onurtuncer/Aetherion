@@ -114,3 +114,31 @@ Possible improvements include:
 ---
 
 End of file.
+
+---
+
+# iekf_convention_mc.py
+
+## Purpose
+
+Monte Carlo prototype comparing the left- and right-invariant EKF on
+SE2(3) x R^7 for the open error-convention decision of the sensor fusion work
+(`TODO-sensor-fusion.md`, `doc/sensor_fusion.rst`). One filter with the
+convention as a switch; both conventions see the same truth, sensor samples
+and initial error (paired runs). NumPy only; matplotlib optional for the plot.
+
+Model: launch-centred inertial frame, point-mass gravity with gradient, MEMS
+IMU with random-walk biases, GNSS position and velocity, barometric height
+with random-walk bias. Scenarios: nominal, large and huge initial heading
+error, GNSS outage, far from the origin with weak yaw (float64 and float32
+covariance), nominal in float32.
+
+## Usage
+
+    python scripts/iekf_convention_mc.py                       # all scenarios, 20 runs
+    python scripts/iekf_convention_mc.py --runs 50 --scenarios large_heading outage
+    python scripts/iekf_convention_mc.py --out results/iekf_mc --no-plots
+
+Prints a table per scenario and convention (ANEES, final yaw and position
+RMS, heading convergence time, failed runs) and writes
+`iekf_convention_mc.png` (yaw RMS and ANEES against time) to `--out`.
