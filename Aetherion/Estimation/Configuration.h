@@ -52,8 +52,8 @@ struct MeasurementSpec
   std::uint32_t requires_;  ///< Bitmask over BlockId
 };
 
-[[nodiscard]] constexpr std::uint32_t bit(BlockId b) { return 1u << static_cast<unsigned>(b); }
-[[nodiscard]] constexpr std::uint32_t bit(MeasurementId m) { return 1u << static_cast<unsigned>(m); }
+[[nodiscard]] constexpr std::uint32_t bit(BlockId b) { return 1U << static_cast<unsigned>(b); }
+[[nodiscard]] constexpr std::uint32_t bit(MeasurementId m) { return 1U << static_cast<unsigned>(m); }
 
 inline constexpr std::array<MeasurementSpec, kMeasurementCount> kMeasurementLibrary{ {
     { MeasurementId::GnssPosition, "gnss_position", 3, bit(BlockId::NavCore) },
@@ -183,11 +183,11 @@ public:
   /// FNV-1a 64 of descriptor().
   [[nodiscard]] std::uint64_t hash() const
   {
-    std::uint64_t h = 0xcbf29ce484222325ull;
+    std::uint64_t h = 0xcbf29ce484222325ULL;
     for (unsigned char c : descriptor())
     {
       h ^= c;
-      h *= 0x100000001b3ull;
+      h *= 0x100000001b3ULL;
     }
     return h;
   }

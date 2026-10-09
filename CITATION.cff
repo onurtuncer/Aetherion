@@ -1,0 +1,43 @@
+# This CITATION.cff file was generated with cffinit.
+# Visit https://bit.ly/cffinit to generate yours today!
+# Validate with: pip install cffconvert && cffconvert --validate
+
+cff-version: 1.2.0
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+title: "Aetherion: Flight Dynamics Library"
+abstract: >-
+  Aetherion is a research-grade C++ library for rocket and aerospace
+  flight dynamics built on Featherstone 6-D spatial vector algebra,
+  ECI/WGS84 frame transformations, algorithmic differentiation, and
+  structure-preserving (Lie group) ODE integration, with FMI/FMU export
+  for co-simulation. It is validated against the NASA/NESC
+  six-degree-of-freedom flight simulation check cases
+  (NASA TM-2015-218675).
+authors:
+  - family-names: Tuncer
+    given-names: Onur
+    affiliation: Istanbul Technical University
+    orcid: "https://orcid.org/0000-0002-2803-1146"
+version: 0.16.1
+date-released: 2026-10-08
+license: MIT
+repository-code: https://github.com/onurtuncer/Aetherion
+url: https://onurtuncer.github.io/Aetherion/
+keywords:
+  - flight dynamics
+  - six degrees of freedom
+  - spatial vector algebra
+  - Featherstone
+  - Lie group integrators
+  - Runge-Kutta Munthe-Kaas
+  - algorithmic differentiation
+  - FMI
+  - FMU
+  - co-simulation
+  - rocket
+  - aerospace
+  - WGS84
+  - C++
