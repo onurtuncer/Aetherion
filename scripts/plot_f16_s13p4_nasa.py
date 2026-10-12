@@ -15,13 +15,13 @@ Source-tree:
 Build directory (after CMake copies this script next to the executable):
     python plot_f16_s13p4_nasa.py [sim_csv] [nasa_ref]
 
-    sim_csv  optional path to the simulation CSV (default: f16_s13p4_sim.csv).
+    sim_csv  optional path to the simulation CSV (default: f16_s13p4.csv).
     nasa_ref  optional NASA reference simulation: 02, 04 or 05 (default: 05).
 
 NOTE: the closed-loop LQR is stiff — use timeStep <= 0.02 s for accurate
 results.  The default sim CSV is produced by:
 
-    F16LateralSideStep --endTime 60 --timeStep 0.02 --outputFileName f16_s13p4_sim.csv
+    F16LateralSideStep --endTime 60 --timeStep 0.02 --outputFileName f16_s13p4.csv
 
 Outputs (doc/_static/f16_s13p4/ or build-dir figures/f16_s13p4/):
     fig_lateral.png           lateral deviation from courseline vs 2 000 ft cmd
@@ -63,12 +63,12 @@ _BUILD_NASA = _HERE / f"Atmos_13p4_sim_{NASA_REF}.csv"
 _IN_BUILD_DIR = _BUILD_NASA.exists()
 
 if _IN_BUILD_DIR:
-    _SIM_DEFAULT = _HERE / "f16_s13p4_sim.csv"
+    _SIM_DEFAULT = _HERE / "f16_s13p4.csv"
     NASA_CSV = _BUILD_NASA
     OUT_DIR  = _HERE / "figures" / "f16_s13p4"
 else:
     _REPO    = _HERE.parent
-    _SIM_DEFAULT = _REPO / "f16_s13p4_sim.csv"
+    _SIM_DEFAULT = _REPO / "f16_s13p4.csv"
     NASA_CSV = _REPO / "data" / "Atmos_13p4_SubsonicLateralSideStepF16" / f"Atmos_13p4_sim_{NASA_REF}.csv"
     OUT_DIR  = _REPO / "doc" / "_static" / "f16_s13p4"
 

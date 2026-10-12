@@ -71,5 +71,5 @@ TEST_CASE("First configuration descriptor and hash are pinned", "[estimation][co
                                          "meas=gnss_position,3,nav_core\n"
                                          "meas=gnss_velocity,3,nav_core\n"
                                          "meas=barometer,1,nav_core+baro_bias\n");
-  REQUIRE(kNavBaroGnss16.hash() == 0x1e59a990edd19e83ull);
+  REQUIRE(kNavBaroGnss16.hash() == 0x1e59a990edd19e83ULL);
 }

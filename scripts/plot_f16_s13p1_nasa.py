@@ -14,14 +14,14 @@ Source-tree:
 Build directory (after CMake copies this script next to the executable):
     python plot_f16_s13p1_nasa.py [sim_csv] [nasa_ref]
 
-    sim_csv  optional path to the simulation CSV (default: f16_s13p1_200s.csv).
+    sim_csv  optional path to the simulation CSV (default: f16_s13p1.csv).
     nasa_ref  optional NASA reference simulation: 02, 04 or 05 (default: 05).
 
 NOTE: the closed-loop LQR is stiff — use timeStep <= 0.02 s for accurate
 results.  dt = 0.1 s produces a numerical instability (roll divergence,
 12 ft altitude error).  The default sim CSV is produced by:
 
-    F16AltitudeChange --endTime 20 --timeStep 0.02 --outputFileName f16_s13p1_200s.csv
+    F16AltitudeChange --endTime 20 --timeStep 0.02 --outputFileName f16_s13p1.csv
 
 Outputs (figures/ sub-directory next to this script, or doc/_static/f16_s13p1/):
     fig_flight_envelope.png   altitude, TAS, Mach
@@ -62,12 +62,12 @@ _BUILD_NASA = _HERE / f"Atmos_13p1_sim_{NASA_REF}.csv"
 _IN_BUILD_DIR = _BUILD_NASA.exists()
 
 if _IN_BUILD_DIR:
-    _SIM_DEFAULT = _HERE / "f16_s13p1_200s.csv"
+    _SIM_DEFAULT = _HERE / "f16_s13p1.csv"
     NASA_CSV = _BUILD_NASA
     OUT_DIR  = _HERE / "figures" / "f16_s13p1"
 else:
     _REPO    = _HERE.parent
-    _SIM_DEFAULT = _REPO / "f16_s13p1_200s.csv"
+    _SIM_DEFAULT = _REPO / "f16_s13p1.csv"
     NASA_CSV = _REPO / "data" / "Atmos_13p1_SubsonicAltitudeChangeF16" / f"Atmos_13p1_sim_{NASA_REF}.csv"
     OUT_DIR  = _REPO / "doc" / "_static" / "f16_s13p1"
 

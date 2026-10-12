@@ -117,6 +117,33 @@ End of file.
 
 ---
 
+# checkpoint_tables.py
+
+## Purpose
+
+Prints the per-checkpoint validation tables of `doc/examples.rst` for one NASA
+TM-2015-218675 scenario from a fresh Aetherion run, in the layout of the table
+in the documentation and against the reference run the documentation names
+(sim_01 plus the closest run for 8-10; sim 05, or sim 02 where the doc says so,
+for the F-16 cases; sim 06 for 17). The plot scripts write figures and
+`error_summary.csv` files but never print values at the checkpoint times, so
+this is the step that lets a table be re-verified after a change without
+reading numbers off a plot. It prints; it does not edit `doc/`.
+
+## Usage
+
+    python scripts/checkpoint_tables.py <scenario> <aetherion.csv>
+
+    scenario: 8 9 10 11 12 13.1 13.2 13.3 13.4 15 16 17
+
+Run `<aetherion.csv>` with the parameters `doc/examples.rst` states for that
+scenario. Peak errors use the plot scripts' alignment (time rounded to 4
+decimals, inner join), so the figures quoted in the doc reproduce; checkpoint
+rows take the nearest sample, Scenario 17 interpolates (its rows include the
+37.4 s and 131.8 s phase events).
+
+---
+
 # iekf_convention_mc.py
 
 ## Purpose
