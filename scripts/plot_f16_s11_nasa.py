@@ -13,8 +13,11 @@ Source-tree (repo root as working directory):
 Build directory (after CMake copies this script next to the executable):
     python plot_f16_s11_nasa.py [sim_csv] [nasa_ref]
 
-    sim_csv  optional path to the simulation output CSV (default: f16_s11_200s.csv
-             in the same directory as this script).
+    sim_csv  optional path to the simulation output CSV (default: f16_s11.csv
+             in the same directory as this script, as written by the run
+             command in doc/examples.rst: F16SteadyFlight --timeStep 0.01
+             --startTime 0 --endTime 180 --writeInterval 10
+             --outputFileName f16_s11.csv).
     nasa_ref  optional NASA reference simulation: 02, 04 or 05 (default: 05).
 
 The script auto-detects its location:
@@ -67,13 +70,13 @@ _IN_BUILD_DIR = _BUILD_NASA.exists()
 
 if _IN_BUILD_DIR:
     # Running from the CMake build directory
-    _SIM_DEFAULT = _HERE / "f16_s11_200s.csv"
+    _SIM_DEFAULT = _HERE / "f16_s11.csv"
     NASA_CSV = _BUILD_NASA
     OUT_DIR  = _HERE / "figures" / "f16_s11"
 else:
     # Running from the source tree (scripts/ directory)
     _REPO    = _HERE.parent
-    _SIM_DEFAULT = _REPO / "f16_s11_200s.csv"
+    _SIM_DEFAULT = _REPO / "f16_s11.csv"
     NASA_CSV = _REPO / "data" / "Atmos_11_TrimCheckSubsonicF16" / f"Atmos_11_sim_{NASA_REF}.csv"
     OUT_DIR  = _REPO / "doc" / "_static" / "f16_s11"
 

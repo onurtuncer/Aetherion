@@ -4,7 +4,7 @@
 # The simulator tracks the aircraft's lateral deviation from the original 45 deg NE courseline and applies a 2 000 ft
 # right-of-course offset at t = 20 s per NASA TM-2015-218675 section B-13.4.
 #
-# Recommended run command: F16LateralSideStep --endTime 60 --timeStep 0.02 --outputFileName f16_s13p4_sim.csv
+# Recommended run command: F16LateralSideStep --endTime 60 --timeStep 0.02 --outputFileName f16_s13p4.csv
 
 set(F16_DATA_DIR "${PROJECT_SOURCE_DIR}/data/F16_S119_source")
 
