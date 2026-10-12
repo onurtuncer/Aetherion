@@ -2774,8 +2774,10 @@ Step-size convergence
 ^^^^^^^^^^^^^^^^^^^^^
 
 Case 11 is an **open-loop** trim simulation.  A convergence study over
-dt ∈ {0.1, 0.05, 0.02, 0.01} s (200 s run) confirms full numerical
-convergence already at dt = 0.1 s:
+dt ∈ {0.1, 0.05, 0.02, 0.01} s confirms full numerical convergence already
+at dt = 0.1 s.  The study used a separate 200 s run (``--endTime 200``), 20 s
+longer than the 180 s validation run above, so its altitude column is the
+200 s value: at 180 s the same dt = 0.01 run reads 10 012.87 ft (−0.13 ft).
 
 .. list-table::
    :header-rows: 1
