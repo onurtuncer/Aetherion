@@ -33,10 +33,11 @@ open, both options are given with their consequences.
    discrete transition) and ``MeasurementModels.h`` (GNSS position and
    velocity, barometer, with their innovation Jacobians in both
    conventions). Of step 6, ``EKF.h`` -- the reference invariant EKF,
-   ``InvariantEKF<S, C>``, Joseph form, NEES/NIS -- is in and validated on
-   an analytic truth in both conventions; the replay harness over
-   Hemerion's logs is not. The working plan is ``TODO-sensor-fusion.md`` at
-   the repository root.
+   ``InvariantEKF<S, C>``, Joseph form, NEES/NIS -- and the replay harness
+   (``Replay/``, ``EkfReplay``) are in and validated on an analytic truth
+   and on synthetic logs in Hemerion's formats; real Hemerion logs have not
+   been replayed yet. The working plan is ``TODO-sensor-fusion.md`` at the
+   repository root.
 
 
 Scope and ownership
@@ -835,6 +836,44 @@ simulation time. The replay harness maps flight-computer time onto
 simulation time with a fit over the IMU log, which carries both clocks. GNSS
 fixes arrive late (``--gps-latency``) and are handled as delayed
 measurements.
+
+**The harness (step 6).** ``Aetherion/Estimation/Replay/`` and the
+``EkfReplay`` executable (``src/Examples/EkfReplay``):
+
+* ``Csv.h``, ``Logs.h``: the logs as typed records, columns bound by name
+  through the contract; a log the configuration does not use is not
+  required.
+* ``TimeBase.h``: the least-squares line ``host = offset + scale * part``
+  over the IMU log, with its residual statistics, so a wrong clock
+  assumption shows as a residual rather than a silent offset.
+* ``TruthState.h``: the truth row (geodetic position, Earth-relative NED
+  velocity, ZYX Euler angles) as an LCI state at ``era(t) = w_e t``, and
+  the inverse for reporting attitude errors in the local NED frame.
+* ``Replay.h``: the loop. Each IMU interval is propagated with the readings
+  held at the average of its two bounding samples; a measurement whose
+  validity time falls inside an interval splits it -- predict to that
+  time, apply, predict the remainder. A fix's validity time is its mapped
+  arrival time minus the run's ``gps_latency_s``; this is the replay
+  reference, which may know the latency, while the flight filter must
+  recover it from the arrival stamps (Hemerion step 10) and is judged
+  against the reference by the golden vectors. The clock conventions sit
+  in one ``ReplayTiming`` struct. Output: one row per IMU sample
+  (estimate, truth, error in the filter's coordinates, NEES, sigmas), one
+  per update (NIS), and a summary. NEES is over the navigation core only
+  until the sensor FMUs publish their realised biases (Hemerion step 3).
+
+Validated on synthetic logs written in Hemerion's formats from the
+manoeuvring analytic truth (``tests/Estimation/test_Replay.cpp``): the
+time base is recovered to the stamping jitter, and both conventions are
+consistent (ANEES 1.06 and 0.83, every NIS within 3 % of 1) at the GNSS
+floor (0.33 m). Two things that test caught: applying a measurement "after
+the IMU step that reaches it" lets a fix stamped microseconds after a
+boundary wait a whole period, a mean lag of half an IMU period that at
+120 m/s is a 0.6 m along-track bias rotating with the heading (ANEES 3.8
+with every NIS at 1 -- the signature of a truth/measurement disagreement
+rather than a filter fault); and holding the earlier IMU sample over the
+interval, rather than the average, reads as a bias. Real Hemerion logs
+have not been replayed yet.
 
 **Known gaps.** Hemerion's GPS driver does not yet decode NAV-PVT velocity,
 so ``kNavBaroGnss16`` does not bind against current GPS logs (a test asserts

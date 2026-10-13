@@ -5,7 +5,7 @@
 # ------------------------------------------------------------------------------
 
 add_executable(test_estimation test_Configuration.cpp test_EKF.cpp test_LogContract.cpp test_MeasurementModels.cpp
-                               test_ProcessModel.cpp)
+                               test_ProcessModel.cpp test_Replay.cpp)
 
 target_link_libraries(test_estimation PRIVATE Aetherion Catch2::Catch2WithMain)
 

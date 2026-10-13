@@ -175,17 +175,30 @@ readable from either.
       when generating from an analytic truth, or the ZOH mismatch looks like
       a bias. Yaw from a 5° start is still ~0.5–1° after 240 s: weakly
       observable, as expected without a magnetometer.
-- [ ] Replay harness that reads the Hemerion logs and the truth log.
-- [ ] Time base: `host_time_s` is the flight computer's clock and equals
-      simulation time only under `--rtf 1`. Map it onto simulation time with a
-      fit over the IMU log, which carries both clocks (Hemerion's TODO
-      describes this calibration). Requirement from the LCI frame: residual
-      error well below 1 ms, since a timing error δt rotates the
-      ECEF↔LCI mapping by Ω·δt (~0.5 m at Earth radius per ms).
-- [ ] Delayed-measurement handling for GNSS, exercised with
-      `--gps-latency`.
-- [ ] NEES and NIS against truth. Bias-state NEES needs the realized bias
-      values, which the sensor FMUs do not publish yet (Hemerion step 3).
+- [x] Replay harness (2026-10-13): `Aetherion/Estimation/Replay/{Csv,Logs,
+      TimeBase,TruthState,Replay}.h` and the `EkfReplay` executable
+      (`--logs <dir> --truth <csv> [--convention ri|li] [--config
+      nav-baro-gnss|nav-baro-gnss16]`). Validated on synthetic logs in
+      Hemerion's formats (`tests/Estimation/test_Replay.cpp`): ANEES
+      1.06/0.83, NIS at 1, position 0.33 m. **Not yet run on real Hemerion
+      logs** — none exist on this machine; generating a set needs the
+      Hemerion co-sim example built against the Aetherion FMUs. First real
+      replay must use `--config nav-baro-gnss` until GNSS velocity is logged.
+- [x] Time base: least-squares `host = offset + scale * part` over the IMU
+      log, residual statistics reported (`TimeBase.h`). Recovers a 25 ppm
+      skew and a 1000 s offset to the 20 µs stamping jitter. Open: whether
+      `part_time_s` *is* simulation time when the IMU FMU's clock skew and
+      jitter options are on — Hemerion's call; a wrong assumption shows in
+      the residual.
+- [x] Delayed measurements: the replay reference applies a fix at its
+      validity time, mapped arrival minus `gps_latency_s`, splitting the IMU
+      interval exactly (`Replay.h`; the "apply at the next IMU step" shortcut
+      cost 0.6 m at 120 m/s). Recovering the latency from arrival stamps is
+      the flight filter's job (Hemerion step 10) and is judged against this
+      reference by the golden vectors.
+- [x] NEES and NIS against truth, in the filter's own coordinates. NEES is
+      over the navigation core only until the realized biases are published
+      (Hemerion step 3); the summary says so.
 - [ ] UKF as a cross-check, after the EKF is consistent.
 
 ### Step 7 — Tuning and observability

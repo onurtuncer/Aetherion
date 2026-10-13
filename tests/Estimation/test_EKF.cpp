@@ -24,6 +24,8 @@
 
 #include <Aetherion/Estimation/EKF.h>
 
+#include "SyntheticTruth.h"
+
 using namespace Aetherion::Estimation;
 namespace SO3 = Aetherion::ODE::RKMK::Lie::SO3;
 
@@ -39,64 +41,9 @@ const Configuration& cfg = kNavBaroGnss16;
 
 LciFrame<double> testFrame() { return LciFrame<double>::FromGeodetic(36.0192 * kDeg, -75.6744 * kDeg, 3.0, 0.3); }
 
-// Level circle at speed V and yaw rate psi_dot, 500 m above the origin.
-// Attitude R = Rz(psi) Rx(bank) Ry(theta(t)): coordinated bank for the turn
-// plus a slow pitch oscillation. Without the two, the attitude is fixed
-// relative to the specific-force vector and each tilt error is
-// indistinguishable from a body-frame accelerometer bias (the filter then
-// drifts along that unobservable direction, NEES growing, while GNSS keeps
-// position and velocity perfect -- seen, and the reason this truth banks).
-struct Truth
-{
-  double V = 120.0;
-  double psiDot = 0.05;  // rad/s: a 126 s circle, V*psiDot = 6 m/s^2 (0.6 g) lateral
-  double h = 500.0;
-  // The bank swings +-15 deg about the coordinated value and the pitch
-  // +-8 deg: in a *steady* coordinated turn the specific force sits along
-  // body -z, so a yaw error is told from a body-x accelerometer bias only
-  // through the pitch modulation (0.3 delta_psi m/s^2 for 3 deg of pitch),
-  // and 240 s of GNSS at 0.1 m/s do not resolve it. Sweeping the specific
-  // force direction through the body frame does.
-  double bank0 = std::atan2(120.0 * 0.05, 9.80665);  // coordinated: ~31.5 deg
-  double bankAmp = 15.0 * kDeg, bankRate = 0.3;
-  double pitchAmp = 8.0 * kDeg, pitchRate = 0.5;
-
-  [[nodiscard]] double bank(double t) const { return bank0 + bankAmp * std::sin(bankRate * t); }
-  [[nodiscard]] double theta(double t) const { return pitchAmp * std::sin(pitchRate * t); }
-
-  [[nodiscard]] EstimationState<double> at(double t) const
-  {
-    const double psi = psiDot * t;
-    EstimationState<double> x;
-    x.X.R =
-        SO3::Exp_R(Vec3(0.0, 0.0, psi)) * SO3::Exp_R(Vec3(bank(t), 0.0, 0.0)) * SO3::Exp_R(Vec3(0.0, theta(t), 0.0));
-    x.X.v = Vec3(V * std::cos(psi), V * std::sin(psi), 0.0);
-    x.X.p = Vec3(V / psiDot * std::sin(psi), V / psiDot * (1.0 - std::cos(psi)), -h);
-    return x;
-  }
-  [[nodiscard]] Vec3 accelerationLci(double t) const
-  {
-    const double psi = psiDot * t;
-    return Vec3(-V * psiDot * std::sin(psi), V * psiDot * std::cos(psi), 0.0);
-  }
-  /// Body rate (R^T R_dot)^vee for R = Rz(psi) Rx(phi) Ry(theta):
-  ///   omega = Ry^T [ Rx^T (0, 0, psi_dot) + (phi_dot, 0, 0) ] + (0, theta_dot, 0)
-  ///         = (c_th phi_dot - s_th c_phi psi_dot,  s_phi psi_dot + theta_dot,  s_th phi_dot + c_th c_phi psi_dot).
-  [[nodiscard]] Vec3 bodyRate(double t) const
-  {
-    const double th = theta(t), ph = bank(t);
-    const double thDot = pitchAmp * pitchRate * std::cos(pitchRate * t);
-    const double phDot = bankAmp * bankRate * std::cos(bankRate * t);
-    const double cth = std::cos(th), sth = std::sin(th), cph = std::cos(ph), sph = std::sin(ph);
-    return Vec3(cth * phDot - sth * cph * psiDot, sph * psiDot + thDot, sth * phDot + cth * cph * psiDot);
-  }
-  /// The IMU of this truth at time t: inertial rate and specific force, body frame.
-  [[nodiscard]] ImuSample<double> imu(double t, const LciFrame<double>& frame) const
-  {
-    const EstimationState<double> x = at(t);
-    return { bodyRate(t), x.X.R.transpose() * (accelerationLci(t) - frame.gravity(x.X.p)) };
-  }
-};
+// The manoeuvring analytic truth shared with the replay test; see
+// SyntheticTruth.h for why it must bank and pitch.
+using Truth = Aetherion::Estimation::Testing::SyntheticTruth;
 
 struct Sensors
 {
