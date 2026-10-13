@@ -24,7 +24,7 @@ open, both options are given with their consequences.
 
 .. note::
 
-   **Status (v0.17.1).** Step 2 (block scheme, vehicle configuration, log
+   **Status (v0.17.2).** Step 2 (block scheme, vehicle configuration, log
    contract) is implemented in ``Aetherion/Estimation/Blocks.h``,
    ``Configuration.h`` and ``LogContract.h``. Step 5 is complete:
    ``SE23.h`` (the group), ``LciFrame.h`` (the navigation frame and
@@ -32,9 +32,11 @@ open, both options are given with their consequences.
    conventions), ``ProcessModel.h`` (strapdown propagation, error dynamics,
    discrete transition) and ``MeasurementModels.h`` (GNSS position and
    velocity, barometer, with their innovation Jacobians in both
-   conventions). ``EKF.h`` is still a placeholder; the reference filter is
-   step 6. The working plan is ``TODO-sensor-fusion.md`` at the repository
-   root.
+   conventions). Of step 6, ``EKF.h`` -- the reference invariant EKF,
+   ``InvariantEKF<S, C>``, Joseph form, NEES/NIS -- is in and validated on
+   an analytic truth in both conventions; the replay harness over
+   Hemerion's logs is not. The working plan is ``TODO-sensor-fusion.md`` at
+   the repository root.
 
 
 Scope and ownership
@@ -840,6 +842,35 @@ this). The rocket truth log carries no attitude, and the rocket plant
 publishes only Euler angles, which are singular at the 90° pitch of a
 vertical launch; the rocket configuration needs a quaternion truth output.
 
+
+Reference filter (step 6)
+-------------------------
+
+``Aetherion/Estimation/EKF.h`` is the reference filter,
+``InvariantEKF<S, C>``: ``predict()`` through ``ProcessModel::step<C>``,
+``updateGnssPosition()``, ``updateGnssVelocity()``, ``updateBarometer()``
+through the measurement models, with the Joseph-form covariance update and
+the state corrected by ``retract<C>``. A measurement the configuration does
+not carry is skipped and the result says so. The covariance lives in the
+convention's error coordinates; ``covarianceFromPhysical()`` maps an
+initial covariance given in physical coordinates into them, so both
+conventions start equivalently. No covariance reset after updates, no
+delayed-measurement handling: the replay harness owns time.
+
+``tests/Estimation/test_EKF.cpp`` runs both conventions on an analytic
+truth -- a level circle at 120 m/s with the bank swinging ±15° about the
+coordinated value and the pitch ±8° -- with a MEMS-grade IMU, constant
+biases, GNSS position and velocity at 5 Hz, barometer at 10 Hz, from a
+start 5° off in heading, 1° in tilt, 20 m in position. After 240 s both
+are consistent (NEES 0.9 and 0.8 of 16 degrees of freedom, NIS 1.03 of 3
+and 1.08 of 1), position is at the GNSS floor (0.15 m), tilt within 0.35°,
+and yaw -- weakly observable without a magnetometer -- is still coming down
+(0.9° RI, 0.4° LI). The first version of that truth, an unbanked turn,
+taught a lesson worth recording: with the attitude fixed relative to the
+specific-force vector, every tilt error is indistinguishable from a
+body-frame accelerometer bias, and the filter drifts along that direction
+with NEES growing while GNSS keeps position and velocity perfect. The
+check cases of step 7 bank in their turns; a synthetic truth must too.
 
 Validation plan
 ---------------

@@ -163,7 +163,18 @@ readable from either.
 
 ### Step 6 — Reference filter and replay harness
 
-- [ ] Fill `EKF.h`: double precision, Eigen, dynamic sizes acceptable.
+- [x] `EKF.h` (2026-10-13): `InvariantEKF<S, C>`, Joseph form, dynamic
+      Eigen, skipped updates for measurements the configuration lacks,
+      NEES/NIS, `covarianceFromPhysical()`. Validated in both conventions on
+      an analytic manoeuvring truth (`tests/Estimation/test_EKF.cpp`): NEES
+      0.9/0.8, NIS at 1, position at the GNSS floor. Two lessons: (1) an
+      unbanked constant-rate turn makes every tilt error indistinguishable
+      from a body accelerometer bias — the filter drifted along that
+      direction with NEES growing while GNSS held position; any synthetic
+      truth for step 7 must bank and pitch; (2) sample the IMU at mid-step
+      when generating from an analytic truth, or the ZOH mismatch looks like
+      a bias. Yaw from a 5° start is still ~0.5–1° after 240 s: weakly
+      observable, as expected without a magnetometer.
 - [ ] Replay harness that reads the Hemerion logs and the truth log.
 - [ ] Time base: `host_time_s` is the flight computer's clock and equals
       simulation time only under `--rtf 1`. Map it onto simulation time with a
