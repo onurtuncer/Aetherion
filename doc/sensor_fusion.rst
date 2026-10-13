@@ -852,15 +852,36 @@ measurements.
 * ``Replay.h``: the loop. Each IMU interval is propagated with the readings
   held at the average of its two bounding samples; a measurement whose
   validity time falls inside an interval splits it -- predict to that
-  time, apply, predict the remainder. A fix's validity time is its mapped
-  arrival time minus the run's ``gps_latency_s``; this is the replay
-  reference, which may know the latency, while the flight filter must
-  recover it from the arrival stamps (Hemerion step 10) and is judged
-  against the reference by the golden vectors. The clock conventions sit
-  in one ``ReplayTiming`` struct. Output: one row per IMU sample
-  (estimate, truth, error in the filter's coordinates, NEES, sigmas), one
-  per update (NIS), and a summary. NEES is over the navigation core only
-  until the sensor FMUs publish their realised biases (Hemerion step 3).
+  time, apply, predict the remainder. The clock conventions sit in one
+  ``ReplayTiming`` struct, set from a survey of Hemerion's writers
+  (``origin/main`` 7da6057, 2026-10-13): IMU samples on their
+  ``part_time_s`` (simulation time unless the FMU's clock skew and jitter
+  are on); barometer samples on their ``part_time_s``, which is the
+  BMP390's SENSORTIME register and wraps every 512 s, unwrapped against
+  the fit-mapped host time; a fix at its ``nominal_time_s``, which is
+  ``fix_count * fix_period`` -- the epoch in simulation time, index-based,
+  so the GPS latency cancels in it -- falling back to the mapped arrival
+  time minus ``gps_latency_s`` if that column is absent. Epochs without a
+  fix are written with empty fields and are skipped, as are fixes below
+  3D in Hemerion's own ``fix_type`` enum (0 none, 1 2D, 2 3D -- not UBX's
+  numbering). This is the replay reference, which may know the latency,
+  while the flight filter must recover it from the arrival stamps
+  (Hemerion step 10) and is judged against the reference by the golden
+  vectors. Output: one row per IMU sample (estimate, truth, error in the
+  filter's coordinates, NEES, sigmas), one per update (NIS), and a
+  summary. NEES is over the navigation core only until the sensor FMUs
+  publish their realised biases (Hemerion step 3).
+
+Other facts of the logs the harness relies on, from the same survey: the
+truth CSV is written by the host at one row per communication step (0.1 s
+for the trim host, 0.01 s for the autopilot host) and is interpolated; the
+IMU's ``host_time_s`` is the arrival of the whole burst, so the time-base
+fit shows the step as a sawtooth residual and is a cross-check, not a
+clock; unpaced (``realtime_factor`` 0) the polled barometer yields only a
+few dozen conversions per 200 s; the GPS FMU encodes the plant's altitude
+as both ``height`` and ``hMSL`` (no geoid on either side) and ``velD`` as
+zero; the plant starts at Earth rotation angle zero at t = 0 and Hemerion
+sets no epoch.
 
 Validated on synthetic logs written in Hemerion's formats from the
 manoeuvring analytic truth (``tests/Estimation/test_Replay.cpp``): the

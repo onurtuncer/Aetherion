@@ -28,6 +28,7 @@
 #include <filesystem>
 #include <fstream>
 #include <istream>
+#include <limits>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -54,6 +55,8 @@ struct ImuRecord
 
 struct GpsRecord
 {
+  bool valid = false;       ///< false: an epoch without a fix (empty fields), nothing below is meaningful
+  double nominalTime = 0.0; ///< NaN if the log has no nominal_time_s column
   double hostTime = 0.0;
   double lat_deg = 0.0, lon_deg = 0.0, alt_m = 0.0;
   double horizontalAccuracy_m = 0.0, verticalAccuracy_m = 0.0;
@@ -121,20 +124,24 @@ struct LogSet
 {
   namespace C = LogContract::Gps;
   const bool vel = t.has(C::kVelNorth) && t.has(C::kVelEast) && t.has(C::kVelDown) && t.has(C::kSpeedAcc);
+  const bool nominal = t.has(C::kNominalTime);
   std::vector<GpsRecord> out;
   out.reserve(t.rows.size());
   for (std::size_t i = 0; i < t.rows.size(); ++i)
   {
     GpsRecord r;
+    r.nominalTime = nominal ? t.at(i, C::kNominalTime) : std::numeric_limits<double>::quiet_NaN();
     r.hostTime = t.at(i, C::kHostTime);
     r.lat_deg = t.at(i, C::kLatitude);
     r.lon_deg = t.at(i, C::kLongitude);
     r.alt_m = t.at(i, C::kAltitude);
     r.horizontalAccuracy_m = t.at(i, C::kHorizAcc);
     r.verticalAccuracy_m = t.at(i, C::kVertAcc);
-    r.fixType = static_cast<int>(std::lround(t.at(i, C::kFixType)));
-    r.hasVelocity = vel;
-    if (vel)
+    const double ft = t.at(i, C::kFixType);
+    r.valid = std::isfinite(r.lat_deg) && std::isfinite(r.lon_deg) && std::isfinite(r.alt_m) && std::isfinite(ft);
+    r.fixType = r.valid ? static_cast<int>(std::lround(ft)) : 0;
+    r.hasVelocity = vel && r.valid;
+    if (r.hasVelocity)
     {
       r.velNed_m_s = Eigen::Vector3d(t.at(i, C::kVelNorth), t.at(i, C::kVelEast), t.at(i, C::kVelDown));
       r.speedAccuracy_m_s = t.at(i, C::kSpeedAcc);

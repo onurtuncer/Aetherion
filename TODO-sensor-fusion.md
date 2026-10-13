@@ -184,18 +184,36 @@ readable from either.
       logs** — none exist on this machine; generating a set needs the
       Hemerion co-sim example built against the Aetherion FMUs. First real
       replay must use `--config nav-baro-gnss` until GNSS velocity is logged.
-- [x] Time base: least-squares `host = offset + scale * part` over the IMU
-      log, residual statistics reported (`TimeBase.h`). Recovers a 25 ppm
-      skew and a 1000 s offset to the 20 µs stamping jitter. Open: whether
-      `part_time_s` *is* simulation time when the IMU FMU's clock skew and
-      jitter options are on — Hemerion's call; a wrong assumption shows in
-      the residual.
+- [x] Time base. Surveyed Hemerion's writers at `origin/main` 7da6057
+      (2026-10-13; the local clone was 193 commits behind): IMU
+      `part_time_s` is simulation time unless `--sensor-clock` skew/jitter
+      is on; the GPS log's `nominal_time_s` = `fix_count * fix_period` is
+      the fix's epoch in simulation time with the latency cancelled; the
+      BMP390 `part_time_s` wraps every 512 s; `host_time_s` is burst
+      arrival on the flight computer's clock and, unpaced, bears no fixed
+      relation to simulation time. So the harness times IMU and baro on
+      their part clocks (baro unwrapped), fixes on `nominal_time_s`, and
+      keeps the least-squares `host = offset + scale * part` fit
+      (`TimeBase.h`) as a cross-check and fallback with its residual
+      reported. `fix_type` is Hemerion's enum (0/1/2 = none/2D/3D), not
+      UBX's; epochs without a fix are rows of empty fields. All of this is
+      in `LogContract.h` now.
 - [x] Delayed measurements: the replay reference applies a fix at its
-      validity time, mapped arrival minus `gps_latency_s`, splitting the IMU
-      interval exactly (`Replay.h`; the "apply at the next IMU step" shortcut
-      cost 0.6 m at 120 m/s). Recovering the latency from arrival stamps is
-      the flight filter's job (Hemerion step 10) and is judged against this
-      reference by the golden vectors.
+      validity time, splitting the IMU interval exactly (`Replay.h`; the
+      "apply at the next IMU step" shortcut cost 0.6 m at 120 m/s).
+      Recovering the latency from arrival stamps is the flight filter's
+      job (Hemerion step 10) and is judged against this reference by the
+      golden vectors.
+- [ ] **Replay a real Hemerion log set.** Needs Hemerion built on Windows
+      (`cmake --preset examples-native`, `AETHERION_ROOT` or `--f16` at
+      `out/build/windows-release/models/fmi2/F16Plant/F16Plant.fmu`), then
+      `f16_flight_computer` first and `f16_trim_cosim --case 11 --rtf 1
+      [--gps-latency 0.2]` in `build/examples-native/examples/f16_trim_ecos/`;
+      logs land in each process's `results/`. Use `--rtf 1`: unpaced, the
+      polled barometer yields ~37 conversions per 200 s. Then
+      `EkfReplay --logs results --truth results/f16_truth.csv --config
+      nav-baro-gnss`. Expect the time-base residual to show the 0.01 s
+      burst sawtooth.
 - [x] NEES and NIS against truth, in the filter's own coordinates. NEES is
       over the navigation core only until the realized biases are published
       (Hemerion step 3); the summary says so.

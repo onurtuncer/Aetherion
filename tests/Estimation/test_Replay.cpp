@@ -170,7 +170,8 @@ TEST_CASE("Truth -> LCI state and back to NED Euler angles", "[estimation][repla
 TEST_CASE("Log set loads from streams against the contract headers", "[estimation][replay][logs]")
 {
   std::stringstream gps, imu, baro, truth;
-  gps << kGpsHeader << "\n0,0.1,1000.1,36.0192,-75.6744,3052.0,172.4,45.0,1.5,3.0,9,3\n";
+  // One fix, then an epoch without one as Hemerion writes it: every field after nominal_time_s empty.
+  gps << kGpsHeader << "\n0,0.1,1000.1,36.0192,-75.6744,3052.0,172.4,45.0,1.5,3.0,9,2\n1,0.2,,,,,,,,,,\n";
   imu << kImuHeader << "\n0,0.00,1000.00,0.1,0.0,-9.8,0.0,0.0,0.0\n1,0.01,1000.01,0.1,0.0,-9.8,0.0,0.0,0.0\n";
   baro << kBaroHeader << "\n0,0.0,1000.0,70000.0,-5.0\n";
   truth << kTruthHeader << "\n0, 0.0, 3052.0, 36.0192, -75.6744, 121.9, 121.9, 0.0, 0.7854, 0.046, 0.0, 0.0, false\n";
@@ -181,9 +182,14 @@ TEST_CASE("Log set loads from streams against the contract headers", "[estimatio
   REQUIRE(logs.imu.size() == 2);
   REQUIRE(logs.imu[1].partTime == Catch::Approx(0.01));
   REQUIRE(logs.imu[1].accel_m_s2[2] == Catch::Approx(-9.8));
-  REQUIRE(logs.gps.size() == 1);
-  REQUIRE(logs.gps[0].fixType == 3);
+  REQUIRE(logs.gps.size() == 2);
+  REQUIRE(logs.gps[0].valid);
+  REQUIRE(logs.gps[0].fixType == LogContract::Gps::kFixType3D);
+  REQUIRE(logs.gps[0].nominalTime == Catch::Approx(0.1));
   REQUIRE_FALSE(logs.gps[0].hasVelocity);
+  REQUIRE_FALSE(logs.gps[1].valid);
+  REQUIRE(logs.gps[1].nominalTime == Catch::Approx(0.2));
+  REQUIRE(logs.gps[1].fixType == 0);
   REQUIRE(logs.gps[0].horizontalAccuracy_m == Catch::Approx(1.5));
   REQUIRE(logs.baro[0].pressure_Pa == Catch::Approx(70000.0));
   REQUIRE(logs.truth[0].vNed_m_s[0] == Catch::Approx(121.9));
@@ -295,14 +301,17 @@ SyntheticLogs writeSyntheticLogs(double T, unsigned seed)
 
     if (k % 20 == 0)  // 5 Hz fix, delivered gpsLatency later on the host clock
     {
-      const bool noFix = (fixIndex % 50 == 7);  // the occasional dropout
+      const bool noFix = (fixIndex % 50 == 7);  // the occasional dropout: Hemerion writes the epoch with empty fields
       const double latN = lat + (sigH * N01(rng)) / 6371e3, lonN = lon + (sigH * N01(rng)) / (6371e3 * std::cos(lat));
       const double hN = h + sigV * N01(rng);
       const Eigen::Vector3d vN = vNed + Eigen::Vector3d(N01(rng), N01(rng), N01(rng)) * sigVel;
-      gps << fixIndex++ << ',' << t << ',' << host(t + out.gpsLatency) << ',' << latN / kDeg << ',' << lonN / kDeg
-          << ',' << hN << ',' << vN.head<2>().norm() << ',' << std::atan2(vN[1], vN[0]) / kDeg << ',' << sigH << ','
-          << sigV << ',' << (noFix ? 0 : 9) << ',' << (noFix ? 0 : 3) << ',' << vN[0] << ',' << vN[1] << ',' << vN[2]
-          << ',' << sigVel << '\n';
+      if (noFix)
+        gps << fixIndex++ << ',' << t << ",,,,,,,,,,,,,,\n";
+      else
+        gps << fixIndex++ << ',' << t << ',' << host(t + out.gpsLatency) << ',' << latN / kDeg << ',' << lonN / kDeg
+            << ',' << hN << ',' << vN.head<2>().norm() << ',' << std::atan2(vN[1], vN[0]) / kDeg << ',' << sigH << ','
+            << sigV << ",9," << LogContract::Gps::kFixType3D << ',' << vN[0] << ',' << vN[1] << ',' << vN[2] << ','
+            << sigVel << '\n';
     }
     if (k % 10 == 0)  // 10 Hz barometer: pressure of (h + bias + noise)
     {
@@ -326,7 +335,10 @@ TEST_CASE("Replay: synthetic Hemerion logs through the harness, both conventions
   ReplayOptions opt;
   opt.noise = ProcessNoise<double>{ 5e-5, 7e-4, 2e-6, 2e-5, 0.05 };
   opt.initialError = Eigen::VectorXd::Zero(16);
-  opt.initialError.segment<3>(0) = Eigen::Vector3d(1.0 * kDeg, -0.5 * kDeg, 3.0 * kDeg);
+  // Heading initialised from truth, as the plan says, with a realistic
+  // initialisation error; the large-heading-error behaviour of the two
+  // conventions is test_EKF.cpp's subject, not the harness's.
+  opt.initialError.segment<3>(0) = Eigen::Vector3d(0.5 * kDeg, -0.5 * kDeg, 1.0 * kDeg);
   opt.initialError.segment<3>(6) = Eigen::Vector3d(20.0, -15.0, 10.0);
   opt.initialSigma = Eigen::VectorXd(16);
   opt.initialSigma << 2.0 * kDeg, 2.0 * kDeg, 5.0 * kDeg, 2.0, 2.0, 2.0, 30.0, 30.0, 30.0, 0.005, 0.005, 0.005, 0.1,
@@ -346,10 +358,10 @@ TEST_CASE("Replay: synthetic Hemerion logs through the harness, both conventions
     CHECK(s.timeBase.maxResidual < 1e-4);
 
     CHECK(s.imuSamples == 12000);
-    // 601 fixes; the one at t = 0 may land a few microseconds before the
-    // first IMU sample (host jitter) and is then unusable.
-    CHECK(s.gnssPositionUpdates + s.skippedFixes >= 600);
-    CHECK(s.skippedFixes == 12);  // fix_index 7, 57, ..., 557
+    // 601 epochs, 12 of them without a fix (fix_index 7, 57, ..., 557);
+    // validity from nominal_time_s, so the one at t = 0 is usable too.
+    CHECK(s.gnssPositionUpdates + s.skippedFixes == 601);
+    CHECK(s.skippedFixes == 12);
     CHECK(s.gnssVelocityUpdates == s.gnssPositionUpdates);
     CHECK(s.baroUpdates == 1201);
 

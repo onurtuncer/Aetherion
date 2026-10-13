@@ -75,7 +75,7 @@ int main(int argc, char** argv)
     opt.baroSigma_m = std::stod(v);
   });
   parser.addArgument("--min-fix-type",
-                     "Skip fixes with a smaller NAV-PVT fixType (default 3)",
+                     "Skip fixes with a smaller fix_type; Hemerion's enum 0 none, 1 2D, 2 3D (default 2)",
                      [&](const std::string& v) { opt.minFixType = std::stoi(v); });
 
   try

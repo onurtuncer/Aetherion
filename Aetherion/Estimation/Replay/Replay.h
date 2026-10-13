@@ -13,15 +13,32 @@
 // against the truth log with NEES and NIS.
 //
 // Time. Every record is put on the simulation time base before anything
-// else happens (TimeBase.h). The IMU and barometer samples carry the
-// sensor's own `part_time_s`; GNSS fixes carry only `host_time_s`, which
-// the fit over the IMU log maps back. A fix is applied at its time of
-// validity: the mapped host (arrival) time minus the run's gps_latency_s.
-// This is the replay reference, which may know the latency; the flight
-// filter has to recover it from the arrival stamps (Hemerion step 10) and
-// is judged against this reference by the golden vectors (step 9). The
-// choices are in ReplayTiming so a different log convention is one
-// struct away, not a rewrite.
+// else happens. What Hemerion's writers stamp (surveyed at its origin/main
+// 7da6057, 2026-10-13):
+//   IMU   part_time_s  the sensor's own clock; equal to simulation time
+//                      unless the FMU's clock skew/jitter options are on.
+//         host_time_s  arrival of the burst holding the sample, on the
+//                      flight computer's clock -- bursty (one stamp per
+//                      communication step) and, unpaced (rtf 0), with no
+//                      fixed relation to simulation time at all.
+//   baro  part_time_s  the BMP390 SENSORTIME register: simulation time,
+//                      wrapping every 512 s. Unwrapped against the
+//                      fit-mapped host time.
+//   GNSS  nominal_time_s  fix_count * fix_period: the fix's epoch in
+//                      simulation time, index-based, so the latency
+//                      cancels in it. The validity time.
+//         host_time_s  arrival on the flight computer's clock, latency
+//                      included (NAV-PVT carries no time of its own). Used
+//                      only if nominal_time_s is absent: mapped through
+//                      the fit over the IMU log, minus the run's
+//                      gps_latency_s.
+// The fit host = offset + scale * part over the IMU log (TimeBase.h) is
+// therefore a cross-check and a fallback, not the primary clock; its
+// residual is reported. This is the replay reference, which may know the
+// latency; the flight filter has to recover it from the arrival stamps
+// (Hemerion step 10) and is judged against this reference by the golden
+// vectors (step 9). The choices are in ReplayTiming so a different log
+// convention is one struct away, not a rewrite.
 //
 // Order. Events are merged by time. Each IMU interval [t_k-1, t_k] is
 // propagated with the readings held at the average of its two bounding
@@ -77,10 +94,22 @@ struct ReplayTiming
 {
   std::function<double(const ImuRecord&, const TimeBaseFit&, const RunConfiguration&)> imu =
       [](const ImuRecord& r, const TimeBaseFit&, const RunConfiguration&) { return r.partTime; };
+
+  /// The part clock, unwrapped: the multiple of the wrap period that puts
+  /// it nearest the fit-mapped host time. Exact while the host mapping is
+  /// good to a quarter period (128 s), which even an unpaced run is.
   std::function<double(const BaroRecord&, const TimeBaseFit&, const RunConfiguration&)> baro =
-      [](const BaroRecord& r, const TimeBaseFit&, const RunConfiguration&) { return r.partTime; };
+      [](const BaroRecord& r, const TimeBaseFit& f, const RunConfiguration&) {
+        constexpr double W = LogContract::Baro::kPartTimeWrap_s;
+        const double ref = f.toPart(r.hostTime);
+        return r.partTime + W * std::round((ref - r.partTime) / W);
+      };
+
+  /// nominal_time_s when the log has it, else the mapped arrival time less the latency.
   std::function<double(const GpsRecord&, const TimeBaseFit&, const RunConfiguration&)> gps =
       [](const GpsRecord& r, const TimeBaseFit& f, const RunConfiguration& run) {
+        if (std::isfinite(r.nominalTime))
+          return r.nominalTime;
         return f.toPart(r.hostTime) - run.gpsLatency_s;
       };
 };
@@ -91,7 +120,7 @@ struct ReplayOptions
   double baroSigma_m = 1.0;                                    ///< pressure-altitude noise given to the filter
   double gnssVelSigma_m_s = 0.1;                               ///< used when the log carries no speed accuracy
   double gnssHorizScale = 1.0;  ///< sigma_N = sigma_E = gnssHorizScale * horizontal_accuracy_m
-  int minFixType = 3;           ///< fixes below this (NAV-PVT fixType) are skipped
+  int minFixType = LogContract::Gps::kFixType3D;  ///< Hemerion's enum (0 none, 1 2D, 2 3D); fixes below it are skipped
   /// Initial 1-sigma in physical coordinates: attitude (3, rad), velocity (3), position (3), then the bias blocks.
   Eigen::VectorXd initialSigma;
   /// Perturbation added to the truth at initialisation, in the same physical coordinates (default none).
@@ -258,7 +287,7 @@ template <ErrorConvention C>
     if (e.kind == 0)
     {
       const GpsRecord& g = logs.gps[e.index];
-      if (g.fixType < opt.minFixType)
+      if (!g.valid || g.fixType < opt.minFixType)
       {
         ++res.summary.skippedFixes;
         return;
