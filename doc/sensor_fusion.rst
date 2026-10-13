@@ -24,7 +24,7 @@ open, both options are given with their consequences.
 
 .. note::
 
-   **Status (v0.17.1).** Step 2 (block scheme, vehicle configuration, log
+   **Status (v0.17.2).** Step 2 (block scheme, vehicle configuration, log
    contract) is implemented in ``Aetherion/Estimation/Blocks.h``,
    ``Configuration.h`` and ``LogContract.h``. Step 5 is complete:
    ``SE23.h`` (the group), ``LciFrame.h`` (the navigation frame and
