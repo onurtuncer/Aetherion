@@ -117,7 +117,7 @@ namespace Aetherion::Estimation
   const double Pb = L::Pb_Pa[b];
   const double Lb = L::Lb_K_per_km[b] * 1.0e-3;
 
-  double H;
+  double H = 0.0;
   if (Lb == 0.0)
     H = Hb - L::R * Tb / L::g0 * std::log(p_Pa / Pb);
   else
