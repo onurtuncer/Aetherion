@@ -79,8 +79,10 @@ static_assert(
 inline constexpr std::string_view kDescriptorVersion = "aetherion.estimation/1";
 inline constexpr std::string_view kGroup = "SE2(3)";
 // Provisional: left- vs right-invariant is still open (doc/sensor_fusion.rst).
-// Changing it changes every configuration hash.
-inline constexpr std::string_view kErrorConvention = "right-invariant";
+// descriptor() and hash() take the convention, so both filters have a hash;
+// this is only the default, i.e. the one generated code carries until the
+// decision is taken. Changing it changes the default configuration hash.
+inline constexpr ErrorConvention kErrorConvention = ErrorConvention::RightInvariant;
 inline constexpr std::string_view kNavigationFrame = "LCI";
 
 class Configuration
@@ -141,8 +143,10 @@ public:
   }
 
   /// Canonical descriptor; the hash input. One line per item, blocks in
-  /// rank order, measurements in library order.
-  [[nodiscard]] std::string descriptor() const
+  /// rank order, measurements in library order. The error convention is
+  /// named explicitly because the same block set linearised the other way
+  /// is a different filter (different F, H and corrected state).
+  [[nodiscard]] std::string descriptor(ErrorConvention convention = kErrorConvention) const
   {
     std::string d;
     auto line = [&d](std::initializer_list<std::string_view> parts) {
@@ -152,7 +156,7 @@ public:
     };
     line({ kDescriptorVersion });
     line({ "group=", kGroup });
-    line({ "error=", kErrorConvention });
+    line({ "error=", toString(convention) });
     line({ "frame=", kNavigationFrame });
     for (const BlockSpec& s : kBlockLibrary)
     {
@@ -180,11 +184,11 @@ public:
     return d;
   }
 
-  /// FNV-1a 64 of descriptor().
-  [[nodiscard]] std::uint64_t hash() const
+  /// FNV-1a 64 of descriptor(convention).
+  [[nodiscard]] std::uint64_t hash(ErrorConvention convention = kErrorConvention) const
   {
     std::uint64_t h = 0xcbf29ce484222325ULL;
-    for (unsigned char c : descriptor())
+    for (unsigned char c : descriptor(convention))
     {
       h ^= c;
       h *= 0x100000001b3ULL;

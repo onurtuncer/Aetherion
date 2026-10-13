@@ -127,27 +127,39 @@ readable from either.
 
 ### Step 5 — Process and measurement models
 
-- [ ] Fill `EstimationState.h` and `ProcessModel.h`: scalar-templated and
-      AD-friendly, in the same style as the dynamics, so one definition serves
-      the reference filter and the generator.
-- [ ] **Error convention as a template parameter** (decided 2026-10-08) of
-      the process and measurement models and of the reset, so LI and RI both
-      exist from the start and the choice is made on evidence; each gets its
-      own configuration hash. Only the configuration generated in step 8 has
-      to commit to one.
-- [ ] Discretise the error-state transition with F averaged over the step
-      (trapezoidal), not evaluated at its start: the RI bias coupling
-      −Ad_X̂ varies within a step at a rate ~ |p̂||ω|, so a start-of-step F is
-      only first-order accurate for RI (found by the prototype's
-      finite-difference check; LI is second-order either way).
-- [ ] Fill `MeasurementModels.h`, written against what Hemerion's drivers
-      decode, not against idealised quantities:
-      - GNSS position from UBX-NAV-PVT latitude, longitude, altitude;
-      - GNSS velocity, NED;
-      - barometer: compensated pressure to pressure altitude, plus the bias
-        state.
-- [ ] No antenna lever arm in the first configuration; state the assumption
-      in the header.
+- [x] `EstimationState.h` and `ProcessModel.h` (2026-10-13), plus `SE23.h`
+      (group: compose, inverse, Exp, Log, Adjoint; SO(3) `Log_R` and
+      `LeftJacobianInverse` added to `ODE/RKMK/Lie/SO3.h`) and `LciFrame.h`
+      (origin from geodetic + ERA, ECI↔LCI, WGS-84 J2 gravity, central-term
+      gradient). Scalar-templated; `tests/Estimation/test_ProcessModel.cpp`
+      tapes the full step with `CppAD::AD<double>` through Eigen
+      (`cppad/example/cppad_eigen.hpp`) and matches finite differences to
+      1e-9 — the first Eigen+CppAD use in the tree, so the step-8 risk is
+      retired early.
+- [x] **Error convention as a template parameter**: `ErrorConvention` in
+      `Blocks.h`; `retract<C>`/`error<C>`, `errorJacobians<C>`/`step<C>`.
+      `Configuration::descriptor()`/`hash()` take the convention; the
+      pinned hash is the right-invariant default, LI hashes differently.
+- [x] Trapezoidal F. Verified as a convergence order, not a tolerance:
+      ‖Φ − Φ_fd‖ falls 7.9× (RI) / 7.4× (LI) per halving of dt; with a
+      start-of-step F the RI ratio is 4.00 (first order), 50–150× worse at
+      the same dt. The check also found that the nonlinear step must rotate
+      the velocity increment by the **mid-step** attitude R Exp(ω dt/2): with
+      the start-of-step attitude (as in the prototype) its linearisation has
+      no ∂v/∂b_g term, the residual ratio is 2, and Φ is inconsistent with
+      the state propagation at first order.
+- [x] `MeasurementModels.h` (2026-10-13), against what Hemerion's drivers
+      decode: GNSS position from NAV-PVT lat/lon/ellipsoidal height, GNSS
+      velocity NED + transport term ω⊕×r, both through the ERA at the fix's
+      time (`LciFrame::earthRotationAngle`); barometer = `pressureAltitude_m`
+      (exact inverse of `US1976Atmosphere`) against
+      `GeometricAltitude_m(p)` + bias. Innovation, H and R per convention;
+      H checked by finite differences and (barometer) CppAD. Note for the
+      replay harness: `ECEFToGeodeticWGS84` is declared as a template but
+      defined in a `.cpp` for `double` only — fine for logs, not for h(x).
+- [x] No antenna lever arm; stated in the header of `MeasurementModels.h`
+      together with the time-base assumption (fixes are on simulation time
+      when they reach the models).
 
 ### Step 6 — Reference filter and replay harness
 
@@ -209,7 +221,17 @@ leaves every body rate below one gyro count on case 11).
 - [x] `vcpkg.json` version bumped from 0.12.0 to 0.16.0.
 - [ ] CppAD code-generation compatibility: build the dynamics templates with
       `CppAD::cg::CG<double>` early (before step 8) to surface `CondExp` or
-      Eigen interop problems.
+      Eigen interop problems. Half done 2026-10-13: the estimator templates
+      tape with `CppAD::AD<double>` through Eigen (test_ProcessModel.cpp);
+      `CG<double>` itself still untried (CppADCodeGen is not a dependency
+      yet). One AD trap found and documented in `SO3::Log_R`: `acos` has an
+      infinite derivative at the identity, so the small-angle switch and
+      series must be written in sin²θ = |½ vee(R − Rᵀ)|², never in θ — and
+      CondExp discards the dead branch's *value*, not its evaluation: CppAD
+      still differentiated `acos` at c = 1, which UBSAN reported as a
+      division by zero (CI, 2026-10-13). `c` is now clamped to ±(1 − 1e-12).
+      Lesson for the generator: every CondExp branch must be finite and
+      differentiable everywhere it is evaluated, not only where selected.
 
 ## Deferred
 

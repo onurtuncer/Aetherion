@@ -244,6 +244,12 @@ with no Aetherion dynamics in it, so they should be unrelated — but verify on
 
 ### 6. Housekeeping
 
+- [ ] `tests/Serialization/test_DAVEMLReader.cpp`: the `[daveml]` cases each
+      write and remove the same temporary DML file (`writeMinDML()`), so
+      under `ctest -j 8` one case can delete it under another; seen once on
+      2026-10-13 (`evalMathML ci with unknown varID throws`, passes on
+      rerun). Give each case its own file name or run them serially.
+
 - [ ] `doc/conf.py` gained an `\Ad` MathJax macro — keep.
 - [ ] Consider whether `SE3::dexp_inv` should grow a companion
       `dexp_inv_left(eta)` (= `dexp_inv(-eta)`) so call sites cannot get the sign
