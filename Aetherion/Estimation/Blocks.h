@@ -20,8 +20,10 @@
 // Filter form: invariant EKF on SE2(3) x R^n, navigation frame
 // launch-centred inertial (LCI): origin at the launch point, axes equal to
 // local NED at t0 and then frozen in inertial space. The error convention
-// (left- or right-invariant) is not decided yet; right-invariant is
-// provisional. See doc/sensor_fusion.rst for the trade-off.
+// (left- or right-invariant) is not decided yet; both exist behind the
+// ErrorConvention parameter of the process and measurement models, and
+// right-invariant is the provisional default of the configuration hash. See
+// doc/sensor_fusion.rst for the trade-off.
 //
 // The navigation core is one SE2(3) element X = (R, v, p), R body -> LCI,
 // v and p in LCI. Its 9 error states are the tangent vector
@@ -39,6 +41,30 @@
 
 namespace Aetherion::Estimation
 {
+
+/// Which invariant error the filter linearises about (doc/sensor_fusion.rst,
+/// "Error convention"). With X the true and Xhat the estimated navigation
+/// core: left-invariant eta = Xhat^-1 X (body-frame error components),
+/// right-invariant eta = X Xhat^-1 (world-frame components). The choice is a
+/// template parameter of the models, so both filters exist; it is part of
+/// the configuration descriptor, so each has its own hash.
+enum class ErrorConvention : std::uint8_t
+{
+  LeftInvariant,
+  RightInvariant,
+};
+
+[[nodiscard]] constexpr std::string_view toString(ErrorConvention c)
+{
+  switch (c)
+  {
+    case ErrorConvention::LeftInvariant:
+      return "left-invariant";
+    case ErrorConvention::RightInvariant:
+      return "right-invariant";
+  }
+  return "?";
+}
 
 enum class BlockId : std::uint8_t
 {

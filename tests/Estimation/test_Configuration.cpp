@@ -72,4 +72,13 @@ TEST_CASE("First configuration descriptor and hash are pinned", "[estimation][co
                                          "meas=gnss_velocity,3,nav_core\n"
                                          "meas=barometer,1,nav_core+baro_bias\n");
   REQUIRE(kNavBaroGnss16.hash() == 0x1e59a990edd19e83ULL);
+  REQUIRE(kNavBaroGnss16.hash(ErrorConvention::RightInvariant) == kNavBaroGnss16.hash());
+}
+
+// Same blocks, other convention: a different filter, so a different hash.
+TEST_CASE("Error convention is part of the hash", "[estimation][configuration]")
+{
+  const std::string li = kNavBaroGnss16.descriptor(ErrorConvention::LeftInvariant);
+  REQUIRE(li.find("error=left-invariant\n") != std::string::npos);
+  REQUIRE(kNavBaroGnss16.hash(ErrorConvention::LeftInvariant) != kNavBaroGnss16.hash(ErrorConvention::RightInvariant));
 }
