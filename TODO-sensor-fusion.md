@@ -148,14 +148,18 @@ readable from either.
       the start-of-step attitude (as in the prototype) its linearisation has
       no ∂v/∂b_g term, the residual ratio is 2, and Φ is inconsistent with
       the state propagation at first order.
-- [ ] Fill `MeasurementModels.h`, written against what Hemerion's drivers
-      decode, not against idealised quantities:
-      - GNSS position from UBX-NAV-PVT latitude, longitude, altitude;
-      - GNSS velocity, NED;
-      - barometer: compensated pressure to pressure altitude, plus the bias
-        state.
-- [ ] No antenna lever arm in the first configuration; state the assumption
-      in the header.
+- [x] `MeasurementModels.h` (2026-10-13), against what Hemerion's drivers
+      decode: GNSS position from NAV-PVT lat/lon/ellipsoidal height, GNSS
+      velocity NED + transport term ω⊕×r, both through the ERA at the fix's
+      time (`LciFrame::earthRotationAngle`); barometer = `pressureAltitude_m`
+      (exact inverse of `US1976Atmosphere`) against
+      `GeometricAltitude_m(p)` + bias. Innovation, H and R per convention;
+      H checked by finite differences and (barometer) CppAD. Note for the
+      replay harness: `ECEFToGeodeticWGS84` is declared as a template but
+      defined in a `.cpp` for `double` only — fine for logs, not for h(x).
+- [x] No antenna lever arm; stated in the header of `MeasurementModels.h`
+      together with the time-base assumption (fixes are on simulation time
+      when they reach the models).
 
 ### Step 6 — Reference filter and replay harness
 
@@ -222,7 +226,12 @@ leaves every body rate below one gyro count on case 11).
       `CG<double>` itself still untried (CppADCodeGen is not a dependency
       yet). One AD trap found and documented in `SO3::Log_R`: `acos` has an
       infinite derivative at the identity, so the small-angle switch and
-      series must be written in sin²θ = |½ vee(R − Rᵀ)|², never in θ.
+      series must be written in sin²θ = |½ vee(R − Rᵀ)|², never in θ — and
+      CondExp discards the dead branch's *value*, not its evaluation: CppAD
+      still differentiated `acos` at c = 1, which UBSAN reported as a
+      division by zero (CI, 2026-10-13). `c` is now clamped to ±(1 − 1e-12).
+      Lesson for the generator: every CondExp branch must be finite and
+      differentiable everywhere it is evaluated, not only where selected.
 
 ## Deferred
 

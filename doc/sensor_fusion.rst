@@ -26,13 +26,15 @@ open, both options are given with their consequences.
 
    **Status (v0.17.1).** Step 2 (block scheme, vehicle configuration, log
    contract) is implemented in ``Aetherion/Estimation/Blocks.h``,
-   ``Configuration.h`` and ``LogContract.h``. Of step 5, the state and the
-   process model are in: ``SE23.h`` (the group), ``LciFrame.h`` (the
-   navigation frame and gravity), ``EstimationState.h`` (state, retract and
-   error in both conventions) and ``ProcessModel.h`` (strapdown
-   propagation, error dynamics, discrete transition). ``MeasurementModels.h``
-   and ``EKF.h`` are still placeholders. The working plan is
-   ``TODO-sensor-fusion.md`` at the repository root.
+   ``Configuration.h`` and ``LogContract.h``. Step 5 is complete:
+   ``SE23.h`` (the group), ``LciFrame.h`` (the navigation frame and
+   gravity), ``EstimationState.h`` (state, retract and error in both
+   conventions), ``ProcessModel.h`` (strapdown propagation, error dynamics,
+   discrete transition) and ``MeasurementModels.h`` (GNSS position and
+   velocity, barometer, with their innovation Jacobians in both
+   conventions). ``EKF.h`` is still a placeholder; the reference filter is
+   step 6. The working plan is ``TODO-sensor-fusion.md`` at the repository
+   root.
 
 
 Scope and ownership
@@ -763,6 +765,25 @@ The first configuration assumes the GNSS antenna is at the IMU (no lever
 arm). The models are scalar-templated, in the same style as the dynamics, so
 one definition serves the double-precision reference filter (via CppAD
 Jacobians, :cite:`cppad`) and the code generator.
+
+Implementation (step 5). ``Aetherion/Estimation/MeasurementModels.h``
+provides the raw-to-LCI mappings (``gnssPositionLci``, ``gnssVelocityLci``
+with the transport term, ``nedToLci`` for the receiver's NED accuracies,
+all through the Earth rotation angle at the fix's time,
+``LciFrame::earthRotationAngle``), the pressure-altitude inversion
+``pressureAltitude_m`` (the exact layer-by-layer inverse of
+``US1976Atmosphere``, including the geopotential conversion and the
+above-ceiling decay), and the linearised updates ``gnssPosition<C>``,
+``gnssVelocity<C>``, ``barometer<C>`` returning innovation, Jacobian and
+the measurement covariance in the convention's innovation coordinates
+(rotated by :math:`\hat R^{\mathsf T}` for LI). The barometer's height is
+``Environment::GeometricAltitude_m`` of the estimated position (height
+above the ellipsoid to 0.1 m below 15 km), with an analytic gradient; the
+iterative ``ECEFToGeodeticWGS84`` is not used because it is compiled for
+``double`` only and cannot be taped. Every Jacobian is checked against
+central differences of the nonlinear maps in both conventions, and the
+barometer's again through CppAD, in
+``tests/Estimation/test_MeasurementModels.cpp``.
 
 
 Replay and log contract
