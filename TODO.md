@@ -244,20 +244,25 @@ with no Aetherion dynamics in it, so they should be unrelated — but verify on
 
 ### 6. Housekeeping
 
-- [ ] `tests/Serialization/test_DAVEMLReader.cpp`: the `[daveml]` cases each
-      write and remove the same temporary DML file (`writeMinDML()`), so
-      under `ctest -j 8` one case can delete it under another; seen once on
+- [x] `tests/Serialization/test_DAVEMLReader.cpp`: the `[daveml]` cases each
+      wrote and removed the same temporary DML file (`writeMinDML()`), so
+      under `ctest -j 8` one case could delete it under another; seen once on
       2026-10-13 (`evalMathML ci with unknown varID throws`, passes on
-      rerun). Give each case its own file name or run them serially.
+      rerun). Fixed 2026-10-14: each call writes a randomly named file in the
+      temp directory.
 
-- [ ] `doc/conf.py` gained an `\Ad` MathJax macro — keep.
-- [ ] Consider whether `SE3::dexp_inv` should grow a companion
-      `dexp_inv_left(eta)` (= `dexp_inv(-eta)`) so call sites cannot get the sign
-      wrong again. The current fix negates at each of the three call sites, which
-      works but is repeated.
-- [ ] Ninja does not detect header changes in this environment — MSVC's
-      `/showIncludes` output is localised (Turkish, "Not: eklenen dosya"), so the
-      dependency scan yields nothing. **After editing a header, delete the
-      target's `CMakeFiles/<target>.dir` or use `--clean-first`**, otherwise you
-      will test a stale binary. This cost an hour today. Consider setting
-      `VSLANG=1033` in the environment or the CMake presets.
+- [x] `doc/conf.py` gained an `\Ad` MathJax macro — keep.
+- [x] `SE3::dexp_inv_left(eta)` (= `dexp_inv(-eta)`) exists (`SE3.h`, since
+      `7593a0d`) and all three RKMK call sites use it; nothing negates by hand.
+- [x] Ninja header tracking. Re-checked 2026-10-14 in
+      `out/build/windows-release`: the cached `msvc_deps_prefix` is the
+      Turkish "Not: eklenen dosya:", it matches what cl prints, `ninja -t deps`
+      lists the Aetherion headers for every object (611 for
+      `test_Replay.cpp.obj`), and touching `EKF.h` schedules exactly the two
+      estimation objects that include it. Header edits are tracked. The stale
+      binary on 2026-10-13 had another cause (most likely a build dir
+      configured with a different prefix than cl printed at build time). If it
+      recurs, compare `msvc_deps_prefix` in `CMakeFiles/rules.ninja` with
+      cl's `/showIncludes` output before reaching for `--clean-first`.
+      `VSLANG=1033` has been in the `windows-base` preset since August; it
+      changes nothing here because the prefix was detected in Turkish.
