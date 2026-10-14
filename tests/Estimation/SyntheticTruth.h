@@ -24,7 +24,9 @@
 #pragma once
 
 #include <cmath>
+#include <cstdint>
 #include <numbers>
+#include <random>
 
 #include <Eigen/Dense>
 
@@ -35,6 +37,42 @@
 
 namespace Aetherion::Estimation::Testing
 {
+
+// Gaussian samples that are the same on every platform. std::normal_distribution
+// is implementation-defined -- libstdc++ and MSVC draw different sequences
+// from the same engine -- so a "deterministic" seed gave Linux CI a different
+// 240 s run than Windows, and a bound set on one failed on the other.
+// Box-Muller on the engine's own bits, as Environment/DrydenTurbulence.h does.
+class PortableGaussian
+{
+public:
+  explicit PortableGaussian(std::uint64_t seed) : rng_(seed) {}
+
+  double operator()()
+  {
+    if (hasSpare_)
+    {
+      hasSpare_ = false;
+      return spare_;
+    }
+    double u1 = 0.0;
+    do
+      u1 = uniform();
+    while (u1 <= 0.0);
+    const double u2 = uniform();
+    const double r = std::sqrt(-2.0 * std::log(u1));
+    spare_ = r * std::sin(2.0 * std::numbers::pi * u2);
+    hasSpare_ = true;
+    return r * std::cos(2.0 * std::numbers::pi * u2);
+  }
+
+private:
+  double uniform() { return static_cast<double>(rng_() >> 11) * 0x1.0p-53; }  // [0, 1), 53 bits
+
+  std::mt19937_64 rng_;
+  double spare_ = 0.0;
+  bool hasSpare_ = false;
+};
 
 struct SyntheticTruth
 {
@@ -67,7 +105,7 @@ struct SyntheticTruth
   [[nodiscard]] Vec3 accelerationLci(double t) const
   {
     const double psi = psiDot * t;
-    return Vec3(-V * psiDot * std::sin(psi), V * psiDot * std::cos(psi), 0.0);
+    return { -V * psiDot * std::sin(psi), V * psiDot * std::cos(psi), 0.0 };
   }
 
   /// Body rate (R^T R_dot)^vee for R = Rz(psi) Rx(phi) Ry(theta):
@@ -79,7 +117,7 @@ struct SyntheticTruth
     const double thDot = pitchAmp * pitchRate * std::cos(pitchRate * t);
     const double phDot = bankAmp * bankRate * std::cos(bankRate * t);
     const double cth = std::cos(th), sth = std::sin(th), cph = std::cos(ph), sph = std::sin(ph);
-    return Vec3(cth * phDot - sth * cph * psiDot, sph * psiDot + thDot, sth * phDot + cth * cph * psiDot);
+    return { cth * phDot - sth * cph * psiDot, sph * psiDot + thDot, sth * phDot + cth * cph * psiDot };
   }
 
   /// The ideal IMU of this truth at time t: inertial rate and specific force, body frame.

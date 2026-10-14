@@ -81,6 +81,14 @@ readable from either.
       with a Joseph-form covariance (every run), LI unaffected. Next:
       covariance reset after updates in both; RI with UD / square-root in
       float32; initial-heading sweep (5–20°) for LI; rocket trajectory.
+      New evidence 2026-10-13 from the C++ filter on synthetic logs
+      (`tests/Estimation/test_Replay.cpp`, float64, Joseph form, 2–5 km
+      from the LCI origin): with initial sigmas of 5° yaw and 30 m
+      position, RI holds ~0.9° of tilt RMS and ANEES ~2 over 120 s while LI
+      settles to 0.11° and ANEES 1.3 on the same samples; with 1° / 10 m
+      sigmas RI is at 0.3°. Same direction as finding 3 (the [p̂]× coupling
+      of large covariances), already in float64. Worth a dedicated sweep
+      over initial sigma × distance from the origin before deciding.
       When decided, update the
       `error=` line of the configuration descriptor and the pinned hash
       (currently provisional `right-invariant`). Trade-off is written up in
