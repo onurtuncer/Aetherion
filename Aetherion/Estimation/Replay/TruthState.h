@@ -123,9 +123,8 @@ struct GeodeticTruth
   const Eigen::Matrix3d R_NB =
       rotationEcefFromNed(lat, lon).transpose() * rotationEciFromEcef(era).transpose() * frame.R_WL * x.X.R;
   // ZYX from R_NB: yaw = atan2(R21, R11), pitch = -asin(R31), roll = atan2(R32, R33).
-  return Eigen::Vector3d(std::atan2(R_NB(1, 0), R_NB(0, 0)),
-                         -std::asin(std::clamp(R_NB(2, 0), -1.0, 1.0)),
-                         std::atan2(R_NB(2, 1), R_NB(2, 2)));
+  return { std::atan2(R_NB(1, 0), R_NB(0, 0)), -std::asin(std::clamp(R_NB(2, 0), -1.0, 1.0)),
+           std::atan2(R_NB(2, 1), R_NB(2, 2)) };
 }
 
 }  // namespace Aetherion::Estimation::Replay

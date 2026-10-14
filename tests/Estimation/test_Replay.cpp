@@ -292,7 +292,7 @@ SyntheticLogs writeSyntheticLogs(double T, unsigned seed)
     imu << k << ',' << t << ',' << host(t) << ',' << a[0] << ',' << a[1] << ',' << a[2] << ',' << g[0] << ',' << g[1]
         << ',' << g[2] << '\n';
 
-    double lat, lon, h;
+    double lat = 0.0, lon = 0.0, h = 0.0;
     Eigen::Vector3d vNed, euler;
     geodetic(t, lat, lon, h, vNed, euler);
     tr << k << ", " << t << ", " << h << ", " << lat / kDeg << ", " << lon / kDeg << ", " << vNed[0] << ", " << vNed[1]
