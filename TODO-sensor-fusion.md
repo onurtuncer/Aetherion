@@ -81,6 +81,14 @@ readable from either.
       with a Joseph-form covariance (every run), LI unaffected. Next:
       covariance reset after updates in both; RI with UD / square-root in
       float32; initial-heading sweep (5–20°) for LI; rocket trajectory.
+      New evidence 2026-10-13 from the C++ filter on synthetic logs
+      (`tests/Estimation/test_Replay.cpp`, float64, Joseph form, 2–5 km
+      from the LCI origin): with initial sigmas of 5° yaw and 30 m
+      position, RI holds ~0.9° of tilt RMS and ANEES ~2 over 120 s while LI
+      settles to 0.11° and ANEES 1.3 on the same samples; with 1° / 10 m
+      sigmas RI is at 0.3°. Same direction as finding 3 (the [p̂]× coupling
+      of large covariances), already in float64. Worth a dedicated sweep
+      over initial sigma × distance from the origin before deciding.
       When decided, update the
       `error=` line of the configuration descriptor and the pinned hash
       (currently provisional `right-invariant`). Trade-off is written up in
@@ -175,17 +183,48 @@ readable from either.
       when generating from an analytic truth, or the ZOH mismatch looks like
       a bias. Yaw from a 5° start is still ~0.5–1° after 240 s: weakly
       observable, as expected without a magnetometer.
-- [ ] Replay harness that reads the Hemerion logs and the truth log.
-- [ ] Time base: `host_time_s` is the flight computer's clock and equals
-      simulation time only under `--rtf 1`. Map it onto simulation time with a
-      fit over the IMU log, which carries both clocks (Hemerion's TODO
-      describes this calibration). Requirement from the LCI frame: residual
-      error well below 1 ms, since a timing error δt rotates the
-      ECEF↔LCI mapping by Ω·δt (~0.5 m at Earth radius per ms).
-- [ ] Delayed-measurement handling for GNSS, exercised with
-      `--gps-latency`.
-- [ ] NEES and NIS against truth. Bias-state NEES needs the realized bias
-      values, which the sensor FMUs do not publish yet (Hemerion step 3).
+- [x] Replay harness (2026-10-13): `Aetherion/Estimation/Replay/{Csv,Logs,
+      TimeBase,TruthState,Replay}.h` and the `EkfReplay` executable
+      (`--logs <dir> --truth <csv> [--convention ri|li] [--config
+      nav-baro-gnss|nav-baro-gnss16]`). Validated on synthetic logs in
+      Hemerion's formats (`tests/Estimation/test_Replay.cpp`): ANEES
+      1.06/0.83, NIS at 1, position 0.33 m. **Not yet run on real Hemerion
+      logs** — none exist on this machine; generating a set needs the
+      Hemerion co-sim example built against the Aetherion FMUs. First real
+      replay must use `--config nav-baro-gnss` until GNSS velocity is logged.
+- [x] Time base. Surveyed Hemerion's writers at `origin/main` 7da6057
+      (2026-10-13; the local clone was 193 commits behind): IMU
+      `part_time_s` is simulation time unless `--sensor-clock` skew/jitter
+      is on; the GPS log's `nominal_time_s` = `fix_count * fix_period` is
+      the fix's epoch in simulation time with the latency cancelled; the
+      BMP390 `part_time_s` wraps every 512 s; `host_time_s` is burst
+      arrival on the flight computer's clock and, unpaced, bears no fixed
+      relation to simulation time. So the harness times IMU and baro on
+      their part clocks (baro unwrapped), fixes on `nominal_time_s`, and
+      keeps the least-squares `host = offset + scale * part` fit
+      (`TimeBase.h`) as a cross-check and fallback with its residual
+      reported. `fix_type` is Hemerion's enum (0/1/2 = none/2D/3D), not
+      UBX's; epochs without a fix are rows of empty fields. All of this is
+      in `LogContract.h` now.
+- [x] Delayed measurements: the replay reference applies a fix at its
+      validity time, splitting the IMU interval exactly (`Replay.h`; the
+      "apply at the next IMU step" shortcut cost 0.6 m at 120 m/s).
+      Recovering the latency from arrival stamps is the flight filter's
+      job (Hemerion step 10) and is judged against this reference by the
+      golden vectors.
+- [ ] **Replay a real Hemerion log set.** Needs Hemerion built on Windows
+      (`cmake --preset examples-native`, `AETHERION_ROOT` or `--f16` at
+      `out/build/windows-release/models/fmi2/F16Plant/F16Plant.fmu`), then
+      `f16_flight_computer` first and `f16_trim_cosim --case 11 --rtf 1
+      [--gps-latency 0.2]` in `build/examples-native/examples/f16_trim_ecos/`;
+      logs land in each process's `results/`. Use `--rtf 1`: unpaced, the
+      polled barometer yields ~37 conversions per 200 s. Then
+      `EkfReplay --logs results --truth results/f16_truth.csv --config
+      nav-baro-gnss`. Expect the time-base residual to show the 0.01 s
+      burst sawtooth.
+- [x] NEES and NIS against truth, in the filter's own coordinates. NEES is
+      over the navigation core only until the realized biases are published
+      (Hemerion step 3); the summary says so.
 - [ ] UKF as a cross-check, after the EKF is consistent.
 
 ### Step 7 — Tuning and observability
