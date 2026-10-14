@@ -24,9 +24,11 @@
 //   baro  part_time_s  the BMP390 SENSORTIME register: simulation time,
 //                      wrapping every 512 s. Unwrapped against the
 //                      fit-mapped host time.
-//   GNSS  nominal_time_s  fix_count * fix_period: the fix's epoch in
-//                      simulation time, index-based, so the latency
-//                      cancels in it. The validity time.
+//   GNSS  nominal_time_s  the fix's epoch in simulation time, index-based,
+//                      so the latency cancels in it. The validity time.
+//                      Hemerion 7da6057 writes fix_count * fix_period
+//                      with fix_count from 1, one period late (fix 1 is
+//                      the t = 0 state); logs from it need -fix_period.
 //         host_time_s  arrival on the flight computer's clock, latency
 //                      included (NAV-PVT carries no time of its own). Used
 //                      only if nominal_time_s is absent: mapped through

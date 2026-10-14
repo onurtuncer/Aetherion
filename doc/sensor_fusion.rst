@@ -35,8 +35,9 @@ open, both options are given with their consequences.
    conventions). Of step 6, ``EKF.h`` -- the reference invariant EKF,
    ``InvariantEKF<S, C>``, Joseph form, NEES/NIS -- and the replay harness
    (``Replay/``, ``EkfReplay``) are in and validated on an analytic truth
-   and on synthetic logs in Hemerion's formats; real Hemerion logs have not
-   been replayed yet. The working plan is ``TODO-sensor-fusion.md`` at the
+   and on synthetic logs in Hemerion's formats, and the first real Hemerion
+   log sets (check case 11, calm and in turbulence) replay consistently once
+   Hemerion's GPS epoch stamp is corrected. The working plan is ``TODO-sensor-fusion.md`` at the
    repository root.
 
 
@@ -858,9 +859,10 @@ measurements.
   ``part_time_s`` (simulation time unless the FMU's clock skew and jitter
   are on); barometer samples on their ``part_time_s``, which is the
   BMP390's SENSORTIME register and wraps every 512 s, unwrapped against
-  the fit-mapped host time; a fix at its ``nominal_time_s``, which is
-  ``fix_count * fix_period`` -- the epoch in simulation time, index-based,
-  so the GPS latency cancels in it -- falling back to the mapped arrival
+  the fit-mapped host time; a fix at its ``nominal_time_s`` -- the epoch in
+  simulation time, index-based, so the GPS latency cancels in it (one
+  fix period late in Hemerion 7da6057; see the first real replay below) --
+  falling back to the mapped arrival
   time minus ``gps_latency_s`` if that column is absent. Epochs without a
   fix are written with empty fields and are skipped, as are fixes below
   3D in Hemerion's own ``fix_type`` enum (0 none, 1 2D, 2 3D -- not UBX's
@@ -898,8 +900,52 @@ boundary wait a whole period, a mean lag of half an IMU period that at
 120 m/s is a 0.6 m along-track bias rotating with the heading (ANEES 3.8
 with every NIS at 1 -- the signature of a truth/measurement disagreement
 rather than a filter fault); and holding the earlier IMU sample over the
-interval, rather than the average, reads as a bias. Real Hemerion logs
-have not been replayed yet.
+interval, rather than the average, reads as a bias.
+
+**First real replay (2026-10-14).** Hemerion 7da6057, check case 11 for
+200 s at ``--rtf 1``, calm and in light-to-moderate turbulence (W20 = 8 m/s),
+replayed with ``nav-baro-gnss``. As logged, the filter was ANEES ~1300 with
+GNSS NIS at 1 and 17 m position RMS: the truth/measurement-disagreement
+signature again. The fixes match the truth with no filter involved once
+moved 0.100 s earlier (to 1 cm along-track; 17.2 m at 172 m/s without the
+shift). Hemerion's flight computer stamps ``fix_count * fix_period`` with
+``fix_count`` counted from 1, while the GPS FMU encodes the plant state at
+the start of the co-simulation step, so ``nominal_time_s`` is one fix
+period late. With the stamps corrected:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 10 12 12 14 12 12
+
+   * - Run
+     - Conv.
+     - ANEES
+     - NIS GNSS
+     - Position RMS
+     - Tilt RMS
+     - Yaw RMS
+   * - Case 11, calm
+     - RI / LI
+     - 1.76 / 0.74
+     - 0.98
+     - 0.44 m
+     - 0.32° / 0.13°
+     - 23° / 9°
+   * - Case 11, turbulence
+     - RI / LI
+     - 1.17 / 1.31
+     - 1.03
+     - 0.46 m
+     - 0.10° / 0.22°
+     - 4.1° / 4.8°
+
+Yaw drifting in calm trimmed flight is the expected weak observability
+without a magnetometer; turbulence makes it observable. Barometer NIS is
+0.11 in both runs, so the default 1 m pressure-altitude sigma is
+pessimistic (step 7). The IMU stamps are consistent, but its 100 Hz
+samples see the plant's specific force and rates held over each 0.1 s
+communication step (best shift against truth −0.055 s in turbulence); the
+manoeuvring cases of step 7 should run at a 0.01 s step.
 
 **Known gaps.** Hemerion's GPS driver does not yet decode NAV-PVT velocity,
 so ``kNavBaroGnss16`` does not bind against current GPS logs (a test asserts
