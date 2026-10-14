@@ -138,7 +138,12 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
     // the switch nor the series may be written in terms of theta -- even
     // theta² would put 0·inf on the tape. Both use sin²theta = |half_vee|²,
     // which is polynomial in R; theta only enters the closed-form branch,
-    // which CondExp discards near the identity.
+    // which CondExp discards near the identity. CondExp discards the value,
+    // not the evaluation: CppAD still differentiates acos in the dead
+    // branch, and at c = 1 exactly that is a division by zero (UBSAN,
+    // issue seen in CI on the process-model AD test). So c is clamped to
+    // ±(1 - 1e-12), not ±1: theta then bottoms out at ~1.4e-6, far inside
+    // the series region, and the dead branch's derivative is finite.
     // -------------------------------------------------------------------------
     template <class S>
     [[nodiscard]] inline Eigen::Matrix<S, 3, 1>
@@ -153,10 +158,12 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
             S(0.5) * (R(1, 0) - R(0, 1)) };  // = sin(theta) · axis
         const S s2 = half_vee.dot(half_vee);  // sin²(theta)
 
-        // Clamp against round-off beyond [-1, 1]; CondExp keeps it AD-safe.
+        // Clamp against round-off beyond [-1, 1] and away from the
+        // singular derivative at ±1 (see the AD note); CondExp keeps it AD-safe.
+        const S c_max = S(1.0 - 1e-12);
         S c = (R.trace() - S(1)) * S(0.5);
-        c = Core::condexp_gt(c, S(1), S(1), c);
-        c = Core::condexp_lt(c, S(-1), S(-1), c);
+        c = Core::condexp_gt(c, c_max, c_max, c);
+        c = Core::condexp_lt(c, -c_max, -c_max, c);
         const S theta = acos(c);
 
         const S eps2   = S(1e-8);

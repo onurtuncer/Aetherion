@@ -45,6 +45,14 @@ struct LciFrame
 
   Vec3 r_W0 = Vec3::Zero();      ///< ECI position of the origin [m]
   Mat3 R_WL = Mat3::Identity();  ///< LCI -> ECI; columns are N, E, D of the origin at t0
+  S era0_rad = S(0);  ///< Earth rotation angle at t0; the ECEF->ECI mapping of a later measurement needs era(t)
+
+  /// Earth rotation angle at t0 + t: what the ECEF -> ECI rotation of a
+  /// measurement taken t seconds after the frame epoch uses.
+  [[nodiscard]] S earthRotationAngle(const S& t_since_t0_s) const
+  {
+    return era0_rad + S(Environment::WGS84::kRotationRate_rad_s) * t_since_t0_s;
+  }
 
   /// Frame from the geodetic origin (WGS-84 latitude, longitude, ellipsoidal
   /// height) and the Earth rotation angle at t0. These are the `lat0_deg`,
@@ -56,6 +64,7 @@ struct LciFrame
     const auto R = Coordinate::NEDToInertialRotationMatrix(lat0_rad, lon0_rad, era0_rad);  // row-major
 
     LciFrame f;
+    f.era0_rad = era0_rad;
     f.r_W0 = Vec3(r_W[0], r_W[1], r_W[2]);
     for (int r = 0; r < 3; ++r)
       for (int c = 0; c < 3; ++c)
