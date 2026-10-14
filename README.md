@@ -24,6 +24,7 @@
 - **ECI / WGS84 frame transformations**
 - **Algorithmic Differentiation (AD-friendly)**
 - **Clean ODE formulations for high-fidelity simulation**
+- **Lie-group state estimation** (invariant EKF on SE₂(3))
 
 The name *ΑΙΘΕΡΙΟΝ* (Aetherion) is inspired by the Greek word **Αιθήρ**, referring to the upper atmosphere — the pristine realm of celestial motion.
 
@@ -50,13 +51,24 @@ Stage separation, coast phases, and second-stage ignition are all captured with 
 - **Variable-mass bodies** — propellant burn, staging events, CG travel
 
 ### Numerical Methods
-- **Lie-structure-preserving Runge-Kutta-Munthe-Kaas (RKMK) integrator** on SE(3)
-- **Fully implicit RADAU-IIA solver** for stiff ascent phases
-- *(Planned)* **Discrete Extended Kalman Filter on a product manifold** containing Lie groups
+- **Lie-structure-preserving Runge-Kutta-Munthe-Kaas (RKMK) integrators** on SE(3) and product SE(3) × ℝⁿ manifolds
+- **Explicit RK4** and **fully implicit RADAU-IIA** schemes (Newton-solved stages) for stiff ascent phases
+- **Two-stage Newton-Raphson trim solver** for straight-and-level fixed-wing flight, with aerodynamic moment transfer from the reference centre to the CG
+
+### State Estimation
+- **Reference invariant EKF** (`InvariantEKF<S, C>`) on SE₂(3) × ℝ⁷: attitude, velocity and position as one SE₂(3) element, with gyro, accelerometer and barometer biases kept Euclidean
+- **Left- or right-invariant error convention** chosen by template parameter, so both filters run on the same models
+- **Launch-centred inertial (LCI) navigation frame** with WGS-84 J2 gravity; strapdown process model with a trapezoidal transition matrix
+- **GNSS position, GNSS velocity and barometer** measurement models; Joseph-form updates; NEES/NIS consistency metrics
+- **Composable state blocks** and a hashed vehicle configuration (`kNavBaroGnss16`), plus a log contract for replaying co-simulation logs
+- *(Planned)* replay harness, tuning on the F-16 check cases, float32 rerun, and C code generation of f, h and their Jacobians
+
+See [`doc/sensor_fusion.rst`](doc/sensor_fusion.rst) and [`TODO-sensor-fusion.md`](TODO-sensor-fusion.md) for the design and roadmap.
 
 ### Algorithmic Differentiation
 - **AD-friendly formulations** throughout — compatible with CppAD, dual numbers, and similar libraries
-- *(Planned)* Auto-Jacobians fed directly into the EKF/UKF linearisation pipeline
+- **CppAD-taped Jacobians** in the trim solver and the estimator: the process and measurement models tape through Eigen and are checked against finite differences
+- *(Planned)* CppADCodeGen export of the estimator Jacobians as plain C
 
 ### Environment Models
 - **US1976 Standard Atmosphere** (temperature, pressure, density, speed of sound), with ISA + dT and sea-level pressure offsets re-integrated hydrostatically
@@ -70,7 +82,8 @@ Stage separation, coast phases, and second-stage ignition are all captured with 
 - Stage-aware propellant tracking with automatic separation logic
 
 ### Interoperability
-- **FMI/FMU export** via fmu4cpp — drop Aetherion plants into any FMI-compliant simulator
+- **FMI/FMU export** via fmu4cpp — drop Aetherion plants into any FMI-compliant simulator. Shipped FMUs: `F16Plant`, `F16Autopilot`, `TwoStageRocket` (steady wind, Dryden turbulence and atmosphere offsets exposed as ports)
+- **Simulink models** built from the FMUs by [`matlab/build_f16_simulink.m`](matlab/build_f16_simulink.m) (run in CI) and [`matlab/build_twostagerocket_simulink.m`](matlab/build_twostagerocket_simulink.m)
 - JSON configuration files for initial conditions and simulation parameters
 - CSV output compatible with NASA reference data formats
 
@@ -107,7 +120,7 @@ files and the run checks nothing at all.
   <img src="doc/_static/sva_gnc_pipeline.png" width="720" alt="SVA / AD / EKF pipeline"/>
 </p>
 
-The library is architected so that the same smooth `ẋ = f(x, u)` used for simulation feeds auto-Jacobians into the EKF linearisation, producing a single consistent GNC pipeline from plant model to state estimator.
+The library is architected so that smooth, scalar-templated models feed auto-Jacobians into the filter linearisation, producing a single consistent GNC pipeline from plant model to state estimator. The plant supplies the truth; the estimator's process and measurement models are taped with CppAD, and the reference EKF is the specification that generated flight code will be checked against.
 
 ---
 
@@ -153,24 +166,27 @@ notation for spatial transforms, keeping the frame algebra explicit and AD-frien
 
 ## Validated Examples
 
-| Example | Vehicle | Reference |
-|---------|---------|-----------|
-| [`TwoStageRocket`](src/Examples/TwoStageRocket/TwoStageRocket.cpp) | Two-stage launch vehicle | NASA TM-2015-218675 Scenario 17 |
-| [`F16SteadyFlight`](src/Examples/F16SteadyFlight/F16SteadyFlight.cpp) | F-16 at trim | NASA TN D-8532 Section 13.1 |
-| [`F16AirspeedChange`](src/Examples/F16AirspeedChange/F16AirspeedChange.cpp) | F-16 speed step | NASA TN D-8532 Section 13.2 |
-| [`F16AltitudeChange`](src/Examples/F16AltitudeChange/F16AltitudeChange.cpp) | F-16 altitude step | NASA TN D-8532 Section 13.3 |
-| [`F16HeadingChange`](src/Examples/F16HeadingChange/F16HeadingChange.cpp) | F-16 heading change | NASA TN D-8532 Section 13.4 |
-| [`F16LateralSideStep`](src/Examples/F16LateralSideStep/F16LateralSideStep.cpp) | F-16 lateral manoeuvre | NASA TN D-8532 Appendix |
-| [`F16SupersonicTrim`](src/Examples/F16SupersonicTrim/F16SupersonicTrim.cpp) | F-16 supersonic trim | NASA TN D-8532 |
-| [`EastwardCannonball`](src/Examples/EastwardCannonball/EastwardCannonball.cpp) | Point mass projectile | Analytic (Coriolis) |
-| [`NorthwardCannonball`](src/Examples/NorthwardCannonball/NorthwardCannonball.cpp) | Point mass projectile | Analytic (Coriolis) |
-| [`SphereWithAtmosphericDrag`](src/Examples/SphereWithAtmosphericDrag/SphereWithAtmosphericDrag.cpp) | Sphere + drag | Analytical reference |
-| [`DroppedSphereSteadyWind`](src/Examples/DroppedSphereSteadyWind/DroppedSphereSteadyWind.cpp) | Sphere in steady crosswind | Analytical reference |
-| [`DroppedSphere2DWindShear`](src/Examples/DroppedSphere2DWindShear/DroppedSphere2DWindShear.cpp) | Sphere in wind-shear field | Analytical reference |
-| [`TumblingBrickNoDamping`](src/Examples/TumblingBrickNoDamping/TumblingBrickNoDamping.cpp) | Free tumbling rigid body | Angular momentum conservation |
-| [`TumblingBrickWithDamping`](src/Examples/TumblingBrickWithDamping/TumblingBrickWithDamping.cpp) | Damped tumbling body | Energy dissipation |
-| [`CircleEquatorDateLine`](src/Examples/CircleEquatorDateLine/CircleEquatorDateLine.cpp) | Orbital-like equatorial loop | Geometric consistency |
-| [`CircleNorthPole`](src/Examples/CircleNorthPole/CircleNorthPole.cpp) | Polar orbital loop | Geometric consistency |
+Every example reproduces an atmospheric check case from **NASA TM-2015-218675** (NESC 6-DOF flight simulation check cases).
+
+| Example | Vehicle | Scenario |
+|---------|---------|----------|
+| [`DraglessSphere`](src/Examples/DraglessSphere/DraglessSphere.cpp) | Dragless sphere, gravity only | 1 |
+| [`TumblingBrickNoDamping`](src/Examples/TumblingBrickNoDamping/TumblingBrickNoDamping.cpp) | Free tumbling brick | 2 |
+| [`TumblingBrickWithDamping`](src/Examples/TumblingBrickWithDamping/TumblingBrickWithDamping.cpp) | Tumbling brick with aerodynamic damping | 3 |
+| [`SphereWithAtmosphericDrag`](src/Examples/SphereWithAtmosphericDrag/SphereWithAtmosphericDrag.cpp) | Sphere with atmospheric drag | 6 |
+| [`DroppedSphereSteadyWind`](src/Examples/DroppedSphereSteadyWind/DroppedSphereSteadyWind.cpp) | Sphere in steady crosswind | 7 |
+| [`DroppedSphere2DWindShear`](src/Examples/DroppedSphere2DWindShear/DroppedSphere2DWindShear.cpp) | Sphere in 2-D wind shear | 8 |
+| [`EastwardCannonball`](src/Examples/EastwardCannonball/EastwardCannonball.cpp) | Eastward ballistic cannonball | 9 |
+| [`NorthwardCannonball`](src/Examples/NorthwardCannonball/NorthwardCannonball.cpp) | Northward ballistic cannonball | 10 |
+| [`F16SteadyFlight`](src/Examples/F16SteadyFlight/F16SteadyFlight.cpp) | F-16 subsonic trimmed flight | 11 |
+| [`F16SupersonicTrim`](src/Examples/F16SupersonicTrim/F16SupersonicTrim.cpp) | F-16 supersonic trimmed flight (Mach ≈ 2) | 12 |
+| [`F16AltitudeChange`](src/Examples/F16AltitudeChange/F16AltitudeChange.cpp) | F-16 altitude change | 13.1 |
+| [`F16AirspeedChange`](src/Examples/F16AirspeedChange/F16AirspeedChange.cpp) | F-16 airspeed change | 13.2 |
+| [`F16HeadingChange`](src/Examples/F16HeadingChange/F16HeadingChange.cpp) | F-16 heading change | 13.3 |
+| [`F16LateralSideStep`](src/Examples/F16LateralSideStep/F16LateralSideStep.cpp) | F-16 lateral side-step | 13.4 |
+| [`CircleNorthPole`](src/Examples/CircleNorthPole/CircleNorthPole.cpp) | F-16 North Pole circumnavigation | 15 |
+| [`CircleEquatorDateLine`](src/Examples/CircleEquatorDateLine/CircleEquatorDateLine.cpp) | F-16 circle around equator / date line | 16 |
+| [`TwoStageRocket`](src/Examples/TwoStageRocket/TwoStageRocket.cpp) | Two-stage rocket to orbit | 17 |
 
 ---
 
@@ -178,6 +194,7 @@ notation for spatial transforms, keeping the frame algebra explicit and AD-frien
 
 - **Catch2 unit tests** covering every module
 - **Numerical validation** against NASA technical reports (sub-percent agreement)
+- **Estimator validation**: Jacobians against finite differences and CppAD; filter consistency (NEES/NIS) in both error conventions on an analytic manoeuvring truth
 - **AddressSanitizer + UBSanitizer** run on every CI push
 - **Clang-Tidy static analysis** and **IWYU** include hygiene enforced on every PR
 
@@ -189,6 +206,7 @@ notation for spatial transforms, keeping the frame algebra explicit and AD-frien
 |---------|---------|-------------|
 | [Eigen](https://eigen.tuxfamily.org) | Linear algebra | vendored (`vendor/eigen`) |
 | [CppAD](https://coin-or.github.io/CppAD/) | Algorithmic differentiation | vcpkg (`vcpkg.json`) |
+| [nlohmann/json](https://github.com/nlohmann/json) | JSON configuration files | vendored (header-only) |
 | [fmu4cpp](https://github.com/markaren/fmu4cpp) | FMI/FMU export | vendored (`vendor/fmu4cpp`) |
 | [ecos](https://github.com/Ecos-platform/ecos) | FMI co-simulation engine (FMU smoke testing) | submodule (`vendor/ecos`) |
 | [Catch2 v3](https://github.com/catchorg/Catch2) | Unit testing | fetched at configure time |
@@ -249,6 +267,12 @@ cmake -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --parallel
 ctest --test-dir build
 ```
+
+---
+
+## Citing
+
+If you use Aetherion in your research, please cite it using the metadata in [`CITATION.cff`](CITATION.cff) (GitHub's **Cite this repository** button generates BibTeX and APA from it).
 
 ---
 
