@@ -71,15 +71,25 @@ enum class Log : std::uint8_t
 
 namespace Gps
 {
+// Arrival time on the flight computer's clock (the fix carries no time of
+// its own: iTOW is left at 0), so it includes the GPS latency.
 inline constexpr std::string_view kHostTime = "host_time_s";
+// fix_count * fix_period: the fix's epoch in simulation time, index-based,
+// so the latency cancels in it. The validity time the replay uses when
+// present. Epochs without a fix are still written, with every other
+// field empty (Hemerion f16_flight_computer.cpp, gps_csv).
+inline constexpr std::string_view kNominalTime = "nominal_time_s";
 inline constexpr std::string_view kLatitude = "latitude_deg";
 inline constexpr std::string_view kLongitude = "longitude_deg";
-// NAV-PVT `height` (ellipsoidal): Hemerion's ubxParser reads payload
-// offset 32, although GpsFix::altitude_m is documented as MSL.
+// NAV-PVT `height` (offset 32). Hemerion's emitter writes the plant's
+// altitude into both `height` and `hMSL` (no geoid model on either side),
+// so the content is the plant's geodetic altitude.
 inline constexpr std::string_view kAltitude = "altitude_m";
 inline constexpr std::string_view kHorizAcc = "horizontal_accuracy_m";
 inline constexpr std::string_view kVertAcc = "vertical_accuracy_m";
+// Hemerion's own enum (gpsTypes.hpp), not UBX's: 0 no fix, 1 2D, 2 3D.
 inline constexpr std::string_view kFixType = "fix_type";
+inline constexpr int kFixType3D = 2;
 // Not yet written by Hemerion: GpsFix decodes only gSpeed and course,
 // although the emitter already encodes velN/E/D and sAcc. Proposed
 // names; a configuration with GnssVelocity cannot replay until they
@@ -104,7 +114,9 @@ inline constexpr std::string_view kGyroZ = "gyro_z_rad_s";
 
 namespace Baro
 {
+// The BMP390's SENSORTIME register: wraps every 512 s.
 inline constexpr std::string_view kPartTime = "part_time_s";
+inline constexpr double kPartTimeWrap_s = 512.0;
 inline constexpr std::string_view kHostTime = "host_time_s";
 inline constexpr std::string_view kPressure = "pressure_pa";
 inline constexpr std::string_view kTemperature = "temperature_c";
