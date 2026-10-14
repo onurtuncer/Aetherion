@@ -81,14 +81,16 @@ readable from either.
       with a Joseph-form covariance (every run), LI unaffected. Next:
       covariance reset after updates in both; RI with UD / square-root in
       float32; initial-heading sweep (5–20°) for LI; rocket trajectory.
-      New evidence 2026-10-13 from the C++ filter on synthetic logs
-      (`tests/Estimation/test_Replay.cpp`, float64, Joseph form, 2–5 km
-      from the LCI origin): with initial sigmas of 5° yaw and 30 m
-      position, RI holds ~0.9° of tilt RMS and ANEES ~2 over 120 s while LI
-      settles to 0.11° and ANEES 1.3 on the same samples; with 1° / 10 m
-      sigmas RI is at 0.3°. Same direction as finding 3 (the [p̂]× coupling
-      of large covariances), already in float64. Worth a dedicated sweep
-      over initial sigma × distance from the origin before deciding.
+      The 2026-10-13 "evidence" from the C++ filter on synthetic logs (RI
+      0.9° tilt RMS against LI 0.11°, `test_Replay.cpp`) is **retracted**
+      (2026-10-14): it was one noise seed. Over seeds 1–20 (float64, Joseph
+      form, 5° yaw / 30 m sigmas, 2–5 km from the LCI origin) the two
+      conventions are indistinguishable: tilt RMS 0.43° mean for both
+      (RI 0.11–1.01°, LI 0.05–1.24°), neither better in more than 11 of 20
+      seeds, ANEES and NIS identical to the second digit. Lesson for the
+      sweep below: compare conventions over seeds, never on one realisation.
+      The sweep over initial sigma × distance from the origin is still worth
+      running, but there is no float64 effect to explain yet.
       When decided, update the
       `error=` line of the configuration descriptor and the pinned hash
       (currently provisional `right-invariant`). Trade-off is written up in
@@ -187,8 +189,10 @@ readable from either.
       TimeBase,TruthState,Replay}.h` and the `EkfReplay` executable
       (`--logs <dir> --truth <csv> [--convention ri|li] [--config
       nav-baro-gnss|nav-baro-gnss16]`). Validated on synthetic logs in
-      Hemerion's formats (`tests/Estimation/test_Replay.cpp`): ANEES
-      1.06/0.83, NIS at 1, position 0.33 m. **Not yet run on real Hemerion
+      Hemerion's formats (`tests/Estimation/test_Replay.cpp`): over seeds
+      1–20, ANEES 1.04 mean (0.44–2.04), NIS 0.91–1.13, position 0.34 m,
+      both conventions; the test's bounds hold on every seed (checked
+      2026-10-14, closing the "e2e bounds to verify" note). **Not yet run on real Hemerion
       logs** — none exist on this machine; generating a set needs the
       Hemerion co-sim example built against the Aetherion FMUs. First real
       replay must use `--config nav-baro-gnss` until GNSS velocity is logged.

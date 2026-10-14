@@ -373,11 +373,11 @@ TEST_CASE("Replay: synthetic Hemerion logs through the harness, both conventions
     CHECK(s.nisGnssVelocity < 2.5);
     CHECK(s.nisBaro > 0.4);
     CHECK(s.nisBaro < 2.5);
-    // Attitude: LI settles to ~0.1 deg of tilt here; RI, started with the
-    // same 5 deg yaw / 30 m position sigmas 2-5 km from the LCI origin,
-    // holds ~0.9 deg of tilt and ANEES ~2 over the same 120 s (0.3 deg
-    // with 1 deg / 10 m sigmas). Recorded in TODO-sensor-fusion.md as
-    // convention evidence; the bounds here cover both.
+    // Bounds checked over seeds 1-20 in both conventions (2026-10-14), all
+    // passing; worst cases ANEES 0.44 / 2.04, position 0.49 m, tilt 1.24 deg,
+    // yaw 2.78 deg. The conventions are indistinguishable over those seeds
+    // (tilt 0.43 deg mean for both). On seed 3 alone LI has 0.11 deg of
+    // tilt against RI's 0.90 deg; that is noise, not a convention effect.
     CHECK(s.posRms_m < 0.6);
     CHECK(s.velRms_m_s < 0.15);
     CHECK(s.tiltRms_deg < 1.5);

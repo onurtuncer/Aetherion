@@ -886,8 +886,13 @@ sets no epoch.
 Validated on synthetic logs written in Hemerion's formats from the
 manoeuvring analytic truth (``tests/Estimation/test_Replay.cpp``): the
 time base is recovered to the stamping jitter, and both conventions are
-consistent (ANEES 1.06 and 0.83, every NIS within 3 % of 1) at the GNSS
-floor (0.33 m). Two things that test caught: applying a measurement "after
+consistent at the GNSS floor. Over 20 noise seeds (120 s each, second half;
+the test pins seed 3) the two are indistinguishable: ANEES of the navigation
+core 1.04 mean (0.44 to 2.04), NIS per dimension 0.91 to 1.13 for every
+measurement, position 0.34 m RMS, tilt 0.43° mean for both (0.05 to 1.24°),
+and neither convention has the lower tilt error in more than 11 of the 20
+seeds. A single seed can suggest a convention preference: seed 3 gives
+0.11° LI against 0.90° RI. Two things that test caught: applying a measurement "after
 the IMU step that reaches it" lets a fix stamped microseconds after a
 boundary wait a whole period, a mean lag of half an IMU period that at
 120 m/s is a 0.6 m along-track bias rotating with the heading (ANEES 3.8
