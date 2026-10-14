@@ -5,7 +5,8 @@ and ISA offsets for the F-16 and rocket plants, requested by Hemerion. Done
 2026-09-24 on `feat/wind-turbulence-atmosphere`, version bumped to v0.16.0;
 the file records what shipped and the deviations from the plan.
 
-Branch: **`fix/rkmk-left-trivialisation`** (2 commits, not yet pushed or merged)
+Branch: **`fix/rkmk-left-trivialisation`** — merged into `main` as PR #60 on
+2026-09-21. Items below marked 2026-10-12 were closed on `main` at `b3b0e10`.
 
 ## What happened
 
@@ -96,11 +97,20 @@ moves the staging event and invalidates the comparison.
 - [x] `papers/eucass-library/main.tex`: Scenario 17 row, figure and prose filled;
       also fixed a literal U+0307 combining dot (`u̇` -> `\dot u`) that was a hard
       LaTeX error, and the stale author e-mail.
-- [ ] Update `doc/examples.rst` Scenario 17 checkpoint table (~line 5620) and the
-      `-0.87 %` / `+0.14 %` headline claims — those are pre-fix.
-- [ ] `README.md`: "Final altitude error: **0.87 %**" was assumed pre-fix, but at
-      the recommended dt = 1 ms the measured value *is* **0.87 %** (232.4 vs
-      234.5 km). Check it against `doc/examples.rst` before changing anything.
+- [x] `doc/examples.rst` Scenario 17 checkpoint table and the `-0.87 %` /
+      `+0.14 %` headline claims re-checked 2026-10-12 against a fresh 200 s run
+      of the post-fix binary (clean Release build of `main` at `b3b0e10`,
+      dt = 1 ms). Every cell of the table reproduces, as do −0.46° pitch and
+      8 392.3 / 8 380.7 m/s — the table was already post-fix. Only the prose
+      changed: the S1-burn sentence claimed "within 0.16 %" although its own
+      5 s row shows −0.22 % (the relative error is meaningless below ~770 m;
+      absolute error there is < 1.3 m), and the TAS peak is 0.74 m/s, not
+      0.71. Coast-phase "< 0.16 %" became "0.16 % (0.163 % peak)".
+- [x] `README.md` 0.87 % / 0.14 % claims are correct for dt = 1 ms; unchanged.
+- [x] `scripts/checkpoint_tables.py` added: prints every per-checkpoint table
+      in `doc/examples.rst` (8–17) from a run CSV, in the doc's layout, with
+      the plot scripts' alignment for the peak-error sentences. Use it for the
+      next re-verification instead of reading figures.
 
 Measured against sim 06 at dt = 1 ms:
 
@@ -187,10 +197,17 @@ spread of zero.
 
 Still open:
 
-- [ ] Per-checkpoint **tables** and summary sentences for scenarios 8, 9, 10,
-      11, 12, 13.1--13.4, 15, 16 have not been re-verified against fresh runs.
-      Scenario 1's table was checked and is correct; scenario 17's was checked
-      and is correct.
+- [x] Per-checkpoint **tables** and summary sentences for scenarios 8, 9, 10,
+      11, 12, 13.1--13.4, 15, 16 re-verified 2026-10-12 against fresh runs of
+      the post-fix Release binary with the doc's stated parameters
+      (`scripts/checkpoint_tables.py`). All tables reproduce cell for cell;
+      the quoted peak errors (13.1 pitch 0.63°, 13.3 roll 4.1°, 13.4 roll
+      3.7°, 15 lon 0.0164°, 16 lon 0.0000°) reproduce with the plot scripts'
+      inner-join alignment (interpolating onto the 0.02 s sim grid gives
+      larger transient peaks against the 0.1 s references; do not quote
+      those). One correction: scenario 12 NASA sim 02 TAS at 200 s was
+      610.06 m/s against 1 186.3 KTAS; the knots were right, the m/s is
+      610.28. Scenario 1's and 17's tables were already checked.
 
 ### 4. Confirm the ecos failures are pre-existing
 
@@ -198,6 +215,17 @@ Still open:
 `reset_to_defaults_ecos_ecos` segfault. They exercise an FMI feed-through model
 with no Aetherion dynamics in it, so they should be unrelated — but verify on
 `main` before claiming that in the paper's CI table.
+
+- [x] Confirmed 2026-10-12. The segfaults were issue #54: ecos picks its FMU
+      extractor from `$SHELL` (`vendor/ecos/src/util/unzipper.hpp`), and with
+      SHELL unset under PowerShell it ran `tar`, which on this machine is
+      Git's GNU tar, cannot read a zip, and left `loadFmu()` returning null
+      for ecos to dereference. Fixed by pinning `SHELL=bash` on the ctest
+      entries (`tests/ThirdPartyIntegration/CMakeLists.txt`, PR #57,
+      2026-09-10) — eleven days *before* the RKMK fix merged (PR #60,
+      2026-09-21). The July binaries that showed the failures predate both.
+      All three pass on `main` at `b3b0e10` (ctest, 1.05 s). Safe to call
+      them unrelated in the CI table.
 
 ### 5. Papers — DONE
 
@@ -216,14 +244,25 @@ with no Aetherion dynamics in it, so they should be unrelated — but verify on
 
 ### 6. Housekeeping
 
-- [ ] `doc/conf.py` gained an `\Ad` MathJax macro — keep.
-- [ ] Consider whether `SE3::dexp_inv` should grow a companion
-      `dexp_inv_left(eta)` (= `dexp_inv(-eta)`) so call sites cannot get the sign
-      wrong again. The current fix negates at each of the three call sites, which
-      works but is repeated.
-- [ ] Ninja does not detect header changes in this environment — MSVC's
-      `/showIncludes` output is localised (Turkish, "Not: eklenen dosya"), so the
-      dependency scan yields nothing. **After editing a header, delete the
-      target's `CMakeFiles/<target>.dir` or use `--clean-first`**, otherwise you
-      will test a stale binary. This cost an hour today. Consider setting
-      `VSLANG=1033` in the environment or the CMake presets.
+- [x] `tests/Serialization/test_DAVEMLReader.cpp`: the `[daveml]` cases each
+      wrote and removed the same temporary DML file (`writeMinDML()`), so
+      under `ctest -j 8` one case could delete it under another; seen once on
+      2026-10-13 (`evalMathML ci with unknown varID throws`, passes on
+      rerun). Fixed 2026-10-14: each call writes a randomly named file in the
+      temp directory.
+
+- [x] `doc/conf.py` gained an `\Ad` MathJax macro — keep.
+- [x] `SE3::dexp_inv_left(eta)` (= `dexp_inv(-eta)`) exists (`SE3.h`, since
+      `7593a0d`) and all three RKMK call sites use it; nothing negates by hand.
+- [x] Ninja header tracking. Re-checked 2026-10-14 in
+      `out/build/windows-release`: the cached `msvc_deps_prefix` is the
+      Turkish "Not: eklenen dosya:", it matches what cl prints, `ninja -t deps`
+      lists the Aetherion headers for every object (611 for
+      `test_Replay.cpp.obj`), and touching `EKF.h` schedules exactly the two
+      estimation objects that include it. Header edits are tracked. The stale
+      binary on 2026-10-13 had another cause (most likely a build dir
+      configured with a different prefix than cl printed at build time). If it
+      recurs, compare `msvc_deps_prefix` in `CMakeFiles/rules.ninja` with
+      cl's `/showIncludes` output before reaching for `--clean-first`.
+      `VSLANG=1033` has been in the `windows-base` preset since August; it
+      changes nothing here because the prefix was detected in Turkish.

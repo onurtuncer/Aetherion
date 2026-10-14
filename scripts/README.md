@@ -114,3 +114,58 @@ Possible improvements include:
 ---
 
 End of file.
+
+---
+
+# checkpoint_tables.py
+
+## Purpose
+
+Prints the per-checkpoint validation tables of `doc/examples.rst` for one NASA
+TM-2015-218675 scenario from a fresh Aetherion run, in the layout of the table
+in the documentation and against the reference run the documentation names
+(sim_01 plus the closest run for 8-10; sim 05, or sim 02 where the doc says so,
+for the F-16 cases; sim 06 for 17). The plot scripts write figures and
+`error_summary.csv` files but never print values at the checkpoint times, so
+this is the step that lets a table be re-verified after a change without
+reading numbers off a plot. It prints; it does not edit `doc/`.
+
+## Usage
+
+    python scripts/checkpoint_tables.py <scenario> <aetherion.csv>
+
+    scenario: 8 9 10 11 12 13.1 13.2 13.3 13.4 15 16 17
+
+Run `<aetherion.csv>` with the parameters `doc/examples.rst` states for that
+scenario. Peak errors use the plot scripts' alignment (time rounded to 4
+decimals, inner join), so the figures quoted in the doc reproduce; checkpoint
+rows take the nearest sample, Scenario 17 interpolates (its rows include the
+37.4 s and 131.8 s phase events).
+
+---
+
+# iekf_convention_mc.py
+
+## Purpose
+
+Monte Carlo prototype comparing the left- and right-invariant EKF on
+SE2(3) x R^7 for the open error-convention decision of the sensor fusion work
+(`TODO-sensor-fusion.md`, `doc/sensor_fusion.rst`). One filter with the
+convention as a switch; both conventions see the same truth, sensor samples
+and initial error (paired runs). NumPy only; matplotlib optional for the plot.
+
+Model: launch-centred inertial frame, point-mass gravity with gradient, MEMS
+IMU with random-walk biases, GNSS position and velocity, barometric height
+with random-walk bias. Scenarios: nominal, large and huge initial heading
+error, GNSS outage, far from the origin with weak yaw (float64 and float32
+covariance), nominal in float32.
+
+## Usage
+
+    python scripts/iekf_convention_mc.py                       # all scenarios, 20 runs
+    python scripts/iekf_convention_mc.py --runs 50 --scenarios large_heading outage
+    python scripts/iekf_convention_mc.py --out results/iekf_mc --no-plots
+
+Prints a table per scenario and convention (ANEES, final yaw and position
+RMS, heading convergence time, failed runs) and writes
+`iekf_convention_mc.png` (yaw RMS and ANEES against time) to `--out`.

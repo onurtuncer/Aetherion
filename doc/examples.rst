@@ -2774,8 +2774,10 @@ Step-size convergence
 ^^^^^^^^^^^^^^^^^^^^^
 
 Case 11 is an **open-loop** trim simulation.  A convergence study over
-dt ∈ {0.1, 0.05, 0.02, 0.01} s (200 s run) confirms full numerical
-convergence already at dt = 0.1 s:
+dt ∈ {0.1, 0.05, 0.02, 0.01} s confirms full numerical convergence already
+at dt = 0.1 s.  The study used a separate 200 s run (``--endTime 200``), 20 s
+longer than the 180 s validation run above, so its altitude column is the
+200 s value: at 180 s the same dt = 0.01 run reads 10 012.87 ft (−0.13 ft).
 
 .. list-table::
    :header-rows: 1
@@ -3078,7 +3080,7 @@ Validation Results at t = 200 s
      - +243.9 ft
    * - TAS
      - 609.59 m/s  (1 185.0 KTAS)
-     - 610.06 m/s  (1 186.3 KTAS)
+     - 610.28 m/s  (1 186.3 KTAS)
    * - Mach
      - 2.010434
      - 2.014849
@@ -5718,7 +5720,7 @@ The complete mission sequence is therefore:
 to integration step size.  The three bundled reference runs diverge by 7% in
 final altitude (sim_04/05 at 251 km vs sim_06 at 234 km), purely from step-size
 differences.  Aetherion at :math:`\Delta t = 0.001\ \text{s}` (the TM-recommended
-value) reproduces the trajectory to < 0.16% through the entire coast phase and
+value) reproduces the trajectory to 0.16% (0.163% peak) through the entire coast phase and
 ends within 0.9% of NASA Sim 06 — placing it in the same fine-step cluster.
 
 Building and Running
@@ -6036,9 +6038,11 @@ Run with :math:`\Delta t = 0.001\ \text{s}`, ``--writeInterval 100``,
      - **8 392.3**
      - **8 380.7**
 
-Through the **S1 burn phase** (t = 0–37.4 s) altitude error vs NASA Sim 06
-remains within **0.16%** (0.151% at burnout) and velocity error below
-**1.5 m/s** (0.71 m/s peak).  Through the
+Through the **S1 burn phase** (t = 0–37.4 s) the altitude error vs NASA Sim 06
+is below **1.3 m** for the first 6.5 s (the altitude itself is still under
+770 m there, so the relative error is not yet meaningful) and within **0.16%**
+from there to burnout (0.151% at burnout); the velocity error stays below
+**1.5 m/s** (0.74 m/s peak).  Through the
 **coast phase** (t = 37.4–131.8 s) the 0.16% offset holds unchanged —
 confirming the spatial inertia is correct during ballistic flight.  At S2
 ignition (t = 131.8 s) altitude error is still only **0.16%**, meaning both
