@@ -12,6 +12,7 @@
 #include "Aetherion/ODE/RKMK/Lie/SE3.h"
 #include <Aetherion/Environment/Atmosphere.h>
 #include <Aetherion/Environment/WGS84.h>
+#include <Aetherion/Environment/GeometricAltitude.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
 #include <Aetherion/Environment/WindModels.h>
@@ -73,8 +74,9 @@ namespace Aetherion::FlightDynamics {
             const Eigen::Matrix<S, 3, 1> v_surface_body = g.R.transpose() * omega_E.cross(g.p);
             const Eigen::Matrix<S, 3, 1> v_rel = v_B - v_surface_body;
 
-            // Geocentric altitude: alt ≈ |r_ECI| − Re  (spherical approximation)
-            const S alt = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
+            // Geometric altitude above the WGS-84 ellipsoid. |r| - a (the equatorial
+            // radius) is only right on the equator: at 36 deg latitude it is 7.3 km low.
+            const S alt = Environment::GeometricAltitude_m(g.p);
 
             // US 1976 atmospheric density at altitude
             const S rho = Environment::US1976Atmosphere(alt).rho;
@@ -144,8 +146,8 @@ namespace Aetherion::FlightDynamics {
             const Eigen::Matrix<Sc, 3, 1> v_surface = g.R.transpose() * omega_E.cross(g.p);
             const Eigen::Matrix<Sc, 3, 1> v_rel = v_B - v_surface;
 
-            // Geocentric altitude and US 1976 density
-            const Sc alt = g.p.norm() - Sc(Environment::WGS84::kSemiMajorAxis_m);
+            // Geometric altitude above the WGS-84 ellipsoid and US 1976 density
+            const Sc alt = Environment::GeometricAltitude_m(g.p);
             const Sc rho = Environment::US1976Atmosphere(alt).rho;
 
             // True airspeed — AD-safe sqrt
@@ -237,7 +239,7 @@ namespace Aetherion::FlightDynamics {
             const Eigen::Matrix<S, 3, 1> v_rel = v_B - v_surface_body - v_wind_body;
 
             // ── Altitude, density, drag ───────────────────────────────────
-            const S alt = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
+            const S alt = Environment::GeometricAltitude_m(g.p);
             const S rho = Environment::US1976Atmosphere(alt).rho;
             const S v2      = v_rel.squaredNorm();
             const S v_safe  = SquareRoot(v2 + S(1.0e-30));
@@ -296,8 +298,8 @@ namespace Aetherion::FlightDynamics {
             const Eigen::Matrix<S, 3, 1> v_surface_body =
                 g.R.transpose() * omega_E.cross(g.p);
 
-            // ── Geocentric altitude ───────────────────────────────────────
-            const S h = g.p.norm() - S(Environment::WGS84::kSemiMajorAxis_m);
+            // ── Geometric altitude above the WGS-84 ellipsoid ─────────────
+            const S h = Environment::GeometricAltitude_m(g.p);
 
             // ── Wind in ECI from model (model receives full ECI position) ─
             // The model is responsible for ECEF→ECI rotation if it works in

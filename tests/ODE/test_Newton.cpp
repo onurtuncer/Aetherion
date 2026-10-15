@@ -222,3 +222,79 @@ TEST_CASE("CppADResidualJacobian: NewtonSolve converges using AD Jacobian", "[ne
     REQUIRE(x(0) == Approx(std::sqrt(2.0)).margin(1e-12));
     REQUIRE(x(1) == Approx(std::sqrt(3.0)).margin(1e-12));
 }
+
+// -----------------------------------------------------------------------------
+// Regression: the returned iterate is the one whose convergence is reported.
+//
+// The loop checks convergence before each correction and never after the last
+// one it may take. With max_iters = 1 the single undamped step on a linear
+// residual lands exactly on the root; the result used to say converged = false
+// with r_norm of the previous iterate (1), and threw with throw_on_fail.
+// -----------------------------------------------------------------------------
+
+namespace {
+    void linear_eval(const Eigen::VectorXd& xin, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+        r.resize(1);
+        J.resize(1, 1);
+        r(0) = xin(0) - 1.0;
+        J(0, 0) = 1.0;
+    }
+}
+
+TEST_CASE("NewtonSolve: a root reached on the last permitted iteration is reported as converged",
+          "[newton][regression]") {
+    Core::NewtonOptions opt;
+    opt.max_iters = 1;
+
+    SECTION("undamped") {
+        opt.use_damping = false;
+        Eigen::VectorXd x(1);
+        x(0) = 0.0;
+        const auto res = Core::NewtonSolve(linear_eval, x, opt);
+        CHECK(x(0) == Approx(1.0));
+        CHECK(res.converged);
+        CHECK(res.iters == 1);
+        CHECK(res.r_norm == Approx(0.0).margin(1e-15));
+    }
+
+    SECTION("damped") {
+        opt.use_damping = true;
+        Eigen::VectorXd x(1);
+        x(0) = 0.0;
+        const auto res = Core::NewtonSolve(linear_eval, x, opt);
+        CHECK(x(0) == Approx(1.0));
+        CHECK(res.converged);
+        CHECK(res.r_norm == Approx(0.0).margin(1e-15));
+    }
+
+    SECTION("throw_on_fail does not throw for a converged final iterate") {
+        opt.use_damping = false;
+        opt.throw_on_fail = true;
+        Eigen::VectorXd x(1);
+        x(0) = 0.0;
+        REQUIRE_NOTHROW(Core::NewtonSolve(linear_eval, x, opt));
+    }
+}
+
+TEST_CASE("NewtonSolve: an unconverged result describes the returned iterate", "[newton][regression]") {
+    // x^2 - 2 from x = 1 with one step lands on 1.5, residual 0.25: still not
+    // converged, and r_norm must be 0.25 (the returned x), not 1 (the start).
+    auto eval = [](const Eigen::VectorXd& xin, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+        r.resize(1);
+        J.resize(1, 1);
+        r(0) = xin(0) * xin(0) - 2.0;
+        J(0, 0) = 2.0 * xin(0);
+    };
+    Core::NewtonOptions opt;
+    opt.max_iters = 1;
+    opt.use_damping = false;
+    opt.abs_tol = 1e-12;
+    opt.rel_tol = 0.0;
+    opt.step_tol = 0.0;
+    Eigen::VectorXd x(1);
+    x(0) = 1.0;
+    const auto res = Core::NewtonSolve(eval, x, opt);
+    CHECK(x(0) == Approx(1.5));
+    CHECK_FALSE(res.converged);
+    CHECK(res.r_norm == Approx(0.25));
+}

@@ -11,12 +11,19 @@
 #include <Aetherion/Simulation/Log.h>
 #include <Aetherion/Simulation/SnapshotTraits.h>
 
+#include <format>
 #include <numbers>
 #include <stdexcept>
 #include <cstdlib>
 #include <fstream>
 
 namespace Aetherion::Simulation {
+
+    namespace {
+        /// Consecutive non-converged steps at an unchanged time before run() gives up.
+        /// The retry is deterministic (same state, same h), so more buys nothing.
+        constexpr std::size_t kMaxStalledSteps = 3;
+    }
 
     // ── writeCsvHeader default ────────────────────────────────────────────────
     void Application::writeCsvHeader(std::ofstream& csv) const
@@ -179,6 +186,7 @@ namespace Aetherion::Simulation {
 
         std::size_t step_count = 0;
         std::size_t failed_steps = 0;
+        std::size_t stalled_steps = 0;   // consecutive failures that left the clock where it was
         double      t_current = cfg.startTime;
 
         while (t_current < t_end - 1e-12)
@@ -188,14 +196,30 @@ namespace Aetherion::Simulation {
             const bool   doWrite = (step_count % writeInterval == 0);
             const auto   obs = stepAndRecord(csv, h, doWrite);
 
+            const bool advanced = (obs.time_s != t_current);
             t_current = obs.time_s;
 
             if (!obs.converged)
             {
                 ++failed_steps;
+                // A simulator that rejects a step leaves state and time where they
+                // were, so the next pass retries the identical step. Bound that:
+                // an unchanged input gives an unchanged failure, and an endless
+                // loop must not be mistaken for a run.
+                stalled_steps = advanced ? 0 : stalled_steps + 1;
+                if (stalled_steps >= kMaxStalledSteps)
+                    throw std::runtime_error(std::format(
+                        "Step {} did not converge at t={:.6f} s (residual={:.3e}) and the simulator "
+                        "did not advance; {} consecutive attempts failed, aborting the run.",
+                        step_count, obs.time_s, obs.residual, stalled_steps));
                 AE_CORE_WARN(
-                    "Step {} did not converge at t={:.6f} s  (residual={:.3e}). Continuing.",
-                    step_count, obs.time_s, obs.residual);
+                    "Step {} did not converge at t={:.6f} s  (residual={:.3e}). {}",
+                    step_count, obs.time_s, obs.residual,
+                    advanced ? "Continuing." : "Retrying.");
+            }
+            else
+            {
+                stalled_steps = 0;
             }
 
             if (step_count % 10 == 0 || t_current >= t_end - 1e-12)
