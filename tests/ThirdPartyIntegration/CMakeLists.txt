@@ -60,8 +60,8 @@ catch_discover_tests(
   "_ecos"
   ${_ecos_test_properties})
 
-# ── Eigen ─────────────────────────────────────────────────────────────────────
-# fmu4cpp base class: an FMU state carries the clock (audit F05), in process.
+# ── Eigen ───────────────────────────────────────────────────────────────────── fmu4cpp base class: an FMU state
+# carries the clock (audit F05), in process.
 add_executable(test_fmu4cpp_state test_fmu4cpp_state.cpp "$<TARGET_OBJECTS:fmu4cpp_base>")
 target_link_libraries(test_fmu4cpp_state PRIVATE Catch2::Catch2WithMain)
 target_compile_definitions(test_fmu4cpp_state PRIVATE FMU4CPP_MODEL_IDENTIFIER="counter_state_test")
@@ -91,28 +91,27 @@ target_link_libraries(test_cppad PRIVATE Catch2::Catch2WithMain CppAD::cppad Eig
 
 catch_discover_tests(test_cppad)
 
-# The FMPy smoke test of the packaged F16Plant FMU (trim stability, then
-# checkpoint / rollback / replay with bitwise agreement) drives the FMU through
-# an FMI master, which the C++ tests cannot. It is part of CTest whenever the
-# FMU is built and a Python with fmpy is found; otherwise configure says so and
-# the test is absent rather than silently passing. (Audit R02: this test caught
-# the rollback defect F05 and was not in the gate.)
+# The FMPy smoke test of the packaged F16Plant FMU (trim stability, then checkpoint / rollback / replay with bitwise
+# agreement) drives the FMU through an FMI master, which the C++ tests cannot. It is part of CTest whenever the FMU is
+# built and a Python with fmpy is found; otherwise configure says so and the test is absent rather than silently
+# passing. (Audit R02: this test caught the rollback defect F05 and was not in the gate.)
 if(TARGET F16Plant_fmi2)
   find_package(Python3 COMPONENTS Interpreter QUIET)
   if(Python3_Interpreter_FOUND)
-    execute_process(
-      COMMAND "${Python3_EXECUTABLE}" -c "import fmpy, numpy"
-      RESULT_VARIABLE _aetherion_fmpy_rc
-      OUTPUT_QUIET ERROR_QUIET)
+    execute_process(COMMAND "${Python3_EXECUTABLE}" -c "import fmpy, numpy" RESULT_VARIABLE _aetherion_fmpy_rc
+                    OUTPUT_QUIET ERROR_QUIET)
     if(_aetherion_fmpy_rc EQUAL 0)
-      add_test(
-        NAME f16plant_fmpy_rollback
-        COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/src/FMU/F16Plant/test_f16plant.py"
-                --fmu "${CMAKE_BINARY_DIR}/models/fmi2/F16Plant/F16Plant.fmu"
-                --dt 0.02 --t-end 10 --checkpoint 3)
-      set_tests_properties(f16plant_fmpy_rollback PROPERTIES
-        LABELS "fmu;fmpy" TIMEOUT 900
-        ENVIRONMENT "PYTHONIOENCODING=utf-8")
+      add_test(NAME f16plant_fmpy_rollback
+               COMMAND "${Python3_EXECUTABLE}" "${PROJECT_SOURCE_DIR}/src/FMU/F16Plant/test_f16plant.py" --fmu
+                       "${CMAKE_BINARY_DIR}/models/fmi2/F16Plant/F16Plant.fmu" --dt 0.02 --t-end 10 --checkpoint 3)
+      set_tests_properties(
+        f16plant_fmpy_rollback
+        PROPERTIES LABELS
+                   "fmu;fmpy"
+                   TIMEOUT
+                   900
+                   ENVIRONMENT
+                   "PYTHONIOENCODING=utf-8")
       message(STATUS "f16plant_fmpy_rollback registered (${Python3_EXECUTABLE})")
     else()
       message(STATUS "fmpy not importable by ${Python3_EXECUTABLE}: f16plant_fmpy_rollback is not registered")
