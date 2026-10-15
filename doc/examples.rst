@@ -2197,7 +2197,7 @@ AIAA S-119 DAVE-ML files distributed with the F-16 reference model
        are zero in this model (simplified Stevens & Lewis convention)
 
 Inertial Parameters
-~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""
 
 Loaded from ``F16_inertia.dml`` at the standard 35 % MAC centre-of-gravity
 position (:math:`\Delta x_{CG} = 0`):
@@ -2226,7 +2226,7 @@ position (:math:`\Delta x_{CG} = 0`):
      - 1 331 kg·m²
 
 Aerodynamic Reference Geometry
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""""""""""""""
 
 .. list-table::
    :header-rows: 1
@@ -2360,7 +2360,7 @@ The bisection is valid because :math:`F_{EX}` is monotonically increasing
 in power level at constant altitude and Mach.
 
 Trim Result (Scenario 11)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""""""""
 
 Running the solver at the Scenario-11 flight condition:
 
@@ -2590,7 +2590,7 @@ The simulation assembles the following policy combination, defined in
    using F16Stepper = RigidBody::SixDoFStepper<F16VF>;
 
 F16AeroPolicy
-~~~~~~~~~~~~~
+"""""""""""""
 
 :cpp:class:`F16AeroPolicy` wraps :cpp:class:`DAVEMLAeroModel` and is the
 aerodynamic counterpart of the simpler :cpp:struct:`DragOnlyAeroPolicy` used
@@ -2640,7 +2640,7 @@ in spherical drop tests.  At each integration stage it:
       M_{z} &= C_n \, q \, S \, b \cdot k_{\text{ft·lbf→N·m}}
 
 F16PropPolicy
-~~~~~~~~~~~~~
+"""""""""""""
 
 :cpp:class:`F16PropPolicy` wraps :cpp:class:`DAVEMLPropModel`.  At each
 stage it:
@@ -2663,7 +2663,7 @@ stage it:
    //   M_x   = M_y = M_z = 0  (TEM = 0 in DML)
 
 CppAD Compatibility
-~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""
 
 All three model classes — :cpp:class:`DAVEMLAeroModel`,
 :cpp:class:`DAVEMLPropModel`, and the two policy wrappers — are templated
