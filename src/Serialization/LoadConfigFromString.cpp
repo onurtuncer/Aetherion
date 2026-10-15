@@ -10,7 +10,7 @@
 #include "Aetherion/RigidBody/Config.h"
 #include "Aetherion/Serialization/Json/Config.h"
 #include <stdexcept>
-#include <vendor/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Aetherion::Serialization {
 

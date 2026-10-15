@@ -154,7 +154,9 @@ if(AETHERION_INSTALL)
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-  # descriptionGenerator tool (needed by generateFMU() at SWIL build time)
+  # descriptionGenerator tool (needed by generateFMU() at SWIL build time). fmu4cpp is added EXCLUDE_FROM_ALL, so
+  # without an FMU in the build nothing built it and `cmake --install` failed on the missing executable.
+  set_target_properties(descriptionGenerator PROPERTIES EXCLUDE_FROM_ALL OFF)
   install(TARGETS descriptionGenerator RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
   # ── Headers ────────────────────────────────────────────────────────────────── Aetherion public headers →
@@ -177,6 +179,9 @@ if(AETHERION_INSTALL)
   # Eigen3 headers → include/Eigen/
   install(DIRECTORY vendor/eigen/Eigen DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
+  # nlohmann/json (single header) → include/nlohmann/json.hpp; public Serialization headers include it.
+  install(FILES vendor/nlohmann/json.hpp DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/nlohmann)
+
   # CppAD headers and cppad_lib → alongside Aetherion, so the installed SDK is self-contained (Aetherion's public
   # headers include <cppad/cppad.hpp>). Sources are wherever find_package(CppAD) located them -- vcpkg's vcpkg_installed
   # tree by default. AetherionConfig.cmake prefers a CppAD found on the consumer's own prefix and only falls back to
@@ -188,8 +193,18 @@ if(AETHERION_INSTALL)
     PATTERN "*.h"
     PATTERN "*.hpp")
 
+  # A shared CppAD from a distribution package is found as an unversioned symlink (libcppad_lib.so ->
+  # libcppad_lib.so.N). install(FILES) copies the link, not its target, which left the SDK with a dangling link (pre-DOI
+  # audit F07): install the file the link resolves to as well.
   if(CppAD_LIBRARY_RELEASE)
     install(FILES "${CppAD_LIBRARY_RELEASE}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    file(REAL_PATH "${CppAD_LIBRARY_RELEASE}" _aetherion_cppad_real)
+    if(NOT
+       _aetherion_cppad_real
+       STREQUAL
+       CppAD_LIBRARY_RELEASE)
+      install(FILES "${_aetherion_cppad_real}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
+    endif()
   endif()
 
   if(CppAD_LIBRARY_DEBUG)

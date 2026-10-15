@@ -234,3 +234,30 @@ TEST_CASE("SO3::Log_R: AD tape of Log(Exp(w)) has the identity Jacobian", "[SO3]
         for (int j = 0; j < 3; ++j)
             CHECK_THAT(J[3 * i + j], WithinAbs(i == j ? 1.0 : 0.0, 1e-9));
 }
+
+TEST_CASE("SO3::Log_R: accurate in the ordinary branch just short of a half turn", "[SO3][Log_R][regression]")
+{
+    // theta / sin(theta) grows like 1 / sin^2(theta) towards pi. With sin
+    // taken as sin(acos(c)) an O(1e-13) error in acos(c) became an O(1e-9)
+    // error in the result at pi - 1e-3 (a Linux/GCC CI failure of the half-
+    // turn test). With sin taken from R itself the result is as accurate as
+    // the angle: a sweep over axes and angles in the ordinary branch
+    // (sin^2 theta above 1e-8) must invert Exp_R to 1e-11.
+    int n = 0;
+    for (int i = 0; i < 40; ++i)
+    {
+        const double u = 0.37 * i, v = 0.91 * i + 0.3;
+        const Vec3d a = Vec3d(std::cos(u) * std::sin(v), std::sin(u) * std::sin(v), std::cos(v)).normalized();
+        for (double gap : { 1e-2, 3e-3, 1e-3, 3e-4, 1.2e-4 })
+        {
+            const Vec3d w = (kPi - gap) * a;
+            const Mat3d R = SO3::Exp_R(w);
+            const Vec3d r = SO3::Log_R(R);
+            INFO("gap " << gap << ", axis " << a.transpose());
+            CHECK((r - w).norm() < 1e-11);
+            CHECK((SO3::Exp_R(r) - R).norm() < 1e-11);
+            ++n;
+        }
+    }
+    CHECK(n == 200);
+}

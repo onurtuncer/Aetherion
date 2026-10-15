@@ -575,5 +575,13 @@ subclasses to override:
 ``--writeInterval`` from ``argv``, throwing ``std::invalid_argument`` on
 unknown flags, missing values, or constraint violations.
 
+``--startTime`` is the epoch of the run: it sets the initial Earth rotation
+angle, and the ``time`` column of the output is the time elapsed since it, so
+a run lasts ``endTime - startTime`` and its first row is at ``time = 0``.
+(Until v0.17.2 a nonzero ``--startTime`` ran from 0 to ``endTime`` instead --
+pre-DOI audit finding F08.)
+A step that fails without advancing the clock is retried at most three times;
+then the run stops with an error instead of looping (audit finding F09).
+
 .. doxygennamespace:: Aetherion::Simulation
    :content-only:

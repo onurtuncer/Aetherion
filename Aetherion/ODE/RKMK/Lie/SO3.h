@@ -153,7 +153,6 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         Log_R(const Eigen::Matrix<S, 3, 3>& R)
     {
         using std::acos;
-        using std::sin;
 
         const Eigen::Matrix<S, 3, 1> half_vee{
             S(0.5) * (R(2, 1) - R(1, 2)),
@@ -170,7 +169,14 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         const S theta = acos(c);
 
         const S eps2   = S(1e-8);
-        const S s      = sin(theta);
+        // sin(theta) as R carries it, not sin(acos(c)): theta / sin(theta)
+        // grows like 1 / sin^2(theta) near pi, so the 1e-13 error acos(c)
+        // has there was amplified a millionfold at pi - 1e-3 (seen on GCC,
+        // hidden by MSVC's rounding). With |half_vee| the axis is exact and
+        // only theta carries that error. The 1e-300 keeps the derivative of
+        // the square root finite at the identity, in the branch CondExp
+        // discards.
+        const S s      = Core::sqrt_s(s2 + S(1e-300));
         const S s_safe = Core::condexp_lt(s2, eps2, S(1), s);
         const S k      = Core::condexp_lt(s2, eps2, S(1) + s2 / S(6), theta / s_safe);
         const Eigen::Matrix<S, 3, 1> w_sin = k * half_vee;  // series near I, theta/sin(theta) elsewhere
