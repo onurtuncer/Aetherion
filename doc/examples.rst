@@ -2674,9 +2674,17 @@ complete VectorField (gravity + aero + prop) at each Newton stage.  The two
 critical compatibility fixes required for the DAVE-ML lookup tables are:
 
 * **Index selection** — the breakpoint segment index is a step function
-  of the input and cannot be differentiated.  It is evaluated using the
-  current tape value via ``CppAD::Value(CppAD::Var2Par(input))``, which
-  extracts the numeric value without recording it as a variable.
+  of the input and cannot be differentiated.  It is found by comparing the
+  AD input with the breakpoints; CppAD records those comparisons, so the
+  index is a constant of the tape and the tape reports (through
+  ``compare_change_number()``) when a later evaluation falls in another
+  segment, at which point the Newton evaluator re-records it.  Reducing
+  the input to a ``double`` first, as was done until v0.17.2, recorded
+  nothing, and a step whose stages crossed a breakpoint was solved on the
+  wrong segment (pre-DOI audit finding F01).  All six F-16 scenarios (11, 12,
+  13.1--13.4) were rerun after the change with the run parameters stated in
+  this chapter: no checkpoint value in their tables moves by more than one
+  unit in the sixth significant figure, so the tables stand as printed.
 * **Interpolation weight** — the weight :math:`w = (x - b_i)/(b_{i+1} - b_i)`
   *must* be computed from the original AD variable ``input`` (not from the
   frozen double) so that ``d(weight)/d(input) = 1/\text{span}`` is correctly

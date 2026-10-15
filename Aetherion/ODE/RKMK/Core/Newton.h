@@ -233,19 +233,37 @@ namespace Aetherion::ODE::RKMK::Core {
         using MatN = Eigen::Matrix<double, N, N>;
 
         explicit FixedCppADResidualJacobian(Functor f)
-            : functor_(std::move(f)), tape_(build_tape_()) {
+            : functor_(std::move(f)) {
             static_assert(N > 0, "FixedCppADResidualJacobian requires N > 0");
         }
 
+        // The tape is recorded at the first point it is asked about and kept
+        // while the branches recorded on it (piecewise conditions, table
+        // segments, atmosphere layers -- any comparison the functor makes on
+        // AD values) still hold at x. CppAD reports a comparison going the
+        // other way through compare_change_number(); the tape is then
+        // re-recorded at x. Without this the Newton iteration converged on the
+        // residual of the region the tape was recorded in, not on the
+        // residual of the function (pre-DOI audit finding F01).
         void operator()(const VecN& x, VecN& r, MatN& J) const {
             const std::vector<double> xd = to_std_(x);
-            const std::vector<double> yd = tape_.Forward(0, xd);
+            if (!taped_) { tape_ = build_tape_(xd); taped_ = true; }
+            std::vector<double> yd = tape_.Forward(0, xd);
+            if (tape_.compare_change_number() > 0) {
+                tape_ = build_tape_(xd);
+                yd = tape_.Forward(0, xd);
+                ++retapes_;
+            }
             for (int i = 0; i < N; ++i) r(i) = yd[(std::size_t)i];
             const std::vector<double> jd = tape_.Jacobian(xd);
             for (int rr = 0; rr < N; ++rr)
                 for (int cc = 0; cc < N; ++cc)
                     J(rr, cc) = jd[(std::size_t)rr * N + (std::size_t)cc];
         }
+
+        /// Number of times the tape was re-recorded because a comparison on it
+        /// went the other way at the point being evaluated.
+        [[nodiscard]] int retape_count() const noexcept { return retapes_; }
 
     private:
         static std::vector<double> to_std_(const VecN& x) {
@@ -254,12 +272,12 @@ namespace Aetherion::ODE::RKMK::Core {
             return v;
         }
 
-        CppAD::ADFun<double> build_tape_() const {
+        CppAD::ADFun<double> build_tape_(const std::vector<double>& at) const {
             using AD = CppAD::AD<double>;
             using VecAD = Eigen::Matrix<AD, N, 1>;
 
             CppAD::vector<AD> ax(N);
-            for (int i = 0; i < N; ++i) ax[(std::size_t)i] = AD(0.0);
+            for (int i = 0; i < N; ++i) ax[(std::size_t)i] = AD(at[(std::size_t)i]);
             CppAD::Independent(ax);
 
             VecAD x_ad;
@@ -271,11 +289,14 @@ namespace Aetherion::ODE::RKMK::Core {
 
             CppAD::ADFun<double> f;
             f.Dependent(ax, ay);
+            f.compare_change_count(1);   // off by default: switch change tracking on
             return f;
         }
 
         Functor                      functor_;
         mutable CppAD::ADFun<double> tape_;
+        mutable bool                 taped_{ false };
+        mutable int                  retapes_{ 0 };
     };
 
     // Factory: deduces Functor, N must be specified explicitly.
@@ -340,14 +361,22 @@ namespace Aetherion::ODE::RKMK::Core {
             : functor_(std::move(f)), n_(n) {
             if (n_ <= 0) throw std::invalid_argument(
                 "CppADResidualJacobian: n must be > 0");
-            tape_ = build_tape_();
         }
 
+        // Recorded at the first point asked about; re-recorded whenever a
+        // comparison on the tape goes the other way at x (see the fixed-size
+        // evaluator above).
         void operator()(const Eigen::VectorXd& x,
             Eigen::VectorXd& r,
             Eigen::MatrixXd& J) const {
             const std::vector<double> xd = to_std_(x);
-            const std::vector<double> yd = tape_.Forward(0, xd);
+            if (!taped_) { tape_ = build_tape_(xd); taped_ = true; }
+            std::vector<double> yd = tape_.Forward(0, xd);
+            if (tape_.compare_change_number() > 0) {
+                tape_ = build_tape_(xd);
+                yd = tape_.Forward(0, xd);
+                ++retapes_;
+            }
             r.resize(n_);
             for (int i = 0; i < n_; ++i) r(i) = yd[(std::size_t)i];
             const std::vector<double> jd = tape_.Jacobian(xd);
@@ -359,6 +388,10 @@ namespace Aetherion::ODE::RKMK::Core {
 
         [[nodiscard]] int size() const noexcept { return n_; }
 
+        /// Number of times the tape was re-recorded because a comparison on it
+        /// went the other way at the point being evaluated.
+        [[nodiscard]] int retape_count() const noexcept { return retapes_; }
+
     private:
         std::vector<double> to_std_(const Eigen::VectorXd& x) const {
             std::vector<double> v((std::size_t)n_);
@@ -366,11 +399,11 @@ namespace Aetherion::ODE::RKMK::Core {
             return v;
         }
 
-        CppAD::ADFun<double> build_tape_() const {
+        CppAD::ADFun<double> build_tape_(const std::vector<double>& at) const {
             using AD = CppAD::AD<double>;
 
             CppAD::vector<AD> ax((std::size_t)n_);
-            for (int i = 0; i < n_; ++i) ax[(std::size_t)i] = AD(0.0);
+            for (int i = 0; i < n_; ++i) ax[(std::size_t)i] = AD(at[(std::size_t)i]);
             CppAD::Independent(ax);
 
             Eigen::Matrix<AD, Eigen::Dynamic, 1> x_ad(n_);
@@ -382,12 +415,15 @@ namespace Aetherion::ODE::RKMK::Core {
 
             CppAD::ADFun<double> f;
             f.Dependent(ax, ay);
+            f.compare_change_count(1);   // off by default: switch change tracking on
             return f;
         }
 
         Functor              functor_;
         int                  n_{ 0 };
         mutable CppAD::ADFun<double> tape_;
+        mutable bool         taped_{ false };
+        mutable int          retapes_{ 0 };
     };
 
 } // namespace Aetherion::ODE::RKMK::Core
@@ -420,7 +456,8 @@ namespace Aetherion::ODE::RKMK::Core {
 ////
 //// Notes:
 ////  - Convergence decisions are performed in double (NewtonOptions uses double).
-////  - CppAD tape is recorded once at construction and reused each iteration.
+////  - CppAD tape is recorded at the first evaluation point and re-recorded
+////    whenever a comparison recorded on it changes result.
 ////
 //#pragma once
 //

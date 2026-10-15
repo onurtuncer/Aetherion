@@ -155,9 +155,10 @@ shared by the aerodynamic, propulsion, and control-law models.
        bearing calculations.
    * - ``<lt>``, ``<gt>``, ``<leq>``, ``<geq>``, ``<eq>``
      - Comparison operators; each returns 1.0 (true) or 0.0 (false).
-       For the AD path the branch condition is extracted as plain
-       ``double`` via ``CppAD::Value()``, so it does not enter the
-       differentiation tape.
+       The comparison is made on ``S``: for the AD path CppAD evaluates
+       it on the current values and records it on the tape, so a later
+       evaluation on the other side is reported by
+       ``compare_change_number()`` (see *CppAD strategy* below).
    * - ``<piecewise>`` / ``<piece>`` / ``<otherwise>``
      - Conditional selection; first matching ``<piece>`` is evaluated.
        Inner ``<piecewise>`` blocks are supported (required by the
@@ -177,12 +178,22 @@ explicit saturation limits.
 **Kahn's topological sort** of the variable dependency graph, ensuring
 each calculated output is evaluated after all its inputs are ready.
 
-*CppAD strategy* — the class is templated on a scalar type ``S``.
-Branching conditions are always extracted as plain ``double`` via
-``CppAD::Value()``, so branch selection never enters the AD tape.
-Arithmetic inside the selected branch is fully carried out in ``S``,
-giving correct first derivatives everywhere except at discontinuous
-switching boundaries (where derivatives are undefined in any case).
+*CppAD strategy* — the class is templated on a scalar type ``S``.  A
+tape records one region of the model: the ``<piece>`` taken by every
+``<piecewise>`` and the segment of every table the inputs fell in when
+it was recorded.  Every decision that selects that region is a
+comparison made on ``S``, which CppAD records, so ``ADFun::Forward(0, x)``
+at an ``x`` in another region reports it through
+``compare_change_number()`` (change tracking is off by default on an
+``ADFun``; the holder calls ``compare_change_count(1)``), and the holder
+re-records the tape at ``x``.  The Newton evaluators in
+``ODE/RKMK/Core/Newton.h`` do exactly that.  Until v0.17.2 the branch
+operands were reduced to ``double`` with ``CppAD::Value()``, which recorded
+nothing: a tape kept across a breakpoint or a piecewise boundary silently
+evaluated the other region's expression, and an implicit step could report
+convergence on it (pre-DOI audit finding F01).  Arithmetic inside the
+selected region is carried out in ``S``, so first derivatives are exact
+inside a segment; at a boundary they are one-sided.
 
 *Generic access* via ``evaluateRaw``: accepts and returns a
 ``std::unordered_map<std::string, S>`` keyed by DAVE-ML variable

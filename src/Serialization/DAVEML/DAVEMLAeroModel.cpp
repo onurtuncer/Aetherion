@@ -62,15 +62,17 @@ static std::vector<double> parseDoubles(const std::string& text)
 template<class S> static S evalNode(const pugi::xml_node& node,
                                     const std::unordered_map<std::string, S>& vars);
 
-// Reduce an AD-typed value to its plain-double value for branching decisions
-// (index selection, piecewise conditions, comparisons). Non-differentiable by
-// design — only the *value* being carried forward stays in S.
-template<class S>
-static double toDouble(const S& v)
-{
-    if constexpr (std::is_same_v<S, double>) return v;
-    else return CppAD::Value(CppAD::Var2Par(v));
-}
+// Branching (comparisons, piecewise conditions, table-segment selection) is
+// done on S itself. For S = double that is an ordinary comparison. For
+// S = CppAD::AD<double> the comparison is evaluated on the current values AND
+// recorded on the tape, so that a later ADFun::Forward(0, x) at a point where
+// it would go the other way reports it through compare_change_number(): the
+// tape's branch is then known to be stale and the caller re-records. (Reducing
+// the operand to a double with CppAD::Value(Var2Par(.)) recorded nothing, and
+// a tape kept across a breakpoint or a piecewise boundary silently evaluated
+// the other region's expression -- pre-DOI audit finding F01.) The value of a
+// recorded comparison does not depend on the comparison being recorded, so
+// the double and AD paths agree wherever the tape is valid.
 
 // ── Arithmetic: times / plus / minus / divide / power ──────────────────────
 template<class S>
@@ -140,20 +142,21 @@ static S evalCsymbolOp(const pugi::xml_node& op,
 }
 
 // ── Comparisons (return S(1) for true, S(0) for false) ──────────────────────
-// Used as piecewise conditions; branching itself is resolved in plain double.
+// Used as piecewise conditions. The comparison is made on S so that CppAD
+// records it (see the note above evalNode).
 template<class S>
 static S evalComparisonOp(const std::string& opName,
                           const std::vector<pugi::xml_node>& operands,
                           const std::unordered_map<std::string, S>& vars)
 {
-    double lhsD = toDouble(evalNode<S>(operands[0], vars));
-    double rhsD = toDouble(evalNode<S>(operands[1], vars));
+    const S lhs = evalNode<S>(operands[0], vars);
+    const S rhs = evalNode<S>(operands[1], vars);
     bool cond = false;
-    if      (opName == "lt")  cond = lhsD <  rhsD;
-    else if (opName == "gt")  cond = lhsD >  rhsD;
-    else if (opName == "leq") cond = lhsD <= rhsD;
-    else if (opName == "geq") cond = lhsD >= rhsD;
-    else                      cond = lhsD == rhsD;  // "eq"
+    if      (opName == "lt")  cond = (lhs <  rhs);
+    else if (opName == "gt")  cond = (lhs >  rhs);
+    else if (opName == "leq") cond = (lhs <= rhs);
+    else if (opName == "geq") cond = (lhs >= rhs);
+    else                      cond = (lhs == rhs);  // "eq"
     return cond ? S(1.0) : S(0.0);
 }
 
@@ -207,7 +210,7 @@ static S evalPiecewiseNode(const pugi::xml_node& node,
         if (cn == "piece") {
             auto val  = child.first_child();            // expression
             auto cond = val.next_sibling();              // condition
-            bool condTrue = toDouble(evalNode<S>(cond, vars)) != 0.0;
+            const bool condTrue = (evalNode<S>(cond, vars) != S(0.0));  // recorded for AD
             if (condTrue && !matched) {
                 result = evalNode<S>(val, vars);
                 matched = true;
@@ -256,29 +259,32 @@ static S ndInterp(const std::vector<double>& data,
     std::size_t ndim = dims.size();
     assert(inputs.size() == ndim);
 
-    // For each dimension find the segment index (using double) and weight (S)
+    // For each dimension find the segment index and the weight. The segment
+    // search compares the S input with the breakpoints, so for AD every
+    // comparison is recorded and a later evaluation in another segment is
+    // reported by compare_change_number(); the index itself is a constant of
+    // the tape, as it must be. Below the first breakpoint the first segment is
+    // used, above the last the last one (the weight then extrapolates
+    // linearly, as before; independentVarRef limits are applied elsewhere).
     std::vector<std::size_t> idx(ndim);
     std::vector<S>           wt(ndim);
 
     for (std::size_t d = 0; d < ndim; ++d) {
         const auto& bp = *bps[d];
-        double xd{};
-        if constexpr (std::is_same_v<S, double>) xd = inputs[d];
-        else xd = CppAD::Value(CppAD::Var2Par(inputs[d]));
+        assert(bp.size() >= 2);
+        const S& x = inputs[d];
+        const std::size_t last = bp.size() - 2;   // index of the last segment
 
-        // Clamp to breakpoint range
-        xd = std::max(bp.front(), std::min(bp.back(), xd));
-
-        // Find segment
+        // One comparison per breakpoint passed: below the table the first
+        // one already fails and segment 0 is used, above it the loop runs to
+        // the last segment. Points in the same segment record the same
+        // comparison results, so no spurious change is reported.
         std::size_t i = 0;
-        while (i + 1 < bp.size() - 1 && bp[i + 1] <= xd) ++i;
+        while (i < last && !(x < S(bp[i + 1]))) ++i;   // x >= bp[i+1]: next segment
         idx[d] = i;
 
-        double span = bp[i + 1] - bp[i];
-        // Use the original AD input for the weight so CppAD records the correct
-        // derivative (d wt/d input = 1/span). The double xd is only used above
-        // for index selection, which is non-differentiable and treated as constant.
-        wt[d] = (span > 0.0) ? (inputs[d] - S(bp[i])) / S(span) : S(0.0);
+        const double span = bp[i + 1] - bp[i];
+        wt[d] = (span > 0.0) ? (x - S(bp[i])) / S(span) : S(0.0);
     }
 
     // N-D bilinear interpolation: iterate over 2^ndim vertices

@@ -21,15 +21,16 @@
 // CppAD note
 // ──────────
 // DAVEMLAeroModel::evaluate<S>() works with S = double and S = CppAD::AD<double>.
-// Breakpoint-segment selection uses the plain-double value of the input (via
-// CppAD::Value() in the AD path) so that indices are always integers, while
-// interpolation weights are computed with full S precision — giving correct
-// first derivatives everywhere except at breakpoint boundaries.
-//
-// Piecewise branches are resolved with the double value of the condition
-// operand (again via CppAD::Value), then a CppAD-safe conditional expression
-// is used: CondExpLt(cond, S(0), s_then, s_else).  This keeps the tape
-// smooth for optimisation.
+// Breakpoint-segment selection and piecewise conditions are comparisons on S.
+// For AD they are evaluated on the current values and recorded on the tape,
+// so a tape is exact in the region (segments, branches) it was recorded in and
+// ADFun::compare_change_number() > 0 after Forward(0, x) says that x lies in
+// another region: the holder of the tape must then re-record at x (the Newton
+// evaluators in ODE/RKMK/Core/Newton.h do). Note that ADFun's change
+// counting is off by default; call compare_change_count(1) on the tape.
+// Interpolation weights are computed in S, so first derivatives are exact
+// inside a segment. Min/max limits on variables use CondExpLt/CondExpGt and
+// need no re-recording.
 // ------------------------------------------------------------------------------
 
 #pragma once
