@@ -291,6 +291,8 @@ TEST_CASE("NewtonSolve: empty unknown vector", "[newton]") {
     const auto res = Core::NewtonSolve(eval, x, opt);
     REQUIRE_FALSE(res.converged);
     REQUIRE(res.iters == 0);
+}
+
 // -----------------------------------------------------------------------------
 // Regression: the returned iterate is the one whose convergence is reported.
 //
