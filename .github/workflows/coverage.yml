@@ -1,16 +1,21 @@
 name: Coverage
 
+# Coverage runs on main only (and on demand). It builds Debug with coverage
+# instrumentation and runs the whole suite, slow convergence tests included:
+# 2-4 hours a run, holding a runner throughout. On pull requests that cost
+# more than it told: the GCC, Windows and sanitizer jobs already gate
+# correctness there, and the coverage figure that matters (the Codecov badge)
+# is main's.
 on:
   push:
     branches: [ main ]
-  pull_request:
+  workflow_dispatch:
 
-# A newer push to the same branch or PR cancels this run: the account runs at
-# most 20 jobs at a time, and superseded runs used to hold those slots for
-# hours. Runs on main are never cancelled, so every merge is checked.
+# Only the newest commit's coverage matters, so a newer push to main cancels a
+# run still in progress instead of queueing behind it.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: true
 
 jobs:
   upload-coverage:

@@ -198,7 +198,7 @@ if(AETHERION_INSTALL)
   # audit F07): install the file the link resolves to as well.
   if(CppAD_LIBRARY_RELEASE)
     install(FILES "${CppAD_LIBRARY_RELEASE}" DESTINATION ${CMAKE_INSTALL_LIBDIR})
-    file(REAL_PATH "${CppAD_LIBRARY_RELEASE}" _aetherion_cppad_real)
+    get_filename_component(_aetherion_cppad_real "${CppAD_LIBRARY_RELEASE}" REALPATH)
     if(NOT
        _aetherion_cppad_real
        STREQUAL
