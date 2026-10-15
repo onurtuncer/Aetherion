@@ -33,6 +33,8 @@
 
 #pragma once
 
+#include <numbers>
+
 #include <Eigen/Dense>
 
 #include <Aetherion/ODE/RKMK/Lie/Math.h>
@@ -130,9 +132,10 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
     //
     // Rotation vector of R: theta = acos((tr R - 1)/2), axis from the
     // antisymmetric part, w = theta/(2 sin theta) · vee(R - Rᵀ). The series
-    // 1 + sin²theta/6 replaces theta/sin(theta) below theta = 1e-4. Not
-    // defined at theta = pi (sin theta = 0); the estimator only takes
-    // logarithms of small errors, so that case is not handled.
+    // 1 + sin²theta/6 replaces theta/sin(theta) below theta = 1e-4. Within
+    // 1e-4 of theta = pi the axis is taken from the symmetric part of R and
+    // the angle from sin theta instead (see below), so neither the clamp on
+    // c nor acos's conditioning at -1 reaches a live branch.
     //
     // AD note: acos has an infinite derivative at the identity, so neither
     // the switch nor the series may be written in terms of theta -- even
@@ -170,8 +173,40 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         const S s      = sin(theta);
         const S s_safe = Core::condexp_lt(s2, eps2, S(1), s);
         const S k      = Core::condexp_lt(s2, eps2, S(1) + s2 / S(6), theta / s_safe);
+        const Eigen::Matrix<S, 3, 1> w_sin = k * half_vee;  // series near I, theta/sin(theta) elsewhere
 
-        return k * half_vee;
+        // sin²theta is also below eps2 within 1e-4 rad of theta = pi, where
+        // half_vee carries almost nothing and the series would return a tiny
+        // vector for a half turn. There the axis is read from the symmetric
+        // part instead: R + Rᵀ - 2cI = 2(1 - c) a aᵀ, so the column with the
+        // largest diagonal entry is a multiple of a. Its norm, 2(1 - c)|a_i|,
+        // is bounded away from zero (1 - c >= 1e-12 by the clamp, |a_i| >=
+        // 1/sqrt3), so the dead branch is finite under AD. The sign comes
+        // from half_vee = sin(theta) a; at theta = pi exactly both signs are
+        // the same rotation. The angle is pi - sin(theta) to O(1e-12) in
+        // this band (sin x = x - x³/6), and sin(theta) = sqrt(s2) is accurate
+        // to rounding where acos(c) is not; the 1e-300 keeps d/dx sqrt finite
+        // at s2 = 0 in the dead branch.
+        const Eigen::Matrix<S, 3, 3> B =
+            R + R.transpose() - (S(2) * c) * Eigen::Matrix<S, 3, 3>::Identity();
+        const auto pick = [](const S& lhs, const S& rhs,
+                             const Eigen::Matrix<S, 3, 1>& t, const Eigen::Matrix<S, 3, 1>& f) {
+            Eigen::Matrix<S, 3, 1> out;
+            for (int i = 0; i < 3; ++i) out(i) = Core::condexp_ge(lhs, rhs, t(i), f(i));
+            return out;
+        };
+        const Eigen::Matrix<S, 3, 1> col =
+            pick(B(0, 0), B(1, 1), pick(B(0, 0), B(2, 2), B.col(0), B.col(2)),
+                                   pick(B(1, 1), B(2, 2), B.col(1), B.col(2)));
+        const Eigen::Matrix<S, 3, 1> axis = col / Core::sqrt_s(col.squaredNorm());
+        const S sign = Core::condexp_lt(axis.dot(half_vee), S(0), S(-1), S(1));
+        const S theta_pi = S(std::numbers::pi) - Core::sqrt_s(s2 + S(1e-300));
+        const Eigen::Matrix<S, 3, 1> w_pi = (sign * theta_pi) * axis;
+
+        Eigen::Matrix<S, 3, 1> w;
+        for (int i = 0; i < 3; ++i)
+            w(i) = Core::condexp_lt(s2, eps2, Core::condexp_lt(c, S(0), w_pi(i), w_sin(i)), w_sin(i));
+        return w;
     }
 
 } // namespace Aetherion::ODE::RKMK::Lie::SO3

@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 #include <Aetherion/Simulation/Application.h>
 #include <Aetherion/Simulation/ArgumentParser.h>
@@ -370,4 +371,79 @@ TEST_CASE("Log: Init populates core and client loggers", "[Log]") {
     REQUIRE(Log::GetClientLogger() != nullptr);
     REQUIRE(Log::GetCoreLogger() == Log::GetCoreLogger());
     REQUIRE(Log::GetClientLogger() == Log::GetClientLogger());
+}
+// ─────────────────────────────────────────────────────────────
+// StalledStub — reports non-convergence *without* advancing time
+// for the first `stalls` calls, then steps normally. This is what
+// ISimulator::step() does on a rejected step: state and time stay
+// put, so the loop would retry the identical step for ever.
+// ─────────────────────────────────────────────────────────────
+class StalledStub : public Application
+{
+public:
+    explicit StalledStub(FakeArgv& args, int stalls)
+        : Application(args.argc(), args.argv())
+        , stalls_(stalls)
+        , time_(getConfig().startTime)
+    {
+    }
+
+    int stepsCalled() const { return stepsCalled_; }
+
+protected:
+    void prepareSimulation()                  const override {}
+    void writeInitialSnapshot(std::ofstream&) const override {}
+    void logFinalSummary()                    const override {}
+
+    StepObservation stepAndRecord(std::ofstream&, double h, bool) const override
+    {
+        ++stepsCalled_;
+        StepObservation obs;
+        if (stepsCalled_ <= stalls_) {
+            obs.time_s    = time_;      // unchanged
+            obs.converged = false;
+            obs.residual  = 0.5;
+            return obs;
+        }
+        time_ += h;
+        obs.time_s    = time_;
+        obs.converged = true;
+        return obs;
+    }
+
+private:
+    int            stalls_;
+    mutable int    stepsCalled_ = 0;
+    mutable double time_        = 0.0;
+};
+
+TEST_CASE("Application::run aborts a step that keeps failing without advancing",
+          "[Application][run][regression]") {
+    const std::string outFile = "_ae_run_test_stalled.csv";
+    FakeArgv args{ "test_program",
+        "--timeStep",       "0.1",
+        "--endTime",        "0.3",
+        "--outputFileName", outFile.c_str() };
+    StalledStub app(args, /*stalls=*/1000);
+
+    REQUIRE_THROWS_AS(app.run(), std::runtime_error);
+    // Bounded by kMaxStalledSteps in Application.cpp, not by the stub.
+    CHECK(app.stepsCalled() == 3);
+
+    std::filesystem::remove(outFile);
+}
+
+TEST_CASE("Application::run recovers when a stalled step eventually advances",
+          "[Application][run][regression]") {
+    const std::string outFile = "_ae_run_test_stall_recover.csv";
+    FakeArgv args{ "test_program",
+        "--timeStep",       "0.1",
+        "--endTime",        "0.3",
+        "--outputFileName", outFile.c_str() };
+    StalledStub app(args, /*stalls=*/2);
+
+    REQUIRE_NOTHROW(app.run());
+    CHECK(app.stepsCalled() == 2 + 3);
+
+    std::filesystem::remove(outFile);
 }

@@ -64,7 +64,8 @@ namespace Aetherion::Estimation
 template <class S>
 struct UpdateResult
 {
-  bool applied = false;  ///< false: the configuration does not carry this measurement; nothing changed
+  bool applied = false;  ///< false: the configuration does not carry this measurement, or it was rejected; nothing changed
+  bool rejected = false; ///< true: innovation or covariance not finite, or S not positive definite; nothing changed
   int dim = 0;           ///< measurement dimension
   S nis = S(0);          ///< normalised innovation squared, z^T S^-1 z (chi^2 with `dim` dof if consistent)
 };
@@ -189,15 +190,30 @@ private:
 
   UpdateResult<S> update(const VecX& z, const MatX& H, const MatX& R)
   {
+    UpdateResult<S> r;
+    r.dim = static_cast<int>(z.size());
+
+    // A measurement that is not a number, or whose innovation covariance does
+    // not factorise, must not reach the state: one NaN in K makes every later
+    // estimate NaN with no fault reported. Refuse it and say so instead.
+    if (!z.allFinite() || !R.allFinite())
+    {
+      r.rejected = true;
+      return r;
+    }
+
     const int n = cfg_.dimension();
     const MatX PHt = P_ * H.transpose();
     const MatX Sm = H * PHt + R;
     const auto ldlt = Sm.ldlt();
+    if (ldlt.info() != Eigen::Success || !ldlt.isPositive())
+    {
+      r.rejected = true;
+      return r;
+    }
     const MatX K = ldlt.solve(PHt.transpose()).transpose();  // P H^T S^-1
 
-    UpdateResult<S> r;
     r.applied = true;
-    r.dim = static_cast<int>(z.size());
     r.nis = z.dot(ldlt.solve(z));
 
     const VecX delta = K * z;
