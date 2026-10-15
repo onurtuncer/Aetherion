@@ -9,28 +9,19 @@
 
 # ######################################################################################################################
 
+# Where the fmu4cpp export templates are. Three layouts: the source tree (vendor/fmu4cpp next to cmake/), a historical
+# one, and an installed SDK (lib/cmake/Aetherion/fmu4cpp, where the install rules put the template). The lookup used to
+# be done -- and fail fatally -- when this file was included, and AetherionConfig.cmake includes it, so
+# find_package(Aetherion) failed for every consumer of an installed SDK, FMU or not (pre-DOI audit F07). It is now
+# resolved when generateFMU() is called.
 set(_fmu4cpp_cmake_dir "${CMAKE_CURRENT_LIST_DIR}")
 get_filename_component(_aetherion_root "${_fmu4cpp_cmake_dir}/.." ABSOLUTE)
-
-# New layout (vendored)
-set(_candidate_vendor "${_aetherion_root}/vendor/fmu4cpp")
-# Old layout (historical)
-set(_candidate_legacy "${_aetherion_root}")
-
-if(EXISTS "${_candidate_vendor}/export/src/fmu4cpp/model_identifier.cpp.in")
-  set(_fmu4cpp_root "${_candidate_vendor}")
-elseif(EXISTS "${_candidate_legacy}/export/src/fmu4cpp/model_identifier.cpp.in")
-  set(_fmu4cpp_root "${_candidate_legacy}")
-else()
-  message(
-    FATAL_ERROR
-      "Cannot locate fmu4cpp export templates.\n"
-      "Tried:\n"
-      "  ${_candidate_vendor}/export/src/fmu4cpp/model_identifier.cpp.in\n"
-      "  ${_candidate_legacy}/export/src/fmu4cpp/model_identifier.cpp.in\n"
-      "Check your vendor/fmu4cpp checkout (must contain export/...).")
-endif()
-
+set(_fmu4cpp_root "")
+foreach(_candidate IN ITEMS "${_aetherion_root}/vendor/fmu4cpp" "${_aetherion_root}" "${_fmu4cpp_cmake_dir}/fmu4cpp")
+  if(NOT _fmu4cpp_root AND EXISTS "${_candidate}/export/src/fmu4cpp/model_identifier.cpp.in")
+    set(_fmu4cpp_root "${_candidate}")
+  endif()
+endforeach()
 set(_fmu4cpp_root "${_fmu4cpp_root}" CACHE INTERNAL "")
 
 # ###################################################################3
@@ -56,6 +47,13 @@ set(_fmu4cpp_root "${_fmu4cpp_root}" CACHE INTERNAL "")
 #
 # cmake-lint: disable=R0912,R0915
 function(generateFMU modelIdentifier)
+  if(NOT _fmu4cpp_root)
+    message(
+      FATAL_ERROR
+        "generateFMU: cannot locate the fmu4cpp export templates "
+        "(export/src/fmu4cpp/model_identifier.cpp.in) next to ${_fmu4cpp_cmake_dir}. "
+        "Check the vendor/fmu4cpp checkout or the Aetherion installation.")
+  endif()
 
   set(options WITH_SOURCES)
   set(oneValueArgs RESOURCE_FOLDER DOC_FOLDER DESTINATION)

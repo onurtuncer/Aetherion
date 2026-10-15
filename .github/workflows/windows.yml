@@ -5,6 +5,13 @@ on:
     branches: [ main ]
   pull_request:
 
+# A newer push to the same branch or PR cancels this run: the account runs at
+# most 20 jobs at a time, and superseded runs used to hold those slots for
+# hours. Runs on main are never cancelled, so every merge is checked.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
 jobs:
   build-static-library:
     runs-on: windows-latest

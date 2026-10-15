@@ -25,6 +25,8 @@
 #include <cmath>
 #include <fstream>
 #include <filesystem>
+#include <random>
+#include <string>
 
 using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinAbs;
@@ -93,7 +95,9 @@ const char* const kMathOpDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 
 std::string writeMathOpDML()
 {
-    const std::string path = "_ae_test_mathop.dml";
+    // One file per process: CTest runs every test case as its own process, and
+    // with -j they wrote and deleted one shared path under each other.
+    static const std::string path = "_ae_test_mathop_" + std::to_string(std::random_device{}()) + ".dml";
     std::ofstream f(path);
     f << kMathOpDML;
     return path;

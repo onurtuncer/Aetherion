@@ -166,7 +166,7 @@ notation for spatial transforms, keeping the frame algebra explicit and AD-frien
 
 ## Validated Examples
 
-Every example reproduces an atmospheric check case from **NASA TM-2015-218675** (NESC 6-DOF flight simulation check cases).
+Each example below runs an atmospheric check case from **NASA TM-2015-218675** (NESC 6-DOF flight simulation check cases). How closely it reproduces the reference runs -- per scenario, per quantity, and against the spread among the NASA implementations themselves, which for some scenarios exceeds Aetherion's difference from any one of them -- is tabulated in the [validation chapter](https://onurtuncer.github.io/Aetherion/examples.html); `scripts/checkpoint_tables.py` regenerates those tables from a run. (`EkfReplay`, a sensor-fusion tool, is not a check case.)
 
 | Example | Vehicle | Scenario |
 |---------|---------|----------|
@@ -193,7 +193,7 @@ Every example reproduces an atmospheric check case from **NASA TM-2015-218675** 
 ## Testing
 
 - **Catch2 unit tests** covering every module
-- **Numerical validation** against NASA technical reports (sub-percent agreement)
+- **Numerical validation** against the NASA TM-2015-218675 reference runs, scenario by scenario (see the validation chapter for the quantities, tolerances and reference spread)
 - **Estimator validation**: Jacobians against finite differences and CppAD; filter consistency (NEES/NIS) in both error conventions on an analytic manoeuvring truth
 - **AddressSanitizer + UBSanitizer** run on every CI push
 - **Clang-Tidy static analysis** and **IWYU** include hygiene enforced on every PR
@@ -230,6 +230,10 @@ git clone https://github.com/onurtuncer/Aetherion.git
 cd Aetherion
 git submodule update --init --recursive
 ```
+
+The only submodule, `vendor/ecos`, is used by the test suite alone. A source archive without submodules (a GitHub
+release tarball, `git archive`) builds the library, examples and FMUs with `-DAETHERION_BUILD_TESTS=OFF`; with tests on,
+configure stops and says to initialise the submodule.
 
 CppAD is consumed through [vcpkg](https://vcpkg.io) on every platform, so a vcpkg clone is
 the only external prerequisite:

@@ -177,7 +177,14 @@ namespace Aetherion::Simulation {
     {
         const auto& cfg = getConfig();
         const double dt = cfg.timeStep;
-        const double t_end = cfg.endTime;
+        // Simulation time is the time elapsed since the start: every simulator
+        // starts its clock at 0 and reports elapsed time, and the examples
+        // take --startTime as the epoch (the initial Earth rotation angle).
+        // The loop therefore runs for endTime - startTime of elapsed time.
+        // It used to start its own clock at startTime and then adopt the
+        // simulator's elapsed time after the first step, so a nonzero
+        // --startTime ran from 0 to endTime instead (pre-DOI audit F08).
+        const double t_end = cfg.endTime - cfg.startTime;
 
         const std::size_t writeInterval = cfg.writeInterval;
 
@@ -187,7 +194,7 @@ namespace Aetherion::Simulation {
         std::size_t step_count = 0;
         std::size_t failed_steps = 0;
         std::size_t stalled_steps = 0;   // consecutive failures that left the clock where it was
-        double      t_current = cfg.startTime;
+        double      t_current = 0.0;   // elapsed
 
         while (t_current < t_end - 1e-12)
         {

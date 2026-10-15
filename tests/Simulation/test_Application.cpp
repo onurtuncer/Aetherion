@@ -287,7 +287,7 @@ public:
     explicit RunableStub(FakeArgv& args, int failOnStep = -1)
         : Application(args.argc(), args.argv())
         , failOnStep_(failOnStep)
-        , time_(getConfig().startTime)
+        , time_(0.0)   // elapsed, as every simulator reports it
     {
     }
 
@@ -399,7 +399,7 @@ public:
     explicit StalledStub(FakeArgv& args, int stalls)
         : Application(args.argc(), args.argv())
         , stalls_(stalls)
-        , time_(getConfig().startTime)
+        , time_(0.0)   // elapsed, as every simulator reports it
     {
     }
 
@@ -459,6 +459,25 @@ TEST_CASE("Application::run recovers when a stalled step eventually advances",
 
     REQUIRE_NOTHROW(app.run());
     CHECK(app.stepsCalled() == 2 + 3);
+
+    std::filesystem::remove(outFile);
+}
+
+TEST_CASE("Application::run with a nonzero --startTime runs for endTime - startTime",
+          "[Application][run][regression]") {
+    // F08: --startTime 1 --endTime 1.3 --timeStep 0.1 is a 0.3 s run. The loop
+    // used to start at 1, adopt the simulator's elapsed time (0.1) after the
+    // first step and run on to 1.3 elapsed: 13 steps.
+    const std::string outFile = "_ae_run_test_starttime.csv";
+    FakeArgv args{ "test_program",
+        "--startTime",      "1.0",
+        "--endTime",        "1.3",
+        "--timeStep",       "0.1",
+        "--outputFileName", outFile.c_str() };
+    RunableStub app(args);
+
+    REQUIRE_NOTHROW(app.run());
+    CHECK(app.stepsCalled() == 3);
 
     std::filesystem::remove(outFile);
 }

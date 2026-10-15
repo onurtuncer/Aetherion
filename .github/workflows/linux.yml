@@ -2,8 +2,16 @@ name: GCC Release Build
 
 on:
   push:
+    branches: [ main ]
     paths-ignore: ['README.md']
   pull_request:
+
+# A newer push to the same branch or PR cancels this run: the account runs at
+# most 20 jobs at a time, and superseded runs used to hold those slots for
+# hours. Runs on main are never cancelled, so every merge is checked.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   build:
@@ -32,3 +40,44 @@ jobs:
 
       - name: Run tests
         run: ctest --preset=gcc-release
+
+  # The installed SDK, consumed on its own (pre-DOI audit F07): configure with
+  # install rules and without tests (so also without the ecos submodule, R01),
+  # install, move the installation, then build and run tests/InstallConsumer
+  # against the moved prefix only.
+  install-consumer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Cache vcpkg dependencies
+        uses: ./.github/actions/vcpkg-cache
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y gcc-13 g++-13 unzip
+
+      - name: Configure compiler alternatives
+        run: |
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+      - name: Configure (install rules, no tests, no submodules)
+        run: >
+          cmake --preset=gcc-release -B build/install-check
+          -DAETHERION_INSTALL=ON -DAETHERION_BUILD_TESTS=OFF -DAETHERION_BUILD_EXAMPLES=OFF
+          -DAETHERION_BUILD_FMUS=OFF -DAETHERION_BUILD_SIMULATION=OFF
+          -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/aetherion-install
+
+      - name: Build and install
+        run: |
+          cmake --build build/install-check
+          cmake --install build/install-check
+
+      - name: Relocate the installation
+        run: mv "${{ runner.temp }}/aetherion-install" "${{ runner.temp }}/aetherion-moved"
+
+      - name: Build and run the consumer against the moved installation
+        run: |
+          cmake -S tests/InstallConsumer -B "${{ runner.temp }}/consumer" -DCMAKE_BUILD_TYPE=Release                 -DCMAKE_PREFIX_PATH="${{ runner.temp }}/aetherion-moved"
+          cmake --build "${{ runner.temp }}/consumer"
+          "${{ runner.temp }}/consumer/aetherion_consumer"
