@@ -163,6 +163,19 @@ namespace Aetherion::ODE::RKMK::Core {
                 }
             }
 
+            // The loop tests convergence before each correction, never after
+            // the last one it is allowed to take. Evaluate the iterate that is
+            // actually returned, so a root reached on the final iteration is
+            // reported as such and r_norm / dx_norm describe x, not its
+            // predecessor.
+            std::forward<EvalT>(eval)(x, r, J);
+            res.r_norm = r.norm();
+            res.dx_norm = J.colPivHouseholderQr().solve(-r).norm();
+            if (newton_converged(res.r_norm, res.r0_norm, res.dx_norm, x.norm(), opt)) {
+                res.converged = true;
+                return res;
+            }
+
             res.converged = false;
             if (opt.throw_on_fail)
                 throw std::runtime_error(

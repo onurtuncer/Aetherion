@@ -32,6 +32,8 @@ static_assert(Aetherion::Environment::is_wind_model_v<Aetherion::Environment::Li
 static_assert(Aetherion::Environment::is_wind_model_v<Aetherion::FlightDynamics::GeodesicCallbackWind>);
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Coordinate/LocalToInertial.h>
+#include <numbers>
 
 namespace {
     using Vec3d  = Eigen::Vector3d;
@@ -256,4 +258,28 @@ TEST_CASE("WindAwareDragPolicy<ZeroWind>: AD<double> evaluates", "[wind][policy]
     WindAwareDragPolicy<ZeroWind> wp{ 0.1, 0.018241, ZeroWind{} };
     auto w = wp(g, nu, AD(14.59), AD(0.0));
     CHECK(w.f.tail<3>().norm() != AD(0.0));  // drag is non-zero
+}
+
+// -----------------------------------------------------------------------------
+// Regression: the shear's altitude is the height above the WGS-84 ellipsoid.
+// |r| - a is the height only on the equator; at 36 deg N and 3000 m it is
+// -4.35 km, and a 0.01 (m/s)/m gradient gave -43.5 m/s instead of +30 m/s.
+// -----------------------------------------------------------------------------
+TEST_CASE("LinearWindShear: altitude at 36 deg latitude is the geodetic height", "[wind][shear][regression]")
+{
+    constexpr double kDeg = std::numbers::pi / 180.0;
+    constexpr double h_m = 3000.0;
+    const auto r = Aetherion::Coordinate::GeodeticToECEF(36.0 * kDeg, 0.0, h_m);
+    const Vec3d r_ECI(r[0], r[1], r[2]);
+
+    const auto ws = Aetherion::Environment::LinearWindShear::from_ned(
+        /*gradient_N=*/0.01, /*gradient_E=*/0.0, /*intercept_N=*/0.0, /*intercept_E=*/0.0,
+        36.0 * kDeg, 0.0);
+    const Vec3d v = ws.velocity_ecef(r_ECI, 0.0);
+
+    // 0.1 m of height error is 1e-3 m/s here.
+    CHECK_THAT(v.norm(), WithinAbs(0.01 * h_m, 2e-3));
+    // North wind: no east (y) component on the prime meridian, and upward z.
+    CHECK_THAT(v.y(), WithinAbs(0.0, 1e-9));
+    CHECK(v.z() > 0.0);
 }

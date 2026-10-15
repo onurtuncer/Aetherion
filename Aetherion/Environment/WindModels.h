@@ -50,6 +50,7 @@
 
 #include <Eigen/Dense>
 #include <Aetherion/Environment/WGS84.h>
+#include <Aetherion/Environment/GeometricAltitude.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
 #include <type_traits>
 #include <cmath>
@@ -218,8 +219,9 @@ struct LinearWindShear {
     template<class S>
     Eigen::Matrix<S, 3, 1>
     velocity_ecef(const Eigen::Matrix<S,3,1>& r_eci, S /*t*/) const {
-        // Geocentric altitude
-        const S h  = r_eci.norm() - S(WGS84::kSemiMajorAxis_m);
+        // Geometric altitude above the WGS-84 ellipsoid (not |r| - a, which is
+        // only the height on the equator)
+        const S h  = GeometricAltitude_m(r_eci);
         // Linear NED wind at altitude h
         const S vN = S(grad_N) * h + S(int_N);
         const S vE = S(grad_E) * h + S(int_E);

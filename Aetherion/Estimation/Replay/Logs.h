@@ -138,13 +138,19 @@ struct LogSet
     r.horizontalAccuracy_m = t.at(i, C::kHorizAcc);
     r.verticalAccuracy_m = t.at(i, C::kVertAcc);
     const double ft = t.at(i, C::kFixType);
-    r.valid = std::isfinite(r.lat_deg) && std::isfinite(r.lon_deg) && std::isfinite(r.alt_m) && std::isfinite(ft);
+    // Every field the update will read must be a number. A partly written row
+    // (a cell empty or unparseable, Csv.h gives NaN) is an epoch without a
+    // usable fix, not a fix with NaN in its covariance: that would reach the
+    // filter and leave every later estimate NaN.
+    r.valid = std::isfinite(r.lat_deg) && std::isfinite(r.lon_deg) && std::isfinite(r.alt_m) &&
+              std::isfinite(ft) && std::isfinite(r.horizontalAccuracy_m) && std::isfinite(r.verticalAccuracy_m);
     r.fixType = r.valid ? static_cast<int>(std::lround(ft)) : 0;
-    r.hasVelocity = vel && r.valid;
-    if (r.hasVelocity)
+    if (vel && r.valid)
     {
       r.velNed_m_s = Eigen::Vector3d(t.at(i, C::kVelNorth), t.at(i, C::kVelEast), t.at(i, C::kVelDown));
       r.speedAccuracy_m_s = t.at(i, C::kSpeedAcc);
+      // The position may still be used when the velocity cells are not numbers.
+      r.hasVelocity = r.velNed_m_s.allFinite() && std::isfinite(r.speedAccuracy_m_s);
     }
     out.push_back(r);
   }
