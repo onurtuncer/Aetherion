@@ -99,3 +99,20 @@ TEST_CASE("Sidecar parsing", "[estimation][logcontract]")
   REQUIRE_THROWS_WITH(parseSidecar("lat0_deg=1\n"),
                       ContainsSubstring("lon0_deg") && ContainsSubstring("realtime_factor"));
 }
+
+TEST_CASE("Sidecar parsing: no trailing newline, lines without '='", "[estimation][logcontract]")
+{
+  const auto kv = parseSidecar("# run 7\nlat0_deg = 36.5\nlon0_deg=-121.25\nalt0_ft=10000\n\n"
+                               "gps_latency_s=0.2\nrealtime_factor=1");
+  REQUIRE(kv.at("lat0_deg") == "36.5");  // trimmed
+  REQUIRE(kv.at("realtime_factor") == "1");
+  REQUIRE_FALSE(kv.contains("# run 7"));
+}
+
+TEST_CASE("Out-of-range log ids fall through safely", "[estimation][logcontract]")
+{
+  const auto bogus = static_cast<Log>(99);
+  REQUIRE(defaultFileName(bogus) == "?");
+  REQUIRE(requiredColumns(bogus, kNavBaroGnss16).empty());
+  REQUIRE(defaultFileName(Log::Truth) == "truth.csv");
+}

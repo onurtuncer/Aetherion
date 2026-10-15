@@ -418,3 +418,27 @@ TEST_CASE("F16Environment: evaluates with CppAD::AD<double> in wind, gust and of
     const auto wAD = pol(gAD, nuAD, AD(kMass_kg), AD(t));
     for (int i = 0; i < 6; ++i) CHECK_THAT(CppAD::Value(wAD.f(i)), WithinRel(wd.f(i), 1e-12));
 }
+
+TEST_CASE("F16Environment: setControls is the same as constructing with the deflections", "[f16env][controls]")
+{
+    if (kAeroFile.empty() || kPropFile.empty()) return;
+    const Scene s = makeScene();
+    const double v = kV_fps * kFt_m;
+    const auto st = makeState(s, v, v, 0.0, 0.0);
+
+    const double el = s.trim.el_deg - 2.0, ail = 1.5, rdr = -3.0;
+    const F16AeroPolicy built(s.aero, el, ail, rdr, kXcg_ft * kFt_m);
+    F16AeroPolicy updated = makePolicy(s);
+    const auto w0 = updated(pose(st), st.nu_B, kMass_kg, 0.0);
+    updated.setControls(el, ail, rdr);
+
+    const auto wb = built(pose(st), st.nu_B, kMass_kg, 0.0);
+    const auto wu = updated(pose(st), st.nu_B, kMass_kg, 0.0);
+    for (int i = 0; i < 6; ++i) CHECK(wu.f(i) == wb.f(i));
+
+    // Two degrees of trailing-edge-up elevator from trim raise the pitching
+    // moment; aileron and rudder bring in roll and yaw.
+    CHECK(wu.f(1) > w0.f(1));
+    CHECK(wu.f(0) != w0.f(0));
+    CHECK(wu.f(2) != w0.f(2));
+}

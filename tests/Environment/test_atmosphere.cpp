@@ -194,3 +194,13 @@ TEST_CASE("US1976Atmosphere - pressure/density monotonic and fields positive",
         s_prev = s;
     }
 }
+
+TEST_CASE("US1976Atmosphere - below sea level clamps to sea level", "[US1976][values]")
+{
+    const auto sl = Environment::US1976Atmosphere(0.0);
+    const auto s = Environment::US1976Atmosphere(-250.0);
+    REQUIRE(s.T == Approx(sl.T));
+    REQUIRE(s.p == Approx(sl.p));
+    REQUIRE(s.rho == Approx(sl.rho));
+    REQUIRE(s.a == Approx(sl.a));
+}

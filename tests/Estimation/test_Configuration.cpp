@@ -82,3 +82,13 @@ TEST_CASE("Error convention is part of the hash", "[estimation][configuration]")
   REQUIRE(li.find("error=left-invariant\n") != std::string::npos);
   REQUIRE(kNavBaroGnss16.hash(ErrorConvention::LeftInvariant) != kNavBaroGnss16.hash(ErrorConvention::RightInvariant));
 }
+
+TEST_CASE("Enum names, including out-of-range values", "[estimation][configuration]")
+{
+  REQUIRE(toString(ErrorConvention::LeftInvariant) == "left-invariant");
+  REQUIRE(toString(ErrorConvention::RightInvariant) == "right-invariant");
+  REQUIRE(toString(static_cast<ErrorConvention>(42)) == "?");
+  REQUIRE(toString(ProcessModelKind::Strapdown) == "strapdown");
+  REQUIRE(toString(ProcessModelKind::RandomWalk) == "random_walk");
+  REQUIRE(toString(static_cast<ProcessModelKind>(42)) == "?");
+}

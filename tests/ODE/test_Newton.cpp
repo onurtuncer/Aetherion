@@ -223,6 +223,76 @@ TEST_CASE("CppADResidualJacobian: NewtonSolve converges using AD Jacobian", "[ne
     REQUIRE(x(1) == Approx(std::sqrt(3.0)).margin(1e-12));
 }
 
+TEST_CASE("NewtonSolve: line-search failure throws when throw_on_fail=true", "[newton]") {
+    Eigen::VectorXd x(1);
+    x(0) = 0.0;
+
+    auto eval = [&](const Eigen::VectorXd&, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+        r.resize(1);
+        J.resize(1, 1);
+        r(0) = 1.0;
+        J(0, 0) = 1.0;
+        };
+
+    Core::NewtonOptions opt;
+    opt.max_iters = 10;
+    opt.use_damping = true;
+    opt.sufficient_decrease = 0.9;
+    opt.damping_init = 1.0;
+    opt.damping_shrink = 0.5;
+    opt.damping_min = 0.9;
+    opt.max_line_search_iters = 10;
+    opt.throw_on_fail = true;
+
+    REQUIRE_THROWS_AS(Core::NewtonSolve(eval, x, opt), std::runtime_error);
+}
+
+TEST_CASE("NewtonSolve: exhausted line search still takes the last damped step", "[newton]") {
+    // Constant residual: no step is ever accepted by the sufficient-decrease
+    // test, but with a single line-search iteration lambda (0.5) stays above
+    // damping_min, so the damped step is taken anyway and iteration goes on.
+    Eigen::VectorXd x(1);
+    x(0) = 0.0;
+
+    auto eval = [&](const Eigen::VectorXd&, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+        r.resize(1);
+        J.resize(1, 1);
+        r(0) = 1.0;
+        J(0, 0) = 1.0;
+        };
+
+    Core::NewtonOptions opt;
+    opt.max_iters = 3;
+    opt.use_damping = true;
+    opt.sufficient_decrease = 0.9;
+    opt.damping_init = 1.0;
+    opt.damping_shrink = 0.5;
+    opt.damping_min = 1e-6;
+    opt.max_line_search_iters = 1;
+    opt.throw_on_fail = false;
+
+    const auto res = Core::NewtonSolve(eval, x, opt);
+
+    REQUIRE_FALSE(res.converged);
+    REQUIRE(res.last_lambda == Approx(0.5));
+    // Three damped steps of 0.5 * dx, dx = -1 each time.
+    REQUIRE(x(0) == Approx(-1.5));
+}
+
+TEST_CASE("NewtonSolve: empty unknown vector", "[newton]") {
+    auto eval = [](const Eigen::VectorXd&, Eigen::VectorXd&, Eigen::MatrixXd&) {};
+    Eigen::VectorXd x;
+
+    Core::NewtonOptions opt;
+    opt.throw_on_fail = true;
+    REQUIRE_THROWS_AS(Core::NewtonSolve(eval, x, opt), std::invalid_argument);
+
+    opt.throw_on_fail = false;
+    const auto res = Core::NewtonSolve(eval, x, opt);
+    REQUIRE_FALSE(res.converged);
+    REQUIRE(res.iters == 0);
+}
+
 // -----------------------------------------------------------------------------
 // Regression: the returned iterate is the one whose convergence is reported.
 //
