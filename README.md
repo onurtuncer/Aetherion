@@ -35,10 +35,10 @@ The name *ΑΙΘΕΡΙΟΝ* (Aetherion) is inspired by the Greek word **Αιθή
 The flagship simulation is a full 6-DOF two-stage rocket gravity-turn ascent from the equator, validated against **NASA TM-2015-218675 Atmospheric Scenario 17**. The trajectory below was produced entirely by Aetherion using Featherstone SVA dynamics, the US1976 atmosphere, WGS84 gravity, and an implicit RADAU-IIA integrator.
 
 <p align="center">
-  <img src="doc/_static/atmos17/trajectory_3d.png" width="680" alt="Two-Stage Rocket 3D Trajectory — Aetherion vs. NASA Sim 06"/>
+  <img src="doc/_static/atmos17/trajectory_3d.png" width="680" alt="Two-Stage Rocket 3D Trajectory — Aetherion between NASA Sims 04 and 06"/>
 </p>
 
-Stage separation, coast phases, and second-stage ignition are all captured with sub-percent error versus the NASA reference (Δt = 1 ms). Final altitude error: **0.87 %** · Final speed error: **0.14 %** (8 392 vs 8 381 m/s true airspeed).
+Through the first-stage burn and the coast, altitude and speed stay within 0.2 % of the NASA reference runs (Δt = 1 ms). After the second-stage burn the two NASA reference implementations themselves differ by 17 km in altitude and 10° in pitch; Aetherion ends between them: **248 km** against 251 km (Sim 04) and 234 km (Sim 06), **8 363 m/s** against 8 336 and 8 381 m/s.
 
 ---
 
