@@ -96,35 +96,72 @@ LABELS = {
 
 # ── Unit conversion: NASA Sim 06 → SI ────────────────────────────────────────
 def convert_sim06_to_si(df: pd.DataFrame) -> pd.DataFrame:
+    """NASA CSV (imperial) -> SI frame with Aetherion column names.
+
+    Sims 04/05 carry fewer columns than Sim 06 (no gePosition, altitude
+    rate or true airspeed); a column the file does not have is left out,
+    and trueAirspeed_m_s is rebuilt from the Earth-relative velocity.
+    """
+    df = df.rename(columns=lambda c: c.strip())
     si = pd.DataFrame()
-    si["time"]                              = df["time"]
-    si["altitudeMsl_m"]                     = df["altitudeMsl_ft"]          * FT2M
-    si["longitude_rad"]                     = df["longitude_deg"]           * DEG2RAD
-    si["latitude_rad"]                      = df["latitude_deg"]            * DEG2RAD
-    si["localGravity_m_s2"]                 = df["localGravity_ft_s2"]      * FT2M
-    si["eulerAngle_rad_Yaw"]                = df["eulerAngle_deg_Yaw"]      * DEG2RAD
-    si["eulerAngle_rad_Pitch"]              = df["eulerAngle_deg_Pitch"]    * DEG2RAD
-    si["eulerAngle_rad_Roll"]               = df["eulerAngle_deg_Roll"]     * DEG2RAD
-    si["bodyAngularRateWrtEi_rad_s_Roll"]   = df["bodyAngularRateWrtEi_deg_s_Roll"]  * DEG2RAD
-    si["bodyAngularRateWrtEi_rad_s_Pitch"]  = df["bodyAngularRateWrtEi_deg_s_Pitch"] * DEG2RAD
-    si["bodyAngularRateWrtEi_rad_s_Yaw"]    = df["bodyAngularRateWrtEi_deg_s_Yaw"]   * DEG2RAD
-    si["altitudeRateWrtMsl_m_s"]            = df["altitudeRateWrtMsl_ft_min"] * FTMIN_TO_MS
-    si["speedOfSound_m_s"]                  = df["speedOfSound_ft_s"]       * FT2M
-    si["airDensity_kg_m3"]                  = df["airDensity_slug_ft3"]     * SLUG_FT3_TO_KG_M3
-    si["ambientPressure_Pa"]                = df["ambientPressure_lbf_ft2"] * LBF_FT2_TO_PA
-    si["ambientTemperature_K"]              = df["ambientTemperature_dgR"]  * RANKINE_TO_K
-    si["aero_bodyForce_N_X"]                = df["aero_bodyForce_lbf_X"]   * LBF_TO_N
-    si["aero_bodyForce_N_Y"]                = df["aero_bodyForce_lbf_Y"]   * LBF_TO_N
-    si["aero_bodyForce_N_Z"]                = df["aero_bodyForce_lbf_Z"]   * LBF_TO_N
-    si["aero_bodyMoment_Nm_L"]              = df["aero_bodyMoment_ftlbf_L"] * FTLBF_TO_NM
-    si["aero_bodyMoment_Nm_M"]              = df["aero_bodyMoment_ftlbf_M"] * FTLBF_TO_NM
-    si["aero_bodyMoment_Nm_N"]              = df["aero_bodyMoment_ftlbf_N"] * FTLBF_TO_NM
-    si["mach"]                              = df["mach"]
-    si["dynamicPressure_Pa"]                = df["dynamicPressure_lbf_ft2"] * LBF_FT2_TO_PA
-    si["trueAirspeed_m_s"]                  = df["trueAirspeed_nmi_h"]      * KNOT2MS
-    si["feVelocity_m_s_X"]                  = df["feVelocity_ft_s_X"]       * FT2M
-    si["feVelocity_m_s_Y"]                  = df["feVelocity_ft_s_Y"]       * FT2M
-    si["feVelocity_m_s_Z"]                  = df["feVelocity_ft_s_Z"]       * FT2M
+    si["time"] = df["time"]
+    if "altitudeMsl_ft" in df.columns:
+        si["altitudeMsl_m"] = df["altitudeMsl_ft"] * FT2M
+    if "longitude_deg" in df.columns:
+        si["longitude_rad"] = df["longitude_deg"] * DEG2RAD
+    if "latitude_deg" in df.columns:
+        si["latitude_rad"] = df["latitude_deg"] * DEG2RAD
+    if "localGravity_ft_s2" in df.columns:
+        si["localGravity_m_s2"] = df["localGravity_ft_s2"] * FT2M
+    if "eulerAngle_deg_Yaw" in df.columns:
+        si["eulerAngle_rad_Yaw"] = df["eulerAngle_deg_Yaw"] * DEG2RAD
+    if "eulerAngle_deg_Pitch" in df.columns:
+        si["eulerAngle_rad_Pitch"] = df["eulerAngle_deg_Pitch"] * DEG2RAD
+    if "eulerAngle_deg_Roll" in df.columns:
+        si["eulerAngle_rad_Roll"] = df["eulerAngle_deg_Roll"] * DEG2RAD
+    if "bodyAngularRateWrtEi_deg_s_Roll" in df.columns:
+        si["bodyAngularRateWrtEi_rad_s_Roll"] = df["bodyAngularRateWrtEi_deg_s_Roll"] * DEG2RAD
+    if "bodyAngularRateWrtEi_deg_s_Pitch" in df.columns:
+        si["bodyAngularRateWrtEi_rad_s_Pitch"] = df["bodyAngularRateWrtEi_deg_s_Pitch"] * DEG2RAD
+    if "bodyAngularRateWrtEi_deg_s_Yaw" in df.columns:
+        si["bodyAngularRateWrtEi_rad_s_Yaw"] = df["bodyAngularRateWrtEi_deg_s_Yaw"] * DEG2RAD
+    if "altitudeRateWrtMsl_ft_min" in df.columns:
+        si["altitudeRateWrtMsl_m_s"] = df["altitudeRateWrtMsl_ft_min"] * FTMIN_TO_MS
+    if "speedOfSound_ft_s" in df.columns:
+        si["speedOfSound_m_s"] = df["speedOfSound_ft_s"] * FT2M
+    if "airDensity_slug_ft3" in df.columns:
+        si["airDensity_kg_m3"] = df["airDensity_slug_ft3"] * SLUG_FT3_TO_KG_M3
+    if "ambientPressure_lbf_ft2" in df.columns:
+        si["ambientPressure_Pa"] = df["ambientPressure_lbf_ft2"] * LBF_FT2_TO_PA
+    if "ambientTemperature_dgR" in df.columns:
+        si["ambientTemperature_K"] = df["ambientTemperature_dgR"] * RANKINE_TO_K
+    if "aero_bodyForce_lbf_X" in df.columns:
+        si["aero_bodyForce_N_X"] = df["aero_bodyForce_lbf_X"] * LBF_TO_N
+    if "aero_bodyForce_lbf_Y" in df.columns:
+        si["aero_bodyForce_N_Y"] = df["aero_bodyForce_lbf_Y"] * LBF_TO_N
+    if "aero_bodyForce_lbf_Z" in df.columns:
+        si["aero_bodyForce_N_Z"] = df["aero_bodyForce_lbf_Z"] * LBF_TO_N
+    if "aero_bodyMoment_ftlbf_L" in df.columns:
+        si["aero_bodyMoment_Nm_L"] = df["aero_bodyMoment_ftlbf_L"] * FTLBF_TO_NM
+    if "aero_bodyMoment_ftlbf_M" in df.columns:
+        si["aero_bodyMoment_Nm_M"] = df["aero_bodyMoment_ftlbf_M"] * FTLBF_TO_NM
+    if "aero_bodyMoment_ftlbf_N" in df.columns:
+        si["aero_bodyMoment_Nm_N"] = df["aero_bodyMoment_ftlbf_N"] * FTLBF_TO_NM
+    if "mach" in df.columns:
+        si["mach"] = df["mach"]
+    if "dynamicPressure_lbf_ft2" in df.columns:
+        si["dynamicPressure_Pa"] = df["dynamicPressure_lbf_ft2"] * LBF_FT2_TO_PA
+    if "trueAirspeed_nmi_h" in df.columns:
+        si["trueAirspeed_m_s"] = df["trueAirspeed_nmi_h"] * KNOT2MS
+    if "feVelocity_ft_s_X" in df.columns:
+        si["feVelocity_m_s_X"] = df["feVelocity_ft_s_X"] * FT2M
+    if "feVelocity_ft_s_Y" in df.columns:
+        si["feVelocity_m_s_Y"] = df["feVelocity_ft_s_Y"] * FT2M
+    if "feVelocity_ft_s_Z" in df.columns:
+        si["feVelocity_m_s_Z"] = df["feVelocity_ft_s_Z"] * FT2M
+    if "trueAirspeed_m_s" not in si.columns:
+        si["trueAirspeed_m_s"] = np.sqrt(si["feVelocity_m_s_X"]**2 + si["feVelocity_m_s_Y"]**2
+                                         + si["feVelocity_m_s_Z"]**2)
     return si
 
 
@@ -340,8 +377,13 @@ def _phase_mask(t):
     return p
 
 
-def plot_trajectory_3d(t, sim_df, ref_df, out_dir, dpi, fmt, show):
-    """3D trajectory: East (km) vs Up/Altitude (km), with North ~0."""
+def plot_trajectory_3d(t, sim_df, ref_df, out_dir, dpi, fmt, show,
+                       ref2_df=None, ref_label="NASA Sim 06", ref2_label="NASA Sim 04"):
+    """3D trajectory: East (km) vs Up/Altitude (km), with North ~0.
+
+    ref_df is the nominated reference; ref2_df, when given, is the other NASA
+    implementation, so the figure shows where Aetherion sits between the two.
+    """
 
     # Aetherion geodetic coords
     lon_ae  = sim_df["longitude_rad"].values
@@ -355,6 +397,11 @@ def plot_trajectory_3d(t, sim_df, ref_df, out_dir, dpi, fmt, show):
     alt_ref = ref_df["altitudeMsl_m"].values
     E_ref, N_ref, U_ref = _traj_to_enu(lon_ref, lat_ref, alt_ref)
 
+    if ref2_df is not None:
+        alt_ref2 = ref2_df["altitudeMsl_m"].values
+        E_ref2, N_ref2, U_ref2 = _traj_to_enu(ref2_df["longitude_rad"].values,
+                                              ref2_df["latitude_rad"].values, alt_ref2)
+
     phase = _phase_mask(t)
     phase_names = ["S1 burn (0–37.4 s)", "Coast (37.4–131.8 s)",
                    "S2 burn (131.8–193 s)", "Final coast (193–200 s)"]
@@ -365,7 +412,7 @@ def plot_trajectory_3d(t, sim_df, ref_df, out_dir, dpi, fmt, show):
 
     # ── Draw Earth surface arc ─────────────────────────────────────────────
     # Flat ground plane at U=0, coloured light green/blue
-    E_max = max(E_ae.max(), E_ref.max()) * 1.05
+    E_max = max(E_ae.max(), E_ref.max(), E_ref2.max() if ref2_df is not None else 0.0) * 1.05
     E_gr  = np.linspace(0, E_max, 40)
     N_gr  = np.linspace(-5, 5, 10)
     EG, NG = np.meshgrid(E_gr, N_gr)
@@ -379,10 +426,14 @@ def plot_trajectory_3d(t, sim_df, ref_df, out_dir, dpi, fmt, show):
         ax.plot(E_ae[mask], N_ae[mask], U_ae[mask],
                 color=phase_cols[ph], lw=2.2, label=phase_names[ph], zorder=5)
 
-    # ── NASA Sim 06 trajectory (single dashed grey line) ───────────────────
+    # ── NASA reference trajectories (dashed / dash-dot) ────────────────────
     ax.plot(E_ref, N_ref, U_ref,
             color="#6B7280", lw=1.4, ls="--", alpha=0.8,
-            label="NASA Sim 06", zorder=4)
+            label=ref_label, zorder=4)
+    if ref2_df is not None:
+        ax.plot(E_ref2, N_ref2, U_ref2,
+                color="#B45309", lw=1.4, ls="-.", alpha=0.8,
+                label=ref2_label, zorder=4)
 
     # ── Event markers ──────────────────────────────────────────────────────
     marker_styles = {0: "S1 burnout", 1: "S2 ignition", 2: "S2 burnout"}
@@ -411,12 +462,18 @@ def plot_trajectory_3d(t, sim_df, ref_df, out_dir, dpi, fmt, show):
     ax.scatter([E_ref[-1]], [N_ref[-1]], [U_ref[-1]],
                color=VAL_COLOR, s=60, marker="*",
                zorder=9, depthshade=False)
+    if ref2_df is not None:
+        ax.scatter([E_ref2[-1]], [N_ref2[-1]], [U_ref2[-1]],
+                   color="#B45309", s=60, marker="*",
+                   zorder=9, depthshade=False)
 
     # ── Axes & labels ──────────────────────────────────────────────────────
     ax.set_xlabel("East distance [km]",   labelpad=10)
     ax.set_ylabel("North offset [km]",    labelpad=10)
     ax.set_zlabel("Altitude [km]",        labelpad=10)
-    ax.set_title("Two-Stage Rocket Trajectory — Aetherion vs. NASA Sim 06\n"
+    ax.set_title("Two-Stage Rocket Trajectory — Aetherion vs. NASA reference runs\n"
+                 if ref2_df is not None else
+                 f"Two-Stage Rocket Trajectory — Aetherion vs. {ref_label}\n"
                  "NASA TM-2015-218675 Atmospheric Scenario 17",
                  fontsize=12, fontweight="bold", pad=15)
 
@@ -425,8 +482,14 @@ def plot_trajectory_3d(t, sim_df, ref_df, out_dir, dpi, fmt, show):
 
     # ── Annotation box ─────────────────────────────────────────────────────
     note = (f"Aetherion: alt={alt_ae[-1]/1000:.1f} km, TAS={sim_df['trueAirspeed_m_s'].values[-1]:.0f} m/s\n"
-            f"NASA Sim 06: alt={alt_ref[-1]/1000:.1f} km, TAS={ref_df['trueAirspeed_m_s'].values[-1]:.0f} m/s\n"
-            f"Error: {(alt_ae[-1]-alt_ref[-1])/alt_ref[-1]*100:.2f}%  (dt = 0.001 s, Radau IIA RKMK)")
+            f"{ref_label}: alt={alt_ref[-1]/1000:.1f} km, TAS={ref_df['trueAirspeed_m_s'].values[-1]:.0f} m/s"
+            f"  ({(alt_ae[-1]-alt_ref[-1])/alt_ref[-1]*100:+.2f} %)\n")
+    if ref2_df is not None:
+        note += (f"{ref2_label}: alt={alt_ref2[-1]/1000:.1f} km, TAS={ref2_df['trueAirspeed_m_s'].values[-1]:.0f} m/s"
+                 f"  ({(alt_ae[-1]-alt_ref2[-1])/alt_ref2[-1]*100:+.2f} %)\n"
+                 "The two NASA implementations differ by "
+                 f"{abs(alt_ref[-1]-alt_ref2[-1])/1000:.0f} km at t = 200 s; Aetherion lies between them.\n")
+    note += "dt = 0.001 s, Radau IIA RKMK"
     fig.text(0.02, 0.02, note, fontsize=8, color="#374151",
              bbox=dict(boxstyle="round,pad=0.4", facecolor="white",
                        edgecolor="#D1D5DB", alpha=0.9))
@@ -445,6 +508,10 @@ def main():
         description="Scenario 17 comparison plots: Aetherion vs. NASA Sim 06.")
     parser.add_argument("--sim",     default="twostage_sim_output.csv")
     parser.add_argument("--ref",     default="Atmos_17_sim_06.csv")
+    parser.add_argument("--ref2",    default=None,
+                        help="second NASA run (e.g. Atmos_17_sim_04.csv) for the 3-D figure")
+    parser.add_argument("--ref-label",  default="NASA Sim 06")
+    parser.add_argument("--ref2-label", default="NASA Sim 04")
     parser.add_argument("--output",  default="comparison_output")
     parser.add_argument("--dpi",     type=int, default=150)
     parser.add_argument("--fmt",     default="png",
@@ -460,6 +527,10 @@ def main():
     print(f"Loading NASA Sim06: {args.ref}")
     ref_raw = pd.read_csv(args.ref)
     ref_si  = convert_sim06_to_si(ref_raw)
+    ref2_si = None
+    if args.ref2:
+        print(f"Loading NASA ref2 : {args.ref2}")
+        ref2_si = convert_sim06_to_si(pd.read_csv(args.ref2))
 
     # Interpolate reference to sim time grid
     t_sim = sim_df["time"].values
@@ -511,7 +582,8 @@ def main():
     # ── 3D trajectory ────────────────────────────────────────────────────────
     print("\nGenerating 3D trajectory plot…")
     plot_trajectory_3d(t_sim, sim_df, ref_si, args.output,
-                       args.dpi, args.fmt, show)
+                       args.dpi, args.fmt, show,
+                       ref2_df=ref2_si, ref_label=args.ref_label, ref2_label=args.ref2_label)
 
     print("\nDone.")
 

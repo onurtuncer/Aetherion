@@ -245,9 +245,12 @@ TEST_CASE("Spatial inertia: diagonal blocks have correct magnitude",
     using Catch::Approx;
 
     // Rotational block (top-left 3×3)
+    // The tensor in ip is about the CG; M is about the MRC, so the
+    // parallel-axis term m xcg^2 appears on the two axes normal to the offset.
+    const double shift = ip.mass_kg * ip.xbar_m * ip.xbar_m;
     REQUIRE(vf.M(0, 0) == Approx( ip.Ixx).epsilon(1e-12));
-    REQUIRE(vf.M(1, 1) == Approx( ip.Iyy).epsilon(1e-12));
-    REQUIRE(vf.M(2, 2) == Approx( ip.Izz).epsilon(1e-12));
+    REQUIRE(vf.M(1, 1) == Approx( ip.Iyy + shift).epsilon(1e-12));
+    REQUIRE(vf.M(2, 2) == Approx( ip.Izz + shift).epsilon(1e-12));
     REQUIRE(vf.M(0, 1) == Approx(-ip.Ixy).epsilon(1e-12));
     REQUIRE(vf.M(0, 2) == Approx(-ip.Ixz).epsilon(1e-12));
     REQUIRE(vf.M(1, 2) == Approx(-ip.Iyz).epsilon(1e-12));

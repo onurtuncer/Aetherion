@@ -300,7 +300,7 @@ FlightDynamics modules.
 Key types:
 
 * :cpp:struct:`Aetherion::RigidBody::State` — full state on :math:`SE(3) \times \mathbb{R}^7`.
-* :cpp:struct:`Aetherion::RigidBody::InertialParameters` — mass, inertia tensor about CoG, CoG offset (all in body frame).
+* :cpp:struct:`Aetherion::RigidBody::InertialParameters` — mass, inertia tensor about the centre of mass, centre of mass relative to the body origin (all in body frame).
 * :cpp:class:`Aetherion::RigidBody::VectorField` — Newton-Euler ODE right-hand side, templated on physics policies.
 * :cpp:class:`Aetherion::RigidBody::SixDoFStepper` — high-level facade with three template parameters:
   ``VectorField``, ``EuclidDim`` (default 7), and ``IntegratorPolicy`` (default Radau IIA RKMK),
