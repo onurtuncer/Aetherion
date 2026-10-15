@@ -59,11 +59,11 @@ struct GpsRecord
   double nominalTime = 0.0; ///< NaN if the log has no nominal_time_s column
   double hostTime = 0.0;
   double lat_deg = 0.0, lon_deg = 0.0, alt_m = 0.0;
-  double horizontalAccuracy_m = 0.0, verticalAccuracy_m = 0.0;
+  double horizontalAccuracy_m = 0.0, verticalAccuracy_m = 0.0;  ///< 0: not reported, the harness uses its own sigma
   int fixType = 0;
   bool hasVelocity = false;
   Eigen::Vector3d velNed_m_s = Eigen::Vector3d::Zero();
-  double speedAccuracy_m_s = 0.0;
+  double speedAccuracy_m_s = 0.0;  ///< 0: not reported
 };
 
 struct BaroRecord
@@ -138,19 +138,23 @@ struct LogSet
     r.horizontalAccuracy_m = t.at(i, C::kHorizAcc);
     r.verticalAccuracy_m = t.at(i, C::kVertAcc);
     const double ft = t.at(i, C::kFixType);
-    // Every field the update will read must be a number. A partly written row
-    // (a cell empty or unparseable, Csv.h gives NaN) is an epoch without a
-    // usable fix, not a fix with NaN in its covariance: that would reach the
-    // filter and leave every later estimate NaN.
-    r.valid = std::isfinite(r.lat_deg) && std::isfinite(r.lon_deg) && std::isfinite(r.alt_m) &&
-              std::isfinite(ft) && std::isfinite(r.horizontalAccuracy_m) && std::isfinite(r.verticalAccuracy_m);
+    // Nothing that is not a number may reach the filter: a partly written row
+    // (a cell empty or unparseable, Csv.h gives NaN) used to go through an
+    // update and leave every later estimate NaN. A fix needs its position and
+    // fix type; an accuracy that is not a number is "not reported" (0), and
+    // the harness then uses its configured sigma, as it already does for the
+    // speed accuracy. A velocity that is not a number cannot be substituted,
+    // so the fix keeps its position and loses its velocity.
+    r.valid = std::isfinite(r.lat_deg) && std::isfinite(r.lon_deg) && std::isfinite(r.alt_m) && std::isfinite(ft);
     r.fixType = r.valid ? static_cast<int>(std::lround(ft)) : 0;
+    if (!std::isfinite(r.horizontalAccuracy_m)) r.horizontalAccuracy_m = 0.0;
+    if (!std::isfinite(r.verticalAccuracy_m)) r.verticalAccuracy_m = 0.0;
     if (vel && r.valid)
     {
       r.velNed_m_s = Eigen::Vector3d(t.at(i, C::kVelNorth), t.at(i, C::kVelEast), t.at(i, C::kVelDown));
       r.speedAccuracy_m_s = t.at(i, C::kSpeedAcc);
-      // The position may still be used when the velocity cells are not numbers.
-      r.hasVelocity = r.velNed_m_s.allFinite() && std::isfinite(r.speedAccuracy_m_s);
+      if (!std::isfinite(r.speedAccuracy_m_s)) r.speedAccuracy_m_s = 0.0;
+      r.hasVelocity = r.velNed_m_s.allFinite();
     }
     out.push_back(r);
   }
