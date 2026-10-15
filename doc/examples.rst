@@ -5202,7 +5202,7 @@ rather than purely pitch-plane.
 
 .. list-table::
    :header-rows: 1
-   :widths: 12 12 12 12 12 12 12 12 12 12 12
+   :widths: 14 8 8 8 8 8 8 8 8 8 8 8
 
    * - α (β) [°]
      - −10
