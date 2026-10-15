@@ -5,12 +5,12 @@
 # ------------------------------------------------------------------------------
 #
 # A consumer of an installed Aetherion SDK, built against the installation alone: no source tree, no build tree, no
-# vcpkg. CI installs Aetherion, moves the installation to another directory, and builds and runs this project against
-# it (pre-DOI audit F07: find_package(Aetherion) failed for every consumer, a public JSON header could not be compiled,
-# and the CppAD library could be a dangling link).
+# vcpkg. CI installs Aetherion, moves the installation to another directory, and builds and runs this project against it
+# (pre-DOI audit F07: find_package(Aetherion) failed for every consumer, a public JSON header could not be compiled, and
+# the CppAD library could be a dangling link).
 #
-#   cmake -S tests/InstallConsumer -B consumer-build -DCMAKE_PREFIX_PATH=<moved prefix>
-#   cmake --build consumer-build && consumer-build/aetherion_consumer
+# cmake -S tests/InstallConsumer -B consumer-build -DCMAKE_PREFIX_PATH=<moved prefix> cmake --build consumer-build &&
+# consumer-build/aetherion_consumer
 # ------------------------------------------------------------------------------
 cmake_minimum_required(VERSION 3.25)
 project(AetherionInstallConsumer LANGUAGES CXX)
