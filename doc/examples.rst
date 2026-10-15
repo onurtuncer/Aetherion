@@ -6123,15 +6123,35 @@ Known Modelling Differences
    * - **Angular momentum of a burning stage**
      - The spatial inertia is rebuilt before every step (zero-order hold)
        and the body rate :math:`\boldsymbol{\omega}` is kept through the
-       rebuild: the propellant leaves with the angular momentum it had in the
-       tank, so :math:`\mathbf{I}_C\boldsymbol{\omega}` falls with
-       :math:`\mathbf{I}_C` and the pitch rate stays constant in vacuum.  The
-       NASA reference runs do something else, and not the same thing as each
-       other: through the S2 burn, over which :math:`I_{yy}` falls by a factor
-       4.4, the pitch rate of Sims 04/05 grows 2.1-fold (−0.10 to
-       −0.20 °/s) and that of Sim 06 2.4-fold (−0.16 to −0.39 °/s).  Full
-       conservation of :math:`\mathbf{I}_C\boldsymbol{\omega}` would give
-       4.4-fold (tried: it ends at 3.4° of pitch, outside the reference
-       spread), so neither limiting model is what they integrate.  This is the
-       largest contributor to the end-state spread, both between Aetherion and
-       the references and among the references themselves (see below).
+       rebuild, so the pitch rate stays constant in vacuum.  The NASA
+       reference runs do something else, and not the same thing as each
+       other: through the S2 burn, over which :math:`I_{yy}` falls by a
+       factor 4.4, the pitch rate of Sims 04/05 grows 2.1-fold (−0.10 to
+       −0.20 °/s) and that of Sim 06 2.4-fold (−0.16 to −0.39 °/s).
+
+       The complete variable-mass equation (Thomson) is
+       :math:`\mathbf{I}\dot{\boldsymbol{\omega}} = \mathbf{M}_\text{ext}
+       - \dot{\mathbf{I}}\boldsymbol{\omega} - \dot{m}\,\rho_e^2\,\boldsymbol{\omega}`:
+       the inertia-relief term :math:`-\dot{\mathbf{I}}\boldsymbol{\omega}`
+       raises the rate as the tensor shrinks, and the jet-damping term lowers
+       it, with :math:`\rho_e` the nozzle's distance from the centre of mass.
+       Keeping :math:`\boldsymbol{\omega}` is the case
+       :math:`\rho_e = k`, the propellant's radius of gyration about the
+       centre of mass -- the propellant leaves with the angular momentum it had
+       where it sat; the DML gives :math:`k^2 = \Delta I/\Delta m =
+       9.1\ \text{m}^2`, :math:`k \approx 3\ \text{m}`.  Relief alone
+       (:math:`\rho_e = 0`, i.e. conserving
+       :math:`\mathbf{I}_C\boldsymbol{\omega}`) would raise the rate
+       4.4-fold; it was tried and ends at 3.4° of pitch, outside the reference
+       spread.  A real second stage has its nozzle well beyond :math:`k`
+       (here some 5--6 m behind the centre of mass), so jet damping outweighs
+       relief and the pitch rate should *fall* through the burn, with a time
+       constant :math:`I/(\dot m \rho_e^2)` of order 10 s.  The DML does not
+       give the nozzle position, so that term is not modelled; the reference
+       runs do not model it either, and their growth is a convention of how
+       their codes handle :math:`\dot{\mathbf{I}}`, not an effect that can
+       be derived from the vehicle data.  Keeping :math:`\boldsymbol{\omega}`
+       is therefore retained as the closer of the two available limits to the
+       physics.  This is the largest contributor to the end-state spread, both
+       between Aetherion and the references and among the references
+       themselves (see below).
