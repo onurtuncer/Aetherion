@@ -119,6 +119,8 @@ struct ReplayOptions
   ProcessNoise<double> noise{ 2e-4, 5e-3, 2e-6, 2e-5, 0.05 };  ///< Hemerion's IMU densities at 100 Hz (its step 4)
   double baroSigma_m = 1.0;                                    ///< pressure-altitude noise given to the filter
   double gnssVelSigma_m_s = 0.1;                               ///< used when the log carries no speed accuracy
+  double gnssHorizSigma_m = 1.5;                               ///< used when a fix carries no horizontal accuracy
+  double gnssVertSigma_m = 3.0;                                ///< used when a fix carries no vertical accuracy
   double gnssHorizScale = 1.0;  ///< sigma_N = sigma_E = gnssHorizScale * horizontal_accuracy_m
   int minFixType = LogContract::Gps::kFixType3D;  ///< Hemerion's enum (0 none, 1 2D, 2 3D); fixes below it are skipped
   /// Initial 1-sigma in physical coordinates: attitude (3, rad), velocity (3), position (3), then the bias blocks.
@@ -297,9 +299,9 @@ template <ErrorConvention C>
       const Eigen::Matrix3d C_LN = meas.nedToLci(fix, era);
       if (useGnssPos)
       {
-        const double sh = opt.gnssHorizScale * g.horizontalAccuracy_m;
-        const Eigen::Matrix3d SigmaN =
-            Eigen::Vector3d(sh * sh, sh * sh, g.verticalAccuracy_m * g.verticalAccuracy_m).asDiagonal();
+        const double sh = (g.horizontalAccuracy_m > 0.0) ? opt.gnssHorizScale * g.horizontalAccuracy_m : opt.gnssHorizSigma_m;
+        const double sz = (g.verticalAccuracy_m > 0.0) ? g.verticalAccuracy_m : opt.gnssVertSigma_m;
+        const Eigen::Matrix3d SigmaN = Eigen::Vector3d(sh * sh, sh * sh, sz * sz).asDiagonal();
         const auto r = ekf.updateGnssPosition(meas.gnssPositionLci(fix, era), C_LN * SigmaN * C_LN.transpose());
         if (r.applied)
         {
