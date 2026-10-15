@@ -235,33 +235,16 @@ private:
         vf.gravity.xcg_m = ip.xbar_m;
     }
 
+    /// The DML inertia is about the centre of mass (AIAA S-119 standard
+    /// variables) and DXCG is the centre of mass forward of the MRC, the body
+    /// origin; VectorField shifts the tensor to the origin (parallel-axis term
+    /// m DXCG^2 in Iyy and Izz) and builds the m[c]x coupling. Zero-order hold
+    /// over the step; omega is kept through the rebuild (see "Known Modelling
+    /// Differences" in doc/examples.rst for what that means and what the NASA
+    /// sims do).
     void rebuildSpatialInertia(const RigidBody::InertialParameters& ip)
     {
-        auto& vf = m_stepper.vectorField();
-
-        const double m   = ip.mass_kg;
-        const double Ixx = ip.Ixx, Iyy = ip.Iyy, Izz = ip.Izz;
-        const double Ixy = ip.Ixy, Iyz = ip.Iyz, Ixz = ip.Ixz;
-        const double rx  = ip.xbar_m;
-        const double ry  = ip.ybar_m;
-        const double rz  = ip.zbar_m;
-
-        vf.M.setZero();
-
-        vf.M(0, 0) =  Ixx;   vf.M(0, 1) = -Ixy;   vf.M(0, 2) = -Ixz;
-        vf.M(1, 0) = -Ixy;   vf.M(1, 1) =  Iyy;   vf.M(1, 2) = -Iyz;
-        vf.M(2, 0) = -Ixz;   vf.M(2, 1) = -Iyz;   vf.M(2, 2) =  Izz;
-
-        vf.M(3, 3) = m;   vf.M(4, 4) = m;   vf.M(5, 5) = m;
-
-        vf.M(0, 4) = -m * rz;   vf.M(0, 5) =  m * ry;
-        vf.M(1, 3) =  m * rz;   vf.M(1, 5) = -m * rx;
-        vf.M(2, 3) = -m * ry;   vf.M(2, 4) =  m * rx;
-        vf.M(3, 1) =  m * rz;   vf.M(3, 2) = -m * ry;
-        vf.M(4, 0) = -m * rz;   vf.M(4, 2) =  m * rx;
-        vf.M(5, 0) =  m * ry;   vf.M(5, 1) = -m * rx;
-
-        vf.M_inv = vf.M.inverse();
+        m_stepper.vectorField().setInertialParameters(ip);
     }
 
     Stepper           m_stepper;

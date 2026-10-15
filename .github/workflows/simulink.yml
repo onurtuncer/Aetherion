@@ -4,7 +4,14 @@ on:
   workflow_run:
     workflows: ["Windows Build"]
     types: [completed]
+    branches: [ main ]
   workflow_dispatch:
+
+# One run per branch at a time; a newer Windows build of main supersedes an
+# older queued one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.workflow_run.head_branch || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   # ── Job 1: build both FMUs (Windows/MSVC, same toolchain as windows.yml) ──

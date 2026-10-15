@@ -222,3 +222,243 @@ TEST_CASE("CppADResidualJacobian: NewtonSolve converges using AD Jacobian", "[ne
     REQUIRE(x(0) == Approx(std::sqrt(2.0)).margin(1e-12));
     REQUIRE(x(1) == Approx(std::sqrt(3.0)).margin(1e-12));
 }
+
+TEST_CASE("NewtonSolve: line-search failure throws when throw_on_fail=true", "[newton]") {
+    Eigen::VectorXd x(1);
+    x(0) = 0.0;
+
+    auto eval = [&](const Eigen::VectorXd&, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+        r.resize(1);
+        J.resize(1, 1);
+        r(0) = 1.0;
+        J(0, 0) = 1.0;
+        };
+
+    Core::NewtonOptions opt;
+    opt.max_iters = 10;
+    opt.use_damping = true;
+    opt.sufficient_decrease = 0.9;
+    opt.damping_init = 1.0;
+    opt.damping_shrink = 0.5;
+    opt.damping_min = 0.9;
+    opt.max_line_search_iters = 10;
+    opt.throw_on_fail = true;
+
+    REQUIRE_THROWS_AS(Core::NewtonSolve(eval, x, opt), std::runtime_error);
+}
+
+TEST_CASE("NewtonSolve: exhausted line search still takes the last damped step", "[newton]") {
+    // Constant residual: no step is ever accepted by the sufficient-decrease
+    // test, but with a single line-search iteration lambda (0.5) stays above
+    // damping_min, so the damped step is taken anyway and iteration goes on.
+    Eigen::VectorXd x(1);
+    x(0) = 0.0;
+
+    auto eval = [&](const Eigen::VectorXd&, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+        r.resize(1);
+        J.resize(1, 1);
+        r(0) = 1.0;
+        J(0, 0) = 1.0;
+        };
+
+    Core::NewtonOptions opt;
+    opt.max_iters = 3;
+    opt.use_damping = true;
+    opt.sufficient_decrease = 0.9;
+    opt.damping_init = 1.0;
+    opt.damping_shrink = 0.5;
+    opt.damping_min = 1e-6;
+    opt.max_line_search_iters = 1;
+    opt.throw_on_fail = false;
+
+    const auto res = Core::NewtonSolve(eval, x, opt);
+
+    REQUIRE_FALSE(res.converged);
+    REQUIRE(res.last_lambda == Approx(0.5));
+    // Three damped steps of 0.5 * dx, dx = -1 each time.
+    REQUIRE(x(0) == Approx(-1.5));
+}
+
+TEST_CASE("NewtonSolve: empty unknown vector", "[newton]") {
+    auto eval = [](const Eigen::VectorXd&, Eigen::VectorXd&, Eigen::MatrixXd&) {};
+    Eigen::VectorXd x;
+
+    Core::NewtonOptions opt;
+    opt.throw_on_fail = true;
+    REQUIRE_THROWS_AS(Core::NewtonSolve(eval, x, opt), std::invalid_argument);
+
+    opt.throw_on_fail = false;
+    const auto res = Core::NewtonSolve(eval, x, opt);
+    REQUIRE_FALSE(res.converged);
+    REQUIRE(res.iters == 0);
+}
+
+// -----------------------------------------------------------------------------
+// Regression: the returned iterate is the one whose convergence is reported.
+//
+// The loop checks convergence before each correction and never after the last
+// one it may take. With max_iters = 1 the single undamped step on a linear
+// residual lands exactly on the root; the result used to say converged = false
+// with r_norm of the previous iterate (1), and threw with throw_on_fail.
+// -----------------------------------------------------------------------------
+
+namespace {
+    void linear_eval(const Eigen::VectorXd& xin, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+        r.resize(1);
+        J.resize(1, 1);
+        r(0) = xin(0) - 1.0;
+        J(0, 0) = 1.0;
+    }
+}
+
+TEST_CASE("NewtonSolve: a root reached on the last permitted iteration is reported as converged",
+          "[newton][regression]") {
+    Core::NewtonOptions opt;
+    opt.max_iters = 1;
+
+    SECTION("undamped") {
+        opt.use_damping = false;
+        Eigen::VectorXd x(1);
+        x(0) = 0.0;
+        const auto res = Core::NewtonSolve(linear_eval, x, opt);
+        CHECK(x(0) == Approx(1.0));
+        CHECK(res.converged);
+        CHECK(res.iters == 1);
+        CHECK(res.r_norm == Approx(0.0).margin(1e-15));
+    }
+
+    SECTION("damped") {
+        opt.use_damping = true;
+        Eigen::VectorXd x(1);
+        x(0) = 0.0;
+        const auto res = Core::NewtonSolve(linear_eval, x, opt);
+        CHECK(x(0) == Approx(1.0));
+        CHECK(res.converged);
+        CHECK(res.r_norm == Approx(0.0).margin(1e-15));
+    }
+
+    SECTION("throw_on_fail does not throw for a converged final iterate") {
+        opt.use_damping = false;
+        opt.throw_on_fail = true;
+        Eigen::VectorXd x(1);
+        x(0) = 0.0;
+        REQUIRE_NOTHROW(Core::NewtonSolve(linear_eval, x, opt));
+    }
+}
+
+TEST_CASE("NewtonSolve: an unconverged result describes the returned iterate", "[newton][regression]") {
+    // x^2 - 2 from x = 1 with one step lands on 1.5, residual 0.25: still not
+    // converged, and r_norm must be 0.25 (the returned x), not 1 (the start).
+    auto eval = [](const Eigen::VectorXd& xin, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+        r.resize(1);
+        J.resize(1, 1);
+        r(0) = xin(0) * xin(0) - 2.0;
+        J(0, 0) = 2.0 * xin(0);
+    };
+    Core::NewtonOptions opt;
+    opt.max_iters = 1;
+    opt.use_damping = false;
+    opt.abs_tol = 1e-12;
+    opt.rel_tol = 0.0;
+    opt.step_tol = 0.0;
+    Eigen::VectorXd x(1);
+    x(0) = 1.0;
+    const auto res = Core::NewtonSolve(eval, x, opt);
+    CHECK(x(0) == Approx(1.5));
+    CHECK_FALSE(res.converged);
+    CHECK(res.r_norm == Approx(0.25));
+}
+
+// -----------------------------------------------------------------------------
+// Regression (audit F01): the taped evaluator follows the functor's branches.
+//
+// The tape used to be recorded once and reused for every point: a functor
+// with a branch evaluated at a point on the other side of it returned the
+// recorded branch's residual and Jacobian. CppAD records comparisons made on
+// AD values and reports through compare_change_number() when one goes the
+// other way; the evaluator now re-records its tape at that point.
+// -----------------------------------------------------------------------------
+
+namespace {
+    struct BranchFunctor {
+        template<class S>
+        Eigen::Matrix<S, Eigen::Dynamic, 1>
+            operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const {
+            Eigen::Matrix<S, Eigen::Dynamic, 1> r(1);
+            if (x(0) < S(1.0)) r(0) = x(0) - S(2.0);          // slope 1
+            else               r(0) = S(2.0) * x(0) - S(3.0);  // slope 2
+            return r;
+        }
+    };
+    struct BranchFunctorFixed {
+        template<class S>
+        Eigen::Matrix<S, 1, 1> operator()(const Eigen::Matrix<S, 1, 1>& x) const {
+            Eigen::Matrix<S, 1, 1> r;
+            if (x(0) < S(1.0)) r(0) = x(0) - S(2.0);
+            else               r(0) = S(2.0) * x(0) - S(3.0);
+            return r;
+        }
+    };
+}
+
+TEST_CASE("CppADResidualJacobian: re-records the tape when a branch changes", "[newton][cppad][regression]") {
+    Core::CppADResidualJacobian<BranchFunctor> eval(BranchFunctor{}, 1);
+    Eigen::VectorXd x(1), r;
+    Eigen::MatrixXd J;
+
+    x(0) = 0.0;                       // first branch: the tape is recorded here
+    eval(x, r, J);
+    CHECK(r(0) == Approx(-2.0));
+    CHECK(J(0, 0) == Approx(1.0));
+    CHECK(eval.retape_count() == 0);
+
+    x(0) = 0.5;                       // same branch: no re-recording
+    eval(x, r, J);
+    CHECK(r(0) == Approx(-1.5));
+    CHECK(eval.retape_count() == 0);
+
+    x(0) = 2.0;                       // other branch: used to give 0 and slope 1
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+    CHECK(J(0, 0) == Approx(2.0));
+    CHECK(eval.retape_count() == 1);
+
+    x(0) = 0.0;                       // and back
+    eval(x, r, J);
+    CHECK(r(0) == Approx(-2.0));
+    CHECK(J(0, 0) == Approx(1.0));
+    CHECK(eval.retape_count() == 2);
+}
+
+TEST_CASE("FixedCppADResidualJacobian: re-records the tape when a branch changes", "[newton][cppad][regression]") {
+    Core::FixedCppADResidualJacobian<1, BranchFunctorFixed> eval(BranchFunctorFixed{});
+    Eigen::Matrix<double, 1, 1> x, r;
+    Eigen::Matrix<double, 1, 1> J;
+
+    x(0) = 0.0;
+    eval(x, r, J);
+    CHECK(r(0) == Approx(-2.0));
+    CHECK(J(0, 0) == Approx(1.0));
+
+    x(0) = 2.0;
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+    CHECK(J(0, 0) == Approx(2.0));
+    CHECK(eval.retape_count() == 1);
+}
+
+TEST_CASE("NewtonSolve on a taped functor converges on the branch the root lies in", "[newton][cppad][regression]") {
+    // Root of the branch functor: 2x - 3 = 0 -> x = 1.5 (second branch).
+    // Starting in the first branch, the frozen tape solved x - 2 = 0 instead.
+    Core::CppADResidualJacobian<BranchFunctor> eval(BranchFunctor{}, 1);
+    Eigen::VectorXd x(1);
+    x(0) = 0.0;
+    Core::NewtonOptions opt;
+    opt.max_iters = 20;
+    opt.abs_tol = 1e-12;
+    opt.rel_tol = 1e-12;
+    const auto res = Core::NewtonSolve(eval, x, opt);
+    REQUIRE(res.converged);
+    CHECK(x(0) == Approx(1.5).margin(1e-10));
+    CHECK(BranchFunctor{}.template operator()<double>(x)(0) == Approx(0.0).margin(1e-10));
+}

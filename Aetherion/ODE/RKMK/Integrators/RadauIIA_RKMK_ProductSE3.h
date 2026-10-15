@@ -105,8 +105,16 @@ namespace Aetherion::ODE::RKMK::Integrators {
                 out.iters = newton_res.iters;
 
             {
+                // Residual of the function itself (no tape) at the solution.
+                // Newton judged convergence on the taped residual; the step is
+                // judged here, with the solver's own tolerance, on the real one.
+                // The evaluator re-records its tape whenever a branch changes,
+                // so the two agree; this is the check that they did.
                 Residual residual_chk(q0, p0, x0d, t0, h, tableau_, xi_field_, f_field_);
                 out.residual_norm = residual_chk(sol).norm();
+                const double thresh = opt.abs_tol + opt.rel_tol * newton_res.r0_norm;
+                if (out.converged && !(out.residual_norm <= 10.0 * thresh))
+                    out.converged = false;
             }
 
             Eigen::Matrix<double, 6, 1> Delta_xi = Eigen::Matrix<double, 6, 1>::Zero();

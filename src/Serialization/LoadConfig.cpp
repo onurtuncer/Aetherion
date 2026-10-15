@@ -13,7 +13,7 @@
 
 #include <fstream>
 #include <stdexcept>
-#include <vendor/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Aetherion::Serialization {
 

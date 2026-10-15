@@ -2197,7 +2197,7 @@ AIAA S-119 DAVE-ML files distributed with the F-16 reference model
        are zero in this model (simplified Stevens & Lewis convention)
 
 Inertial Parameters
-~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""
 
 Loaded from ``F16_inertia.dml`` at the standard 35 % MAC centre-of-gravity
 position (:math:`\Delta x_{CG} = 0`):
@@ -2226,7 +2226,7 @@ position (:math:`\Delta x_{CG} = 0`):
      - 1 331 kg·m²
 
 Aerodynamic Reference Geometry
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""""""""""""""
 
 .. list-table::
    :header-rows: 1
@@ -2360,7 +2360,7 @@ The bisection is valid because :math:`F_{EX}` is monotonically increasing
 in power level at constant altitude and Mach.
 
 Trim Result (Scenario 11)
-~~~~~~~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""""""""
 
 Running the solver at the Scenario-11 flight condition:
 
@@ -2590,7 +2590,7 @@ The simulation assembles the following policy combination, defined in
    using F16Stepper = RigidBody::SixDoFStepper<F16VF>;
 
 F16AeroPolicy
-~~~~~~~~~~~~~
+"""""""""""""
 
 :cpp:class:`F16AeroPolicy` wraps :cpp:class:`DAVEMLAeroModel` and is the
 aerodynamic counterpart of the simpler :cpp:struct:`DragOnlyAeroPolicy` used
@@ -2640,7 +2640,7 @@ in spherical drop tests.  At each integration stage it:
       M_{z} &= C_n \, q \, S \, b \cdot k_{\text{ft·lbf→N·m}}
 
 F16PropPolicy
-~~~~~~~~~~~~~
+"""""""""""""
 
 :cpp:class:`F16PropPolicy` wraps :cpp:class:`DAVEMLPropModel`.  At each
 stage it:
@@ -2663,7 +2663,7 @@ stage it:
    //   M_x   = M_y = M_z = 0  (TEM = 0 in DML)
 
 CppAD Compatibility
-~~~~~~~~~~~~~~~~~~~
+"""""""""""""""""""
 
 All three model classes — :cpp:class:`DAVEMLAeroModel`,
 :cpp:class:`DAVEMLPropModel`, and the two policy wrappers — are templated
@@ -2674,9 +2674,17 @@ complete VectorField (gravity + aero + prop) at each Newton stage.  The two
 critical compatibility fixes required for the DAVE-ML lookup tables are:
 
 * **Index selection** — the breakpoint segment index is a step function
-  of the input and cannot be differentiated.  It is evaluated using the
-  current tape value via ``CppAD::Value(CppAD::Var2Par(input))``, which
-  extracts the numeric value without recording it as a variable.
+  of the input and cannot be differentiated.  It is found by comparing the
+  AD input with the breakpoints; CppAD records those comparisons, so the
+  index is a constant of the tape and the tape reports (through
+  ``compare_change_number()``) when a later evaluation falls in another
+  segment, at which point the Newton evaluator re-records it.  Reducing
+  the input to a ``double`` first, as was done until v0.17.2, recorded
+  nothing, and a step whose stages crossed a breakpoint was solved on the
+  wrong segment (pre-DOI audit finding F01).  All six F-16 scenarios (11, 12,
+  13.1--13.4) were rerun after the change with the run parameters stated in
+  this chapter: no checkpoint value in their tables moves by more than one
+  unit in the sixth significant figure, so the tables stand as printed.
 * **Interpolation weight** — the weight :math:`w = (x - b_i)/(b_{i+1} - b_i)`
   *must* be computed from the original AD variable ``input`` (not from the
   frozen double) so that ``d(weight)/d(input) = 1/\text{span}`` is correctly
@@ -5202,7 +5210,7 @@ rather than purely pitch-plane.
 
 .. list-table::
    :header-rows: 1
-   :widths: 12 12 12 12 12 12 12 12 12 12 12
+   :widths: 14 8 8 8 8 8 8 8 8 8 8 8
 
    * - α (β) [°]
      - −10
@@ -5449,15 +5457,18 @@ Spatial Inertia Matrix
 """"""""""""""""""""""
 
 The six-DoF integrator uses Featherstone's **spatial inertia** formulation.
-With the body origin at the MRC, CG offset :math:`\mathbf{c} = [x_{CG},\,0,\,0]^\top`,
-and body inertia :math:`\mathbf{I}` about the MRC:
+The body origin is the MRC; the DML's ``XIXX``, ``XIYY``, ``XIZZ`` are AIAA
+S-119 standard variables and therefore the inertia :math:`\mathbf{I}_C`
+**about the centre of mass**, and ``DXCG`` is the centre of mass forward of
+the MRC, :math:`\mathbf{c} = [x_{CG},\,0,\,0]^\top`.  The spatial inertia
+about the MRC shifts the tensor there (parallel-axis theorem):
 
 .. math::
 
    \mathbf{M} =
    \begin{bmatrix}
-     \mathbf{I} & m\,[\mathbf{c}]_\times^\top \\
-     m\,[\mathbf{c}]_\times & m\,\mathbf{1}_{3}
+     \mathbf{I}_C + m\,[\mathbf{c}]_\times[\mathbf{c}]_\times^\top & m\,[\mathbf{c}]_\times \\
+     m\,[\mathbf{c}]_\times^\top & m\,\mathbf{1}_{3}
    \end{bmatrix}
    \in \mathbb{R}^{6\times 6}
 
@@ -5469,12 +5480,22 @@ where :math:`[\mathbf{c}]_\times` is the skew-symmetric matrix of
    \mathbf{M} =
    \begin{bmatrix}
      I_{xx}  & 0        & 0        & 0        & 0                & 0       \\
-     0        & I_{yy}  & 0        & 0        & 0                & -m\,x_{CG}\\
-     0        & 0       & I_{zz}   & 0        & m\,x_{CG}        & 0       \\
+     0        & I_{yy} + m\,x_{CG}^2  & 0        & 0        & 0                & -m\,x_{CG}\\
+     0        & 0       & I_{zz} + m\,x_{CG}^2   & 0        & m\,x_{CG}        & 0       \\
      0        & 0       & 0        & m        & 0                & 0       \\
      0        & 0       & m\,x_{CG}& 0        & m                & 0       \\
      0        & -m\,x_{CG}& 0      & 0        & 0                & m
    \end{bmatrix}
+
+The shift is not small for this vehicle: at lift-off :math:`m\,x_{CG}^2`
+is of the order of :math:`10^7\ \text{kg·m}^2` against
+:math:`I_{yy} \approx 3\times 10^7\ \text{kg·m}^2`.  It does not touch the
+ballistic trajectory (a force through the centre of mass accelerates the
+body without rotation whatever the rotational block is), but it sets the
+pitch and yaw response to the aerodynamic moments.  Until v0.17.2 the tensor
+was placed in the rotational block without the shift (pre-DOI audit finding
+F02); ``RigidBody::VectorField::setInertialParameters`` now builds
+:math:`\mathbf{M}` through ``Spatial::Inertia``.
 
 The matrix is rebuilt (together with its inverse :math:`\mathbf{M}^{-1}`)
 before each integration step from the current DML-interpolated values of
@@ -5789,21 +5810,21 @@ S1 burnout (t = 37.4 s) and S2 ignition (t = 131.8 s).
    Side-by-side comparison of Aetherion vs. NASA Sim 06 for all key output
    quantities over the 200-second two-stage ascent.
 
-**Altitude** — :math:`h(t)` with phase markers (final error −0.87%):
+**Altitude** — :math:`h(t)` with phase markers (final 247.7 km; Sim 04 251.5 km, Sim 06 234.5 km):
 
 .. figure:: _static/atmos17/altitudeMsl_m.png
    :alt: Altitude MSL comparison
    :align: center
    :width: 90%
 
-**Euler pitch angle** — gravity-turn nose-down rotation (final error −0.46°):
+**Euler pitch angle** — gravity-turn nose-down rotation (final 19.0°; Sim 04 22.3°, Sim 06 12.2°):
 
 .. figure:: _static/atmos17/eulerAngle_rad_Pitch.png
    :alt: Euler pitch angle comparison
    :align: center
    :width: 90%
 
-**True airspeed** — atmosphere-relative speed (final error +0.14%):
+**True airspeed** — atmosphere-relative speed (final 8 363 m/s; Sim 04 8 336 m/s, Sim 06 8 381 m/s):
 
 .. figure:: _static/atmos17/trueAirspeed_m_s.png
    :alt: True airspeed comparison
@@ -5887,7 +5908,7 @@ above ~70 km:
 **3-D trajectory** — East–Up projection from the equatorial launch site.
 Trajectory segments are colour-coded by mission phase (S1 burn red,
 ballistic coast blue, S2 burn purple, final coast green).  The dashed grey
-line is NASA Sim 06.  Mission events are annotated with vertical drop lines
+line is NASA Sim 06 and the dash-dot amber line NASA Sim 04.  Mission events are annotated with vertical drop lines
 to the ground plane:
 
 .. figure:: _static/atmos17/trajectory_3d.png
@@ -5898,8 +5919,9 @@ to the ground plane:
    3-D trajectory of the two-stage rocket.  The ground plane (altitude = 0)
    is shown as a translucent blue surface.  Phase boundaries at S1 burnout
    (t = 37.4 s), S2 ignition (t = 131.8 s), and S2 burnout (t = 193 s) are
-   marked with annotated drop-lines.  Aetherion ends 2 km lower than NASA
-   Sim 06 (232 km vs 234 km) with near-identical speed (8 392 vs 8 381 m/s).
+   marked with annotated drop-lines.  Aetherion ends at 248 km, between the two
+   NASA implementations (Sim 04: 251 km, Sim 06: 234 km), at a speed within
+   0.4 % of both (8 363 vs 8 336 and 8 381 m/s).
 
 The NASA TM bundle contains three independent reference runs of Scenario 17,
 all produced by the original check-case code but with different step sizes:
@@ -5915,143 +5937,187 @@ envelope for this scenario is therefore about 1.7 × 10⁴ m wide — an order o
 magnitude wider than Aetherion's deviation from the closest run.
 
 Aetherion at :math:`\Delta t = 0.001\ \text{s}` (Radau IIA RKMK) ends at
-**232 km** — placing it within **0.9%** of sim_06.  The NASA TM recommends an integration time step of :math:`\Delta t \leq
+**248 km**, between the two implementations.  The NASA TM recommends an integration time step of :math:`\Delta t \leq
 0.001\ \text{s}` for this scenario.
 
-**All validation numbers below are against ``Atmos_17_sim_06.csv``
-(referred to as "NASA Sim 06").**
+**The table below gives Sim 04 and Sim 06 side by side (Sim 05 is the same
+implementation as Sim 04 at a finer step and agrees with it to 7 m); the
+prose quotes errors against both.  Until v0.17.2 these numbers were quoted
+against Sim 06 only, and the end state agreed with it to 0.9 % because an
+inertia error (pre-DOI audit finding F02) cancelled the modelling
+difference described under *Known Modelling Differences*.**
 
 Validation Results
 ^^^^^^^^^^^^^^^^^^
 
-The table below compares Aetherion output against **NASA Sim 06**
-(:file:`data/Atmos_17_TwoStageRocketToOrbit/Atmos_17_sim_06.csv`).
+The table below compares Aetherion output against **NASA Sim 04** and
+**NASA Sim 06** (:file:`data/Atmos_17_TwoStageRocketToOrbit/`).
 Run with :math:`\Delta t = 0.001\ \text{s}`, ``--writeInterval 100``,
 ``--endTime 200``.
 
 .. list-table::
    :header-rows: 1
-   :widths: 7 12 12 9 9 9 11 11
+   :widths: 13 10 10 10 8 8 8 10 10 10
 
    * - :math:`t` [s]
      - Alt\ :sub:`Aetherion` [m]
+     - Alt\ :sub:`Sim 04` [m]
      - Alt\ :sub:`Sim 06` [m]
-     - Err %
-     - Pitch\ :sub:`Aetherion` [°]
+     - Pitch\ :sub:`Aeth.` [°]
+     - Pitch\ :sub:`Sim 04` [°]
      - Pitch\ :sub:`Sim 06` [°]
      - TAS\ :sub:`Aetherion` [m/s]
+     - TAS\ :sub:`Sim 04` [m/s]
      - TAS\ :sub:`Sim 06` [m/s]
    * - 0
      - 0.0
      - 0.0
-     - 0.00%
-     - 55.220
-     - 55.220
+     - 0.0
+     - 55.22
+     - 55.22
+     - 55.22
      - 0.00
+     - 0.10
      - 0.10
    * - 5
      - 448.5
+     - 449.0
      - 449.5
-     - −0.22%
-     - 54.252
-     - 54.242
+     - 54.26
+     - 54.25
+     - 54.24
      - 242.75
-     - 242.74
+     - 242.83
+     - 242.75
    * - 10
-     - 1 827.9
+     - 1 828.2
+     - 1 828.6
      - 1 829.3
-     - −0.07%
-     - 43.38
+     - 43.42
+     - 43.27
      - 43.24
-     - 509.88
+     - 509.87
+     - 509.95
      - 509.85
    * - 20
-     - 7 252.9
+     - 7 253.9
+     - 7 249.4
      - 7 248.4
-     - +0.06%
-     - 40.24
+     - 39.68
+     - 39.59
      - 39.63
-     - 1 132.82
-     - 1 132.60
+     - 1 132.76
+     - 1 132.84
+     - 1 132.62
    * - 30
-     - 16 648.7
+     - 16 650.1
+     - 16 634.2
      - 16 628.3
-     - +0.12%
-     - 37.35
+     - 37.03
+     - 36.86
      - 36.82
-     - 1 926.82
-     - 1 926.28
+     - 1 926.75
+     - 1 926.78
+     - 1 926.31
    * - 37.4 (S1 burnout)
-     - 26 787.6
+     - 26 789.2
+     - 26 759.5
      - 26 747.1
-     - **+0.15%**
-     - 36.09
+     - 36.23
+     - 36.25
      - 36.13
-     - 2 700.91
-     - 2 700.36
+     - 2 700.80
+     - 2 700.76
+     - 2 700.39
    * - 50 (coast)
-     - 46 096.5
+     - 46 100.4
+     - 46 051.9
      - 46 027.1
-     - +0.15%
-     - 33.94
+     - 34.29
+     - 34.28
      - 33.97
-     - 2 624.3
-     - 2 625.5
+     - 2 624.20
+     - 2 625.88
+     - 2 625.50
    * - 100 (coast)
-     - 109 276.5
+     - 109 288.9
+     - 109 185.3
      - 109 110.6
-     - +0.15%
-     - 27.55
+     - 29.12
+     - 30.93
      - 29.17
-     - 2 382.9
-     - 2 384.7
+     - 2 382.79
+     - 2 384.98
+     - 2 384.75
    * - 131.8 (S2 ignites)
-     - 138 464
-     - 138 239
-     - **+0.16%**
-     - 22.03
+     - 138 480.7
+     - 138 345.0
+     - 138 238.7
+     - 25.43
+     - 28.58
      - 24.72
-     - 2 264.8
-     - 2 266.9
+     - 2 264.59
+     - 2 267.03
+     - 2 266.91
    * - 150 (S2 burn)
-     - 154 661
-     - 153 860
-     - +0.52%
-     - 18.94
+     - 155 232.2
+     - 154 455.7
+     - 153 859.6
+     - 23.38
+     - 27.21
      - 22.08
-     - 3 259.8
-     - 3 105.2
+     - 3 254.61
+     - 3 097.49
+     - 3 105.22
    * - 175 (S2 burn)
-     - 185 155
-     - 184 731
-     - **+0.23%**
-     - 15.01
-     - 17.92
-     - 5 372.6
-     - 5 098.1
+     - 189 387.6
+     - 189 142.4
+     - 184 730.7
+     - 20.87
+     - 25.09
+     - 17.91
+     - 5 356.41
+     - 5 072.55
+     - 5 098.14
    * - 200 (end)
-     - 232 434
-     - 234 477
-     - **−0.87%**
-     - 11.70
+     - 247 711.7
+     - 251 450.8
+     - 234 477.0
+     - 18.96
+     - 22.26
      - 12.16
-     - **8 392.3**
-     - **8 380.7**
+     - 8 363.28
+     - 8 335.71
+     - 8 380.79
 
-Through the **S1 burn phase** (t = 0–37.4 s) the altitude error vs NASA Sim 06
-is below **1.3 m** for the first 6.5 s (the altitude itself is still under
-770 m there, so the relative error is not yet meaningful) and within **0.16%**
-from there to burnout (0.151% at burnout); the velocity error stays below
-**1.5 m/s** (0.74 m/s peak).  Through the
-**coast phase** (t = 37.4–131.8 s) the 0.16% offset holds unchanged —
-confirming the spatial inertia is correct during ballistic flight.  At S2
-ignition (t = 131.8 s) altitude error is still only **0.16%**, meaning both
-simulations enter S2 at essentially the same orbital state.  The final state at
-t = 200 s shows:
+Through the **S1 burn phase** (t = 0–37.4 s) the altitude difference is below
+**1.3 m** for the first 6.5 s (the altitude itself is still under 770 m there,
+so a relative error is not yet meaningful) and then within **0.11 %** of
+Sim 04 and **0.16 %** of Sim 06 to burnout; the speed stays within
+**0.1 m/s** of Sim 04 and **0.6 m/s** of Sim 06.  The pitch rate reverses
+twice during the burn, under the aerodynamic moment, and Aetherion follows
+Sim 06 through both reversals (e.g. +0.85 °/s against +1.10 °/s at t = 20 s,
+−0.58 against −0.44 °/s at t = 25 s).  Through the **coast phase**
+(t = 37.4–131.8 s) the altitude offset stays at 0.10–0.11 % (Sim 04) and
+0.16–0.18 % (Sim 06), as it must for ballistic flight, and the pitch at
+t = 100 s is **29.12°** against 29.17° (Sim 06) and 30.93° (Sim 04): the
+two NASA implementations leave the burn with different pitch rates
+(−0.097 and −0.163 °/s) and Aetherion's −0.139 °/s lies between them.  At
+S2 ignition (t = 131.8 s) the altitude is within 0.10 % / 0.18 % and the
+pitch is 25.4° against 28.6° / 24.7°.
 
-* Altitude: **−0.87%** (2 043 m below NASA Sim 06)
-* TAS: **+0.14%** (+11.6 m/s)
-* Pitch: **−0.46°** (11.70° vs 12.16°)
+Through the **S2 burn** the three diverge.  Both NASA implementations let the
+pitch rate grow as the stage empties (to −0.20 and −0.39 °/s at t = 200 s),
+while Aetherion's stays constant (see *Known Modelling Differences*), and the
+NASA runs end 17 km and 10° apart from each other.  The final state at
+t = 200 s:
+
+* Altitude: **247.7 km** — −1.5 % against Sim 04 (251.5 km), +5.6 % against
+  Sim 06 (234.5 km); between the two.
+* TAS: **8 363 m/s** — +0.33 % against Sim 04 (8 336 m/s), −0.21 % against
+  Sim 06 (8 381 m/s).
+* Pitch: **18.96°** — −3.3° against Sim 04 (22.26°), +6.8° against Sim 06
+  (12.16°); between the two.
 
 Known Modelling Differences
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -6062,12 +6128,38 @@ Known Modelling Differences
 
    * - Item
      - Explanation
-   * - **Inertia relief**
-     - The variable-mass Newton-Euler equation should strictly include an
-       inertia-relief term :math:`-\dot{\mathbf{M}}\,\boldsymbol{\nu}` accounting
-       for the time-varying spatial inertia.  Aetherion omits this term but
-       approximates it via the per-step ZOH rebuild of :math:`\mathbf{M}`.
-       At :math:`\Delta t = 0.001\ \text{s}` the per-step inertia change
-       (:math:`\Delta I_{yy} \approx 0.6\ \text{kg·m}^2`) is negligible compared
-       to :math:`I_{yy} \approx 30\ \text{MN·m}^2`, so the ZOH approximation is
-       adequate.
+   * - **Angular momentum of a burning stage**
+     - The spatial inertia is rebuilt before every step (zero-order hold)
+       and the body rate :math:`\boldsymbol{\omega}` is kept through the
+       rebuild, so the pitch rate stays constant in vacuum.  The NASA
+       reference runs do something else, and not the same thing as each
+       other: through the S2 burn, over which :math:`I_{yy}` falls by a
+       factor 4.4, the pitch rate of Sims 04/05 grows 2.1-fold (−0.10 to
+       −0.20 °/s) and that of Sim 06 2.4-fold (−0.16 to −0.39 °/s).
+
+       The complete variable-mass equation (Thomson) is
+       :math:`\mathbf{I}\dot{\boldsymbol{\omega}} = \mathbf{M}_\text{ext}
+       - \dot{\mathbf{I}}\boldsymbol{\omega} - \dot{m}\,\rho_e^2\,\boldsymbol{\omega}`:
+       the inertia-relief term :math:`-\dot{\mathbf{I}}\boldsymbol{\omega}`
+       raises the rate as the tensor shrinks, and the jet-damping term lowers
+       it, with :math:`\rho_e` the nozzle's distance from the centre of mass.
+       Keeping :math:`\boldsymbol{\omega}` is the case
+       :math:`\rho_e = k`, the propellant's radius of gyration about the
+       centre of mass -- the propellant leaves with the angular momentum it had
+       where it sat; the DML gives :math:`k^2 = \Delta I/\Delta m =
+       9.1\ \text{m}^2`, :math:`k \approx 3\ \text{m}`.  Relief alone
+       (:math:`\rho_e = 0`, i.e. conserving
+       :math:`\mathbf{I}_C\boldsymbol{\omega}`) would raise the rate
+       4.4-fold; it was tried and ends at 3.4° of pitch, outside the reference
+       spread.  A real second stage has its nozzle well beyond :math:`k`
+       (here some 5--6 m behind the centre of mass), so jet damping outweighs
+       relief and the pitch rate should *fall* through the burn, with a time
+       constant :math:`I/(\dot m \rho_e^2)` of order 10 s.  The DML does not
+       give the nozzle position, so that term is not modelled; the reference
+       runs do not model it either, and their growth is a convention of how
+       their codes handle :math:`\dot{\mathbf{I}}`, not an effect that can
+       be derived from the vehicle data.  Keeping :math:`\boldsymbol{\omega}`
+       is therefore retained as the closer of the two available limits to the
+       physics.  This is the largest contributor to the end-state spread, both
+       between Aetherion and the references and among the references
+       themselves (see below).

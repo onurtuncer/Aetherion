@@ -261,3 +261,12 @@ TEST_CASE("SE3 with CppAD: Exp is tape-able (smoke test)", "[se3][cppad]") {
     REQUIRE(J.size() == 6);
     for (double ji : J) REQUIRE(std::isfinite(ji));
 }
+
+TEST_CASE("SE3.exp: lower-case alias is Exp", "[se3][exp]") {
+    SE3d::Tangent xi;
+    xi << 0.1, -0.2, 0.3, 1.0, 2.0, -3.0;
+    const auto a = SE3d::exp(xi);
+    const auto b = SE3d::Exp(xi);
+    REQUIRE((a.R - b.R).norm() == 0.0);
+    REQUIRE((a.p - b.p).norm() == 0.0);
+}

@@ -8,7 +8,7 @@
 
 #pragma once
 #include <string>
-#include <vendor/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Aetherion::RigidBody {
     struct Config;

@@ -11,6 +11,7 @@ add_executable(
   test_BodyRatesJson.cpp
   test_AerodynamicParametersJson.cpp
   test_ConfigJson.cpp
+  test_JsonErrorPaths.cpp
   test_VelocityNEDJson.cpp)
 
 target_link_libraries(test_json PRIVATE Aetherion Catch2::Catch2WithMain)
@@ -48,7 +49,8 @@ catch_discover_tests(test_daveml_reader)
 # DAVE-ML aero model smoke tests
 set(DAVEML_F16_AERO "${PROJECT_SOURCE_DIR}/data/F16_S119_source/F16_aero.dml")
 
-add_executable(test_daveml_aero_model test_DAVEMLAeroModel.cpp)
+add_executable(test_daveml_aero_model test_DAVEMLAeroModel.cpp test_DAVEMLAeroModelErrors.cpp
+                                      test_DAVEMLAeroModelTapes.cpp)
 
 target_compile_definitions(test_daveml_aero_model PRIVATE "DAVEML_AERO_FILE=\"${DAVEML_F16_AERO}\"")
 

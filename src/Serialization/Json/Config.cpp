@@ -16,7 +16,7 @@
 #include "Aetherion/Serialization/Json/VelocityNED.h"
 #include "Aetherion/Serialization/Json/BodyRates.h"
 
-#include <vendor/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 namespace Aetherion::Serialization::Json {
 

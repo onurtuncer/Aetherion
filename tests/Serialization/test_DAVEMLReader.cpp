@@ -25,9 +25,11 @@
 #include <Aetherion/Serialization/DAVEML/DAVEMLReader.h>
 #include <Aetherion/Serialization/DAVEML/LoadInertiaFromDAVEML.h>
 
+#include <cstdint>
 #include <string>
 #include <fstream>
 #include <filesystem>
+#include <random>
 
 using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinRel;
@@ -55,9 +57,15 @@ const char* const kMinDML = R"(<?xml version="1.0" encoding="UTF-8"?>
   <variableDef varID="x_sft2b" units="slug-ft2"  initialValue="5.0"/>
 </DAVEfunc>)";
 
+// catch_discover_tests runs every TEST_CASE as its own process, so under
+// `ctest -j` several cases write this file at once: each gets its own name, or
+// one case's remove() deletes the file another is still reading.
 std::string writeMinDML()
 {
-    const std::string path = "_ae_test_reader_min.dml";
+    std::random_device rd;
+    const auto tag = (static_cast<std::uint64_t>(rd()) << 32U) | rd();
+    const std::string path =
+        (std::filesystem::temp_directory_path() / ("_ae_test_reader_min_" + std::to_string(tag) + ".dml")).string();
     std::ofstream f(path);
     f << kMinDML;
     return path;

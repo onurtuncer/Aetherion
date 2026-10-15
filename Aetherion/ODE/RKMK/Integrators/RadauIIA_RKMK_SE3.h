@@ -140,11 +140,15 @@ namespace Aetherion::ODE::RKMK::Integrators {
             if constexpr (requires { newton_res.converged; }) out.converged = newton_res.converged;
             if constexpr (requires { newton_res.iters; })     out.iters = newton_res.iters;
 
-            // Residual norm at the found x.
+            // Residual of the function itself (no tape) at the found x; the
+            // step is accepted on it, with the solver's own tolerance.
             {
                 Residual residual_chk(q0, p0, t0, h, tableau_, f_);
                 out.residual_norm =
                     residual_chk.template operator() < double > (x).norm();
+                const double thresh = opt.abs_tol + opt.rel_tol * newton_res.r0_norm;
+                if (out.converged && !(out.residual_norm <= 10.0 * thresh))
+                    out.converged = false;
             }
 
             // Update: Delta = sum_i b_i * xi_i

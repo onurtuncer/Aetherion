@@ -20,14 +20,16 @@
 //
 // Templated on Scalar S -- works for both double and CppAD::AD<double>.
 //
-// Changes vs original:
-//   1. Both M and M_inv are stored (built once at construction).
-//      The original stored only M_inv then called M_inv_S.inverse() on every
-//      Newton stage to recover M -- a full 6x6 inversion per call.
-//      Now operator() uses M.cast<S>(), which is a free type-widening.
-//   2. The CTAD deduction guide with defaulted template arguments has been
-//      removed.  MSVC (C2572) and the C++ standard forbid default arguments
-//      on deduction guide template parameter lists.
+// Mass properties. M is Featherstone's spatial inertia about the body origin
+// (eq. 2.63), built by Spatial::Inertia from InertialParameters: the inertia
+// tensor is about the centre of mass and is shifted to the origin by the
+// parallel-axis term m [c]x [c]x^T, with c the centre of mass relative to the
+// origin; the off-diagonal blocks are m [c]x. Both M and M_inv are stored.
+// The mass handed to the wrench policies is the one M was built with, so the
+// gravitational acceleration is g whatever the mass state says; x(6) is
+// integrated by the mass policy and is for the owner to read. Mass properties
+// change only through setInertialParameters(), which a variable-mass vehicle
+// calls before each step (TwoStageRocketSimulator does, zero-order hold).
 //
 #pragma once
 
@@ -42,6 +44,7 @@
 #include <Aetherion/RigidBody/KinematicsXiField.h>
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/Spatial/Adjoint.h>
+#include <Aetherion/Spatial/Inertia.h>
 #include <Aetherion/Spatial/Twist.h>
 
 namespace Aetherion::RigidBody {
@@ -75,8 +78,9 @@ namespace Aetherion::RigidBody {
         FD::MassPolicy       MassMdot = FD::ConstantMassPolicy
     >
     struct VectorField {
-        Eigen::Matrix<double, 6, 6> M;     ///< 6×6 spatial inertia matrix (body frame).
-        Eigen::Matrix<double, 6, 6> M_inv; ///< Inverse of @c M (precomputed at construction).
+        Eigen::Matrix<double, 6, 6> M;     ///< 6×6 spatial inertia about the body origin (body frame).
+        Eigen::Matrix<double, 6, 6> M_inv; ///< Inverse of @c M.
+        double                      mass_kg{ 0.0 }; ///< Mass @c M was built with [kg]; handed to the wrench policies.
 
         Gravity   gravity;     ///< Gravity wrench policy instance.
         Aero      aero;        ///< Aerodynamic wrench policy instance.
@@ -100,31 +104,27 @@ namespace Aetherion::RigidBody {
             , thrust(std::move(th))
             , mass_model(std::move(mm))
         {
-            const double m = ip.mass_kg;
-            const double Ixx = ip.Ixx, Iyy = ip.Iyy, Izz = ip.Izz;
-            const double Ixy = ip.Ixy, Iyz = ip.Iyz, Ixz = ip.Ixz;
-            const double rx = ip.xbar_m, ry = ip.ybar_m, rz = ip.zbar_m;
+            setInertialParameters(ip);
+        }
 
-            M = Eigen::Matrix<double, 6, 6>::Zero();
-
-            // Rotational inertia block (top-left 3x3)
-            M(0, 0) = Ixx;  M(0, 1) = -Ixy;  M(0, 2) = -Ixz;
-            M(1, 0) = -Ixy;  M(1, 1) = Iyy;  M(1, 2) = -Iyz;
-            M(2, 0) = -Ixz;  M(2, 1) = -Iyz;  M(2, 2) = Izz;
-
-            // Translational inertia block (bottom-right 3x3)
-            M(3, 3) = m;  M(4, 4) = m;  M(5, 5) = m;
-
-            // CG offset cross-coupling (Featherstone spatial inertia: h× = m·[c×])
-            // [c×] = [[0,-rz,ry],[rz,0,-rx],[-ry,rx,0]]; bottom-left = [c×]^T = -[c×]
-            M(0, 4) = -m * rz;  M(0, 5) =  m * ry;
-            M(1, 3) =  m * rz;  M(1, 5) = -m * rx;
-            M(2, 3) = -m * ry;  M(2, 4) =  m * rx;
-            M(3, 1) =  m * rz;  M(3, 2) = -m * ry;
-            M(4, 0) = -m * rz;  M(4, 2) =  m * rx;
-            M(5, 0) =  m * ry;  M(5, 1) = -m * rx;
-
-            M_inv = M.inverse();
+        /// @brief Rebuild @c M, @c M_inv and @c mass_kg from new mass properties.
+        ///
+        /// The inertia tensor in @p ip is about the centre of mass and
+        /// @c (xbar_m, ybar_m, zbar_m) is the centre of mass relative to the body
+        /// origin, so @c M is the Featherstone spatial inertia about the origin:
+        /// the tensor shifted by the parallel-axis term @f$ m[c]_\times[c]_\times^{\mathsf T} @f$
+        /// in the rotational block and @f$ m[c]_\times @f$ in the coupling blocks.
+        /// Without the shift the matrix is not the kinetic-energy metric of any
+        /// rigid body (it is indefinite for a large enough offset). This is the
+        /// only way the mass properties change; call it before each step for a
+        /// variable-mass vehicle.
+        void setInertialParameters(const InertialParameters& ip)
+        {
+            const Spatial::Inertia<double> inertia(
+                ip.mass_kg, inertiaTensor(ip), Eigen::Vector3d(ip.xbar_m, ip.ybar_m, ip.zbar_m));
+            M       = inertia.M;
+            M_inv   = M.inverse();
+            mass_kg = ip.mass_kg;
         }
 
         // Convenience constructors for the common case where trailing policy types are
@@ -175,9 +175,11 @@ namespace Aetherion::RigidBody {
                 const Eigen::Matrix<S, 7, 1>& x) const
         {
             const Eigen::Matrix<S, 6, 1> nu_B = x.template head<6>();
-            const S&                     m = x(6);
 
-            // 1. External wrenches
+            // 1. External wrenches, with the mass M was built with: gravity
+            //    divided by M must give g, whatever the integrated mass state
+            //    x(6) says (it only feeds the mass policy below).
+            const S m = S(mass_kg);
             Spatial::Wrench<S> W_ext{};
             W_ext.f = gravity(g, m).f;
             W_ext.f += aero(g, nu_B, m, t).f;
@@ -195,8 +197,8 @@ namespace Aetherion::RigidBody {
 
             const Eigen::Matrix<S, 6, 1> dnu = M_inv_S * (W_ext.f - bias);
 
-            // 3. Mass equation
-            const S dm = mass_model.mdot(t, m);
+            // 3. Mass equation, on the integrated mass state
+            const S dm = mass_model.mdot(t, x(6));
 
             Eigen::Matrix<S, 7, 1> xdot;
             xdot.template head<6>() = dnu;

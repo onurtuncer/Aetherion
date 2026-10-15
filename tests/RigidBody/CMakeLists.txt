@@ -12,6 +12,7 @@ add_executable(
   test_SE3StateInit.cpp
   test_Config.cpp
   test_SpatialInertiaSignConvention.cpp
+  test_SpatialInertiaContract.cpp
   test_ConvergenceOrder.cpp
   test_ConstraintDrift.cpp
   test_ManifoldFactorial.cpp)

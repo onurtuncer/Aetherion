@@ -117,7 +117,7 @@ State space
 ^^^^^^^^^^^
 
 The navigation core is one element of :math:`\SE_2(3)`, the group of
-*extended poses* (rotation plus two vectors):
+*extended poses* (rotation plus two vectors) :cite:`barfoot2017stateEstimation`:
 
 .. math::
 
@@ -157,7 +157,21 @@ exponential and left Jacobian :math:`J_l(\phi)`,
    \Exp(\xi) = \big(\Exp(\phi),\; J_l(\phi)\,\nu,\; J_l(\phi)\,\rho\big),
 
 so it reuses ``ODE/RKMK/Lie/SO3.h`` (see :ref:`group-exp-log` for the
-:math:`\SE(3)` case).
+:math:`\SE(3)` case). The inverse and, away from the :math:`\SO(3)` cut
+locus, the logarithm are
+
+.. math::
+
+   X^{-1} = \big(R^{\mathsf T},\; -R^{\mathsf T} v,\; -R^{\mathsf T} p\big),
+   \qquad
+   \Log(X) = \big(\phi,\; J_l(\phi)^{-1} v,\; J_l(\phi)^{-1} p\big),
+   \quad \phi = \Log(R).
+
+The tangent coordinates :math:`\nu, \rho` are not the physical differences
+:math:`v - \hat v`, :math:`p - \hat p`; how they relate depends on the error
+convention (below). The column order :math:`(R, v, p)` follows
+``SE23.h``; some of the literature swaps :math:`v` and :math:`p`, which
+permutes every block matrix below.
 
 The full state is :math:`\SE_2(3) \times \R^7`: the navigation core plus a
 gyro bias :math:`b_g \in \R^3`, an accelerometer bias :math:`b_a \in \R^3`
@@ -561,6 +575,65 @@ Finally, the same map is differentiated by CppAD through Eigen and the
 ``CondExp`` branches of :math:`\Exp` and :math:`\Log` and agrees with the
 finite differences to :math:`10^{-9}` (RI) and :math:`10^{-7}` (LI): the
 path the code generator takes is exercised now, not in step 8.
+
+Propagation accuracy (open)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The step above is a second-order scheme. It is not the exact solution for
+constant inputs, and it does not use the RKMK integrators of
+:ref:`rkmk-product-manifolds`. Two alternatives are on record for a later
+comparison; neither is implemented in the estimator.
+
+**Exact constant-input step.** With :math:`\omega, a` (bias-corrected) and
+gravity :math:`g` held constant over a step of length :math:`h`, and
+:math:`\phi = \omega h`, the kinematics integrate in closed form
+(the same structure underlies IMU preintegration on :math:`\SE_2(3)`
+:cite:`barrau2020preintegration`):
+
+.. math::
+
+   R^+ = R\,\Exp(\phi), \qquad
+   v^+ = v + g h + R\,h\,J_l(\phi)\,a, \qquad
+   p^+ = p + v h + \tfrac12 g h^2 + R\,h^2 J_2(\phi)\,a,
+
+.. math::
+
+   J_2(\phi) = \int_0^1 (1-s)\,\Exp(s\phi)\,ds
+             = \tfrac12 I + \tfrac16 [\phi]_\times
+               + \tfrac1{24} [\phi]_\times^2 + \cdots .
+
+:math:`J_2` is not :math:`J_l`. The step is exact only under its
+assumptions: inputs held constant over the interval, and constant gravity.
+With position-dependent gravity and the replay's averaged readings it is
+another approximation, if a better one in fast rotation.
+
+**RKMK** :cite:`muntheKaas1998`. Written as :math:`\dot X = X\,u(t, X)^\wedge` with the
+body-trivialised field
+
+.. math::
+
+   u(t, X) = \big(\omega,\; a + R^{\mathsf T} g_L(p),\; R^{\mathsf T} v\big),
+
+and :math:`X(t) = X_n \Exp(\Omega(t))`, the local coordinates obey
+:math:`\dot\Omega = \dexp^{-1}_{-\Omega}\big(u(t, X_n\Exp(\Omega))\big)`
+with :math:`\dexp^{-1}_{-\Omega} u = u + \tfrac12[\Omega, u]
++ \tfrac1{12}[\Omega,[\Omega, u]] + \cdots` (the sign is the one fixed in
+:ref:`rkmk-product-manifolds`; the opposite sign passes the usual tests and
+caps the order at two). The bracket on :math:`\Lie{se}_2(3)`, for
+:math:`\xi = (\phi, \nu, \rho)` and :math:`\eta = (\psi, \mu, \sigma)`, is
+
+.. math::
+
+   [\xi, \eta] = \big(\phi\times\psi,\;
+                      \phi\times\mu - \psi\times\nu,\;
+                      \phi\times\sigma - \psi\times\rho\big).
+
+A fourth-order state step is not a fourth-order filter: :math:`\Phi` and
+:math:`Q_d` would have to be made consistent with it, by the same
+convergence test as above. A fair comparison runs the present step, the
+exact constant-input step and RKMK4 on the same input reconstruction, and
+compares NEES/NIS and cost as well as state error. RKMK4 cannot beat the
+exact step when the inputs really are constant over each interval.
 
 
 .. _sensor-fusion-frame:
@@ -988,8 +1061,21 @@ Validation plan
 
 Consistency is judged against truth with the normalised estimation error
 squared (NEES) and the normalised innovation squared (NIS)
-:cite:`simon2006optimal`. Bias-state NEES needs the realised bias values,
-which the sensor FMUs will publish (Hemerion step 3).
+:cite:`simon2006optimal`,
+
+.. math::
+
+   \mathrm{NEES} = e^{\mathsf T} P^{-1} e, \qquad
+   \mathrm{NIS} = z^{\mathsf T} S^{-1} z,
+
+with :math:`z` the innovation and :math:`S = H P H^{\mathsf T} + R` its
+covariance. For a consistent filter their expectations are the error and
+measurement dimensions. The error :math:`e` must be taken in the
+convention's own coordinates (``x.error<C>(truth)``, as ``EKF.h`` does),
+because that is what :math:`P` describes; a physical difference
+:math:`p - \hat p` scored against an RI covariance is not a consistency
+test. Bias-state NEES needs the realised bias values, which the sensor FMUs
+will publish (Hemerion step 3).
 
 Tuning and observability (step 7) use the F-16 check cases with turbulence
 on (in calm air every body rate on case 11 stays below one gyro count):
@@ -1018,6 +1104,112 @@ in a 10 m/s crosswind, course and yaw differ by 2.28°.
 the covariance form (Joseph form, or UD / square-root) is chosen while truth
 is still available. The choice is an input to the embedded implementation.
 A UKF is run as a cross-check once the EKF is consistent.
+
+
+Closed-loop use (planned)
+-------------------------
+
+Replay shows that the filter is consistent on a fixed record of inputs. It
+does not show that the vehicle stays acceptable when its controller flies on
+the estimate: in replay an estimation error cannot change the trajectory
+that produces the next measurement, and in flight it does. Both questions
+need answering; neither answers the other.
+
+**No commands in the navigation filter.** The gyro and accelerometer
+measure the motion that every force and moment produces, control included,
+so the strapdown kinematics above need no actuator commands, and stay
+independent of aerodynamic derivatives and actuator models. Commands enter
+only through model aiding (below), never by replacing measured specific
+force with commanded acceleration.
+
+**One filter, three drivers.** The same filter, driven by typed,
+timestamped events, runs in offline replay (reproducibility, Jacobians,
+NEES/NIS, regression), in closed-loop co-simulation with live sensor FMUs
+(stability, transients, dropout and reacquisition, scheduling) and on the
+flight computer (deadlines, numerics, fault response). Reading a CSV log is
+an adapter around the filter, not part of it; ``InvariantEKF`` already has
+this shape (``predict``, one ``update*`` per measurement, time owned by the
+caller).
+
+**Three times per measurement.** A measurement has a validity time
+:math:`t_m`, an arrival time :math:`t_a` and is used at a control epoch
+:math:`t_c`, normally :math:`t_m \le t_a \le t_c`. Applying a late GNSS fix
+as if it were current is a time-alignment error, and in LCI also a frame
+error through :math:`{}^{W}\!R_{E}(t)`. The replay reference may apply the
+fix at :math:`t_m` because it reads the whole log; the flight filter keeps a
+bounded history of state, covariance and IMU samples, corrects at
+:math:`t_m` and repropagates to the present (Hemerion step 10). An estimate
+handed to the controller at :math:`t_c` must never contain a measurement
+that had not arrived by :math:`t_c`, and any dead-reckoning past the last
+IMU sample is bounded and reported.
+
+**Controller-facing contract.** At minimum: epoch, frame, state, covariance
+(or a bounded quality figure), age, and a health mode -- *uninitialised*,
+*aligning*, *nominal*, *degraded*, *invalid* -- each with defined control
+behaviour. A GNSS outage leaves attitude usable while position uncertainty
+grows; reacquisition can produce a large correction, which guidance must
+not see as an unbounded step in its reference.
+
+**Acceptance.** Mean error and consistency are necessary but not
+sufficient. The closed-loop matrix varies initial yaw error, aerodynamic
+uncertainty, wind and turbulence, GNSS dropout and delay, computation
+overruns and manoeuvres, and judges tracking error, actuator activity and
+saturation, transients at large corrections, estimate age and missed
+deadlines, innovation consistency, and safe fallback. The two error
+conventions are compared on these too, not on position RMS alone: they
+differ precisely in how they behave under large corrections
+(:ref:`sensor-fusion-convention-evidence`), and that is what a controller
+feels.
+
+
+Model-aided estimation (deferred)
+---------------------------------
+
+The navigation predictor is strapdown: IMU samples drive it, and the
+6-DOF plant is not evaluated. Aetherion's differentiable plant could add
+information in two ways, both deferred.
+
+**Plant aiding as a measurement.** Keep the strapdown core and add the
+plant as an optional source,
+
+.. math::
+
+   z_{\mathrm{model}} = h_{\mathrm{model}}(X, b, u_c, \hat\theta)
+                        + \epsilon_{\mathrm{model}},
+   \qquad \operatorname{Cov}(\epsilon_{\mathrm{model}}) = R_{\mathrm{model}},
+
+for example on air-relative velocity or a slowly varying parameter.
+:math:`R_{\mathrm{model}}` must cover aerodynamic, actuator and wind
+uncertainty and the model's validity envelope. If the model output was
+computed from an IMU sample or measurement the filter has already used, the
+errors are correlated, and treating them as independent makes the
+covariance overconfident: model the correlation, augment the state with
+the shared uncertainty, or leave the redundant information out. The
+inertial core stays common across vehicles while the aiding blocks change
+with the configuration (aerodynamics and air data for the fixed wing,
+variable mass and propulsion for the rocket, mode-dependent models for the
+tail-sitter).
+
+**Plant as the process model.** The state then grows beyond
+:math:`(R, v, p)` to body rates, actuator or propulsion states and model
+parameters. CppAD gives :math:`A_z = \partial f/\partial z` and
+:math:`B_u = \partial f/\partial u_c` of the plant, but these are not the
+filter's error Jacobian: that is the derivative of the *discrete perturbed
+flow*, mapped back through the retraction,
+
+.. math::
+
+   F_d = \frac{\partial}{\partial\xi}\,
+         \mathcal R^{-1}_{\Phi_h(\hat z)}\!\Big(
+         \Phi_h\big(\mathcal R_{\hat z}(\xi), u_c\big)\Big)\Big|_{\xi = 0},
+
+which differs between :math:`\hat X\Exp(\xi)` and :math:`\Exp(\xi)\hat X`
+even for identical physics. Taping that map, not the continuous
+:math:`A_z`, is the AD route, and it is the same consistency requirement
+step 5 met for the strapdown step. Such a filter inherits every
+aerodynamic, thrust, actuator and wind modelling error, so it must be
+validated against a plant that is deliberately perturbed from the
+filter's model, never only against itself.
 
 
 Code generation

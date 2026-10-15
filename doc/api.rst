@@ -300,7 +300,7 @@ FlightDynamics modules.
 Key types:
 
 * :cpp:struct:`Aetherion::RigidBody::State` — full state on :math:`SE(3) \times \mathbb{R}^7`.
-* :cpp:struct:`Aetherion::RigidBody::InertialParameters` — mass, inertia tensor about CoG, CoG offset (all in body frame).
+* :cpp:struct:`Aetherion::RigidBody::InertialParameters` — mass, inertia tensor about the centre of mass, centre of mass relative to the body origin (all in body frame).
 * :cpp:class:`Aetherion::RigidBody::VectorField` — Newton-Euler ODE right-hand side, templated on physics policies.
 * :cpp:class:`Aetherion::RigidBody::SixDoFStepper` — high-level facade with three template parameters:
   ``VectorField``, ``EuclidDim`` (default 7), and ``IntegratorPolicy`` (default Radau IIA RKMK),
@@ -574,6 +574,14 @@ subclasses to override:
 ``--startTime``, ``--endTime``, ``--inputFileName``, ``--outputFileName``, and
 ``--writeInterval`` from ``argv``, throwing ``std::invalid_argument`` on
 unknown flags, missing values, or constraint violations.
+
+``--startTime`` is the epoch of the run: it sets the initial Earth rotation
+angle, and the ``time`` column of the output is the time elapsed since it, so
+a run lasts ``endTime - startTime`` and its first row is at ``time = 0``.
+(Until v0.17.2 a nonzero ``--startTime`` ran from 0 to ``endTime`` instead --
+pre-DOI audit finding F08.)
+A step that fails without advancing the clock is retried at most three times;
+then the run stops with an error instead of looping (audit finding F09).
 
 .. doxygennamespace:: Aetherion::Simulation
    :content-only:

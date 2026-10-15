@@ -28,6 +28,7 @@
 #include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/Atmosphere.h>
+#include <Aetherion/Coordinate/LocalToInertial.h>
 
 namespace {
     using SE3d  = Aetherion::ODE::RKMK::Lie::SE3<double>;
@@ -647,4 +648,73 @@ TEST_CASE("SteadyWindDragPolicy: evaluates with AD<double>",
     CHECK(CppAD::Value(w.f(4)) > 0.0);
     // Moments must be zero
     CHECK_THAT(CppAD::Value(w.f(0)), WithinAbs(0.0, 1e-10));
+}
+
+// =============================================================================
+// Regression: density is taken at the height above the WGS-84 ellipsoid.
+//
+// The generic policies used |r| - a (equatorial radius) for the altitude. That
+// is the height only on the equator, where every check case so far sits; at
+// 36 deg N and 3000 m it is -4.35 km, the atmosphere clamps to sea level, and
+// drag comes out 35 % too large.
+// =============================================================================
+
+namespace {
+    // ECI position of a point at geodetic (lat, lon, h); ECI = ECEF at t = 0.
+    Vec3d eciAt(double lat_deg, double lon_deg, double h_m)
+    {
+        constexpr double kDeg = 3.14159265358979323846 / 180.0;
+        const auto r = Aetherion::Coordinate::GeodeticToECEF(lat_deg * kDeg, lon_deg * kDeg, h_m);
+        return Vec3d(r[0], r[1], r[2]);
+    }
+}
+
+TEST_CASE("Drag policies: density at 36 deg latitude is that of the geodetic height",
+    "[FlightDynamics][aero][regression]")
+{
+    using namespace Aetherion::Environment;
+    using namespace Aetherion::FlightDynamics;
+
+    constexpr double h_m = 3000.0;
+    constexpr double CD = 0.47, S = 0.018241465;
+    const Vec3d r_ECI = eciAt(36.0, 0.0, h_m);
+    const Mat3d R = Mat3d::Identity();
+    const Vec3d v_surf = surfaceVelocityBody(R, r_ECI);
+    const Vec3d dv(30.0, 0.0, 0.0);          // atmosphere-relative airspeed, body x
+
+    SE3d g(R, r_ECI);
+    Vec6d nu;
+    nu << 0.0, 0.0, 0.0, v_surf.x() + dv.x(), v_surf.y() + dv.y(), v_surf.z() + dv.z();
+
+    // The WGS-84 helper agrees with the geodetic height to 0.1 m below 15 km;
+    // 0.1 m is 1e-5 in density, so 1e-4 relative is a safe bound. The old
+    // sea-level density gives -0.5 * 1.225 * CD * S * 30^2 = -4.73 N here.
+    const double rho = US1976Atmosphere(h_m).rho;
+    const double F_exp = -0.5 * rho * CD * S * dv.norm() * dv.x();
+    CHECK(rho < 0.92);   // guard: the expected value is not the sea-level one
+
+    SECTION("DragOnlyAeroPolicy")
+    {
+        DragOnlyAeroPolicy p{ CD, S };
+        const auto w = p(g, nu, 14.59, 0.0);
+        CHECK_THAT(w.f(3), Catch::Matchers::WithinRel(F_exp, 1e-4));
+    }
+    SECTION("BrickDampingAeroPolicy")
+    {
+        BrickDampingAeroPolicy p{ CD, S, 0.1, 0.2, 0.0, 0.0, 0.0 };
+        const auto w = p(g, nu, 14.59, 0.0);
+        CHECK_THAT(w.f(3), Catch::Matchers::WithinRel(F_exp, 1e-4));
+    }
+    SECTION("SteadyWindDragPolicy, no wind")
+    {
+        SteadyWindDragPolicy p{ CD, S, 0.0, 0.0, 0.0 };
+        const auto w = p(g, nu, 14.59, 0.0);
+        CHECK_THAT(w.f(3), Catch::Matchers::WithinRel(F_exp, 1e-4));
+    }
+    SECTION("WindAwareDragPolicy<ZeroWind>")
+    {
+        WindAwareDragPolicy<ZeroWind> p{ CD, S, ZeroWind{} };
+        const auto w = p(g, nu, 14.59, 0.0);
+        CHECK_THAT(w.f(3), Catch::Matchers::WithinRel(F_exp, 1e-4));
+    }
 }

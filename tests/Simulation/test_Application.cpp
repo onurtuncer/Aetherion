@@ -11,6 +11,7 @@
 #include <filesystem>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
 
 #include <Aetherion/Simulation/Application.h>
 #include <Aetherion/Simulation/ArgumentParser.h>
@@ -163,6 +164,21 @@ TEST_CASE("Application parses --outputFileName correctly", "[Application]") {
     REQUIRE(app.getConfig().outputFileName == "sim.csv");
 }
 
+TEST_CASE("Application rejects non-numeric --startTime", "[Application]") {
+    FakeArgv args{ "test_program", "--startTime", "noon" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
+TEST_CASE("Application rejects an empty --inputFileName", "[Application]") {
+    FakeArgv args{ "test_program", "--inputFileName", "" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
+TEST_CASE("Application rejects an empty --outputFileName", "[Application]") {
+    FakeArgv args{ "test_program", "--outputFileName", "" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
 // ─────────────────────────────────────────────────────────────
 // Tests — writeInterval
 // ─────────────────────────────────────────────────────────────
@@ -271,7 +287,7 @@ public:
     explicit RunableStub(FakeArgv& args, int failOnStep = -1)
         : Application(args.argc(), args.argv())
         , failOnStep_(failOnStep)
-        , time_(getConfig().startTime)
+        , time_(0.0)   // elapsed, as every simulator reports it
     {
     }
 
@@ -370,4 +386,98 @@ TEST_CASE("Log: Init populates core and client loggers", "[Log]") {
     REQUIRE(Log::GetClientLogger() != nullptr);
     REQUIRE(Log::GetCoreLogger() == Log::GetCoreLogger());
     REQUIRE(Log::GetClientLogger() == Log::GetClientLogger());
+}
+// ─────────────────────────────────────────────────────────────
+// StalledStub — reports non-convergence *without* advancing time
+// for the first `stalls` calls, then steps normally. This is what
+// ISimulator::step() does on a rejected step: state and time stay
+// put, so the loop would retry the identical step for ever.
+// ─────────────────────────────────────────────────────────────
+class StalledStub : public Application
+{
+public:
+    explicit StalledStub(FakeArgv& args, int stalls)
+        : Application(args.argc(), args.argv())
+        , stalls_(stalls)
+        , time_(0.0)   // elapsed, as every simulator reports it
+    {
+    }
+
+    int stepsCalled() const { return stepsCalled_; }
+
+protected:
+    void prepareSimulation()                  const override {}
+    void writeInitialSnapshot(std::ofstream&) const override {}
+    void logFinalSummary()                    const override {}
+
+    StepObservation stepAndRecord(std::ofstream&, double h, bool) const override
+    {
+        ++stepsCalled_;
+        StepObservation obs;
+        if (stepsCalled_ <= stalls_) {
+            obs.time_s    = time_;      // unchanged
+            obs.converged = false;
+            obs.residual  = 0.5;
+            return obs;
+        }
+        time_ += h;
+        obs.time_s    = time_;
+        obs.converged = true;
+        return obs;
+    }
+
+private:
+    int            stalls_;
+    mutable int    stepsCalled_ = 0;
+    mutable double time_        = 0.0;
+};
+
+TEST_CASE("Application::run aborts a step that keeps failing without advancing",
+          "[Application][run][regression]") {
+    const std::string outFile = "_ae_run_test_stalled.csv";
+    FakeArgv args{ "test_program",
+        "--timeStep",       "0.1",
+        "--endTime",        "0.3",
+        "--outputFileName", outFile.c_str() };
+    StalledStub app(args, /*stalls=*/1000);
+
+    REQUIRE_THROWS_AS(app.run(), std::runtime_error);
+    // Bounded by kMaxStalledSteps in Application.cpp, not by the stub.
+    CHECK(app.stepsCalled() == 3);
+
+    std::filesystem::remove(outFile);
+}
+
+TEST_CASE("Application::run recovers when a stalled step eventually advances",
+          "[Application][run][regression]") {
+    const std::string outFile = "_ae_run_test_stall_recover.csv";
+    FakeArgv args{ "test_program",
+        "--timeStep",       "0.1",
+        "--endTime",        "0.3",
+        "--outputFileName", outFile.c_str() };
+    StalledStub app(args, /*stalls=*/2);
+
+    REQUIRE_NOTHROW(app.run());
+    CHECK(app.stepsCalled() == 2 + 3);
+
+    std::filesystem::remove(outFile);
+}
+
+TEST_CASE("Application::run with a nonzero --startTime runs for endTime - startTime",
+          "[Application][run][regression]") {
+    // F08: --startTime 1 --endTime 1.3 --timeStep 0.1 is a 0.3 s run. The loop
+    // used to start at 1, adopt the simulator's elapsed time (0.1) after the
+    // first step and run on to 1.3 elapsed: 13 steps.
+    const std::string outFile = "_ae_run_test_starttime.csv";
+    FakeArgv args{ "test_program",
+        "--startTime",      "1.0",
+        "--endTime",        "1.3",
+        "--timeStep",       "0.1",
+        "--outputFileName", outFile.c_str() };
+    RunableStub app(args);
+
+    REQUIRE_NOTHROW(app.run());
+    CHECK(app.stepsCalled() == 3);
+
+    std::filesystem::remove(outFile);
 }
