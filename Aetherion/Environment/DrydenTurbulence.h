@@ -233,7 +233,38 @@ public:
     void reseed(std::uint64_t seed)
     {
         m_rng.seed(seed);
+        m_seed      = seed;
+        m_draws     = 0;
         m_haveSpare = false;
+    }
+
+    /// Where the noise stream is: enough to put the generator back exactly.
+    /// The engine is not copied out (mt19937_64 carries 2.5 kB); the seed and
+    /// the number of draws since seeding describe its position, and the
+    /// Box-Muller spare, if one is pending, completes it. Trivially copyable,
+    /// so an FMU can hold it in its state record next to states().
+    struct NoiseState {
+        std::uint64_t seed{ 1 };
+        std::uint64_t draws{ 0 };
+        double        spare{ 0.0 };
+        bool          haveSpare{ false };
+    };
+
+    [[nodiscard]] NoiseState noiseState() const noexcept
+    {
+        return NoiseState{ m_seed, m_draws, m_spare, m_haveSpare };
+    }
+
+    /// Put the stream back where noiseState() found it: the next gaussian()
+    /// is the one that followed. Costs one engine draw per draw replayed.
+    void setNoiseState(const NoiseState& n)
+    {
+        m_rng.seed(n.seed);
+        m_rng.discard(n.draws);
+        m_seed      = n.seed;
+        m_draws     = n.draws;
+        m_spare     = n.spare;
+        m_haveSpare = n.haveSpare;
     }
 
     /// Zero the filter states (the gust starts from calm).
@@ -385,6 +416,7 @@ private:
 
     double uniform01()
     {
+        ++m_draws;
         const std::uint64_t bits = m_rng() >> 11;             // 53 bits
         return static_cast<double>(bits) * (1.0 / 9007199254740992.0);
     }
@@ -392,6 +424,8 @@ private:
     DrydenParameters               m_params{};
     std::array<double, kNumStates> m_x{};
     std::mt19937_64                m_rng{ 1 };
+    std::uint64_t                  m_seed{ 1 };
+    std::uint64_t                  m_draws{ 0 };
     bool                           m_haveSpare{ false };
     double                         m_spare{ 0.0 };
     LagCache                       m_cacheV{};

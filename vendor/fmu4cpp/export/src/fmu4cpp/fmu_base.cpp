@@ -1,5 +1,6 @@
 
 #include "fmu4cpp/fmu_base.hpp"
+#include <cstring>
 #include "fmu4cpp/fmu_except.hpp"
 #include "fmu4cpp/model_info.hpp"
 #include "fmu4cpp/util.hpp"
@@ -322,36 +323,75 @@ std::vector<unsigned> fmu_base::get_value_refs() const {
 }
 
 
+// An FMU state is the model's registered State plus the base clock. The
+// clock has to travel with it: fmi2SetFMUstate rolls the co-simulation back
+// to the time the state was taken, and the next fmi2DoStep arrives at that
+// time, which step() checks against time_. Without the clock in the record a
+// restored instance rejected its first step ("Current time does not match
+// the internal time"), while modelDescription advertised
+// canGetAndSetFMUstate. (Aetherion change to the vendored fmu4cpp; pre-DOI
+// audit finding F05.) The serialized form is the clock's 8 bytes followed by
+// the model's bytes.
+namespace {
+    struct fmu_state_record {
+        double time;
+        void *model;
+    };
+}
+
 void *fmu_base::getFMUState() {
     if (!state_ops_ || !get_state_ptr_) throw fatal_error("getFMUState not implemented");
     const void *in_place = get_state_ptr_(this);
-    return state_ops_->create_from_state(in_place);
+    return new fmu_state_record{time_, state_ops_->create_from_state(in_place)};
 }
 
 void fmu_base::setFmuState(void *state) {
     if (!state_ops_ || !get_state_ptr_) throw fatal_error("setFmuState not implemented");
+    if (!state) throw fatal_error("setFmuState: null state");
+    const auto *rec = static_cast<const fmu_state_record *>(state);
     void *dst = get_state_ptr_(this);
-    state_ops_->assign_into_state(dst, state);
+    state_ops_->assign_into_state(dst, rec->model);
+    time_ = rec->time;
 }
 
 void fmu_base::freeFmuState(void **state) {
     if (!state_ops_ || !state || !*state) throw fatal_error("freeFmuState not implemented");
-    state_ops_->destroy(*state);
+    auto *rec = static_cast<fmu_state_record *>(*state);
+    state_ops_->destroy(rec->model);
+    delete rec;
     *state = nullptr;
 }
 
 void fmu_base::serializedFMUStateSize(void *state, size_t &size) {
     if (!state_ops_) throw fatal_error("serializedFMUStateSize not implemented");
-    size = state_ops_->serialized_size();
+    (void) state;
+    size = sizeof(double) + state_ops_->serialized_size();
 }
 
 void fmu_base::serializeFMUState(void *state, std::vector<uint8_t> &out) {
     if (!state_ops_) throw fatal_error("serializeFMUState not implemented");
-    const void *ptr = state ? state : get_state_ptr_(this);
-    state_ops_->serialize(ptr, out);
+    double time = time_;
+    const void *model = get_state_ptr_(this);
+    if (state) {
+        const auto *rec = static_cast<const fmu_state_record *>(state);
+        time = rec->time;
+        model = rec->model;
+    }
+    std::vector<uint8_t> body;
+    state_ops_->serialize(model, body);
+    out.resize(sizeof(double) + body.size());
+    std::memcpy(out.data(), &time, sizeof(double));
+    std::memcpy(out.data() + sizeof(double), body.data(), body.size());
 }
 
 void fmu_base::deserializeFMUState(const std::vector<uint8_t> &in, void **out) {
     if (!state_ops_) throw fatal_error("deserializeFMUState not implemented");
-    state_ops_->deserialize(in, out);
+    if (in.size() < sizeof(double) + state_ops_->serialized_size())
+        throw fatal_error("deserializeFMUState: serialized state too short");
+    double time = 0.0;
+    std::memcpy(&time, in.data(), sizeof(double));
+    const std::vector<uint8_t> body(in.begin() + sizeof(double), in.end());
+    void *model = nullptr;
+    state_ops_->deserialize(body, &model);
+    *out = new fmu_state_record{time, model};
 }

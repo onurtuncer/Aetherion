@@ -44,8 +44,18 @@ the concrete interface contract: the port names a consumer binds against.
      - Two-stage rocket 6-DoF with variable inertia, propellant burn and stage
        separation.  NASA TM-2015-218675 scenario 17.
 
-Every FMU declares ``canGetAndSetFMUstate`` and ``canSerializeFMUstate``, so a
-master may checkpoint and roll back a step.
+The two plant FMUs declare ``canGetAndSetFMUstate`` and
+``canSerializeFMUstate``, so a master may checkpoint a step and roll back to
+it; the autopilot keeps no state beyond its registered variables and declares
+neither.  A checkpoint is the model's state record together with the FMU's
+clock and, for ``F16Plant``, the position of the turbulence noise stream, so a
+rolled-back run reproduces the original one gust for gust.  (Until v0.17.2
+the clock was not part of it and the first ``fmi2DoStep`` after a rollback was
+rejected, and the noise stream was not, so a rolled-back turbulent run diverged
+at once -- pre-DOI audit findings F05 and F06.)  ``test_fmu4cpp_state`` pins the
+clock contract in process; ``src/FMU/F16Plant/test_f16plant.py`` drives the
+packaged FMU through FMPy and is part of CTest whenever a Python with ``fmpy``
+is found at configure time.
 
 .. _fmu_version:
 
