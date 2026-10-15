@@ -122,8 +122,9 @@ public:
     [[nodiscard]] RocketPropulsionResult propulsion(double t_sim) const;
 
     /// @brief Evaluate the inertia DML at the current fuel state.
-    /// @return Mass properties referenced to the moment reference centre (MRC).
-    ///         xbar_m = DXCG [m, +FWD] encodes the CG–MRC offset.
+    /// @return Mass properties as InertialParameters: XIXX..XIZZ are about the
+    ///         centre of mass (AIAA S-119 standard variables), xbar_m = DXCG
+    ///         [m, +FWD] is the centre of mass forward of the MRC (body origin).
     [[nodiscard]] RigidBody::InertialParameters inertialParameters() const;
 
     // ── State advance ─────────────────────────────────────────────────────────
