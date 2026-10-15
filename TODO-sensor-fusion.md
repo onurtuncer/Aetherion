@@ -81,14 +81,16 @@ readable from either.
       with a Joseph-form covariance (every run), LI unaffected. Next:
       covariance reset after updates in both; RI with UD / square-root in
       float32; initial-heading sweep (5–20°) for LI; rocket trajectory.
-      New evidence 2026-10-13 from the C++ filter on synthetic logs
-      (`tests/Estimation/test_Replay.cpp`, float64, Joseph form, 2–5 km
-      from the LCI origin): with initial sigmas of 5° yaw and 30 m
-      position, RI holds ~0.9° of tilt RMS and ANEES ~2 over 120 s while LI
-      settles to 0.11° and ANEES 1.3 on the same samples; with 1° / 10 m
-      sigmas RI is at 0.3°. Same direction as finding 3 (the [p̂]× coupling
-      of large covariances), already in float64. Worth a dedicated sweep
-      over initial sigma × distance from the origin before deciding.
+      The 2026-10-13 "evidence" from the C++ filter on synthetic logs (RI
+      0.9° tilt RMS against LI 0.11°, `test_Replay.cpp`) is **retracted**
+      (2026-10-14): it was one noise seed. Over seeds 1–20 (float64, Joseph
+      form, 5° yaw / 30 m sigmas, 2–5 km from the LCI origin) the two
+      conventions are indistinguishable: tilt RMS 0.43° mean for both
+      (RI 0.11–1.01°, LI 0.05–1.24°), neither better in more than 11 of 20
+      seeds, ANEES and NIS identical to the second digit. Lesson for the
+      sweep below: compare conventions over seeds, never on one realisation.
+      The sweep over initial sigma × distance from the origin is still worth
+      running, but there is no float64 effect to explain yet.
       When decided, update the
       `error=` line of the configuration descriptor and the pinned hash
       (currently provisional `right-invariant`). Trade-off is written up in
@@ -187,8 +189,10 @@ readable from either.
       TimeBase,TruthState,Replay}.h` and the `EkfReplay` executable
       (`--logs <dir> --truth <csv> [--convention ri|li] [--config
       nav-baro-gnss|nav-baro-gnss16]`). Validated on synthetic logs in
-      Hemerion's formats (`tests/Estimation/test_Replay.cpp`): ANEES
-      1.06/0.83, NIS at 1, position 0.33 m. **Not yet run on real Hemerion
+      Hemerion's formats (`tests/Estimation/test_Replay.cpp`): over seeds
+      1–20, ANEES 1.04 mean (0.44–2.04), NIS 0.91–1.13, position 0.34 m,
+      both conventions; the test's bounds hold on every seed (checked
+      2026-10-14, closing the "e2e bounds to verify" note). **Not yet run on real Hemerion
       logs** — none exist on this machine; generating a set needs the
       Hemerion co-sim example built against the Aetherion FMUs. First real
       replay must use `--config nav-baro-gnss` until GNSS velocity is logged.
@@ -196,7 +200,9 @@ readable from either.
       (2026-10-13; the local clone was 193 commits behind): IMU
       `part_time_s` is simulation time unless `--sensor-clock` skew/jitter
       is on; the GPS log's `nominal_time_s` = `fix_count * fix_period` is
-      the fix's epoch in simulation time with the latency cancelled; the
+      meant as the fix's epoch in simulation time with the latency
+      cancelled (it is one period late as of 7da6057, see the real replay
+      below); the
       BMP390 `part_time_s` wraps every 512 s; `host_time_s` is burst
       arrival on the flight computer's clock and, unpaced, bears no fixed
       relation to simulation time. So the harness times IMU and baro on
@@ -212,16 +218,36 @@ readable from either.
       Recovering the latency from arrival stamps is the flight filter's
       job (Hemerion step 10) and is judged against this reference by the
       golden vectors.
-- [ ] **Replay a real Hemerion log set.** Needs Hemerion built on Windows
-      (`cmake --preset examples-native`, `AETHERION_ROOT` or `--f16` at
-      `out/build/windows-release/models/fmi2/F16Plant/F16Plant.fmu`), then
-      `f16_flight_computer` first and `f16_trim_cosim --case 11 --rtf 1
-      [--gps-latency 0.2]` in `build/examples-native/examples/f16_trim_ecos/`;
-      logs land in each process's `results/`. Use `--rtf 1`: unpaced, the
-      polled barometer yields ~37 conversions per 200 s. Then
-      `EkfReplay --logs results --truth results/f16_truth.csv --config
-      nav-baro-gnss`. Expect the time-base residual to show the 0.01 s
-      burst sawtooth.
+- [x] **Replay a real Hemerion log set** (2026-10-14, Hemerion `origin/main`
+      7da6057, `examples-native` built with MSVC, F16Plant.fmu from this
+      repo; case 11 calm and `--seed 11 --turbulence 8 --turbulence-seed 1`,
+      both `--rtf 1`, 200 s; `EkfReplay --config nav-baro-gnss`). Run
+      `f16_flight_computer --quiet-ms 10000` first, then `f16_trim_cosim`,
+      from the same directory with `SHELL=bash` (ecos' FMU unzipper).
+      **Found: Hemerion's `nominal_time_s` is one fix period late.** The
+      flight computer increments `fix_count` before stamping
+      `fix_count * fix_period_s` (`f16_flight_computer.cpp:811-820`, same in
+      `rocket_gps_ecos/flight_computer_main.cpp:767-776`), but the GPS FMU
+      encodes the plant state at the *start* of the co-sim step: fix 1,
+      stamped 0.1 s, is the t = 0 position. Against truth without the filter,
+      the fixes match at −0.100 s to 1 cm along-track and are 17.2 m behind
+      at zero shift. As logged: ANEES ~1300 with GNSS NIS at 1 (the
+      truth/measurement-disagreement signature) and 17 m position RMS. With
+      the stamps moved back 0.1 s: ANEES 1.76 RI / 0.74 LI (calm), 1.17 /
+      1.31 (turbulence), GNSS NIS 0.98 / 1.03, position 0.44 m. **To do on
+      the Hemerion side:** stamp `(fix_count - 1) * fix_period_s` in both
+      flight computers; logs written before that fix need the −0.1 s.
+      Other findings: the IMU stamps are consistent, but its samples in
+      (t, t + 0.1] see the plant input held from t (best shift −0.055 s
+      in turbulence: a co-sim step artefact, not a stamp bug; use
+      `--step 0.01` for manoeuvring cases); the first co-sim step yields no
+      IMU samples (part time starts at 0.11 s); baro NIS is 0.11, so the
+      default 1 m baro sigma is pessimistic (step 7); yaw drifts 23° RI /
+      9° LI in calm trim (expected without a magnetometer) and holds at
+      4–5° in turbulence; the host-clock fit residual is 62 ms rms, 302 ms
+      max, not the expected 0.01 s sawtooth. That fit is only the
+      cross-check, but the burst timing is worth a look before Hemerion
+      step 10 relies on arrival stamps.
 - [x] NEES and NIS against truth, in the filter's own coordinates. NEES is
       over the navigation core only until the realized biases are published
       (Hemerion step 3); the summary says so.

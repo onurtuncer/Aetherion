@@ -24,9 +24,11 @@
 //   baro  part_time_s  the BMP390 SENSORTIME register: simulation time,
 //                      wrapping every 512 s. Unwrapped against the
 //                      fit-mapped host time.
-//   GNSS  nominal_time_s  fix_count * fix_period: the fix's epoch in
-//                      simulation time, index-based, so the latency
-//                      cancels in it. The validity time.
+//   GNSS  nominal_time_s  the fix's epoch in simulation time, index-based,
+//                      so the latency cancels in it. The validity time.
+//                      Hemerion 7da6057 writes fix_count * fix_period
+//                      with fix_count from 1, one period late (fix 1 is
+//                      the t = 0 state); logs from it need -fix_period.
 //         host_time_s  arrival on the flight computer's clock, latency
 //                      included (NAV-PVT carries no time of its own). Used
 //                      only if nominal_time_s is absent: mapped through
@@ -194,6 +196,109 @@ namespace detail
   g.roll_rad = lerp(a->roll_rad, b->roll_rad);
   return g;
 }
+
+/// The host <- part clock fit over the IMU log.
+[[nodiscard]] inline TimeBaseFit fitImuTimeBase(const std::vector<ImuRecord>& imu)
+{
+  std::vector<double> part, host;
+  part.reserve(imu.size());
+  host.reserve(imu.size());
+  for (const ImuRecord& r : imu)
+  {
+    part.push_back(r.partTime);
+    host.push_back(r.hostTime);
+  }
+  return fitTimeBase(part, host);
+}
+
+/// Initial 1-sigma in physical coordinates when the options give none of the right size.
+[[nodiscard]] inline Eigen::VectorXd defaultInitialSigma(const Configuration& cfg)
+{
+  constexpr double kDeg = std::numbers::pi / 180.0;
+  Eigen::VectorXd sig = Eigen::VectorXd::Zero(cfg.dimension());
+  sig.segment<3>(cfg.offset(BlockId::NavCore) + NavCoreLayout::kAttitude).setConstant(1.0 * kDeg);
+  sig.segment<3>(cfg.offset(BlockId::NavCore) + NavCoreLayout::kVelocity).setConstant(1.0);
+  sig.segment<3>(cfg.offset(BlockId::NavCore) + NavCoreLayout::kPosition).setConstant(10.0);
+  if (const int o = cfg.offset(BlockId::GyroBias); o >= 0)
+    sig.segment<3>(o).setConstant(2e-3);
+  if (const int o = cfg.offset(BlockId::AccelBias); o >= 0)
+    sig.segment<3>(o).setConstant(0.05);
+  if (const int o = cfg.offset(BlockId::BaroBias); o >= 0)
+    sig[o] = 20.0;
+  return sig;
+}
+
+/// Physical perturbation of x: world-frame attitude error, dv, dp, biases.
+inline void perturb(EstimationState<double>& x, const Configuration& cfg, const Eigen::VectorXd& err)
+{
+  const int nav = cfg.offset(BlockId::NavCore);
+  const Eigen::Vector3d dth = err.segment<3>(nav + NavCoreLayout::kAttitude);
+  x.X.R = ODE::RKMK::Lie::SO3::Exp_R(dth) * x.X.R;
+  x.X.v += err.segment<3>(nav + NavCoreLayout::kVelocity);
+  x.X.p += err.segment<3>(nav + NavCoreLayout::kPosition);
+  if (const int o = cfg.offset(BlockId::GyroBias); o >= 0)
+    x.gyroBias += err.segment<3>(o);
+  if (const int o = cfg.offset(BlockId::AccelBias); o >= 0)
+    x.accelBias += err.segment<3>(o);
+  if (const int o = cfg.offset(BlockId::BaroBias); o >= 0)
+    x.baroBias += err[o];
+}
+
+/// Fill the summary's statistics over the second half of [t0, tEnd].
+inline void summarise(ReplayResult& res, double t0, double tEnd)
+{
+  constexpr double kDeg = std::numbers::pi / 180.0;
+  ReplaySummary& S = res.summary;
+  S.duration_s = tEnd - t0;
+  const double tHalf = t0 + 0.5 * S.duration_s;
+  double nees = 0.0, pos = 0.0, vel = 0.0, tilt = 0.0, yaw = 0.0;
+  std::size_t cnt = 0;
+  for (const StateRow& r : res.states)
+  {
+    if (r.t < tHalf)
+      continue;
+    nees += r.neesNav;
+    pos += (r.estimate.X.p - r.truth.X.p).squaredNorm();
+    vel += (r.estimate.X.v - r.truth.X.v).squaredNorm();
+    tilt += r.eulerErr_rad[1] * r.eulerErr_rad[1] + r.eulerErr_rad[2] * r.eulerErr_rad[2];
+    yaw += r.eulerErr_rad[0] * r.eulerErr_rad[0];
+    ++cnt;
+  }
+  if (cnt > 0)
+  {
+    const auto c = static_cast<double>(cnt);
+    S.aneesNav = nees / c / 9.0;
+    S.posRms_m = std::sqrt(pos / c);
+    S.velRms_m_s = std::sqrt(vel / c);
+    S.tiltRms_deg = std::sqrt(tilt / c / 2.0) / kDeg;
+    S.yawRms_deg = std::sqrt(yaw / c) / kDeg;
+  }
+  double nisP = 0.0, nisV = 0.0, nisB = 0.0;
+  std::size_t nP = 0, nV = 0, nB = 0;
+  for (const UpdateRow& u : res.updates)
+  {
+    if (u.t < tHalf)
+      continue;
+    switch (u.id)
+    {
+      case MeasurementId::GnssPosition:
+        nisP += u.nis / u.dim;
+        ++nP;
+        break;
+      case MeasurementId::GnssVelocity:
+        nisV += u.nis / u.dim;
+        ++nV;
+        break;
+      case MeasurementId::Barometer:
+        nisB += u.nis / u.dim;
+        ++nB;
+        break;
+    }
+  }
+  S.nisGnssPosition = nP ? nisP / static_cast<double>(nP) : 0.0;
+  S.nisGnssVelocity = nV ? nisV / static_cast<double>(nV) : 0.0;
+  S.nisBaro = nB ? nisB / static_cast<double>(nB) : 0.0;
+}
 }  // namespace detail
 
 template <ErrorConvention C>
@@ -208,18 +313,7 @@ template <ErrorConvention C>
   ReplayResult res;
   res.summary.convention = C;
 
-  // Time base from the IMU log.
-  {
-    std::vector<double> part, host;
-    part.reserve(logs.imu.size());
-    host.reserve(logs.imu.size());
-    for (const ImuRecord& r : logs.imu)
-    {
-      part.push_back(r.partTime);
-      host.push_back(r.hostTime);
-    }
-    res.summary.timeBase = fitTimeBase(part, host);
-  }
+  res.summary.timeBase = detail::fitImuTimeBase(logs.imu);
   const TimeBaseFit& fit = res.summary.timeBase;
 
   // Frame and filter.
@@ -232,35 +326,9 @@ template <ErrorConvention C>
   // Initial state from the truth at the first IMU sample.
   const double t0 = opt.timing.imu(logs.imu.front(), fit, logs.run);
   EstimationState<double> x0 = truthToState(detail::interpolateTruth(logs.truth, t0), frame);
-  Eigen::VectorXd sig = opt.initialSigma;
-  if (sig.size() != n)
-  {
-    sig = Eigen::VectorXd::Zero(n);
-    sig.segment<3>(cfg.offset(BlockId::NavCore) + NavCoreLayout::kAttitude).setConstant(1.0 * kDeg);
-    sig.segment<3>(cfg.offset(BlockId::NavCore) + NavCoreLayout::kVelocity).setConstant(1.0);
-    sig.segment<3>(cfg.offset(BlockId::NavCore) + NavCoreLayout::kPosition).setConstant(10.0);
-    if (const int o = cfg.offset(BlockId::GyroBias); o >= 0)
-      sig.segment<3>(o).setConstant(2e-3);
-    if (const int o = cfg.offset(BlockId::AccelBias); o >= 0)
-      sig.segment<3>(o).setConstant(0.05);
-    if (const int o = cfg.offset(BlockId::BaroBias); o >= 0)
-      sig[o] = 20.0;
-  }
+  const Eigen::VectorXd sig = (opt.initialSigma.size() == n) ? opt.initialSigma : detail::defaultInitialSigma(cfg);
   if (opt.initialError.size() == n)
-  {
-    // Physical perturbation: world-frame attitude error, dv, dp, biases.
-    const int nav = cfg.offset(BlockId::NavCore);
-    const Eigen::Vector3d dth = opt.initialError.segment<3>(nav + NavCoreLayout::kAttitude);
-    x0.X.R = ODE::RKMK::Lie::SO3::Exp_R(dth) * x0.X.R;
-    x0.X.v += opt.initialError.segment<3>(nav + NavCoreLayout::kVelocity);
-    x0.X.p += opt.initialError.segment<3>(nav + NavCoreLayout::kPosition);
-    if (const int o = cfg.offset(BlockId::GyroBias); o >= 0)
-      x0.gyroBias += opt.initialError.segment<3>(o);
-    if (const int o = cfg.offset(BlockId::AccelBias); o >= 0)
-      x0.accelBias += opt.initialError.segment<3>(o);
-    if (const int o = cfg.offset(BlockId::BaroBias); o >= 0)
-      x0.baroBias += opt.initialError[o];
-  }
+    detail::perturb(x0, cfg, opt.initialError);
   ekf.initialise(x0, ekf.covarianceFromPhysical(x0, Eigen::MatrixXd(sig.cwiseProduct(sig).asDiagonal())));
 
   // Measurement events on the simulation time base, in order.
@@ -390,57 +458,7 @@ template <ErrorConvention C>
     }
   }
 
-  // Summary over the second half.
-  ReplaySummary& S = res.summary;
-  S.duration_s = tPrev - t0;
-  const double tHalf = t0 + 0.5 * S.duration_s;
-  double nees = 0.0, pos = 0.0, vel = 0.0, tilt = 0.0, yaw = 0.0;
-  std::size_t cnt = 0;
-  for (const StateRow& r : res.states)
-  {
-    if (r.t < tHalf)
-      continue;
-    nees += r.neesNav;
-    pos += (r.estimate.X.p - r.truth.X.p).squaredNorm();
-    vel += (r.estimate.X.v - r.truth.X.v).squaredNorm();
-    tilt += r.eulerErr_rad[1] * r.eulerErr_rad[1] + r.eulerErr_rad[2] * r.eulerErr_rad[2];
-    yaw += r.eulerErr_rad[0] * r.eulerErr_rad[0];
-    ++cnt;
-  }
-  if (cnt > 0)
-  {
-    const double c = static_cast<double>(cnt);
-    S.aneesNav = nees / c / 9.0;
-    S.posRms_m = std::sqrt(pos / c);
-    S.velRms_m_s = std::sqrt(vel / c);
-    S.tiltRms_deg = std::sqrt(tilt / c / 2.0) / kDeg;
-    S.yawRms_deg = std::sqrt(yaw / c) / kDeg;
-  }
-  double nisP = 0.0, nisV = 0.0, nisB = 0.0;
-  std::size_t nP = 0, nV = 0, nB = 0;
-  for (const UpdateRow& u : res.updates)
-  {
-    if (u.t < tHalf)
-      continue;
-    switch (u.id)
-    {
-      case MeasurementId::GnssPosition:
-        nisP += u.nis / u.dim;
-        ++nP;
-        break;
-      case MeasurementId::GnssVelocity:
-        nisV += u.nis / u.dim;
-        ++nV;
-        break;
-      case MeasurementId::Barometer:
-        nisB += u.nis / u.dim;
-        ++nB;
-        break;
-    }
-  }
-  S.nisGnssPosition = nP ? nisP / static_cast<double>(nP) : 0.0;
-  S.nisGnssVelocity = nV ? nisV / static_cast<double>(nV) : 0.0;
-  S.nisBaro = nB ? nisB / static_cast<double>(nB) : 0.0;
+  detail::summarise(res, t0, tPrev);  // over the second half
   return res;
 }
 
