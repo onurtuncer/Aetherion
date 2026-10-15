@@ -286,6 +286,7 @@ struct F16PlantState {
 
     // ── Turbulence filter states (preserved across save/restore) ─────────────
     std::array<double, 8> turb_x{};
+    AE_ENV::DrydenTurbulence::NoiseState turb_noise{};   // generator position and Box-Muller spare
 };
 static_assert(std::is_trivially_copyable_v<F16PlantState>,
     "F16PlantState must be trivially copyable for fmu4cpp state save/restore.");
@@ -904,7 +905,8 @@ private:
         for (int i = 0; i < 6; ++i)
             state_.nu_B[i] = m_state.nu_B(i);
         state_.mass_kg = m_state.m;
-        state_.turb_x  = m_turb.has_value() ? m_turb->states() : std::array<double, 8>{};
+        state_.turb_x     = m_turb.has_value() ? m_turb->states() : std::array<double, 8>{};
+        state_.turb_noise = m_turb.has_value() ? m_turb->noiseState() : AE_ENV::DrydenTurbulence::NoiseState{};
     }
 
     // ── unpackState ───────────────────────────────────────────────────────────
@@ -922,11 +924,13 @@ private:
         for (int i = 0; i < 6; ++i)
             m_state.nu_B(i) = state_.nu_B[i];
         m_state.m = state_.mass_kg;
-        // Turbulence filter states come back with the checkpoint; the noise
-        // stream does not, so a restored run diverges from the original
-        // realisation after the first turbulent step.
-        if (m_turb.has_value())
+        // Turbulence filter states and the position of the noise stream come
+        // back with the checkpoint, so a restored run reproduces the original
+        // realisation gust for gust.
+        if (m_turb.has_value()) {
             m_turb->setStates(state_.turb_x);
+            m_turb->setNoiseState(state_.turb_noise);
+        }
 
         // Re-sync control surface state into VF (also restored from POD)
         if (!m_stepper.has_value()) return;

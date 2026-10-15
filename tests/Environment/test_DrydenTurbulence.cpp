@@ -237,3 +237,42 @@ TEST_CASE("DrydenLowAltitudeParameters: MIL-F-8785C low-altitude rules", "[dryde
     // Height is clamped to the rule's range.
     CHECK(DrydenLowAltitudeParameters(5000.0, W20).L_w_m == DrydenLowAltitudeParameters(304.8, W20).L_w_m);
 }
+
+TEST_CASE("DrydenTurbulence: a restored noise state reproduces the realisation gust for gust",
+          "[dryden][regression]")
+{
+    // F06: states() carried the eight filter states but not the generator,
+    // so a restored turbulence diverged from the original at the first step.
+    // Three checkpoints in a row, one of them after an odd number of gaussian
+    // draws (a Box-Muller spare pending), each replayed exactly.
+    DrydenTurbulence a(testParams(), 42);
+    for (int i = 0; i < 37; ++i) a.step(0.02, kV);     // 37 steps: an odd number of draws is likely
+    const auto x = a.states();
+    const auto n = a.noiseState();
+    CHECK(n.seed == 42);
+    CHECK(n.draws > 0);
+
+    std::vector<GustState> original;
+    for (int i = 0; i < 200; ++i) original.push_back(a.step(0.02, kV));
+
+    DrydenTurbulence b(testParams(), 7);               // different seed, different history
+    for (int i = 0; i < 11; ++i) b.step(0.02, kV);
+    b.setStates(x);
+    b.setNoiseState(n);
+    for (int i = 0; i < 200; ++i) {
+        const GustState g = b.step(0.02, kV);
+        REQUIRE(g.u_mps == original[(std::size_t)i].u_mps);
+        REQUIRE(g.v_mps == original[(std::size_t)i].v_mps);
+        REQUIRE(g.w_mps == original[(std::size_t)i].w_mps);
+        REQUIRE(g.p_rad_s == original[(std::size_t)i].p_rad_s);
+        REQUIRE(g.q_rad_s == original[(std::size_t)i].q_rad_s);
+        REQUIRE(g.r_rad_s == original[(std::size_t)i].r_rad_s);
+    }
+    CHECK(b.noiseState().draws == a.noiseState().draws);
+
+    // Restoring the filter states alone is not enough (the old behaviour).
+    DrydenTurbulence c(testParams(), 7);
+    c.setStates(x);
+    const GustState g1 = c.step(0.02, kV);
+    CHECK(g1.u_mps != original[0].u_mps);
+}
