@@ -368,3 +368,97 @@ TEST_CASE("NewtonSolve: an unconverged result describes the returned iterate", "
     CHECK_FALSE(res.converged);
     CHECK(res.r_norm == Approx(0.25));
 }
+
+// -----------------------------------------------------------------------------
+// Regression (audit F01): the taped evaluator follows the functor's branches.
+//
+// The tape used to be recorded once and reused for every point: a functor
+// with a branch evaluated at a point on the other side of it returned the
+// recorded branch's residual and Jacobian. CppAD records comparisons made on
+// AD values and reports through compare_change_number() when one goes the
+// other way; the evaluator now re-records its tape at that point.
+// -----------------------------------------------------------------------------
+
+namespace {
+    struct BranchFunctor {
+        template<class S>
+        Eigen::Matrix<S, Eigen::Dynamic, 1>
+            operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const {
+            Eigen::Matrix<S, Eigen::Dynamic, 1> r(1);
+            if (x(0) < S(1.0)) r(0) = x(0) - S(2.0);          // slope 1
+            else               r(0) = S(2.0) * x(0) - S(3.0);  // slope 2
+            return r;
+        }
+    };
+    struct BranchFunctorFixed {
+        template<class S>
+        Eigen::Matrix<S, 1, 1> operator()(const Eigen::Matrix<S, 1, 1>& x) const {
+            Eigen::Matrix<S, 1, 1> r;
+            if (x(0) < S(1.0)) r(0) = x(0) - S(2.0);
+            else               r(0) = S(2.0) * x(0) - S(3.0);
+            return r;
+        }
+    };
+}
+
+TEST_CASE("CppADResidualJacobian: re-records the tape when a branch changes", "[newton][cppad][regression]") {
+    Core::CppADResidualJacobian<BranchFunctor> eval(BranchFunctor{}, 1);
+    Eigen::VectorXd x(1), r;
+    Eigen::MatrixXd J;
+
+    x(0) = 0.0;                       // first branch: the tape is recorded here
+    eval(x, r, J);
+    CHECK(r(0) == Approx(-2.0));
+    CHECK(J(0, 0) == Approx(1.0));
+    CHECK(eval.retape_count() == 0);
+
+    x(0) = 0.5;                       // same branch: no re-recording
+    eval(x, r, J);
+    CHECK(r(0) == Approx(-1.5));
+    CHECK(eval.retape_count() == 0);
+
+    x(0) = 2.0;                       // other branch: used to give 0 and slope 1
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+    CHECK(J(0, 0) == Approx(2.0));
+    CHECK(eval.retape_count() == 1);
+
+    x(0) = 0.0;                       // and back
+    eval(x, r, J);
+    CHECK(r(0) == Approx(-2.0));
+    CHECK(J(0, 0) == Approx(1.0));
+    CHECK(eval.retape_count() == 2);
+}
+
+TEST_CASE("FixedCppADResidualJacobian: re-records the tape when a branch changes", "[newton][cppad][regression]") {
+    Core::FixedCppADResidualJacobian<1, BranchFunctorFixed> eval(BranchFunctorFixed{});
+    Eigen::Matrix<double, 1, 1> x, r;
+    Eigen::Matrix<double, 1, 1> J;
+
+    x(0) = 0.0;
+    eval(x, r, J);
+    CHECK(r(0) == Approx(-2.0));
+    CHECK(J(0, 0) == Approx(1.0));
+
+    x(0) = 2.0;
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+    CHECK(J(0, 0) == Approx(2.0));
+    CHECK(eval.retape_count() == 1);
+}
+
+TEST_CASE("NewtonSolve on a taped functor converges on the branch the root lies in", "[newton][cppad][regression]") {
+    // Root of the branch functor: 2x - 3 = 0 -> x = 1.5 (second branch).
+    // Starting in the first branch, the frozen tape solved x - 2 = 0 instead.
+    Core::CppADResidualJacobian<BranchFunctor> eval(BranchFunctor{}, 1);
+    Eigen::VectorXd x(1);
+    x(0) = 0.0;
+    Core::NewtonOptions opt;
+    opt.max_iters = 20;
+    opt.abs_tol = 1e-12;
+    opt.rel_tol = 1e-12;
+    const auto res = Core::NewtonSolve(eval, x, opt);
+    REQUIRE(res.converged);
+    CHECK(x(0) == Approx(1.5).margin(1e-10));
+    CHECK(BranchFunctor{}.template operator()<double>(x)(0) == Approx(0.0).margin(1e-10));
+}
