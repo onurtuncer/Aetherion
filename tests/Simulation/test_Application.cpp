@@ -163,6 +163,21 @@ TEST_CASE("Application parses --outputFileName correctly", "[Application]") {
     REQUIRE(app.getConfig().outputFileName == "sim.csv");
 }
 
+TEST_CASE("Application rejects non-numeric --startTime", "[Application]") {
+    FakeArgv args{ "test_program", "--startTime", "noon" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
+TEST_CASE("Application rejects an empty --inputFileName", "[Application]") {
+    FakeArgv args{ "test_program", "--inputFileName", "" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
+TEST_CASE("Application rejects an empty --outputFileName", "[Application]") {
+    FakeArgv args{ "test_program", "--outputFileName", "" };
+    REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
+}
+
 // ─────────────────────────────────────────────────────────────
 // Tests — writeInterval
 // ─────────────────────────────────────────────────────────────

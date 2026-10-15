@@ -13,6 +13,7 @@ add_executable(
   test_ISimulator.cpp
   test_MakeSnapshot2.cpp
   test_SnapshotTraits.cpp
+  test_SimulatorPolicyHooks.cpp
   test_BodySpecificForce.cpp)
 
 target_link_libraries(
