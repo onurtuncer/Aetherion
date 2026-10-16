@@ -22,6 +22,8 @@
 #include <Eigen/Dense>
 #include <cppad/cppad.hpp>
 
+#include <numbers>
+
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
 #include <Aetherion/FlightDynamics/Policies/MassPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/PropulsionPolicies.h>
@@ -663,9 +665,9 @@ namespace {
     // ECI position of a point at geodetic (lat, lon, h); ECI = ECEF at t = 0.
     Vec3d eciAt(double lat_deg, double lon_deg, double h_m)
     {
-        constexpr double kDeg = 3.14159265358979323846 / 180.0;
+        constexpr double kDeg = std::numbers::pi / 180.0;
         const auto r = Aetherion::Coordinate::GeodeticToECEF(lat_deg * kDeg, lon_deg * kDeg, h_m);
-        return Vec3d(r[0], r[1], r[2]);
+        return { r[0], r[1], r[2] };
     }
 }
 

@@ -27,6 +27,7 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <string>
 #include <vector>
 
 namespace {
@@ -78,11 +79,15 @@ FMU4CPP_INSTANTIATE(Counter);
 namespace {
     double real(const fmu4cpp::fmu_base& m, const char* name)
     {
-        return m.get_real_variable(name).value().get();
+        const auto v = m.get_real_variable(name);
+        if (!v.has_value()) throw std::runtime_error(std::string("no real variable ") + name);
+        return v->get();
     }
     int integer(const fmu4cpp::fmu_base& m, const char* name)
     {
-        return m.get_int_variable(name).value().get();
+        const auto v = m.get_int_variable(name);
+        if (!v.has_value()) throw std::runtime_error(std::string("no integer variable ") + name);
+        return v->get();
     }
 }
 

@@ -287,7 +287,6 @@ public:
     explicit RunableStub(FakeArgv& args, int failOnStep = -1)
         : Application(args.argc(), args.argv())
         , failOnStep_(failOnStep)
-        , time_(0.0)   // elapsed, as every simulator reports it
     {
     }
 
@@ -312,7 +311,7 @@ protected:
 private:
     int            failOnStep_;
     mutable int    stepsCalled_ = 0;
-    mutable double time_        = 0.0;
+    mutable double time_        = 0.0;   // elapsed, as every simulator reports it
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -399,7 +398,6 @@ public:
     explicit StalledStub(FakeArgv& args, int stalls)
         : Application(args.argc(), args.argv())
         , stalls_(stalls)
-        , time_(0.0)   // elapsed, as every simulator reports it
     {
     }
 
@@ -429,7 +427,7 @@ protected:
 private:
     int            stalls_;
     mutable int    stepsCalled_ = 0;
-    mutable double time_        = 0.0;
+    mutable double time_        = 0.0;   // elapsed, as every simulator reports it
 };
 
 TEST_CASE("Application::run aborts a step that keeps failing without advancing",

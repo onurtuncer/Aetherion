@@ -169,7 +169,7 @@ TEST_CASE("DAVEMLAeroModel tape: the F-16 Cz tape reports leaving its alpha segm
     if (file.empty()) return;
     DAVEMLAeroModel m(file);
 
-    auto inputsAt = [](AD alpha) {
+    auto inputsAt = [](const AD& alpha) {
         DAVEMLAeroModel::Inputs<AD> in;
         in.vt_fps = AD(300.0);
         in.alpha_deg = alpha;
