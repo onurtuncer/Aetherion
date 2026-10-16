@@ -253,6 +253,7 @@ TEST_CASE("DrydenTurbulence: a restored noise state reproduces the realisation g
     CHECK(n.draws > 0);
 
     std::vector<GustState> original;
+    original.reserve(200);
     for (int i = 0; i < 200; ++i) original.push_back(a.step(0.02, kV));
 
     DrydenTurbulence b(testParams(), 7);               // different seed, different history
