@@ -103,7 +103,7 @@
 #include <string>
 
 // Aetherion — two-stage rocket simulator (includes RocketStageModel,
-// RocketGravityPolicy, RocketAeroPolicy, Snapshot2/MakeSnapshot2)
+// RocketAeroPolicy, Snapshot2/MakeSnapshot2)
 #include <Aetherion/Examples/TwoStageRocket/TwoStageRocketSimulator.h>
 
 // Initial state construction

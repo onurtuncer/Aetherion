@@ -21,7 +21,7 @@
 // VectorField type
 // ────────────────
 //   TwoStageRocketVF = VectorField<
-//       RocketGravityPolicy, – J₂ gravity + CG–MRC moment transfer (My, Mz)
+//       J2GravityPolicy,     – J₂ gravity at the CG; VectorField moves it to the MRC
 //       RocketAeroPolicy,    – DAVE-ML CL/CD/CY/Cm/Cn with wind-to-body transform
 //       AxialThrustPolicy,   – body +x thrust (bodyThrustForce_X from DML)
 //       LinearBurnPolicy     – variable mdot updated each step (ZOH)
@@ -30,7 +30,7 @@
 // Per-step loop (ZOH)
 // ───────────────────
 //   1. query RocketStageModel.propulsion()        → update thrust_N, mdot_kgs in VF
-//   2. query RocketStageModel.inertialParameters() → rebuild M / M_inv + xcg_m in VF
+//   2. query RocketStageModel.inertialParameters() → rebuild M / M_inv (and DXCG) in VF
 //   3. integrate one step with SixDoFStepper
 //   4. advance RocketStageModel fuel state
 //   5. on staging event: subtract kStg1DryMass_kg from m_state.m, rebuild M
@@ -46,7 +46,6 @@
 #pragma once
 
 #include <Aetherion/Examples/TwoStageRocket/RocketStageModel.h>
-#include <Aetherion/Examples/TwoStageRocket/RocketGravityPolicy.h>
 #include <Aetherion/Examples/TwoStageRocket/RocketAeroPolicy.h>
 
 #include <Aetherion/RigidBody/SixDofStepper.h>
@@ -73,7 +72,7 @@ namespace Aetherion::Examples::TwoStageRocket {
 // Defined at namespace scope so it can be referenced in the default template
 // argument for IntegratorPolicy below.
 using TwoStageRocketVF = RigidBody::VectorField<
-    RocketGravityPolicy,
+    FlightDynamics::J2GravityPolicy,
     RocketAeroPolicy,
     FlightDynamics::AxialThrustPolicy,
     FlightDynamics::LinearBurnPolicy
@@ -126,7 +125,7 @@ public:
         std::shared_ptr<Serialization::DAVEMLAeroModel>       propDml,
         const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aeroDml,
         double                                                stg2IgnitionTime_s = 0.0)
-        : m_stepper   (VF{ ip, RocketGravityPolicy{}, RocketAeroPolicy{aeroDml} })
+        : m_stepper   (VF{ ip, FlightDynamics::J2GravityPolicy{}, RocketAeroPolicy{aeroDml} })
         , m_state     (std::move(x0))
         , m_theta0    (theta0)
         , m_stageModel(std::move(inertiaDml), std::move(propDml))
@@ -229,19 +228,17 @@ private:
         vf.thrust.thrust_N     =  prop.thrust_N;
         vf.mass_model.mdot_kgs = -prop.mdot_kgs;
 
-        const auto ip = m_stageModel.inertialParameters();
-        rebuildSpatialInertia(ip);
-
-        vf.gravity.xcg_m = ip.xbar_m;
+        rebuildSpatialInertia(m_stageModel.inertialParameters());
     }
 
     /// The DML inertia is about the centre of mass (AIAA S-119 standard
     /// variables) and DXCG is the centre of mass forward of the MRC, the body
     /// origin; VectorField shifts the tensor to the origin (parallel-axis term
-    /// m DXCG^2 in Iyy and Izz) and builds the m[c]x coupling. Zero-order hold
-    /// over the step; omega is kept through the rebuild (see "Known Modelling
-    /// Differences" in doc/examples.rst for what that means and what the NASA
-    /// sims do).
+    /// m DXCG^2 in Iyy and Izz), builds the m[c]x coupling, and moves the
+    /// gravity wrench from the CG to the MRC (moment DXCG x F, once added by
+    /// the example's own RocketGravityPolicy). Zero-order hold over the step;
+    /// omega is kept through the rebuild (see "Known Modelling Differences" in
+    /// doc/examples.rst for what that means and what the NASA sims do).
     void rebuildSpatialInertia(const RigidBody::InertialParameters& ip)
     {
         m_stepper.vectorField().setInertialParameters(ip);

@@ -277,6 +277,16 @@ four policy types.  Each policy must satisfy the corresponding C++20 concept:
 All policies satisfy their concept for both ``S = double`` and
 ``S = CppAD::AD<double>`` (enforced by ``static_assert`` at definition time).
 
+**Reference point.**  ``VectorField`` writes the equations of motion about the
+body origin, where its spatial inertia is taken.  A ``GravityPolicy`` returns
+its wrench at the centre of mass, where gravity acts: force :math:`m\,\mathbf{g}`
+in body axes and no moment (a gravity-gradient torque, if the model has one).
+``VectorField`` moves it to the origin, adding the moment
+:math:`\mathbf{c} \times \mathbf{F}` with :math:`\mathbf{c}` the centre of mass
+from ``InertialParameters``.  ``AeroPolicy`` and ``PropulsionPolicy`` wrenches
+are about the body origin already — the vehicle model's moment reference
+centre — and are summed as they are.
+
 :cpp:class:`Aetherion::RigidBody::KinematicsXiField` implements the
 right-trivialised kinematic equation
 :math:`\dot{g} = g\,\hat{\xi}` as a stateless identity pass-through

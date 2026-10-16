@@ -11,12 +11,13 @@
 //   xdot = operator()(t, g, x)
 //        = [dnu_B/dt(6); dm/dt(1)]
 //
-// Newton-Euler equations (body frame, at CG):
+// Newton-Euler equations (body frame, about the body origin):
 //
 //   M * dnu_B/dt = W_ext - ad*(nu_B) * M * nu_B
 //   dm/dt        = mdot(t, m)
 //
-// where W_ext = sum of gravity + aero + propulsion wrenches in body frame.
+// where W_ext = sum of gravity + aero + propulsion wrenches in body frame,
+// all about the body origin.
 //
 // Templated on Scalar S -- works for both double and CppAD::AD<double>.
 //
@@ -30,6 +31,18 @@
 // integrated by the mass policy and is for the owner to read. Mass properties
 // change only through setInertialParameters(), which a variable-mass vehicle
 // calls before each step (TwoStageRocketSimulator does, zero-order hold).
+//
+// Wrench reference point. M is about the body origin, so every wrench summed
+// into W_ext must be about the body origin too. The aero and propulsion
+// policies return theirs about the origin already: the vehicle model's moment
+// reference centre, where the DAVE-ML moment coefficients are defined. The
+// gravity policy returns the wrench at the centre of mass, where gravity
+// acts (force m g in body axes, and a gravity-gradient torque if the model
+// has one); operator() moves it to the origin, adding the moment c x F. The
+// moment used to be dropped, so a body at rest with its centre of mass off
+// the origin turned under gravity alone (second pre-DOI audit, finding N01).
+// The rocket example had its own transfer in RocketGravityPolicy; that
+// policy is gone and the example uses J2GravityPolicy.
 //
 #pragma once
 
@@ -46,6 +59,7 @@
 #include <Aetherion/Spatial/Adjoint.h>
 #include <Aetherion/Spatial/Inertia.h>
 #include <Aetherion/Spatial/Twist.h>
+#include <Aetherion/Spatial/WrenchShift.h>
 
 namespace Aetherion::RigidBody {
 
@@ -62,7 +76,9 @@ namespace Aetherion::RigidBody {
 /// @f]
 /// where @f$\mathbf{M}@f$ is the 6×6 spatial inertia, @f$\nu_B = [\omega_B;\,v_B]@f$
 /// is the body twist, and @f$\mathbf{W}_\mathrm{ext}@f$ is the sum of gravity,
-/// aerodynamic, and propulsion wrenches (all in body frame).
+/// aerodynamic, and propulsion wrenches (all in body frame, about the body
+/// origin; the gravity policy's wrench is moved there from the centre of
+/// mass, see @c operator()).
 ///
 /// The callable @c operator()(t, g, x) returns @f$\dot{\mathbf{x}} \in \mathbb{R}^7@f$
 /// with layout @f$[\dot{\nu}_B(6);\, \dot{m}(1)]@f$.
@@ -81,8 +97,9 @@ namespace Aetherion::RigidBody {
         Eigen::Matrix<double, 6, 6> M;     ///< 6×6 spatial inertia about the body origin (body frame).
         Eigen::Matrix<double, 6, 6> M_inv; ///< Inverse of @c M.
         double                      mass_kg{ 0.0 }; ///< Mass @c M was built with [kg]; handed to the wrench policies.
+        Eigen::Vector3d             com_m{ Eigen::Vector3d::Zero() }; ///< Centre of mass from the body origin, body frame [m]; the gravity wrench is moved from here to the origin.
 
-        Gravity   gravity;     ///< Gravity wrench policy instance.
+        Gravity   gravity;     ///< Gravity wrench policy instance; returns the wrench at the centre of mass.
         Aero      aero;        ///< Aerodynamic wrench policy instance.
         Thrust    thrust;      ///< Propulsion wrench policy instance.
         MassMdot  mass_model;  ///< Mass-rate model policy instance.
@@ -115,13 +132,14 @@ namespace Aetherion::RigidBody {
         /// the tensor shifted by the parallel-axis term @f$ m[c]_\times[c]_\times^{\mathsf T} @f$
         /// in the rotational block and @f$ m[c]_\times @f$ in the coupling blocks.
         /// Without the shift the matrix is not the kinetic-energy metric of any
-        /// rigid body (it is indefinite for a large enough offset). This is the
+        /// rigid body (it is indefinite for a large enough offset). The centre
+        /// of mass is kept in @c com_m for the gravity wrench. This is the
         /// only way the mass properties change; call it before each step for a
         /// variable-mass vehicle.
         void setInertialParameters(const InertialParameters& ip)
         {
-            const Spatial::Inertia<double> inertia(
-                ip.mass_kg, inertiaTensor(ip), Eigen::Vector3d(ip.xbar_m, ip.ybar_m, ip.zbar_m));
+            com_m = Eigen::Vector3d(ip.xbar_m, ip.ybar_m, ip.zbar_m);
+            const Spatial::Inertia<double> inertia(ip.mass_kg, inertiaTensor(ip), com_m);
             M       = inertia.M;
             M_inv   = M.inverse();
             mass_kg = ip.mass_kg;
@@ -176,12 +194,17 @@ namespace Aetherion::RigidBody {
         {
             const Eigen::Matrix<S, 6, 1> nu_B = x.template head<6>();
 
-            // 1. External wrenches, with the mass M was built with: gravity
-            //    divided by M must give g, whatever the integrated mass state
-            //    x(6) says (it only feeds the mass policy below).
+            // 1. External wrenches about the body origin, with the mass M was
+            //    built with: gravity divided by M must give g, whatever the
+            //    integrated mass state x(6) says (it only feeds the mass
+            //    policy below). The gravity policy returns its wrench at the
+            //    centre of mass, where the force acts; it is moved to the
+            //    origin here (moment c x F) so that it is about the same point
+            //    as M. The aero and propulsion wrenches are about the origin
+            //    already.
             const S m = S(mass_kg);
-            Spatial::Wrench<S> W_ext{};
-            W_ext.f = gravity(g, m).f;
+            const Eigen::Matrix<S, 3, 1> c = com_m.template cast<S>();
+            Spatial::Wrench<S> W_ext = Spatial::ShiftWrenchToNewPoint(gravity(g, m), c);
             W_ext.f += aero(g, nu_B, m, t).f;
             W_ext.f += thrust(g, nu_B, m, t).f;
 

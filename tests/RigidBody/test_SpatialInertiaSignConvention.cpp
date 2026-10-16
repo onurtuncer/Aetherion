@@ -51,8 +51,6 @@
 #include <Aetherion/RigidBody/State.h>
 #include <Aetherion/FlightDynamics/Policies/GravityPolicies.h>
 #include <Aetherion/Environment/WGS84.h>
-#include <Aetherion/Environment/Gravity.h>
-#include <Aetherion/Spatial/Wrench.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
 #include <Eigen/Dense>
@@ -62,44 +60,14 @@
 using namespace Aetherion;
 using namespace Aetherion::RigidBody;
 
-// ── Test-local gravity policy with CG–MRC moment transfer ────────────────────
+// ── Gravity moment about the MRC ─────────────────────────────────────────────
 //
-// Identical physics to RocketGravityPolicy but defined here so the test is
-// self-contained and does not depend on the Examples directory.
-//
-// With r_CG = [xcg, 0, 0]^T (body frame), the moment about the MRC is:
+// The gravity policies return their wrench at the CG; VectorField moves it to
+// the body origin, the MRC here, which is where the moment
 //   M_MRC = r_CG × F_grav   →   M_y = -xcg·Fz,   M_z = +xcg·Fy
-struct CgOffsetGravityPolicy
-{
-    double mu   { Environment::WGS84::kGM_m3_s2 };
-    double Re   { Environment::WGS84::kSemiMajorAxis_m };
-    double J2   { Environment::WGS84::kJ2 };
-    double xcg_m{ 0.0 };
-
-    template<class S>
-    Spatial::Wrench<S>
-    operator()(const ODE::RKMK::Lie::SE3<S>& g, S mass) const
-    {
-        const Environment::Vec3<S> r{ g.p(0), g.p(1), g.p(2) };
-        const auto g_arr = Environment::J2(r, S(mu), S(Re), S(J2));
-
-        const Eigen::Matrix<S, 3, 1> F_body =
-            g.R.transpose().template cast<S>()
-            * Eigen::Matrix<S, 3, 1>{ g_arr[0] * mass,
-                                      g_arr[1] * mass,
-                                      g_arr[2] * mass };
-
-        Spatial::Wrench<S> w{};
-        w.f.setZero();
-        w.f.template tail<3>() = F_body;
-        // CG→MRC moment transfer  (only xcg ≠ 0 for axisymmetric body)
-        w.f(1) -= S(xcg_m) * F_body(2);   // My = −xcg · Fz
-        w.f(2) += S(xcg_m) * F_body(1);   // Mz = +xcg · Fy
-        return w;
-    }
-};
-
-static_assert(FlightDynamics::GravityPolicy<CgOffsetGravityPolicy>);
+// comes from (the rocket example once added it in a policy of its own). The
+// free-fall test below needs that moment and the coupling-block signs both
+// right: with either one wrong the body pitches.
 
 // ── Rocket-like inertial parameters ──────────────────────────────────────────
 
@@ -271,7 +239,8 @@ TEST_CASE("Spatial inertia: diagonal blocks have correct magnitude",
 // A rigid body with CG ≠ MRC in free fall under gravity must experience ZERO
 // angular acceleration (equivalence principle / torque-free free fall).
 //
-// With the CORRECT Featherstone sign convention AND the CG→MRC gravity moment
+// With the CORRECT Featherstone sign convention AND the gravity moment about
+// the MRC that VectorField adds when it moves the CG wrench there
 // (M_y = -xcg·Fz), the 2×2 pitching subsystem gives:
 //
 //   [Iyy   -m·xcg] [ω̇_y]   [-xcg·Fz]
@@ -292,14 +261,11 @@ TEST_CASE("Spatial inertia: free-fall with CG offset gives zero angular accelera
 {
     const auto ip = rocket_params();
 
-    // VectorField with CG-aware gravity (adds the CG→MRC moment transfer).
-    CgOffsetGravityPolicy grav;
-    grav.xcg_m = ip.xbar_m;
-
-    using TestVF      = VectorField<CgOffsetGravityPolicy>;
+    // J2 gravity at the CG; VectorField moves it to the MRC (xbar_m = xcg).
+    using TestVF      = VectorField<FlightDynamics::J2GravityPolicy>;
     using TestStepper = SixDoFStepper<TestVF>;
 
-    TestVF      vf(ip, grav);
+    TestVF      vf(ip);
     TestStepper stepper(vf);
 
     StateD s0;
