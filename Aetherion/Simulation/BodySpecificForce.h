@@ -28,8 +28,8 @@
 // because the centrifugal term is something a real strapdown accelerometer
 // genuinely does sense.  The force-sum form used here carries no gravity term
 // at all, so it cannot get that subtraction wrong.  Aetherion's gravity
-// policies (CentralGravityPolicy, J2GravityPolicy, RocketGravityPolicy) are
-// pure mass-attraction models and are simply never consulted here.
+// policies (CentralGravityPolicy, J2GravityPolicy) are pure mass-attraction
+// models and are simply never consulted here.
 //
 // Reference point
 // ─────────────────────────────────────────────────────────────────────────────
