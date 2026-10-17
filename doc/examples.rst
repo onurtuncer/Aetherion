@@ -3394,14 +3394,14 @@ Validation results at t = 20 s (dt = 0.02 s)
      - −0.10°
 
 Peak errors against simulation 05 over the 20 s: altitude ±0.11 m, pitch
-±0.73°, roll ±0.004°.  The pitch peak is confined to the first half
+±0.73°, roll ±0.0046°.  The pitch peak is confined to the first half
 second after the step, where the two zero-order-hold controllers sample the
 command at different instants.  For 0.2 s of that the longitudinal command
 is saturated and the control law asks for 25° of elevator; the aero tables
 end at 24° with ``extrapolate="neither"``, so the aerodynamics are taken at
 24° (before release 0.18.0 the tables were extrapolated to 25°, and the peak
 was 0.63°).  The final state (t = 20 s) agrees to within
-**0.3 ft altitude** and **0.001°** in both pitch and roll.
+**0.32 ft altitude** (0.31 ft) and **0.001°** in both pitch and roll.
 
 Validation figures
 ^^^^^^^^^^^^^^^^^^

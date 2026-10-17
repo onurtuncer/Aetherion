@@ -188,3 +188,54 @@ TEST_CASE("DAVEMLAeroModel: a table referencing an undefined breakpoint set", "[
   </function>)"),
         ContainsSubstring("breakpoint 'nowhere', which is not defined"));
 }
+
+TEST_CASE("DAVEMLAeroModel: a function whose table cannot be found is rejected at load",
+    "[daveml_aero][negative][regression]")
+{
+    // Second pre-DOI audit, finding N09: a griddedTableRef to an undefined
+    // gtID was skipped, the file loaded, and y evaluated to its initialValue
+    // (7) with nothing to say the table was never read.
+    const std::string head = R"(
+  <variableDef varID="x" units="nd" initialValue="0"><isInput/></variableDef>
+  <variableDef varID="y" units="nd" initialValue="7"><isOutput/></variableDef>
+  <breakpointDef bpID="XBP"><bpVals>0, 1</bpVals></breakpointDef>)";
+
+    SECTION("griddedTableRef to an undefined griddedTableDef")
+    {
+        REQUIRE_THROWS_WITH(loadDML("missing_gt", head + R"(
+  <function name="y_fn"><independentVarRef varID="x"/><dependentVarRef varID="y"/>
+    <functionDefn><griddedTableRef gtID="missing_table"/></functionDefn></function>)"),
+            ContainsSubstring("table for 'y' refers to griddedTableDef 'missing_table', which is not defined"));
+    }
+    SECTION("the same reference resolves when the table is defined")
+    {
+        const auto m = loadDML("present_gt", head + R"(
+  <griddedTableDef gtID="y_table"><breakpointRefs><bpRef bpID="XBP"/></breakpointRefs>
+    <dataTable>10, 20</dataTable></griddedTableDef>
+  <function name="y_fn"><independentVarRef varID="x"/><dependentVarRef varID="y"/>
+    <functionDefn><griddedTableRef gtID="y_table"/></functionDefn></function>)");
+        CHECK_THAT(m.evaluateRaw(std::unordered_map<std::string, double>{ { "x", 0.5 } }).at("y"),
+            WithinAbs(15.0, 1e-12));
+    }
+    SECTION("ungridded table")
+    {
+        REQUIRE_THROWS_WITH(loadDML("ungridded", head + R"(
+  <function name="y_fn"><independentVarRef varID="x"/><dependentVarRef varID="y"/>
+    <functionDefn><ungriddedTableDef><dataPoint>0 10</dataPoint></ungriddedTableDef></functionDefn></function>)"),
+            ContainsSubstring("ungridded tables are not supported"));
+    }
+    SECTION("no table at all")
+    {
+        REQUIRE_THROWS_WITH(loadDML("no_table", head + R"(
+  <function name="y_fn"><independentVarRef varID="x"/><dependentVarRef varID="y"/>
+    <functionDefn/></function>)"),
+            ContainsSubstring("has no griddedTableDef or griddedTableRef"));
+    }
+    SECTION("no dependentVarRef")
+    {
+        REQUIRE_THROWS_WITH(loadDML("no_dep", head + R"(
+  <function name="y_fn"><independentVarRef varID="x"/>
+    <functionDefn><griddedTableRef gtID="whatever"/></functionDefn></function>)"),
+            ContainsSubstring("function 'y_fn' has no dependentVarRef"));
+    }
+}

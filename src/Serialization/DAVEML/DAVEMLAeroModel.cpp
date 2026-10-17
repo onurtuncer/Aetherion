@@ -452,8 +452,14 @@ namespace Aetherion::Serialization {
         for (const auto& xn : doc.select_nodes("//function")) {
             auto fnode = xn.node();
 
+            // A function that names no output, or whose table cannot be found,
+            // is rejected rather than skipped: skipping left the output at its
+            // initialValue or calculation with nothing to say the table was
+            // never read (second pre-DOI audit, finding N09).
+            const std::string fnName = fnode.attribute("name").as_string();
             auto dvr = fnode.child("dependentVarRef");
-            if (!dvr) continue;
+            if (!dvr || std::string(dvr.attribute("varID").as_string()).empty())
+                throw std::runtime_error("DAVEMLAeroModel: function '" + fnName + "' has no dependentVarRef varID");
             std::string depVarID = dvr.attribute("varID").as_string();
             const std::string where = "DAVEMLAeroModel: table for '" + depVarID + "'";
 
@@ -482,9 +488,15 @@ namespace Aetherion::Serialization {
             auto gdef = fnode.select_node(".//griddedTableDef").node();
             if (!gdef) {
                 auto ref = fnode.select_node(".//griddedTableRef").node();
-                if (!ref) continue;
-                auto it = topLevelTableDefs.find(ref.attribute("gtID").as_string());
-                if (it == topLevelTableDefs.end()) continue;
+                if (!ref) {
+                    if (fnode.select_node(".//ungriddedTableDef") || fnode.select_node(".//ungriddedTableRef"))
+                        throw std::runtime_error(where + ": ungridded tables are not supported");
+                    throw std::runtime_error(where + ": the function has no griddedTableDef or griddedTableRef");
+                }
+                const std::string gtID = ref.attribute("gtID").as_string();
+                auto it = topLevelTableDefs.find(gtID);
+                if (it == topLevelTableDefs.end())
+                    throw std::runtime_error(where + " refers to griddedTableDef '" + gtID + "', which is not defined");
                 gdef = it->second;
             }
 
