@@ -156,6 +156,12 @@ namespace Aetherion::Estimation::Replay {
         ErrorConvention convention{};
         TimeBaseFit timeBase;
         std::size_t imuSamples = 0, gnssPositionUpdates = 0, gnssVelocityUpdates = 0, baroUpdates = 0, skippedFixes = 0;
+        // Records that never reached the filter. None of them can influence the estimate.
+        std::size_t rejectedImuSamples = 0;   ///< a time or a reading not finite
+        std::size_t skippedImuSamples = 0;    ///< duplicate or out-of-order time stamp
+        std::size_t rejectedTruthRecords = 0; ///< a time or a field not finite
+        std::size_t rejectedMeasurements = 0; ///< GNSS / baro record whose time is not finite
+        std::size_t rejectedUpdates = 0;      ///< refused by the filter: value or covariance invalid (UpdateResult::rejected)
         double duration_s = 0.0;
         double aneesNav = 0.0;                                                        ///< mean NEES of the navigation core over the second half, / 9
         double posRms_m = 0.0, velRms_m_s = 0.0, tiltRms_deg = 0.0, yawRms_deg = 0.0; ///< second half
@@ -299,6 +305,21 @@ namespace Aetherion::Estimation::Replay {
         }
     } // namespace detail
 
+    namespace detail {
+        [[nodiscard]] inline bool finite(const ImuRecord& r)
+        {
+            return std::isfinite(r.partTime) && std::isfinite(r.hostTime) && r.gyro_rad_s.allFinite() &&
+                   r.accel_m_s2.allFinite();
+        }
+
+        [[nodiscard]] inline bool finite(const TruthRecord& r)
+        {
+            return std::isfinite(r.time) && std::isfinite(r.lat_deg) && std::isfinite(r.lon_deg) &&
+                   std::isfinite(r.alt_m) && r.vNed_m_s.allFinite() && std::isfinite(r.yaw_rad) &&
+                   std::isfinite(r.pitch_rad) && std::isfinite(r.roll_rad);
+        }
+    } // namespace detail
+
     template <ErrorConvention C>
     [[nodiscard]] ReplayResult replay(const LogSet& logs, const Configuration& cfg, const ReplayOptions& opt)
     {
@@ -311,7 +332,40 @@ namespace Aetherion::Estimation::Replay {
         ReplayResult res;
         res.summary.convention = C;
 
-        res.summary.timeBase = detail::fitImuTimeBase(logs.imu);
+        // Inputs are checked before anything uses them (second pre-DOI audit,
+        // N06): a NaN gyro reached the propagation and made every later
+        // estimate NaN, and a non-finite time would reach the clock fit and
+        // the event order. Rejected records are counted in the summary; none
+        // of them reaches the filter. The truth is put in time order, which
+        // interpolateTruth relies on.
+        std::vector<ImuRecord> imu;
+        imu.reserve(logs.imu.size());
+        for (const ImuRecord& r : logs.imu)
+        {
+            if (detail::finite(r))
+                imu.push_back(r);
+            else
+                ++res.summary.rejectedImuSamples;
+        }
+        if (imu.size() < 2)
+            throw std::runtime_error("replay: fewer than two valid IMU samples (" +
+                                     std::to_string(res.summary.rejectedImuSamples) + " rejected as not finite)");
+
+        std::vector<TruthRecord> truth;
+        truth.reserve(logs.truth.size());
+        for (const TruthRecord& r : logs.truth)
+        {
+            if (detail::finite(r))
+                truth.push_back(r);
+            else
+                ++res.summary.rejectedTruthRecords;
+        }
+        if (truth.empty())
+            throw std::runtime_error("replay: no valid truth record");
+        std::stable_sort(truth.begin(), truth.end(),
+            [](const TruthRecord& a, const TruthRecord& b) { return a.time < b.time; });
+
+        res.summary.timeBase = detail::fitImuTimeBase(imu);
         const TimeBaseFit& fit = res.summary.timeBase;
 
         // Frame and filter.
@@ -322,8 +376,10 @@ namespace Aetherion::Estimation::Replay {
         const int n = cfg.dimension();
 
         // Initial state from the truth at the first IMU sample.
-        const double t0 = opt.timing.imu(logs.imu.front(), fit, logs.run);
-        EstimationState<double> x0 = truthToState(detail::interpolateTruth(logs.truth, t0), frame);
+        const double t0 = opt.timing.imu(imu.front(), fit, logs.run);
+        if (!std::isfinite(t0))
+            throw std::runtime_error("replay: the first IMU sample maps to a time that is not finite");
+        EstimationState<double> x0 = truthToState(detail::interpolateTruth(truth, t0), frame);
         const Eigen::VectorXd sig = (opt.initialSigma.size() == n) ? opt.initialSigma : detail::defaultInitialSigma(cfg);
         if (opt.initialError.size() == n)
             detail::perturb(x0, cfg, opt.initialError);
@@ -337,10 +393,16 @@ namespace Aetherion::Estimation::Replay {
             std::size_t index;
         };
         std::vector<Event> events;
+        auto addEvent = [&](double t, int kind, std::size_t i) {
+            if (std::isfinite(t))
+                events.push_back({ t, kind, i });
+            else
+                ++res.summary.rejectedMeasurements; // would sort anywhere and split nothing sensibly
+        };
         for (std::size_t i = 0; i < logs.gps.size(); ++i)
-            events.push_back({ opt.timing.gps(logs.gps[i], fit, logs.run), 0, i });
+            addEvent(opt.timing.gps(logs.gps[i], fit, logs.run), 0, i);
         for (std::size_t i = 0; i < logs.baro.size(); ++i)
-            events.push_back({ opt.timing.baro(logs.baro[i], fit, logs.run), 1, i });
+            addEvent(opt.timing.baro(logs.baro[i], fit, logs.run), 1, i);
         std::stable_sort(events.begin(), events.end(), [](const Event& a, const Event& b) { return a.t < b.t; });
         std::size_t nextEvent = 0;
         while (nextEvent < events.size() && events[nextEvent].t < t0)
@@ -374,6 +436,7 @@ namespace Aetherion::Estimation::Replay {
                         res.updates.push_back({ e.t, MeasurementId::GnssPosition, r.dim, r.nis });
                         ++res.summary.gnssPositionUpdates;
                     }
+                    res.summary.rejectedUpdates += r.rejected ? 1U : 0U;
                 }
                 if (useGnssVel && g.hasVelocity)
                 {
@@ -386,6 +449,7 @@ namespace Aetherion::Estimation::Replay {
                         res.updates.push_back({ e.t, MeasurementId::GnssVelocity, r.dim, r.nis });
                         ++res.summary.gnssVelocityUpdates;
                     }
+                    res.summary.rejectedUpdates += r.rejected ? 1U : 0U;
                 }
             } else if (useBaro)
             {
@@ -396,6 +460,7 @@ namespace Aetherion::Estimation::Replay {
                     res.updates.push_back({ e.t, MeasurementId::Barometer, r.dim, r.nis });
                     ++res.summary.baroUpdates;
                 }
+                res.summary.rejectedUpdates += r.rejected ? 1U : 0U;
             }
         };
 
@@ -403,7 +468,7 @@ namespace Aetherion::Estimation::Replay {
             StateRow row;
             row.t = t;
             row.estimate = ekf.state();
-            row.truth = truthToState(detail::interpolateTruth(logs.truth, t), frame);
+            row.truth = truthToState(detail::interpolateTruth(truth, t), frame);
             row.error = ekf.state().template error<C>(cfg, row.truth);
             row.sigma = ekf.covariance().diagonal().cwiseSqrt();
             const Eigen::VectorXd eNav = row.error.segment<9>(nav);
@@ -421,15 +486,29 @@ namespace Aetherion::Estimation::Replay {
         double tLastOut = -1e300;
         record(t0);
         tLastOut = t0;
-        for (std::size_t k = 1; k < logs.imu.size(); ++k)
+        const ImuRecord* last = &imu.front(); // the last sample that was accepted
+        for (std::size_t k = 1; k < imu.size(); ++k)
         {
-            const ImuRecord& s = logs.imu[k];
+            const ImuRecord& s = imu[k];
             const double t = opt.timing.imu(s, fit, logs.run);
+            if (!std::isfinite(t))
+            {
+                ++res.summary.rejectedImuSamples;
+                continue;
+            }
             if (t <= tPrev)
-                continue; // duplicate or out-of-order stamp: skip the sample
-                          // Readings held over [tPrev, t]: the average of the bounding samples.
-            const ImuRecord& u0 = logs.imu[k - 1];
+            {
+                ++res.summary.skippedImuSamples; // duplicate or out-of-order stamp: skip the sample
+                continue;
+            }
+            // Readings held over [tPrev, t]: the average of the bounding
+            // samples -- the one at tPrev being the last one accepted, not the
+            // previous array element, which may be a skipped duplicate (second
+            // pre-DOI audit, N06: a skipped duplicate with a different gyro
+            // reading turned the estimate by 0.5 rad).
+            const ImuRecord& u0 = *last;
             const ImuSample<double> u{ 0.5 * (u0.gyro_rad_s + s.gyro_rad_s), 0.5 * (u0.accel_m_s2 + s.accel_m_s2) };
+            last = &s;
 
             // Split the interval at every measurement inside it.
             double tCur = tPrev;
@@ -521,6 +600,10 @@ namespace Aetherion::Estimation::Replay {
             << "duration: " << s.duration_s << " s, " << s.imuSamples << " IMU steps, " << s.gnssPositionUpdates
             << " GNSS position, " << s.gnssVelocityUpdates << " GNSS velocity, " << s.baroUpdates << " barometer updates, "
             << s.skippedFixes << " fixes skipped\n"
+            << "not used: " << s.rejectedImuSamples << " IMU samples not finite, " << s.skippedImuSamples
+            << " IMU samples out of order, " << s.rejectedTruthRecords << " truth records not finite, "
+            << s.rejectedMeasurements << " measurements with no finite time, " << s.rejectedUpdates
+            << " updates refused by the filter\n"
             << "second half: ANEES (nav core, /9) " << s.aneesNav << ", NIS/dim GNSS pos " << s.nisGnssPosition
             << ", GNSS vel " << s.nisGnssVelocity << ", baro " << s.nisBaro << '\n'
             << "second half RMS: position " << s.posRms_m << " m, velocity " << s.velRms_m_s << " m/s, tilt " << s.tiltRms_deg
