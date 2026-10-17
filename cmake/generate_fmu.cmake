@@ -98,6 +98,22 @@ function(generateFMU modelIdentifier)
     message(FATAL_ERROR "generateFMU requires SOURCES to be provided")
   endif()
 
+  # Two layouts provide the fmu4cpp runtime. In Aetherion's own build tree it is the OBJECT libraries fmu4cpp_base /
+  # fmu4cpp_<fmiVersion> and the descriptionGenerator target. An installed SDK exports static wrappers of them,
+  # Aetherion::fmu4cpp_base / Aetherion::fmu4cpp_<fmiVersion>, and the imported executable
+  # Aetherion::descriptionGenerator. The helper used to assume the build tree, so generateFMU() from a project using
+  # find_package(Aetherion) failed at configure on `fmu4cpp_fmi2` (second pre-DOI audit, finding N05).
+  if(TARGET fmu4cpp_base)
+    set(_fmu_installed FALSE)
+    set(_fmu_description_generator descriptionGenerator)
+  elseif(TARGET Aetherion::fmu4cpp_base AND TARGET Aetherion::descriptionGenerator)
+    set(_fmu_installed TRUE)
+    set(_fmu_description_generator "$<TARGET_FILE:Aetherion::descriptionGenerator>")
+  else()
+    message(FATAL_ERROR "generateFMU: the fmu4cpp runtime is neither in this build (fmu4cpp_base) nor in the Aetherion "
+                        "installation (Aetherion::fmu4cpp_base, Aetherion::descriptionGenerator).")
+  endif()
+
   foreach(fmiVersion IN LISTS FMU_FMI_VERSIONS)
 
     _gettargetplatform(${fmiVersion})
@@ -112,21 +128,32 @@ function(generateFMU modelIdentifier)
     set(VERSION_OBJECTS "${generatedSourcesDir}/fmu4cpp/model_identifier_${versionTarget}.cpp")
     configure_file("${_fmu4cpp_root}/export/src/fmu4cpp/model_identifier.cpp.in" "${VERSION_OBJECTS}" @ONLY)
 
-    set(VERSIONS_DEFS "")
+    set(VERSION_DEFS "")
     if(fmiVersion STREQUAL "fmi2")
       list(APPEND VERSION_DEFS "FMI2")
-      target_compile_definitions(fmu4cpp_fmi2 PUBLIC "FMI2")
-      list(APPEND VERSION_OBJECTS "$<TARGET_OBJECTS:fmu4cpp_fmi2>")
     elseif(fmiVersion STREQUAL "fmi3")
       list(APPEND VERSION_DEFS "FMI3")
-      target_compile_definitions(fmu4cpp_fmi3 PUBLIC "FMI3")
-      list(APPEND VERSION_OBJECTS "$<TARGET_OBJECTS:fmu4cpp_fmi3>")
     else()
       message(FATAL_ERROR "Unknown FMI version: ${fmiVersion}. Supported versions are 'fmi2' and 'fmi3'.")
     endif()
 
-    add_library(${versionTarget} SHARED "$<TARGET_OBJECTS:fmu4cpp_base>" "${FMU_SOURCES}" "${VERSION_OBJECTS}")
-    target_include_directories(${versionTarget} PRIVATE "${_fmu4cpp_root}/export/include" "${FMU_INCLUDE_DIRS}")
+    if(NOT _fmu_installed)
+      target_compile_definitions(fmu4cpp_${fmiVersion} PUBLIC ${VERSION_DEFS})
+      list(APPEND VERSION_OBJECTS "$<TARGET_OBJECTS:fmu4cpp_${fmiVersion}>")
+      add_library(${versionTarget} SHARED "$<TARGET_OBJECTS:fmu4cpp_base>" "${FMU_SOURCES}" "${VERSION_OBJECTS}")
+      target_include_directories(${versionTarget} PRIVATE "${_fmu4cpp_root}/export/include" "${FMU_INCLUDE_DIRS}")
+    else()
+      if(NOT TARGET Aetherion::fmu4cpp_${fmiVersion})
+        message(FATAL_ERROR "generateFMU: this Aetherion installation has no Aetherion::fmu4cpp_${fmiVersion}.")
+      endif()
+      add_library(${versionTarget} SHARED "${FMU_SOURCES}" "${VERSION_OBJECTS}")
+      target_include_directories(${versionTarget} PRIVATE "${FMU_INCLUDE_DIRS}")
+      # The FMI entry points (fmi2Instantiate, fmi2DoStep, ...) are defined in the wrapper archives and called by
+      # nothing in the model, so a plain link would leave them out of the FMU: link the archives whole. The include
+      # directories come with the imported targets.
+      target_link_libraries(${versionTarget} PRIVATE "$<LINK_LIBRARY:WHOLE_ARCHIVE,Aetherion::fmu4cpp_base>"
+                                                     "$<LINK_LIBRARY:WHOLE_ARCHIVE,Aetherion::fmu4cpp_${fmiVersion}>")
+    endif()
 
     target_compile_definitions(${versionTarget} PUBLIC ${VERSION_DEFS} ${FMU_COMPILE_DEFINITIONS})
 
@@ -158,7 +185,7 @@ function(generateFMU modelIdentifier)
       POST_BUILD
       WORKING_DIRECTORY "${binaryOutputDir}"
       COMMAND ${CMAKE_COMMAND} -E echo "${_describe_msg}"
-      COMMAND descriptionGenerator "$<TARGET_FILE_NAME:${versionTarget}>"
+      COMMAND ${_fmu_description_generator} "$<TARGET_FILE_NAME:${versionTarget}>"
       COMMENT "${_describe_msg}")
 
     _package_fmu()
