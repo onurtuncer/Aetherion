@@ -3,8 +3,10 @@
 #
 # Chosen to describe the code as it was written rather than impose a new style: 4-space indentation, `T* p`, function
 # bodies on their own brace line, `if (`. The existing line breaks are kept (ColumnLimit 0: clang-format does not re-flow
-# hand-wrapped statements), and so are hand-aligned trailing comments; includes and using-declarations are never
-# reordered and comments never reflowed. Keep lines within 120 columns by hand.
+# hand-wrapped statements); includes and using-declarations are never reordered and comments never reflowed. Comment
+# lines are indented with the code they describe and runs of trailing comments are aligned (AlignTrailingComments Leave
+# would keep hand alignment, but in clang-format 18 it also leaves whole-line comments at their old indentation).
+# Keep lines within 120 columns by hand.
 BasedOnStyle: LLVM
 Language: Cpp
 Standard: c++20
