@@ -134,7 +134,7 @@ TEST_CASE("GeodesicCallbackWind: callback receives correct geodetic position",
 
     CHECK_THAT(got_lat, WithinAbs(0.0, 1e-6));   // equatorial
     CHECK_THAT(got_lon, WithinAbs(0.0, 1e-6));   // prime meridian at t=0
-    CHECK_THAT(got_alt, WithinAbs(9144.0, 1.0));    // ~30 000 ft
+    CHECK_THAT(got_alt, WithinAbs(9144.0, 1.0)); // ~30 000 ft
     CHECK_THAT(got_t, WithinAbs(0.0, 1e-12));
 }
 
@@ -142,7 +142,7 @@ TEST_CASE("GeodesicCallbackWind: east wind at equator maps to +y ECEF",
     "[wind][callback]")
 {
     GeodesicCallbackWind w([](double, double, double, double) -> Vec3d {
-        return Vec3d{ 0.0, 6.096, 0.0 };   // 20 ft/s eastward
+        return Vec3d{ 0.0, 6.096, 0.0 }; // 20 ft/s eastward
     });
 
     auto v_ecef = w.velocity_ecef(kR_ECI, 0.0);
@@ -260,7 +260,7 @@ TEST_CASE("WindAwareDragPolicy<ZeroWind>: AD<double> evaluates", "[wind][policy]
 
     WindAwareDragPolicy<ZeroWind> wp{ 0.1, 0.018241, ZeroWind{} };
     auto w = wp(g, nu, AD(14.59), AD(0.0));
-    CHECK(w.f.tail<3>().norm() != AD(0.0));  // drag is non-zero
+    CHECK(w.f.tail<3>().norm() != AD(0.0)); // drag is non-zero
 }
 
 // -----------------------------------------------------------------------------

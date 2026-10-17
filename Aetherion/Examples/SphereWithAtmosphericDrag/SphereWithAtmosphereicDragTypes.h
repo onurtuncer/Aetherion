@@ -28,21 +28,21 @@
 
 namespace Aetherion::Examples::SphereWithAtmosphericDrag {
 
-/// @brief Six-DoF vector field for the NASA Atmos-06 sphere-with-drag case.
-///
-/// Policy configuration:
-/// - Gravity  : J2 oblateness perturbation (WGS-84: μ, Re, J2)
-/// - Aero     : Drag only — F = −½ ρ(h) CD S_ref |v_B| v_B  (body frame)
-/// - Thrust   : None
-/// - Mass     : Constant (no propellant consumption)
+    /// @brief Six-DoF vector field for the NASA Atmos-06 sphere-with-drag case.
+    ///
+    /// Policy configuration:
+    /// - Gravity  : J2 oblateness perturbation (WGS-84: μ, Re, J2)
+    /// - Aero     : Drag only — F = −½ ρ(h) CD S_ref |v_B| v_B  (body frame)
+    /// - Thrust   : None
+    /// - Mass     : Constant (no propellant consumption)
     using SphereWithAtmosphericDragVF = RigidBody::VectorField<
-        FlightDynamics::J2GravityPolicy,        ///< Gravity: J2 perturbation (WGS-84).
-        FlightDynamics::DragOnlyAeroPolicy,     ///< Aerodynamics: drag only, no lift.
-        FlightDynamics::ZeroPropulsionPolicy,   ///< Propulsion: none.
-        FlightDynamics::ConstantMassPolicy      ///< Mass: constant.
+        FlightDynamics::J2GravityPolicy,      ///< Gravity: J2 perturbation (WGS-84).
+        FlightDynamics::DragOnlyAeroPolicy,   ///< Aerodynamics: drag only, no lift.
+        FlightDynamics::ZeroPropulsionPolicy, ///< Propulsion: none.
+        FlightDynamics::ConstantMassPolicy    ///< Mass: constant.
         >;
 
-/// @brief RKMK integrator stepper for @c SphereWithAtmosphericDragVF.
+    /// @brief RKMK integrator stepper for @c SphereWithAtmosphericDragVF.
     using SphereWithAtmosphericDragStepper = RigidBody::SixDoFStepper<SphereWithAtmosphericDragVF>;
 
 } // namespace Aetherion::Examples::SphereWithAtmosphericDrag

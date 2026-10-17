@@ -9,7 +9,7 @@
 #pragma once
 
 #include <Aetherion/Coordinate/Math.h>
-#include <Aetherion/Environment/WGS84.h>   // single source of WGS-84 constants
+#include <Aetherion/Environment/WGS84.h> // single source of WGS-84 constants
 
 namespace Aetherion::Coordinate {
 
@@ -35,7 +35,7 @@ namespace Aetherion::Coordinate {
         // WGS-84 constants — from the single authoritative header
         const auto a = Scalar(Environment::WGS84::kSemiMajorAxis_m);
         const auto f = Scalar(Environment::WGS84::kFlattening);
-        const Scalar e2 = f * (Scalar(2) - f);     // = kEccentricitySq
+        const Scalar e2 = f * (Scalar(2) - f); // = kEccentricitySq
 
         const Scalar sLat = Sine(lat_rad);
         const Scalar cLat = Cosine(lat_rad);
@@ -49,9 +49,9 @@ namespace Aetherion::Coordinate {
         const Scalar Z_term = (N * (one - e2) + h_m) * sLat;
 
         return Vec3<Scalar>{
-            cosLatN_plus_h * cLon,  // X
-            cosLatN_plus_h * sLon,  // Y
-            Z_term                   // Z
+            cosLatN_plus_h * cLon, // X
+            cosLatN_plus_h * sLon, // Y
+            Z_term                 // Z
         };
     }
 
@@ -77,9 +77,9 @@ namespace Aetherion::Coordinate {
         const Scalar cA = Cosine(azimuth_rad);
 
         return Vec3<Scalar>{
-            sZ * cA,   // N
-            sZ * sA,   // E
-            -cZ         // D (Down)
+            sZ * cA, // N
+            sZ * sA, // E
+            -cZ      // D (Down)
         };
     }
 
@@ -151,7 +151,7 @@ namespace Aetherion::Coordinate {
 
     // ── 4. Launch state in ECI ────────────────────────────────────────────────
 
-/// @brief ECI launch state derived from geodetic pose and heading.
+    /// @brief ECI launch state derived from geodetic pose and heading.
     template <class Scalar>
     struct LaunchStateECI
     {

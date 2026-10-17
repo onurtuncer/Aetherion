@@ -50,12 +50,12 @@
 
 namespace Aetherion::Examples::TumblingBrickNoDamping {
 
-/// @brief Concrete Application for the NASA TM-2015-218675 Atmospheric Scenario 2 validation case.
-///
-/// Runs a non-symmetric rigid body (1:2:3 inertia ratio) under J2 gravity with
-/// zero aerodynamic forces, reproducing the torque-free tumbling reference trajectory.
-///
-/// Reference: NASA TM-2015-218675, Section B.1.2 / Table 26.
+    /// @brief Concrete Application for the NASA TM-2015-218675 Atmospheric Scenario 2 validation case.
+    ///
+    /// Runs a non-symmetric rigid body (1:2:3 inertia ratio) under J2 gravity with
+    /// zero aerodynamic forces, reproducing the torque-free tumbling reference trajectory.
+    ///
+    /// Reference: NASA TM-2015-218675, Section B.1.2 / Table 26.
     class TumblingBrickNoDampingApplication : public Simulation::Application
     {
     public:

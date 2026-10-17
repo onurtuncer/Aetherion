@@ -28,12 +28,12 @@ TEST_CASE("CrossForce matches analytical formula", "[spatial][crossforce]")
     using Scalar = double;
 
     Aetherion::Spatial::Twist<Scalar> v{};
-    v.v << 1.0, 2.0, 3.0,   // ω
-        4.0, 5.0, 6.0;  // linear
+    v.v << 1.0, 2.0, 3.0, // ω
+        4.0, 5.0, 6.0;    // linear
 
     Aetherion::Spatial::Wrench<Scalar> f{};
-    f.f << 0.5, -1.0, 2.0,  // M
-        3.0, 4.0, -2.0; // F
+    f.f << 0.5, -1.0, 2.0, // M
+        3.0, 4.0, -2.0;    // F
 
     auto result = Aetherion::Spatial::CrossForce(v, f);
 

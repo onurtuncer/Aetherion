@@ -39,11 +39,11 @@ namespace {
     constexpr double kDeg = std::numbers::pi / 180.0;
     const Configuration& cfg = kNavBaroGnss16;
 
-// Kitty Hawk (the F-16 cases), 3 m ellipsoidal height, an arbitrary ERA.
+    // Kitty Hawk (the F-16 cases), 3 m ellipsoidal height, an arbitrary ERA.
     LciFrame<double> testFrame() { return LciFrame<double>::FromGeodetic(36.0192 * kDeg, -75.6744 * kDeg, 3.0, 0.3); }
 
-// A state well away from the origin, so the right-invariant [p]x couplings
-// are large and a start-of-step F would show its first-order error.
+    // A state well away from the origin, so the right-invariant [p]x couplings
+    // are large and a start-of-step F would show its first-order error.
     EstimationState<double> testState()
     {
         EstimationState<double> x;
@@ -71,7 +71,7 @@ namespace {
         return y;
     }
 
-// Phi by central differences of xi -> error_C(propagate(x), propagate(retract_C(x, xi))).
+    // Phi by central differences of xi -> error_C(propagate(x), propagate(retract_C(x, xi))).
     template <ErrorConvention C>
     MatX finiteDifferencePhi(const StrapdownProcessModel<double>& model,
         const EstimationState<double>& x,
@@ -95,7 +95,7 @@ namespace {
 
     double relErr(const MatX& a, const MatX& ref) { return (a - ref).norm() / ref.norm(); }
     double absErr(const MatX& a, const MatX& ref) { return (a - ref).norm(); }
-}  // namespace
+} // namespace
 
 // ---------------------------------------------------------------------------
 TEST_CASE("SO(3): Log inverts Exp, J_l^-1 inverts J_l, including small angles", "[estimation][se23]")
@@ -106,7 +106,7 @@ TEST_CASE("SO(3): Log inverts Exp, J_l^-1 inverts J_l, including small angles", 
         REQUIRE((SO3::Log_R(R) - w).norm() < 1e-12);
         REQUIRE((SO3::LeftJacobianInverse(w) * SO3::LeftJacobian(w) - Mat3::Identity()).norm() < 1e-12);
     }
-  // Round-off past |cos| = 1 is clamped, not NaN.
+    // Round-off past |cos| = 1 is clamped, not NaN.
     Mat3 I = Mat3::Identity();
     I(0, 0) += 1e-15;
     REQUIRE(SO3::Log_R(I).norm() < 1e-12);
@@ -126,7 +126,7 @@ TEST_CASE("SE2(3): composition, inverse, Exp/Log, adjoint", "[estimation][se23]"
     REQUIRE(I.v.norm() < 1e-9);
     REQUIRE(I.p.norm() < 1e-9);
 
-  // X Exp(eta) X^-1 == Exp(Ad_X eta)
+    // X Exp(eta) X^-1 == Exp(Ad_X eta)
     Vec9 eta;
     eta << 0.01, 0.02, -0.03, 0.5, 0.1, -0.2, 3.0, -1.0, 2.0;
     const G lhs = X * G::Exp(eta) * X.inverse();
@@ -142,15 +142,15 @@ TEST_CASE("LCI frame: mapping, gravity direction, gravity gradient", "[estimatio
     const Vec3 p(8000.0, -3000.0, -1500.0);
     REQUIRE((f.toLci(f.toEci(p)) - p).norm() < 1e-6);
 
-  // At the origin the LCI axes are NED: gravity is (nearly) along +D, with
-  // a small meridional (N) component from J2 and none to the east.
+    // At the origin the LCI axes are NED: gravity is (nearly) along +D, with
+    // a small meridional (N) component from J2 and none to the east.
     const Vec3 g0 = f.gravity(Vec3::Zero());
     REQUIRE(g0[2] == Catch::Approx(9.80).margin(0.03));
     REQUIRE(std::abs(g0[0]) < 0.05);
     REQUIRE(std::abs(g0[1]) < 1e-6);
 
-  // Analytic (central-term) gradient against central differences of the
-  // full J2 gravity: J2's share of the gradient is ~1e-3 of ~1.5e-6 s^-2.
+    // Analytic (central-term) gradient against central differences of the
+    // full J2 gravity: J2's share of the gradient is ~1e-3 of ~1.5e-6 s^-2.
     const Mat3 G = f.gravityGradient(p);
     const double h = 10.0;
     for (int j = 0; j < 3; ++j)
@@ -160,7 +160,7 @@ TEST_CASE("LCI frame: mapping, gravity direction, gravity gradient", "[estimatio
         const Vec3 col = (f.gravity(p + d) - f.gravity(p - d)) / (2.0 * h);
         REQUIRE((G.col(j) - col).norm() < 1e-8);
     }
-    REQUIRE(G.norm() > 1e-6);  // and it is not trivially zero
+    REQUIRE(G.norm() > 1e-6); // and it is not trivially zero
 }
 
 TEST_CASE("retract and error are exact inverses in both conventions", "[estimation][state]")
@@ -181,8 +181,8 @@ TEST_CASE("retract and error are exact inverses in both conventions", "[estimati
     }
     SECTION("the two conventions differ by the adjoint of the estimate")
     {
-    // xi_R = Ad_Xhat xi_L for the same perturbed state (first-order identity;
-    // exact for the group part because Xhat Exp(xi) Xhat^-1 = Exp(Ad xi)).
+        // xi_R = Ad_Xhat xi_L for the same perturbed state (first-order identity;
+        // exact for the group part because Xhat Exp(xi) Xhat^-1 = Exp(Ad xi)).
         const auto y = x.retract<ErrorConvention::LeftInvariant>(cfg, d);
         const VecX eR = x.error<ErrorConvention::RightInvariant>(cfg, y);
         const Vec9 expected = SE23<double>::Adjoint(x.X) * d.head<9>();
@@ -194,9 +194,9 @@ TEST_CASE("retract and error are exact inverses in both conventions", "[estimati
 TEST_CASE("propagate: free fall and constant rate integrate as expected", "[estimation][process]")
 {
     const StrapdownProcessModel<double> model(testFrame());
-    EstimationState<double> x;  // at rest at the origin, no biases
+    EstimationState<double> x; // at rest at the origin, no biases
     const Vec3 w(0.0, 0.0, 0.5);
-    const ImuSample<double> u{ w, Vec3::Zero() };  // zero specific force: free fall
+    const ImuSample<double> u{ w, Vec3::Zero() }; // zero specific force: free fall
     const Vec3 g0 = model.frame().gravity(Vec3::Zero());
 
     const double dt = 0.01;
@@ -205,8 +205,8 @@ TEST_CASE("propagate: free fall and constant rate integrate as expected", "[esti
         x = model.propagate(x, u, dt);
     const double T = N * dt;
 
-    REQUIRE((x.X.R - SO3::Exp_R(Vec3(w * T))).norm() < 1e-12);  // constant twist: exact
-    REQUIRE((x.X.v - g0 * T).norm() < 1e-4);                    // gravity changes by ~1e-6 over 5 m
+    REQUIRE((x.X.R - SO3::Exp_R(Vec3(w * T))).norm() < 1e-12); // constant twist: exact
+    REQUIRE((x.X.v - g0 * T).norm() < 1e-4);                   // gravity changes by ~1e-6 over 5 m
     REQUIRE((x.X.p - 0.5 * g0 * T * T).norm() < 1e-4);
     REQUIRE(x.gyroBias.isZero());
     REQUIRE(x.baroBias == 0.0);
@@ -234,7 +234,7 @@ TEST_CASE("noise layout follows the configuration", "[estimation][process]")
     REQUIRE(Qc(8, 8) == Catch::Approx(9e-10));
     REQUIRE(Qc(11, 11) == Catch::Approx(1.6e-7));
     REQUIRE(Qc(12, 12) == Catch::Approx(2.5e-3));
-    REQUIRE(Qc.diagonal().sum() == Catch::Approx(Qc.sum()));  // diagonal
+    REQUIRE(Qc.diagonal().sum() == Catch::Approx(Qc.sum())); // diagonal
 }
 
 // The check the prototype's finite differences performed, now on the C++
@@ -249,15 +249,15 @@ TEST_CASE("discrete transition matches finite differences; trapezoidal F is requ
     const double dt = 0.01;
     const MatX Qc = model.continuousNoiseCovariance(cfg, ProcessNoise<double>{ 1e-3, 2e-3, 3e-5, 4e-4, 5e-2 });
 
-  // The analytic Phi linearises the continuous flow; the finite differences
-  // linearise the discrete propagate(). Both are second-order one-step maps,
-  // so their difference is a local error of O(dt^3): the absolute residual
-  // must fall by ~8 when dt is halved. Absolute, not relative: in RI the
-  // norm of Phi itself is dominated by dt [p]x R, so a relative residual
-  // would understate the order by one. A ratio of ~4 means something is
-  // first-order consistent only (the test caught exactly that in
-  // propagate() before it rotated by the mid-step attitude); ~2 would be a
-  // wrong entry.
+    // The analytic Phi linearises the continuous flow; the finite differences
+    // linearise the discrete propagate(). Both are second-order one-step maps,
+    // so their difference is a local error of O(dt^3): the absolute residual
+    // must fall by ~8 when dt is halved. Absolute, not relative: in RI the
+    // norm of Phi itself is dominated by dt [p]x R, so a relative residual
+    // would understate the order by one. A ratio of ~4 means something is
+    // first-order consistent only (the test caught exactly that in
+    // propagate() before it rotated by the mid-step attitude); ~2 would be a
+    // wrong entry.
     auto check = [&](auto conv, double h) {
         constexpr ErrorConvention C = decltype(conv)::value;
         MatX Phi, Qd, F0, G0;
@@ -274,8 +274,8 @@ TEST_CASE("discrete transition matches finite differences; trapezoidal F is requ
         INFO("convention " << toString(C) << ", dt " << h << ": trapezoidal abs err " << eTrap << " (rel "
                            << relErr(Phi, PhiFd) << "), start-of-step " << eStart);
         REQUIRE(relErr(Phi, PhiFd) < 1e-6);
-    // Equal in LI up to the step's change of R^T G R (~1e-9 relative), so
-    // the inequality is really the RI claim; the slack covers LI's noise.
+        // Equal in LI up to the step's change of R^T G R (~1e-9 relative), so
+        // the inequality is really the RI claim; the slack covers LI's noise.
         REQUIRE(eTrap <= eStart * (1.0 + 1e-6));
 
         REQUIRE(Qd.rows() == 16);
@@ -292,18 +292,18 @@ TEST_CASE("discrete transition matches finite differences; trapezoidal F is requ
     const auto [trapLI, startLI] = check(LI, dt);
     const auto [trapLI2, startLI2] = check(LI, dt / 2);
 
-  // Trapezoidal: local error O(dt^3) in both conventions.
+    // Trapezoidal: local error O(dt^3) in both conventions.
     INFO("trapezoidal abs-err ratio dt/(dt/2): RI " << trapRI / trapRI2 << ", LI " << trapLI / trapLI2);
     REQUIRE(trapRI / trapRI2 > 6.0);
     REQUIRE(trapLI / trapLI2 > 6.0);
 
-  // RI with a start-of-step F: the [p]x R bias coupling moves within the
-  // step, so the local error is O(dt^2) -- ratio ~4 -- and far larger than
-  // the trapezoidal one at the same dt.
+    // RI with a start-of-step F: the [p]x R bias coupling moves within the
+    // step, so the local error is O(dt^2) -- ratio ~4 -- and far larger than
+    // the trapezoidal one at the same dt.
     INFO("RI start-of-step abs-err ratio dt/(dt/2): " << startRI / startRI2);
     REQUIRE(startRI / startRI2 < 6.0);
     REQUIRE(startRI > 50.0 * trapRI);
-  // LI carries that variation inside A_L: start-of-step keeps O(dt^3).
+    // LI carries that variation inside A_L: start-of-step keeps O(dt^3).
     INFO("LI start-of-step abs-err ratio dt/(dt/2): " << startLI / startLI2);
     REQUIRE(startLI / startLI2 > 6.0);
 }
@@ -353,8 +353,8 @@ TEST_CASE("CppAD differentiates the process model through Eigen", "[estimation][
         INFO("convention " << toString(C) << ": AD vs finite differences rel err " << relErr(PhiAD, PhiFd));
         REQUIRE(relErr(PhiAD, PhiFd) < 1e-7);
 
-    // And the analytic Phi agrees with the AD one to discretisation order
-    // (the order itself is established in the previous test case).
+        // And the analytic Phi agrees with the AD one to discretisation order
+        // (the order itself is established in the previous test case).
         MatX Phi, Qd;
         const MatX Qc = MatX::Identity(noiseDimension(cfg), noiseDimension(cfg));
         (void)model.template step<C>(cfg, x, u, dt, Qc, Phi, Qd);

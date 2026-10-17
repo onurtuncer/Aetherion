@@ -74,7 +74,7 @@ namespace Aetherion::FlightDynamics {
     /// All default values are sourced from @c WGS84.h.
     struct J2GravityPolicy
     {
-        double mu{ Environment::WGS84::kGM_m3_s2 };      ///< Gravitational parameter @f$\mu@f$ [m³/s²].
+        double mu{ Environment::WGS84::kGM_m3_s2 };        ///< Gravitational parameter @f$\mu@f$ [m³/s²].
         double Re{ Environment::WGS84::kSemiMajorAxis_m }; ///< Earth equatorial radius [m].
         double J2{ Environment::WGS84::kJ2 };              ///< J₂ zonal harmonic coefficient [-].
 

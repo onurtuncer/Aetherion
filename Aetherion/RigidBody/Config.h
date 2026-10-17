@@ -17,24 +17,24 @@
 
 namespace Aetherion::RigidBody {
 
-/// @brief Aggregated configuration for a single rigid body simulation run.
-///
-/// Collects all initial conditions and physical parameters needed to initialise
-/// the six-degree-of-freedom state and the associated dynamics policies.
-/// Typically populated by deserialising a JSON input file via
-/// Aetherion::Serialization::LoadConfig().
+    /// @brief Aggregated configuration for a single rigid body simulation run.
+    ///
+    /// Collects all initial conditions and physical parameters needed to initialise
+    /// the six-degree-of-freedom state and the associated dynamics policies.
+    /// Typically populated by deserialising a JSON input file via
+    /// Aetherion::Serialization::LoadConfig().
     struct Config
     {
-        GeodeticPoseNED pose;                  ///< Initial geodetic position and attitude in the NED frame.
-        VelocityNED velocityNED;           ///< Initial velocity expressed in the local NED frame [m/s].
-        BodyRates bodyRates;             ///< Initial angular rates expressed in the body frame [rad/s].
-        InertialParameters inertialParameters;    ///< Mass and inertia properties of the rigid body.
-        AerodynamicParameters aerodynamicParameters;///< Reference geometry and aerodynamic coefficients.
-        Environment::ConstantWind wind;             ///< Ambient wind in NED frame [m/s]; defaults to calm (zero).
-                                                ///< Parsed from JSON ("wind"); consumers convert it with
-                                                ///< ConstantECEFWind::from_ned() at the initial position.
-        Environment::WindShear windShear;        ///< Linear altitude wind shear (NED); all zero means unused.
-                                                ///< Parsed from JSON ("windShear"); see LinearWindShear.
+        GeodeticPoseNED pose;                        ///< Initial geodetic position and attitude in the NED frame.
+        VelocityNED velocityNED;                     ///< Initial velocity expressed in the local NED frame [m/s].
+        BodyRates bodyRates;                         ///< Initial angular rates expressed in the body frame [rad/s].
+        InertialParameters inertialParameters;       ///< Mass and inertia properties of the rigid body.
+        AerodynamicParameters aerodynamicParameters; ///< Reference geometry and aerodynamic coefficients.
+        Environment::ConstantWind wind;              ///< Ambient wind in NED frame [m/s]; defaults to calm (zero).
+                                                     ///< Parsed from JSON ("wind"); consumers convert it with
+                                                     ///< ConstantECEFWind::from_ned() at the initial position.
+        Environment::WindShear windShear;            ///< Linear altitude wind shear (NED); all zero means unused.
+                                                     ///< Parsed from JSON ("windShear"); see LinearWindShear.
     };
 
 } // namespace Aetherion::RigidBody

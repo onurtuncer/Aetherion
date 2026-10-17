@@ -67,17 +67,17 @@
 
 namespace Aetherion::Examples::TwoStageRocket {
 
-// ── Concrete VectorField for this simulator ───────────────────────────────────
-//
-// Defined at namespace scope so it can be referenced in the default template
-// argument for IntegratorPolicy below.
+    // ── Concrete VectorField for this simulator ───────────────────────────────────
+    //
+    // Defined at namespace scope so it can be referenced in the default template
+    // argument for IntegratorPolicy below.
     using TwoStageRocketVF = RigidBody::VectorField<
         FlightDynamics::J2GravityPolicy,
         RocketAeroPolicy,
         FlightDynamics::AxialThrustPolicy,
         FlightDynamics::LinearBurnPolicy>;
 
-// ── TwoStageRocketSimulator<IntegratorPolicy> ─────────────────────────────────
+    // ── TwoStageRocketSimulator<IntegratorPolicy> ─────────────────────────────────
 
     template <int EuclidDim = RigidBody::RigidBody6DoFEuclidDim,
         class IntegratorPolicy =
@@ -92,32 +92,32 @@ namespace Aetherion::Examples::TwoStageRocket {
     class TwoStageRocketSimulator
     {
     public:
-    // ── Type aliases ──────────────────────────────────────────────────────────
+        // ── Type aliases ──────────────────────────────────────────────────────────
         using VF = TwoStageRocketVF;
         using Integrator = IntegratorPolicy;
         using Stepper = RigidBody::SixDoFStepper<VF, EuclidDim, Integrator>;
         using StepResult = typename Stepper::StepResult;
 
-    // ── Step observation ──────────────────────────────────────────────────────
+        // ── Step observation ──────────────────────────────────────────────────────
         struct StepObservation
         {
             bool converged = true;
             double residual_norm = 0.0;
         };
 
-    // ── Construction ──────────────────────────────────────────────────────────
+        // ── Construction ──────────────────────────────────────────────────────────
 
-    /// @brief Construct the simulator.
-    ///
-    /// @param ip         Initial inertial parameters (liftoff mass / inertia).
-    /// @param x0         Initial 6-DoF state (ECI position, attitude, body rates, mass).
-    /// @param theta0     Earth Rotation Angle at t=0 [rad].
-    /// @param inertiaDml Parsed @c twostage_inertia.dml engine.
-    /// @param propDml    Parsed @c twostage_prop.dml engine.
-    /// @param aeroDml            Parsed @c twostage_aero.dml engine.
-    /// @param stg2IgnitionTime_s Absolute sim time at which S2 may ignite [s].
-    ///                           Pass (endTime − S2_burn_duration) to match the
-    ///                           NASA TM reference coast-then-fire sequencing.
+        /// @brief Construct the simulator.
+        ///
+        /// @param ip         Initial inertial parameters (liftoff mass / inertia).
+        /// @param x0         Initial 6-DoF state (ECI position, attitude, body rates, mass).
+        /// @param theta0     Earth Rotation Angle at t=0 [rad].
+        /// @param inertiaDml Parsed @c twostage_inertia.dml engine.
+        /// @param propDml    Parsed @c twostage_prop.dml engine.
+        /// @param aeroDml            Parsed @c twostage_aero.dml engine.
+        /// @param stg2IgnitionTime_s Absolute sim time at which S2 may ignite [s].
+        ///                           Pass (endTime − S2_burn_duration) to match the
+        ///                           NASA TM reference coast-then-fire sequencing.
         explicit TwoStageRocketSimulator(
             const RigidBody::InertialParameters& ip,
             RigidBody::StateD x0,
@@ -135,12 +135,12 @@ namespace Aetherion::Examples::TwoStageRocket {
             updateVectorField();
         }
 
-    // ── Step ──────────────────────────────────────────────────────────────────
+        // ── Step ──────────────────────────────────────────────────────────────────
 
-    /// @brief Advance the simulation by @p h seconds.
-    ///
-    /// Performs the ZOH pre-step update (inertia, thrust, mdot), integrates,
-    /// advances the fuel tracker, and applies any staging event.
+        /// @brief Advance the simulation by @p h seconds.
+        ///
+        /// Performs the ZOH pre-step update (inertia, thrust, mdot), integrates,
+        /// advances the fuel tracker, and applies any staging event.
         StepObservation step(double h)
         {
             updateVectorField();
@@ -164,9 +164,9 @@ namespace Aetherion::Examples::TwoStageRocket {
             return { true, res.residual_norm };
         }
 
-    // ── Snapshot ──────────────────────────────────────────────────────────────
+        // ── Snapshot ──────────────────────────────────────────────────────────────
 
-    /// @brief Build a 31-column NASA-compatible snapshot of the current state.
+        /// @brief Build a 31-column NASA-compatible snapshot of the current state.
         [[nodiscard]] Simulation::Snapshot2 snapshot2() const
         {
             constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
@@ -177,43 +177,43 @@ namespace Aetherion::Examples::TwoStageRocket {
                 vf.gravity, vf.aero);
         }
 
-    // ── Derived quantities ────────────────────────────────────────────────────
+        // ── Derived quantities ────────────────────────────────────────────────────
 
-    /// @brief Propulsive force in body axes at the current state [N].
-    ///
-    /// Read from the AxialThrustPolicy instance the integrator holds, so the
-    /// thrust axis comes from the vehicle model rather than from an assumption
-    /// made by the caller.  The value is the zero-order-hold thrust applied over
-    /// the step just taken; on a step in which staging occurred, @c step() has
-    /// already refreshed it to the post-separation stage, pairing correctly with
-    /// the post-separation @c state().m.
+        /// @brief Propulsive force in body axes at the current state [N].
+        ///
+        /// Read from the AxialThrustPolicy instance the integrator holds, so the
+        /// thrust axis comes from the vehicle model rather than from an assumption
+        /// made by the caller.  The value is the zero-order-hold thrust applied over
+        /// the step just taken; on a step in which staging occurred, @c step() has
+        /// already refreshed it to the post-separation stage, pairing correctly with
+        /// the post-separation @c state().m.
         [[nodiscard]] Eigen::Vector3d thrustBodyForce_N() const
         {
             return Simulation::PolicyBodyForce_N(m_time, m_state,
                 m_stepper.vectorField().thrust);
         }
 
-    // ── Accessors ─────────────────────────────────────────────────────────────
+        // ── Accessors ─────────────────────────────────────────────────────────────
         [[nodiscard]] double time() const noexcept { return m_time; }
         [[nodiscard]] const RigidBody::StateD& state() const noexcept { return m_state; }
         [[nodiscard]] const RocketStageModel& stageModel() const noexcept { return m_stageModel; }
 
-    /// @brief Mutable accessor — used by callers (e.g. an FMU wrapper) that need
-    /// to mutate stage-model tuning (e.g. @c stg2IgnitionTime_s) or restore a
-    /// previously-saved fuel/staging checkpoint.
+        /// @brief Mutable accessor — used by callers (e.g. an FMU wrapper) that need
+        /// to mutate stage-model tuning (e.g. @c stg2IgnitionTime_s) or restore a
+        /// previously-saved fuel/staging checkpoint.
         [[nodiscard]] RocketStageModel& stageModel() noexcept { return m_stageModel; }
 
-    /// @brief The aero policy the integrator holds, for setting the steady wind
-    /// and the atmosphere offsets (see RocketAeroPolicy) before stepping.
+        /// @brief The aero policy the integrator holds, for setting the steady wind
+        /// and the atmosphere offsets (see RocketAeroPolicy) before stepping.
         [[nodiscard]] RocketAeroPolicy& aero() noexcept { return m_stepper.vectorField().aero; }
         [[nodiscard]] const RocketAeroPolicy& aero() const noexcept { return m_stepper.vectorField().aero; }
 
-    /// @brief Directly overwrite the integration state and elapsed time.
-    ///
-    /// Used by an FMU wrapper's @c setFmuState to restore a checkpoint. Bypasses
-    /// the normal @c step() ZOH sequence entirely -- callers are responsible for
-    /// also restoring @c stageModel().fuelState() so that propulsion/inertia
-    /// queries remain consistent with @p x.
+        /// @brief Directly overwrite the integration state and elapsed time.
+        ///
+        /// Used by an FMU wrapper's @c setFmuState to restore a checkpoint. Bypasses
+        /// the normal @c step() ZOH sequence entirely -- callers are responsible for
+        /// also restoring @c stageModel().fuelState() so that propulsion/inertia
+        /// queries remain consistent with @p x.
         void setState(const RigidBody::StateD& x, double t) noexcept
         {
             m_state = x;
@@ -232,14 +232,14 @@ namespace Aetherion::Examples::TwoStageRocket {
             rebuildSpatialInertia(m_stageModel.inertialParameters());
         }
 
-    /// The DML inertia is about the centre of mass (AIAA S-119 standard
-    /// variables) and DXCG is the centre of mass forward of the MRC, the body
-    /// origin; VectorField shifts the tensor to the origin (parallel-axis term
-    /// m DXCG^2 in Iyy and Izz), builds the m[c]x coupling, and moves the
-    /// gravity wrench from the CG to the MRC (moment DXCG x F, once added by
-    /// the example's own RocketGravityPolicy). Zero-order hold over the step;
-    /// omega is kept through the rebuild (see "Known Modelling Differences" in
-    /// doc/examples.rst for what that means and what the NASA sims do).
+        /// The DML inertia is about the centre of mass (AIAA S-119 standard
+        /// variables) and DXCG is the centre of mass forward of the MRC, the body
+        /// origin; VectorField shifts the tensor to the origin (parallel-axis term
+        /// m DXCG^2 in Iyy and Izz), builds the m[c]x coupling, and moves the
+        /// gravity wrench from the CG to the MRC (moment DXCG x F, once added by
+        /// the example's own RocketGravityPolicy). Zero-order hold over the step;
+        /// omega is kept through the rebuild (see "Known Modelling Differences" in
+        /// doc/examples.rst for what that means and what the NASA sims do).
         void rebuildSpatialInertia(const RigidBody::InertialParameters& ip)
         {
             m_stepper.vectorField().setInertialParameters(ip);
@@ -248,7 +248,7 @@ namespace Aetherion::Examples::TwoStageRocket {
         Stepper m_stepper;
         RigidBody::StateD m_state;
         double m_time = 0.0;
-        double m_theta0 = 0.0;  ///< ERA at t=0 [rad].
+        double m_theta0 = 0.0; ///< ERA at t=0 [rad].
 
         RocketStageModel m_stageModel;
     };

@@ -67,47 +67,47 @@
 
 namespace Aetherion::FlightDynamics {
 
-/// @brief Pound-force in newtons — matches TrimSolver::kLbf_N.
+    /// @brief Pound-force in newtons — matches TrimSolver::kLbf_N.
     inline constexpr double kTrimLbf_N = 4.448221615260751;
 
-/// @brief Magnitude of the WGS-84 J2 gravitational acceleration at a geodetic
-///        position.
-///
-/// Evaluates the same field as @c J2GravityPolicy, so a weight built from this
-/// value is consistent with what the integrator applies at the trim point.
-///
-/// @param lat_deg Geodetic latitude [deg].
-/// @param alt_m   Ellipsoidal height above the WGS-84 ellipsoid [m].
-/// @return Gravitational acceleration magnitude [m/s²].
+    /// @brief Magnitude of the WGS-84 J2 gravitational acceleration at a geodetic
+    ///        position.
+    ///
+    /// Evaluates the same field as @c J2GravityPolicy, so a weight built from this
+    /// value is consistent with what the integrator applies at the trim point.
+    ///
+    /// @param lat_deg Geodetic latitude [deg].
+    /// @param alt_m   Ellipsoidal height above the WGS-84 ellipsoid [m].
+    /// @return Gravitational acceleration magnitude [m/s²].
     inline double LocalGravityMagnitude_m_s2(double lat_deg, double alt_m)
     {
         constexpr double kDegRad = std::numbers::pi / 180.0;
 
-    // Longitude is arbitrary — see the axisymmetry note in the file header.
+        // Longitude is arbitrary — see the axisymmetry note in the file header.
         const auto r = Coordinate::GeodeticToECEF(lat_deg * kDegRad, 0.0, alt_m);
         const auto g = Environment::J2(Environment::Vec3<double>{ r[0], r[1], r[2] });
 
         return std::sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]);
     }
 
-/// @brief Aircraft weight at a geodetic trim position, in the units
-///        @c TrimInputs::weight_lbf expects.
-///
-/// @param mass_kg Vehicle mass [kg].
-/// @param lat_deg Geodetic latitude of the trim point [deg].
-/// @param alt_m   Ellipsoidal height of the trim point [m].
-/// @return Weight [lbf].
+    /// @brief Aircraft weight at a geodetic trim position, in the units
+    ///        @c TrimInputs::weight_lbf expects.
+    ///
+    /// @param mass_kg Vehicle mass [kg].
+    /// @param lat_deg Geodetic latitude of the trim point [deg].
+    /// @param alt_m   Ellipsoidal height of the trim point [m].
+    /// @return Weight [lbf].
     inline double TrimWeight_lbf(double mass_kg, double lat_deg, double alt_m)
     {
         return mass_kg * LocalGravityMagnitude_m_s2(lat_deg, alt_m) / kTrimLbf_N;
     }
 
-/// @brief Meridian (M) and prime-vertical (N) radii of curvature of the WGS-84
-///        ellipsoid at a geodetic latitude [m].
+    /// @brief Meridian (M) and prime-vertical (N) radii of curvature of the WGS-84
+    ///        ellipsoid at a geodetic latitude [m].
     struct CurvatureRadii
     {
-        double meridian_m{};       ///< M — north–south
-        double primeVertical_m{};  ///< N — east–west
+        double meridian_m{};      ///< M — north–south
+        double primeVertical_m{}; ///< N — east–west
     };
 
     inline CurvatureRadii WGS84CurvatureRadii(double lat_rad)
@@ -120,19 +120,19 @@ namespace Aetherion::FlightDynamics {
         return { N * (1.0 - WGS84::kEccentricitySq) / w2, N };
     }
 
-/// @brief Specific force a vehicle must generate, along the geodetic vertical,
-///        to hold constant geodetic altitude at a given Earth-relative velocity.
-///
-/// J2 attraction along the geodetic vertical, less the centripetal acceleration
-/// of a constant-altitude path over the rotating WGS-84 ellipsoid — see the
-/// file header.  At rest this is plumb-bob gravity; it falls with eastward
-/// speed and rises with westward speed (Eötvös effect).
-///
-/// @param lat_deg    Geodetic latitude [deg].
-/// @param alt_m      Ellipsoidal height above the WGS-84 ellipsoid [m].
-/// @param vNorth_mps Earth-relative north velocity [m/s].
-/// @param vEast_mps  Earth-relative east velocity [m/s].
-/// @return Apparent gravitational acceleration [m/s²].
+    /// @brief Specific force a vehicle must generate, along the geodetic vertical,
+    ///        to hold constant geodetic altitude at a given Earth-relative velocity.
+    ///
+    /// J2 attraction along the geodetic vertical, less the centripetal acceleration
+    /// of a constant-altitude path over the rotating WGS-84 ellipsoid — see the
+    /// file header.  At rest this is plumb-bob gravity; it falls with eastward
+    /// speed and rises with westward speed (Eötvös effect).
+    ///
+    /// @param lat_deg    Geodetic latitude [deg].
+    /// @param alt_m      Ellipsoidal height above the WGS-84 ellipsoid [m].
+    /// @param vNorth_mps Earth-relative north velocity [m/s].
+    /// @param vEast_mps  Earth-relative east velocity [m/s].
+    /// @return Apparent gravitational acceleration [m/s²].
     inline double LevelFlightApparentGravity_m_s2(double lat_deg, double alt_m,
         double vNorth_mps, double vEast_mps)
     {
@@ -143,34 +143,34 @@ namespace Aetherion::FlightDynamics {
         const double sinLat = std::sin(lat);
         const double cosLat = std::cos(lat);
 
-    // J2 attraction projected on geodetic down, (−cos φ, 0, −sin φ) at zero
-    // longitude — arbitrary by the axisymmetry noted in the file header.
+        // J2 attraction projected on geodetic down, (−cos φ, 0, −sin φ) at zero
+        // longitude — arbitrary by the axisymmetry noted in the file header.
         const auto r = Coordinate::GeodeticToECEF(lat, 0.0, alt_m);
         const auto g = Environment::J2(Environment::Vec3<double>{ r[0], r[1], r[2] });
         const double gDown = -(g[0] * cosLat + g[2] * sinLat);
 
         const auto [M, N] = WGS84CurvatureRadii(lat);
 
-    // East velocity seen from ECI: Earth-relative plus the local surface speed
+        // East velocity seen from ECI: Earth-relative plus the local surface speed
         const double vEastInertial = vEast_mps + WGS84::kRotationRate_rad_s * (N + alt_m) * cosLat;
 
         return gDown - vNorth_mps * vNorth_mps / (M + alt_m) - vEastInertial * vEastInertial / (N + alt_m);
     }
 
-/// @brief Apparent aircraft weight in level flight at a geodetic trim position
-///        and Earth-relative velocity, in the units @c TrimInputs::weight_lbf
-///        expects.
-///
-/// This — not the static TrimWeight_lbf() — is the weight a level-flight trim
-/// has to balance for the vehicle to start the integration with zero vertical
-/// acceleration.
-///
-/// @param mass_kg    Vehicle mass [kg].
-/// @param lat_deg    Geodetic latitude of the trim point [deg].
-/// @param alt_m      Ellipsoidal height of the trim point [m].
-/// @param vNorth_mps Earth-relative north velocity at trim [m/s].
-/// @param vEast_mps  Earth-relative east velocity at trim [m/s].
-/// @return Apparent weight [lbf].
+    /// @brief Apparent aircraft weight in level flight at a geodetic trim position
+    ///        and Earth-relative velocity, in the units @c TrimInputs::weight_lbf
+    ///        expects.
+    ///
+    /// This — not the static TrimWeight_lbf() — is the weight a level-flight trim
+    /// has to balance for the vehicle to start the integration with zero vertical
+    /// acceleration.
+    ///
+    /// @param mass_kg    Vehicle mass [kg].
+    /// @param lat_deg    Geodetic latitude of the trim point [deg].
+    /// @param alt_m      Ellipsoidal height of the trim point [m].
+    /// @param vNorth_mps Earth-relative north velocity at trim [m/s].
+    /// @param vEast_mps  Earth-relative east velocity at trim [m/s].
+    /// @return Apparent weight [lbf].
     inline double LevelFlightTrimWeight_lbf(double mass_kg, double lat_deg, double alt_m,
         double vNorth_mps, double vEast_mps)
     {

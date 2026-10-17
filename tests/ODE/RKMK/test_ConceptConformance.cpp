@@ -68,7 +68,7 @@ namespace {
         Eigen::Matrix<double, 6, 1> operator()(
             const double&,
             const SE3d&,
-            const Eigen::Matrix<double, 6, 1>&)   // no const
+            const Eigen::Matrix<double, 6, 1>&) // no const
         {
             return {};
         }
@@ -150,7 +150,7 @@ namespace {
     // VecE wrong compile-time dimension -- must fail RKMKIntegratorOnProductSE3<I,7>.
     struct BadIntegrator_WrongDim
     {
-        using VecE = Eigen::Matrix<double, 6, 1>;   // 6 != 7
+        using VecE = Eigen::Matrix<double, 6, 1>; // 6 != 7
         using StepResult = GoodStepResult;
 
         static StepResult step(

@@ -71,8 +71,8 @@
 #include <Eigen/Dense>
 
 // Aetherion coordinate transforms
-#include <Aetherion/Coordinate/LocalToInertial.h>   // GeodeticToECEF, NEDToECEF,
-                                                      // ECEFToECI, MakeLaunchStateECI
+#include <Aetherion/Coordinate/LocalToInertial.h> // GeodeticToECEF, NEDToECEF,
+                                                  // ECEFToECI, MakeLaunchStateECI
 
 // WGS-84 constants — single source of truth
 #include <Aetherion/Environment/WGS84.h>

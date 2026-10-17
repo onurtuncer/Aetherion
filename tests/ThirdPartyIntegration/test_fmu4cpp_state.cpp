@@ -38,9 +38,9 @@ namespace {
         double integral{ 0.0 };
     };
 
-/// A model whose registered state is a step counter and the integral of 1
-/// over time; `clock` mirrors the base clock seen by do_step so a test can
-/// read it back through a registered output.
+    /// A model whose registered state is a step counter and the integral of 1
+    /// over time; `clock` mirrors the base clock seen by do_step so a test can
+    /// read it back through a registered output.
     class Counter : public fmu4cpp::fmu_base
     {
     public:
@@ -72,7 +72,7 @@ namespace {
         double clock_{ 0.0 };
     };
 
-}  // namespace
+} // namespace
 
 fmu4cpp::model_info fmu4cpp::get_model_info() { return {}; }
 std::string fmu4cpp::model_identifier() { return "counter_state_test"; }
@@ -102,10 +102,10 @@ TEST_CASE("fmu4cpp: a restored FMU state restores the clock, so the next step at
 
     REQUIRE(m->step(0.0, 0.1));
     REQUIRE(m->step(0.1, 0.1));
-    void* checkpoint = m->getFMUState();          // t = 0.2, 2 steps
+    void* checkpoint = m->getFMUState(); // t = 0.2, 2 steps
 
     REQUIRE(m->step(0.2, 0.1));
-    REQUIRE(m->step(0.3, 0.1));                   // t = 0.4, 4 steps
+    REQUIRE(m->step(0.3, 0.1)); // t = 0.4, 4 steps
     CHECK(integer(*m, "steps") == 4);
 
     m->setFmuState(checkpoint);
@@ -129,7 +129,7 @@ TEST_CASE("fmu4cpp: a serialized FMU state carries the clock", "[fmu4cpp][state]
     auto m = fmu4cpp::createInstance({});
     m->enter_initialisation_mode(0.0, std::nullopt, std::nullopt);
     m->exit_initialisation_mode();
-    for (int i = 0; i < 5; ++i) REQUIRE(m->step(0.1 * i, 0.1));   // t = 0.5
+    for (int i = 0; i < 5; ++i) REQUIRE(m->step(0.1 * i, 0.1)); // t = 0.5
 
     void* s = m->getFMUState();
     size_t size = 0;
@@ -153,7 +153,7 @@ TEST_CASE("fmu4cpp: a serialized FMU state carries the clock", "[fmu4cpp][state]
 
     CHECK(integer(*n, "steps") == 5);
     CHECK(real(*n, "integral") == Catch::Approx(0.5));
-    REQUIRE_NOTHROW(n->step(0.5, 0.1));           // the clock came with the bytes
+    REQUIRE_NOTHROW(n->step(0.5, 0.1)); // the clock came with the bytes
     CHECK(integer(*n, "steps") == 6);
 
     // The current state, serialized without a handle, carries the clock too.

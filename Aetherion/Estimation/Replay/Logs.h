@@ -46,8 +46,8 @@ namespace Aetherion::Estimation::Replay {
 
     struct ImuRecord
     {
-        double partTime = 0.0;  ///< sensor clock [s]
-        double hostTime = 0.0;  ///< flight computer clock [s]
+        double partTime = 0.0; ///< sensor clock [s]
+        double hostTime = 0.0; ///< flight computer clock [s]
         Eigen::Vector3d gyro_rad_s;
         Eigen::Vector3d accel_m_s2;
     };
@@ -58,11 +58,11 @@ namespace Aetherion::Estimation::Replay {
         double nominalTime = 0.0; ///< NaN if the log has no nominal_time_s column
         double hostTime = 0.0;
         double lat_deg = 0.0, lon_deg = 0.0, alt_m = 0.0;
-        double horizontalAccuracy_m = 0.0, verticalAccuracy_m = 0.0;  ///< 0: not reported, the harness uses its own sigma
+        double horizontalAccuracy_m = 0.0, verticalAccuracy_m = 0.0; ///< 0: not reported, the harness uses its own sigma
         int fixType = 0;
         bool hasVelocity = false;
         Eigen::Vector3d velNed_m_s = Eigen::Vector3d::Zero();
-        double speedAccuracy_m_s = 0.0;  ///< 0: not reported
+        double speedAccuracy_m_s = 0.0; ///< 0: not reported
     };
 
     struct BaroRecord
@@ -75,7 +75,7 @@ namespace Aetherion::Estimation::Replay {
 
     struct TruthRecord
     {
-        double time = 0.0;  ///< simulation time [s]
+        double time = 0.0; ///< simulation time [s]
         double lat_deg = 0.0, lon_deg = 0.0, alt_m = 0.0;
         Eigen::Vector3d vNed_m_s;
         double yaw_rad = 0.0, pitch_rad = 0.0, roll_rad = 0.0;
@@ -85,10 +85,10 @@ namespace Aetherion::Estimation::Replay {
     {
         double lat0_deg = 0.0;
         double lon0_deg = 0.0;
-        double alt0_m = 0.0;  ///< the sidecar's alt0_ft, converted
+        double alt0_m = 0.0; ///< the sidecar's alt0_ft, converted
         double gpsLatency_s = 0.0;
         double realtimeFactor = 0.0;
-        std::map<std::string, std::string, std::less<>> raw;  ///< every key the sidecar had
+        std::map<std::string, std::string, std::less<>> raw; ///< every key the sidecar had
     };
 
     struct LogSet
@@ -100,7 +100,7 @@ namespace Aetherion::Estimation::Replay {
         RunConfiguration run;
     };
 
-// ---- table -> records -------------------------------------------------------
+    // ---- table -> records -------------------------------------------------------
 
     [[nodiscard]] inline std::vector<ImuRecord> imuRecords(const CsvTable& t)
     {
@@ -137,13 +137,13 @@ namespace Aetherion::Estimation::Replay {
             r.horizontalAccuracy_m = t.at(i, C::kHorizAcc);
             r.verticalAccuracy_m = t.at(i, C::kVertAcc);
             const double ft = t.at(i, C::kFixType);
-    // Nothing that is not a number may reach the filter: a partly written row
-    // (a cell empty or unparseable, Csv.h gives NaN) used to go through an
-    // update and leave every later estimate NaN. A fix needs its position and
-    // fix type; an accuracy that is not a number is "not reported" (0), and
-    // the harness then uses its configured sigma, as it already does for the
-    // speed accuracy. A velocity that is not a number cannot be substituted,
-    // so the fix keeps its position and loses its velocity.
+            // Nothing that is not a number may reach the filter: a partly written row
+            // (a cell empty or unparseable, Csv.h gives NaN) used to go through an
+            // update and leave every later estimate NaN. A fix needs its position and
+            // fix type; an accuracy that is not a number is "not reported" (0), and
+            // the harness then uses its configured sigma, as it already does for the
+            // speed accuracy. A velocity that is not a number cannot be substituted,
+            // so the fix keeps its position and loses its velocity.
             r.valid = std::isfinite(r.lat_deg) && std::isfinite(r.lon_deg) && std::isfinite(r.alt_m) && std::isfinite(ft);
             r.fixType = r.valid ? static_cast<int>(std::lround(ft)) : 0;
             if (!std::isfinite(r.horizontalAccuracy_m)) r.horizontalAccuracy_m = 0.0;
@@ -214,9 +214,9 @@ namespace Aetherion::Estimation::Replay {
         return c;
     }
 
-// ---- loading ----------------------------------------------------------------
+    // ---- loading ----------------------------------------------------------------
 
-/// Streams in place of files; a null stream means "not provided".
+    /// Streams in place of files; a null stream means "not provided".
     struct LogStreams
     {
         std::istream* gps = nullptr;
@@ -254,9 +254,9 @@ namespace Aetherion::Estimation::Replay {
         return logs;
     }
 
-/// `dir` holds the three sensor logs under their default names; `truth` is
-/// the truth CSV and `sidecar` its `.config` (default: `truth` with the
-/// extension replaced).
+    /// `dir` holds the three sensor logs under their default names; `truth` is
+    /// the truth CSV and `sidecar` its `.config` (default: `truth` with the
+    /// extension replaced).
     [[nodiscard]] inline LogSet loadLogs(const std::filesystem::path& dir,
         const std::filesystem::path& truth,
         const Configuration& cfg,
@@ -291,4 +291,4 @@ namespace Aetherion::Estimation::Replay {
         return loadLogs(LogStreams{ gps.get(), imu.get(), baro.get(), tr.get(), text }, cfg);
     }
 
-}  // namespace Aetherion::Estimation::Replay
+} // namespace Aetherion::Estimation::Replay

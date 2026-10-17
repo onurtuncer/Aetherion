@@ -18,9 +18,9 @@
 
 namespace Aetherion::Serialization {
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Unit conversion factor to SI
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Unit conversion factor to SI
+    // ─────────────────────────────────────────────────────────────────────────────
 
     static double unitFactor(const std::string& u)
     {
@@ -35,9 +35,9 @@ namespace Aetherion::Serialization {
         return 1.0;
     }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Minimal MathML arithmetic evaluator (recursive)
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Minimal MathML arithmetic evaluator (recursive)
+    // ─────────────────────────────────────────────────────────────────────────────
 
     using VarEntry = DAVEMLReader::VarEntry;
     using VarMap = std::unordered_map<std::string, VarEntry>;
@@ -105,9 +105,9 @@ namespace Aetherion::Serialization {
             "DAVEMLReader MathML: unexpected element <" + tag + ">");
     }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helper: serialise a pugixml node subtree to string
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Helper: serialise a pugixml node subtree to string
+    // ─────────────────────────────────────────────────────────────────────────────
 
     static std::string nodeToStr(const pugi::xml_node& n)
     {
@@ -116,9 +116,9 @@ namespace Aetherion::Serialization {
         return oss.str();
     }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Re-evaluate all calculated entries using the current var map
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Re-evaluate all calculated entries using the current var map
+    // ─────────────────────────────────────────────────────────────────────────────
 
     static void reeval(VarMap& vars)
     {
@@ -131,9 +131,9 @@ namespace Aetherion::Serialization {
         }
     }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DAVEMLReader — constructor
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // DAVEMLReader — constructor
+    // ─────────────────────────────────────────────────────────────────────────────
 
     DAVEMLReader::DAVEMLReader(const std::string& path)
     {
@@ -166,13 +166,13 @@ namespace Aetherion::Serialization {
             m_vars[varID] = std::move(e);
         }
 
-    // Initial evaluation pass for calculated outputs
+        // Initial evaluation pass for calculated outputs
         reeval(m_vars);
     }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Public API
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Public API
+    // ─────────────────────────────────────────────────────────────────────────────
 
     double DAVEMLReader::getValue(const std::string& varID) const
     {

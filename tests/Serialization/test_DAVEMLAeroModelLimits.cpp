@@ -44,8 +44,8 @@ namespace {
 
     using AD = CppAD::AD<double>;
 
-/// `body` wrapped in a DAVEfunc element in a temp file named after `tag`,
-/// removed again when the loader returns or throws.
+    /// `body` wrapped in a DAVEfunc element in a temp file named after `tag`,
+    /// removed again when the loader returns or throws.
     struct TempDML
     {
         std::filesystem::path path;
@@ -69,9 +69,9 @@ namespace {
         return DAVEMLAeroModel(f.path.string());
     }
 
-// y = table(x): breakpoints 0, 1, 2 and values 0, 1, 4, slope 1 on the first
-// segment and 3 on the second, so the lines continue to -0.5 at x = -0.5 and
-// to 5.5 at x = 2.5 while the edge values are 0 and 4.
+    // y = table(x): breakpoints 0, 1, 2 and values 0, 1, 4, slope 1 on the first
+    // segment and 3 on the second, so the lines continue to -0.5 at x = -0.5 and
+    // to 5.5 at x = 2.5 while the edge values are 0 and 4.
     std::string tableDML(const std::string& ivrAttrs,
         const std::string& bpVals = "0.0, 1.0, 2.0",
         const std::string& data = "0.0, 1.0, 4.0",
@@ -94,7 +94,7 @@ namespace {
   </function>)";
     }
 
-// y = 2 a + b / 10 on a in [0, 1], b in [0, 10]; row-major, last index fastest.
+    // y = 2 a + b / 10 on a in [0, 1], b in [0, 10]; row-major, last index fastest.
     std::string twoDimDML(const std::string& data = "0.0, 1.0, 2.0, 3.0")
     {
         return R"(<variableDef varID="a" units="nd" initialValue="0"><isInput/></variableDef>
@@ -114,7 +114,7 @@ namespace {
   </function>)";
     }
 
-// x held by its variableDef; y = x.
+    // x held by its variableDef; y = x.
     std::string inputLimitDML(const std::string& attrs)
     {
         return R"(<variableDef varID="x" units="nd" initialValue="0" )" + attrs + R"(><isInput/></variableDef>
@@ -126,7 +126,7 @@ namespace {
         return m.evaluateRaw<double>({ { "x", x } }).at("y");
     }
 
-/// Tape y(x) at x0 with change tracking on.
+    /// Tape y(x) at x0 with change tracking on.
     CppAD::ADFun<double> tapeY(const DAVEMLAeroModel& m, double x0)
     {
         std::vector<AD> ax{ AD(x0) };
@@ -189,7 +189,7 @@ TEST_CASE("DAVEMLAeroModel limits: min and max narrow the input range in any mod
     // Wider than the breakpoints, with extrapolation: the lines continue to
     // the limits and the input is held there.
     const auto wide = loadDML("wide", tableDML(R"(min="-1" max="3" extrapolate="both")"));
-    CHECK_THAT(y(wide, -2.0), WithinAbs(-1.0, 1e-12));   // first line at x = -1
+    CHECK_THAT(y(wide, -2.0), WithinAbs(-1.0, 1e-12)); // first line at x = -1
     CHECK_THAT(y(wide, 5.0), WithinAbs(7.0, 1e-12));   // last line at x = 3
     CHECK_THAT(y(wide, 2.5), WithinAbs(5.5, 1e-12));
 
@@ -237,7 +237,7 @@ TEST_CASE("DAVEMLAeroModel limits: variableDef minValue / maxValue apply to a su
         const auto m = loadDML("in_both", inputLimitDML(R"(minValue="0" maxValue="2")"));
         const auto hi = m.evaluateRaw<double>({ { "x", 4.0 } });
         CHECK_THAT(hi.at("y"), WithinAbs(2.0, 1e-12));
-        CHECK_THAT(hi.at("x"), WithinAbs(2.0, 1e-12));   // the held input is what comes back
+        CHECK_THAT(hi.at("x"), WithinAbs(2.0, 1e-12)); // the held input is what comes back
         CHECK_THAT(m.evaluateRaw<double>({ { "x", -1.0 } }).at("y"), WithinAbs(0.0, 1e-12));
         CHECK_THAT(m.evaluateRaw<double>({ { "x", 1.0 } }).at("y"), WithinAbs(1.0, 1e-12));
     }
@@ -317,9 +317,9 @@ TEST_CASE("DAVEMLAeroModel load: a table is checked against its breakpoints",
         CHECK_THAT(y2(1.0, 0.0), WithinAbs(2.0, 1e-12));
         CHECK_THAT(y2(0.0, 10.0), WithinAbs(1.0, 1e-12));
         CHECK_THAT(y2(0.5, 5.0), WithinAbs(1.5, 1e-12));
-        CHECK_THAT(y2(5.0, 20.0), WithinAbs(3.0, 1e-12));    // held at (1, 10)
-        CHECK_THAT(y2(-1.0, -5.0), WithinAbs(0.0, 1e-12));   // held at (0, 0)
-        CHECK_THAT(y2(0.5, 20.0), WithinAbs(2.0, 1e-12));    // held on b only
+        CHECK_THAT(y2(5.0, 20.0), WithinAbs(3.0, 1e-12));  // held at (1, 10)
+        CHECK_THAT(y2(-1.0, -5.0), WithinAbs(0.0, 1e-12)); // held at (0, 0)
+        CHECK_THAT(y2(0.5, 20.0), WithinAbs(2.0, 1e-12));  // held on b only
 
         REQUIRE_THROWS_WITH(loadDML("two_d_short", twoDimDML("0.0, 1.0, 2.0")),
             ContainsSubstring("dataTable has 3 value(s), the breakpoints need 4"));

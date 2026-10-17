@@ -204,7 +204,7 @@ TEST_CASE("SO3::Log_R: rotations near a half turn are not collapsed", "[SO3][Log
             const Vec3d v = SO3::Log_R(R);
             INFO("theta = pi - " << kPi - theta << ", axis = " << a.transpose());
             CHECK_THAT(v.norm(), WithinAbs(theta, 1e-8));
-            CHECK((v - w).norm() < 1e-7);               // same sign as well
+            CHECK((v - w).norm() < 1e-7); // same sign as well
             CHECK(SO3::Exp_R(v).isApprox(R, 1e-9));
         }
         // Exactly pi: +pi a and -pi a are the same rotation, so only the

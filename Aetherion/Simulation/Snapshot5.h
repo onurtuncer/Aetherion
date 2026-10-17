@@ -28,8 +28,8 @@
 
 namespace Aetherion::Simulation {
 
-/// @brief Placeholder snapshot — mirrors Snapshot2 (31 cols).
-/// @todo Extend for the scenario assigned to SnapshotFormat::Five.
+    /// @brief Placeholder snapshot — mirrors Snapshot2 (31 cols).
+    /// @todo Extend for the scenario assigned to SnapshotFormat::Five.
     struct Snapshot5
     {
         double time{ 0.0 };

@@ -60,10 +60,10 @@ namespace {
   </variableDef>
 </DAVEfunc>)";
 
-// y = table(x) with breakpoints 0, 1, 2 and values 0, 1, 4: slope 1 on the
-// first segment, slope 3 on the second. extrapolate="neither" with min 0 and
-// max 2, as the F-16 deck's tables, so outside [0, 2] the input is held at
-// the edge.
+    // y = table(x) with breakpoints 0, 1, 2 and values 0, 1, 4: slope 1 on the
+    // first segment, slope 3 on the second. extrapolate="neither" with min 0 and
+    // max 2, as the F-16 deck's tables, so outside [0, 2] the input is held at
+    // the edge.
     const char* const kTableDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 <DAVEfunc>
   <variableDef varID="x" units="nd" initialValue="0.5"><isInput/></variableDef>
@@ -90,8 +90,8 @@ namespace {
         return path;
     }
 
-/// Tape y(x) of a single-input, single-output raw model at x0, with change
-/// tracking on (an ADFun has it off by default).
+    /// Tape y(x) of a single-input, single-output raw model at x0, with change
+    /// tracking on (an ADFun has it off by default).
     CppAD::ADFun<double> tapeRaw(DAVEMLAeroModel& m, double x0)
     {
         std::vector<AD> ax{ AD(x0) };
@@ -167,7 +167,7 @@ TEST_CASE("DAVEMLAeroModel tape: a table segment is recorded and its change is r
     CHECK(h.compare_change_number() == 0);
     CHECK_THAT(h.Jacobian(std::vector<double>{ -0.3 })[0], WithinAbs(0.0, 1e-12));
     CHECK_THAT(h.Forward(0, std::vector<double>{ 0.5 })[0], WithinAbs(0.5, 1e-12));
-    CHECK(h.compare_change_number() == 0);                 // still the first segment
+    CHECK(h.compare_change_number() == 0); // still the first segment
     h.Forward(0, std::vector<double>{ 1.5 });
     CHECK(h.compare_change_number() > 0);
 }

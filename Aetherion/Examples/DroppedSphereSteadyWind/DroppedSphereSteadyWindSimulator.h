@@ -53,9 +53,9 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
                 time(), state(), currentTheta(),
                 vectorField().gravity, vectorField().aero);
 
-        // Correct TAS, Mach, and dynamic pressure to use wind-relative airspeed.
-        // MakeSnapshot1 computes TAS = |v_NED| (Earth-relative); the correct
-        // atmosphere-relative TAS subtracts the ambient wind.
+            // Correct TAS, Mach, and dynamic pressure to use wind-relative airspeed.
+            // MakeSnapshot1 computes TAS = |v_NED| (Earth-relative); the correct
+            // atmosphere-relative TAS subtracts the ambient wind.
             const Eigen::Vector3d v_air = snap.feVelocity_m_s - m_WindNED;
             snap.trueAirspeed_m_s = v_air.norm();
             snap.mach = snap.trueAirspeed_m_s / snap.speedOfSound_m_s;
@@ -76,16 +76,16 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
         double m_Theta0;
         Eigen::Vector3d m_WindNED;
 
-    /// Convert NED wind → ECEF at the initial launch position, then construct policy.
+        /// Convert NED wind → ECEF at the initial launch position, then construct policy.
         static FlightDynamics::SteadyWindDragPolicy
         makeDragPolicy(const RigidBody::AerodynamicParameters& aero,
             const Environment::ConstantWind& wind,
             double lat0_rad, double lon0_rad)
         {
-        // NED-to-ECEF at (lat0, lon0):
-        //   N_ecef = (-sin(lat)*cos(lon), -sin(lat)*sin(lon),  cos(lat))
-        //   E_ecef = (-sin(lon),           cos(lon),            0       )
-        //   D_ecef = (-cos(lat)*cos(lon), -cos(lat)*sin(lon), -sin(lat) )
+            // NED-to-ECEF at (lat0, lon0):
+            //   N_ecef = (-sin(lat)*cos(lon), -sin(lat)*sin(lon),  cos(lat))
+            //   E_ecef = (-sin(lon),           cos(lon),            0       )
+            //   D_ecef = (-cos(lat)*cos(lon), -cos(lat)*sin(lon), -sin(lat) )
             const double sLat = std::sin(lat0_rad), cLat = std::cos(lat0_rad);
             const double sLon = std::sin(lon0_rad), cLon = std::cos(lon0_rad);
 
@@ -95,12 +95,12 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
 
             const double vN = wind.north_mps, vE = wind.east_mps, vD = wind.down_mps;
 
-        // Wind in ECEF
+            // Wind in ECEF
             double wx_ecef = vN * Nx + vE * Ex + vD * Dx;
             double wy_ecef = vN * Ny + vE * Ey + vD * Dy;
             double wz_ecef = vN * Nz + vE * Ez + vD * Dz;
 
-        // Store as ECEF (the policy rotates back to ECI at runtime using ERA)
+            // Store as ECEF (the policy rotates back to ECI at runtime using ERA)
             return FlightDynamics::SteadyWindDragPolicy{
                 aero.CD, aero.S, wx_ecef, wy_ecef, wz_ecef
             };

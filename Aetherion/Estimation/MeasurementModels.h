@@ -85,21 +85,21 @@
 
 namespace Aetherion::Estimation {
 
-/// Pressure altitude [m] of a static pressure on a standard day: the exact
-/// inverse of Environment::US1976Atmosphere (zero offsets), layer by layer,
-/// including the geopotential-to-geometric conversion. Pressures above
-/// sea-level pressure extrapolate the tropospheric layer downwards (a
-/// negative pressure altitude, as a barometer reports on a high-QNH day);
-/// pressures below the model's 84.852 km (geometric) ceiling invert its
-/// isothermal decay. Sensor preprocessing in double: this is not part of h(x).
+    /// Pressure altitude [m] of a static pressure on a standard day: the exact
+    /// inverse of Environment::US1976Atmosphere (zero offsets), layer by layer,
+    /// including the geopotential-to-geometric conversion. Pressures above
+    /// sea-level pressure extrapolate the tropospheric layer downwards (a
+    /// negative pressure altitude, as a barometer reports on a high-QNH day);
+    /// pressures below the model's 84.852 km (geometric) ceiling invert its
+    /// isothermal decay. Sensor preprocessing in double: this is not part of h(x).
     [[nodiscard]] inline double pressureAltitude_m(double p_Pa)
     {
         using L = Environment::detail::Us1976Layers;
-        constexpr double Re = 6356766.0;   // geopotential reference radius of US1976Atmosphere
-        constexpr double h_max = 84852.0;  // geometric; only 83.7 km geopotential, i.e. still inside layer 6
+        constexpr double Re = 6356766.0;  // geopotential reference radius of US1976Atmosphere
+        constexpr double h_max = 84852.0; // geometric; only 83.7 km geopotential, i.e. still inside layer 6
 
-  // Above the ceiling the model decays p exponentially in geometric height
-  // from p(h_max), with the scale height of the ceiling temperature.
+        // Above the ceiling the model decays p exponentially in geometric height
+        // from p(h_max), with the scale height of the ceiling temperature.
         static const double p_ceiling = Environment::US1976Atmosphere(h_max).p;
         if (p_Pa < p_ceiling)
         {
@@ -125,7 +125,7 @@ namespace Aetherion::Estimation {
         return Re * H / (Re - H);
     }
 
-/// One UBX-NAV-PVT fix as Hemerion decodes it; the height is ellipsoidal.
+    /// One UBX-NAV-PVT fix as Hemerion decodes it; the height is ellipsoidal.
     template <class S>
     struct GnssFix
     {
@@ -150,9 +150,9 @@ namespace Aetherion::Estimation {
 
         [[nodiscard]] const LciFrame<S>& frame() const { return frame_; }
 
-  // ---- raw measurement -> LCI ----------------------------------------------
-  // era_rad is the Earth rotation angle at the fix's time,
-  // frame().earthRotationAngle(t - t0).
+        // ---- raw measurement -> LCI ----------------------------------------------
+        // era_rad is the Earth rotation angle at the fix's time,
+        // frame().earthRotationAngle(t - t0).
 
         [[nodiscard]] Vec3 gnssPositionLci(const GnssFix<S>& fix, const S& era_rad) const
         {
@@ -166,16 +166,16 @@ namespace Aetherion::Estimation {
             const auto r_E = Coordinate::GeodeticToECEF(fix.lat_rad, fix.lon_rad, fix.height_m);
             const auto v_E = Coordinate::NEDToECEF(std::array<S, 3>{ v_ned[0], v_ned[1], v_ned[2] }, fix.lat_rad, fix.lon_rad);
             const S w = S(Environment::WGS84::kRotationRate_rad_s);
-            const std::array<S, 3> v_inertial_E{ v_E[0] - w * r_E[1], v_E[1] + w * r_E[0], v_E[2] };  // + w_e x r_E
+            const std::array<S, 3> v_inertial_E{ v_E[0] - w * r_E[1], v_E[1] + w * r_E[0], v_E[2] }; // + w_e x r_E
             const auto v_W = Coordinate::ECEFToECI(v_inertial_E, era_rad);
             return frame_.rotateToLci(Vec3(v_W[0], v_W[1], v_W[2]));
         }
 
-  /// Rotation NED(fix) -> LCI, for mapping the receiver's NED accuracies:
-  /// Sigma_L = C Sigma_NED C^T.
+        /// Rotation NED(fix) -> LCI, for mapping the receiver's NED accuracies:
+        /// Sigma_L = C Sigma_NED C^T.
         [[nodiscard]] Mat3 nedToLci(const GnssFix<S>& fix, const S& era_rad) const
         {
-            const auto R = Coordinate::NEDToInertialRotationMatrix(fix.lat_rad, fix.lon_rad, era_rad);  // row-major, NED -> ECI
+            const auto R = Coordinate::NEDToInertialRotationMatrix(fix.lat_rad, fix.lon_rad, era_rad); // row-major, NED -> ECI
             Mat3 R_WN;
             for (int r = 0; r < 3; ++r)
                 for (int c = 0; c < 3; ++c)
@@ -183,18 +183,18 @@ namespace Aetherion::Estimation {
             return frame_.R_WL.transpose() * R_WN;
         }
 
-  // ---- nonlinear h(x) --------------------------------------------------------
+        // ---- nonlinear h(x) --------------------------------------------------------
 
         [[nodiscard]] static Vec3 predictGnssPosition(const State& x) { return x.X.p; }
         [[nodiscard]] static Vec3 predictGnssVelocity(const State& x) { return x.X.v; }
         [[nodiscard]] S predictBarometer(const State& x) const { return ellipsoidalHeight(x.X.p) + x.baroBias; }
 
-  /// Height above the WGS-84 ellipsoid of LCI position p.
+        /// Height above the WGS-84 ellipsoid of LCI position p.
         [[nodiscard]] S ellipsoidalHeight(const Vec3& p) const { return Environment::GeometricAltitude_m(frame_.toEci(p)); }
 
-  /// d(ellipsoidalHeight)/dp, in LCI. Analytic derivative of
-  /// GeometricAltitude_m: with s = z/r, D = 1 - e^2 + e^2 s^2 and
-  /// b = a (1 - f),  grad = r_hat + b e^2 s D^-3/2 (e_z - s r_hat) / r  in ECI.
+        /// d(ellipsoidalHeight)/dp, in LCI. Analytic derivative of
+        /// GeometricAltitude_m: with s = z/r, D = 1 - e^2 + e^2 s^2 and
+        /// b = a (1 - f),  grad = r_hat + b e^2 s D^-3/2 (e_z - s r_hat) / r  in ECI.
         [[nodiscard]] Vec3 ellipsoidalHeightGradient(const Vec3& p) const
         {
             namespace Core = ODE::RKMK::Core;
@@ -211,9 +211,9 @@ namespace Aetherion::Estimation {
             return frame_.rotateToLci(grad_W);
         }
 
-  // ---- linearised updates ----------------------------------------------------
-  // z: innovation, H: (m x n) with n = cfg.dimension(), R: (m x m)
-  // measurement covariance in the convention's innovation coordinates.
+        // ---- linearised updates ----------------------------------------------------
+        // z: innovation, H: (m x n) with n = cfg.dimension(), R: (m x m)
+        // measurement covariance in the convention's innovation coordinates.
 
         template <ErrorConvention C>
         void gnssPosition(const Configuration& cfg,
@@ -268,8 +268,8 @@ namespace Aetherion::Estimation {
     private:
         LciFrame<S> frame_;
 
-  // Y = X b observations (position b = (0,0,1), velocity b = (0,1,0)):
-  // residual = y - q with q the predicted vector, `col` its block (nu or rho).
+        // Y = X b observations (position b = (0,0,1), velocity b = (0,1,0)):
+        // residual = y - q with q the predicted vector, `col` its block (nu or rho).
         template <ErrorConvention C>
         void leftInvariantObservation(const Configuration& cfg,
             const State& x,
@@ -301,4 +301,4 @@ namespace Aetherion::Estimation {
         }
     };
 
-}  // namespace Aetherion::Estimation
+} // namespace Aetherion::Estimation

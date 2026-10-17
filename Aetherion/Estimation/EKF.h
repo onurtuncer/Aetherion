@@ -59,7 +59,7 @@
 
 namespace Aetherion::Estimation {
 
-/// What an update did.
+    /// What an update did.
     template <class S>
     struct UpdateResult
     {
@@ -90,8 +90,8 @@ namespace Aetherion::Estimation {
         {
         }
 
-  /// Start from x0 with covariance P0 given in the convention's coordinates
-  /// (use covarianceFromPhysical() to build it from physical sigmas).
+        /// Start from x0 with covariance P0 given in the convention's coordinates
+        /// (use covarianceFromPhysical() to build it from physical sigmas).
         void initialise(const State& x0, const MatX& P0)
         {
             x_ = x0;
@@ -104,11 +104,11 @@ namespace Aetherion::Estimation {
         [[nodiscard]] const StrapdownProcessModel<S>& processModel() const { return model_; }
         [[nodiscard]] const MeasurementModels<S>& measurementModels() const { return measurements_; }
 
-  /// Map a covariance in physical coordinates -- world-frame attitude error,
-  /// dv, dp (all LCI), then the bias blocks -- into this convention's error
-  /// coordinates at state x, P = J P_phys J^T (first order):
-  ///   RI: dv = nu + [phi]x v, dp = rho + [phi]x p, so J[nu,phi] = [v]x, J[rho,phi] = [p]x;
-  ///   LI: phi, nu, rho are body-frame quantities, J = blockdiag(R^T, R^T, R^T).
+        /// Map a covariance in physical coordinates -- world-frame attitude error,
+        /// dv, dp (all LCI), then the bias blocks -- into this convention's error
+        /// coordinates at state x, P = J P_phys J^T (first order):
+        ///   RI: dv = nu + [phi]x v, dp = rho + [phi]x p, so J[nu,phi] = [v]x, J[rho,phi] = [p]x;
+        ///   LI: phi, nu, rho are body-frame quantities, J = blockdiag(R^T, R^T, R^T).
         [[nodiscard]] MatX covarianceFromPhysical(const State& x, const MatX& P_phys) const
         {
             const int n = cfg_.dimension();
@@ -139,7 +139,7 @@ namespace Aetherion::Estimation {
             symmetrise();
         }
 
-  /// GNSS position in LCI with its covariance in LCI (MeasurementModels::gnssPositionLci / nedToLci).
+        /// GNSS position in LCI with its covariance in LCI (MeasurementModels::gnssPositionLci / nedToLci).
         UpdateResult<S> updateGnssPosition(const Vec3& y_L, const Mat3& Sigma_L)
         {
             if (!cfg_.has(MeasurementId::GnssPosition))
@@ -160,7 +160,7 @@ namespace Aetherion::Estimation {
             return update(z, H, R);
         }
 
-  /// Pressure altitude [m] (MeasurementModels::pressureAltitude_m of the sample) and its sigma.
+        /// Pressure altitude [m] (MeasurementModels::pressureAltitude_m of the sample) and its sigma.
         UpdateResult<S> updateBarometer(const S& y_m, const S& sigma_m)
         {
             if (!cfg_.has(MeasurementId::Barometer))
@@ -171,7 +171,7 @@ namespace Aetherion::Estimation {
             return update(z, H, R);
         }
 
-  /// Normalised estimation error squared against the true state.
+        /// Normalised estimation error squared against the true state.
         [[nodiscard]] S nees(const State& truth) const
         {
             const VecX e = x_.template error<C>(cfg_, truth);
@@ -191,9 +191,9 @@ namespace Aetherion::Estimation {
             UpdateResult<S> r;
             r.dim = static_cast<int>(z.size());
 
-    // A measurement that is not a number, or whose innovation covariance does
-    // not factorise, must not reach the state: one NaN in K makes every later
-    // estimate NaN with no fault reported. Refuse it and say so instead.
+            // A measurement that is not a number, or whose innovation covariance does
+            // not factorise, must not reach the state: one NaN in K makes every later
+            // estimate NaN with no fault reported. Refuse it and say so instead.
             if (!z.allFinite() || !R.allFinite())
             {
                 r.rejected = true;
@@ -209,7 +209,7 @@ namespace Aetherion::Estimation {
                 r.rejected = true;
                 return r;
             }
-            const MatX K = ldlt.solve(PHt.transpose()).transpose();  // P H^T S^-1
+            const MatX K = ldlt.solve(PHt.transpose()).transpose(); // P H^T S^-1
 
             r.applied = true;
             r.nis = z.dot(ldlt.solve(z));
@@ -226,4 +226,4 @@ namespace Aetherion::Estimation {
         void symmetrise() { P_ = S(0.5) * (P_ + P_.transpose()).eval(); }
     };
 
-}  // namespace Aetherion::Estimation
+} // namespace Aetherion::Estimation

@@ -50,7 +50,7 @@ TEST_CASE("GeometricAltitude_m: exact at equator", "[GeometricAltitude]")
 TEST_CASE("GeometricAltitude_m: exact at North Pole", "[GeometricAltitude]")
 {
     const double h = 10'000.0;
-    const double b = kA * (1.0 - kF);  // polar radius
+    const double b = kA * (1.0 - kF); // polar radius
     Eigen::Vector3d r_eci{ 0.0, 0.0, b + h };
     // cos_gc = 0 → r_surface = b → altitude = h exactly
     CHECK_THAT(Aetherion::Environment::GeometricAltitude_m(r_eci),

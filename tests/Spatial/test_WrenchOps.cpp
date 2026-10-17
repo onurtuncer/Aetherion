@@ -97,7 +97,7 @@ TEST_CASE("ShiftWrenchToNewPoint: force component is unchanged after shift", "[s
 {
     // Force is invariant; only moment changes.
     Wrench<Scalar> f{};
-    f.f << 0.0, 0.0, 0.0, 3.0, -1.0, 2.0;  // [moment=0 | force]
+    f.f << 0.0, 0.0, 0.0, 3.0, -1.0, 2.0; // [moment=0 | force]
 
     Vec3d r(0.5, 0.0, 0.0);
     auto shifted = ShiftWrenchToNewPoint(f, r);
@@ -111,8 +111,8 @@ TEST_CASE("ShiftWrenchToNewPoint: moment = M_P + r x F", "[spatial][WrenchShift]
     // F = (0, 0, 10) at P, M_P = (0, 0, 0), r = P-Q = (1, 0, 0)
     // Expected moment at Q: (0,0,0) + (1,0,0)×(0,0,10) = (0,-10, 0)
     Wrench<Scalar> f{};
-    f.f << 0.0, 0.0, 0.0,   // moment at P
-        0.0, 0.0, 10.0;  // force
+    f.f << 0.0, 0.0, 0.0, // moment at P
+        0.0, 0.0, 10.0;   // force
 
     Vec3d r(1.0, 0.0, 0.0);
     auto shifted = ShiftWrenchToNewPoint(f, r);
@@ -128,8 +128,8 @@ TEST_CASE("ShiftWrenchToNewPoint: existing moment is preserved in shift", "[spat
     // r x F = (0,1,0)×(0,0,10) = (10, 0, 0)
     // moment at Q = (1,0,0) + (10,0,0) = (11, 0, 0)
     Wrench<Scalar> f{};
-    f.f << 1.0, 0.0, 0.0,   // moment at P
-        0.0, 0.0, 10.0;  // force
+    f.f << 1.0, 0.0, 0.0, // moment at P
+        0.0, 0.0, 10.0;   // force
 
     Vec3d r(0.0, 1.0, 0.0);
     auto shifted = ShiftWrenchToNewPoint(f, r);
@@ -143,8 +143,8 @@ TEST_CASE("ShiftWrenchToNewPoint: pure moment (no force) is unaffected by shift"
 {
     // When F = 0, r × F = 0, so moment does not change
     Wrench<Scalar> f{};
-    f.f << 1.0, 2.0, 3.0,   // moment
-        0.0, 0.0, 0.0;   // zero force
+    f.f << 1.0, 2.0, 3.0, // moment
+        0.0, 0.0, 0.0;    // zero force
 
     Vec3d r(5.0, -3.0, 2.0);
     auto shifted = ShiftWrenchToNewPoint(f, r);

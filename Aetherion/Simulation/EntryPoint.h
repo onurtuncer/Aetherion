@@ -13,18 +13,18 @@
 
 namespace Aetherion::Simulation {
 
-/// @brief Factory function that the client application **must** define to create its Application instance.
-///
-/// The implementation is provided by the user in exactly one client translation unit.
-/// EntryPoint.h defines `main()` which calls this function, takes ownership of the returned
-/// pointer, invokes Application::run(), and deletes it on exit. The client must never define
-/// their own `main()`.
-///
-/// @param argc Argument count forwarded from the process entry point.
-/// @param argv Argument vector forwarded from the process entry point.
-/// @return Heap-allocated Application (or subclass) instance. Ownership is transferred to the entry point.
-/// @throws std::invalid_argument if command-line arguments are invalid (caught by EntryPoint before run()).
-// NOLINTNEXTLINE(readability-redundant-declaration) - forward declaration is required here so main() below can call it; the client defines it later in its own .cpp
+    /// @brief Factory function that the client application **must** define to create its Application instance.
+    ///
+    /// The implementation is provided by the user in exactly one client translation unit.
+    /// EntryPoint.h defines `main()` which calls this function, takes ownership of the returned
+    /// pointer, invokes Application::run(), and deletes it on exit. The client must never define
+    /// their own `main()`.
+    ///
+    /// @param argc Argument count forwarded from the process entry point.
+    /// @param argv Argument vector forwarded from the process entry point.
+    /// @return Heap-allocated Application (or subclass) instance. Ownership is transferred to the entry point.
+    /// @throws std::invalid_argument if command-line arguments are invalid (caught by EntryPoint before run()).
+    // NOLINTNEXTLINE(readability-redundant-declaration) - forward declaration is required here so main() below can call it; the client defines it later in its own .cpp
     Application* CreateApplication(int argc, char** argv);
 
 } // namespace Aetherion::Simulation

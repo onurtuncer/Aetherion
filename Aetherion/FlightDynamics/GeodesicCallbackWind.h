@@ -37,11 +37,11 @@
 
 namespace Aetherion::FlightDynamics {
 
-/// @brief WindModel that calls a user callback with geodetic (lat, lon, alt, t).
-///
-/// **AD compatibility**: when called with S = CppAD::AD\<double\>, the method
-/// returns the ECEF wind cached from the most recent *double* evaluation
-/// (frozen-Jacobian approximation, standard for external data sources).
+    /// @brief WindModel that calls a user callback with geodetic (lat, lon, alt, t).
+    ///
+    /// **AD compatibility**: when called with S = CppAD::AD\<double\>, the method
+    /// returns the ECEF wind cached from the most recent *double* evaluation
+    /// (frozen-Jacobian approximation, standard for external data sources).
     struct GeodesicCallbackWind
     {
         using Callback = std::function<
@@ -61,7 +61,7 @@ namespace Aetherion::FlightDynamics {
             if constexpr (std::is_same_v<S, double>) {
                 if (!callback) return Eigen::Matrix<S, 3, 1>::Zero();
 
-            // ECI → ECEF (rotate by −θ around z)
+                // ECI → ECEF (rotate by −θ around z)
                 const double theta = Environment::WGS84::kRotationRate_rad_s * t_s;
                 const double ct = std::cos(theta), st = std::sin(theta);
                 const Eigen::Vector3d r_ecef{
@@ -70,15 +70,15 @@ namespace Aetherion::FlightDynamics {
                     r_eci(2)
                 };
 
-            // ECEF → geodetic WGS-84
+                // ECEF → geodetic WGS-84
                 std::array<double, 3> ra{ r_ecef(0), r_ecef(1), r_ecef(2) };
                 double lat{}, lon{}, alt{};
                 Coordinate::ECEFToGeodeticWGS84(ra, lat, lon, alt);
 
-            // User callback → NED wind
+                // User callback → NED wind
                 const Eigen::Vector3d v_ned = callback(lat, lon, alt, t_s);
 
-            // NED → ECEF
+                // NED → ECEF
                 const double sLat = std::sin(lat), cLat = std::cos(lat);
                 const double sLon = std::sin(lon), cLon = std::cos(lon);
                 m_cached_ecef = {
@@ -88,7 +88,7 @@ namespace Aetherion::FlightDynamics {
                 };
                 return m_cached_ecef;
             } else {
-            // AD path: frozen ECEF cache cast to S
+                // AD path: frozen ECEF cache cast to S
                 return m_cached_ecef.template cast<S>();
             }
         }

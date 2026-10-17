@@ -33,7 +33,7 @@
 #include <Aetherion/ODE/RKMK/Core/StagePack.h>
 #include <Aetherion/ODE/RKMK/Core/Tableau.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
-#include <Aetherion/ODE/RKMK/Core/StageResidualRadauIIASE3.h>  // re-use detail helpers
+#include <Aetherion/ODE/RKMK/Core/StageResidualRadauIIASE3.h> // re-use detail helpers
 
 namespace Aetherion::ODE::RKMK::Core {
 
@@ -45,13 +45,13 @@ namespace Aetherion::ODE::RKMK::Core {
         static_assert(EuclidDim > 0, "EuclidDim must be > 0");
 
         static constexpr int XiDim = 6;
-        static constexpr int BlockDim = XiDim + EuclidDim;   // per stage
+        static constexpr int BlockDim = XiDim + EuclidDim; // per stage
         static constexpr int TotalDim = Stages * BlockDim;
 
         StageResidualIRK_ProductSE3(
             Eigen::Quaterniond q0,
             Eigen::Vector3d p0,
-            Eigen::Matrix<double, Eigen::Dynamic, 1> x0,  // R^EuclidDim initial Eucl. state
+            Eigen::Matrix<double, Eigen::Dynamic, 1> x0, // R^EuclidDim initial Eucl. state
             double t0,
             double h,
             Tableau tableau,
@@ -114,7 +114,7 @@ namespace Aetherion::ODE::RKMK::Core {
                         aij * x.template segment<EuclidDim>(base_j + XiDim);
                 }
                 (void)xi_i;
-                (void)u_i;  // used below stage-by-stage
+                (void)u_i; // used below stage-by-stage
             }
 
             for (int i = 0; i < Stages; ++i) {
@@ -137,12 +137,12 @@ namespace Aetherion::ODE::RKMK::Core {
 
                 // Build full R^(6+EuclidDim) state for field calls
                 Eigen::Matrix<S, 6 + EuclidDim, 1> state_i;
-                state_i.template head<6>() = xi_i;   // not used by xi_field, but x_i
+                state_i.template head<6>() = xi_i; // not used by xi_field, but x_i
                 // Kinematics:  v_i = xi_field(t_i, g_i, [nu_B=...; m=...])
                 // We pack x_i (size EuclidDim) into a vector for the field.
                 Eigen::Matrix<S, EuclidDim, 1> x_full = x_i;
                 //const Vec6 v_i = xi_field_(ti, g_i, x_full);
-               // const Vec6 v_i = xi_field_(ti, g_i, x_full.template head<6>());
+                // const Vec6 v_i = xi_field_(ti, g_i, x_full.template head<6>());
                 const Vec6 xi_i_eval = x_full.template head<6>().eval();
                 const Vec6 v_i = xi_field_(ti, g_i, xi_i_eval);
 

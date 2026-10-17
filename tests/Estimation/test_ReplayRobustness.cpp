@@ -38,7 +38,7 @@ using namespace Aetherion::Estimation::Replay;
 namespace {
     constexpr double kNaN = std::numeric_limits<double>::quiet_NaN();
     constexpr double kLat0 = 36.0192, kLon0 = -75.6744, kAlt0 = 3000.0;
-}  // namespace
+} // namespace
 
 TEST_CASE("Logs: GPS rows with NaN cells lose only what is not a number", "[estimation][replay][logs][negative][regression]")
 {
@@ -49,25 +49,25 @@ TEST_CASE("Logs: GPS rows with NaN cells lose only what is not a number", "[esti
 
     std::stringstream in;
     in << header << "\n"
-       << "0,0.0,0.1,2,36.0192,-75.6744,3000,1.5,3.0,1,2,3,0.1\n"        // complete
-       << "1,0.2,0.3,2,36.0192,-75.6744,3000,1.5,3.0,,2,3,0.1\n"         // velocity cell empty
-       << "2,0.4,0.5,2,36.0192,-75.6744,3000,1.5,3.0,1,2,3,\n"           // speed accuracy empty
-       << "3,0.6,0.7,2,36.0192,-75.6744,3000,,3.0,1,2,3,0.1\n"           // horizontal accuracy empty
-       << "4,0.8,0.9,2,36.0192,-75.6744,3000,1.5,nan,1,2,3,0.1\n"        // vertical accuracy NaN
-       << "5,1.0,1.1,,,,,,,,,,\n";                                        // epoch without a fix
+       << "0,0.0,0.1,2,36.0192,-75.6744,3000,1.5,3.0,1,2,3,0.1\n" // complete
+       << "1,0.2,0.3,2,36.0192,-75.6744,3000,1.5,3.0,,2,3,0.1\n"  // velocity cell empty
+       << "2,0.4,0.5,2,36.0192,-75.6744,3000,1.5,3.0,1,2,3,\n"    // speed accuracy empty
+       << "3,0.6,0.7,2,36.0192,-75.6744,3000,,3.0,1,2,3,0.1\n"    // horizontal accuracy empty
+       << "4,0.8,0.9,2,36.0192,-75.6744,3000,1.5,nan,1,2,3,0.1\n" // vertical accuracy NaN
+       << "5,1.0,1.1,,,,,,,,,,\n";                                // epoch without a fix
     const auto gps = gpsRecords(readCsv(in, LogContract::Log::GpsFixes, cfg));
     REQUIRE(gps.size() == 6);
 
     CHECK(gps[0].valid);
     CHECK(gps[0].hasVelocity);
 
-    CHECK(gps[1].valid);           // the position is still a fix, the velocity is gone
+    CHECK(gps[1].valid); // the position is still a fix, the velocity is gone
     CHECK_FALSE(gps[1].hasVelocity);
-    CHECK(gps[2].valid);           // speed accuracy not reported: the harness's sigma applies
+    CHECK(gps[2].valid); // speed accuracy not reported: the harness's sigma applies
     CHECK(gps[2].hasVelocity);
     CHECK(gps[2].speedAccuracy_m_s == 0.0);
 
-    CHECK(gps[3].valid);           // accuracy not reported: still a fix, the harness's sigma applies
+    CHECK(gps[3].valid); // accuracy not reported: still a fix, the harness's sigma applies
     CHECK(gps[3].hasVelocity);
     CHECK(gps[3].horizontalAccuracy_m == 0.0);
     CHECK(gps[4].valid);
@@ -97,7 +97,7 @@ TEST_CASE("EKF: a measurement that is not a number is rejected and changes nothi
     CHECK_FALSE(p.applied);
     CHECK(p.rejected);
 
-  // An innovation covariance that is not positive definite is refused too.
+    // An innovation covariance that is not positive definite is refused too.
     const auto q = ekf.updateGnssPosition(Eigen::Vector3d::Zero(), -1e6 * Eigen::Matrix3d::Identity());
     CHECK_FALSE(q.applied);
     CHECK(q.rejected);
@@ -108,7 +108,7 @@ TEST_CASE("EKF: a measurement that is not a number is rejected and changes nothi
     CHECK(ekf.covariance() == P0);
     CHECK(ekf.covariance().allFinite());
 
-  // A good measurement afterwards is applied as usual.
+    // A good measurement afterwards is applied as usual.
     const auto ok = ekf.updateGnssPosition(Eigen::Vector3d(1.0, 0.0, 0.0), Sigma);
     CHECK(ok.applied);
     CHECK_FALSE(ok.rejected);
@@ -117,9 +117,9 @@ TEST_CASE("EKF: a measurement that is not a number is rejected and changes nothi
 }
 
 namespace {
-// One second at rest at the origin, body axes on NED: two IMU samples, two
-// truth rows, one fix half way. Enough for the harness to fit its time base,
-// initialise from truth and apply the fix.
+    // One second at rest at the origin, body axes on NED: two IMU samples, two
+    // truth rows, one fix half way. Enough for the harness to fit its time base,
+    // initialise from truth and apply the fix.
     LogSet stationaryLog(const GpsRecord& fix)
     {
         LogSet l;
@@ -150,7 +150,7 @@ namespace {
         g.fixType = LogContract::Gps::kFixType3D;
         return g;
     }
-}  // namespace
+} // namespace
 
 TEST_CASE("Replay: a fix without accuracies is applied with the configured sigmas", "[estimation][replay][regression]")
 {
@@ -167,15 +167,15 @@ TEST_CASE("Replay: a fix without accuracies is applied with the configured sigma
     CHECK(reported.summary.gnssPositionUpdates == 1);
     CHECK(fallback.summary.gnssPositionUpdates == 1);
     CHECK(std::isfinite(fallback.updates[0].nis));
-    CHECK(fallback.updates[0].nis == reported.updates[0].nis);  // same covariance, same update
+    CHECK(fallback.updates[0].nis == reported.updates[0].nis); // same covariance, same update
     CHECK(fallback.states.back().estimate.X.p == reported.states.back().estimate.X.p);
 }
 
 TEST_CASE("Replay: a fix whose velocity is not a number keeps its position", "[estimation][replay][regression]")
 {
-  // The audit's probe: hasVelocity with a NaN component reached updateGnssVelocity
-  // and left the estimate NaN. The loader no longer produces such a record;
-  // the filter refuses it if one is built by hand.
+    // The audit's probe: hasVelocity with a NaN component reached updateGnssVelocity
+    // and left the estimate NaN. The loader no longer produces such a record;
+    // the filter refuses it if one is built by hand.
     const Configuration cfg{ { BlockId::NavCore }, { MeasurementId::GnssPosition, MeasurementId::GnssVelocity } };
     GpsRecord g = fixAtRest(1.5, 3.0);
     g.hasVelocity = true;

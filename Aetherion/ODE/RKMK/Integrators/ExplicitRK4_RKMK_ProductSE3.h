@@ -51,7 +51,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
         {
             SE3d g1;
             VecE x1{ VecE::Zero() };
-            bool converged{ true };  // explicit: always "converged"
+            bool converged{ true }; // explicit: always "converged"
         };
 
         explicit ExplicitRK4_RKMK_ProductSE3(XiField xi, FField f)
@@ -75,7 +75,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
             // Stage 1  (at t0, g0, x0)
             // ------------------------------------------------------------------
             const Vec6 xi0 = x0.template head<6>();
-            const Vec6 K1 = xi_field_(t0, g0, xi0);          // dexp_inv(0)=I
+            const Vec6 K1 = xi_field_(t0, g0, xi0); // dexp_inv(0)=I
             const VecE k1 = f_field_(t0, g0, x0);
 
             // ------------------------------------------------------------------

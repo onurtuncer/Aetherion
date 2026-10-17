@@ -190,9 +190,9 @@ namespace Aetherion::Coordinate {
     template <class Scalar>
     struct LocalStateNED
     {
-        Scalar lat_rad{}; ///< Geodetic latitude [rad].
-        Scalar lon_rad{}; ///< Geodetic longitude [rad].
-        Scalar h_m{};     ///< Ellipsoidal height [m].
+        Scalar lat_rad{};       ///< Geodetic latitude [rad].
+        Scalar lon_rad{};       ///< Geodetic longitude [rad].
+        Scalar h_m{};           ///< Ellipsoidal height [m].
         Vec3<Scalar> dir_ned{}; ///< Body forward direction (unit vector) in NED.
         Quat<Scalar> q_LB{};    ///< Quaternion rotating body frame into local NED frame.
     };

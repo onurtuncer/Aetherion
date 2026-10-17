@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <Aetherion/Environment/DrydenTurbulence.h>   // GustState
+#include <Aetherion/Environment/DrydenTurbulence.h> // GustState
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
@@ -35,12 +35,12 @@
 
 namespace Aetherion::FlightDynamics {
 
-/// @brief Air-relative velocity in body axes.
-/// @param g          Pose (body → ECI rotation R, ECI position p).
-/// @param nu_B       Body twist [ω_B; v_B], ECI-relative, body axes.
-/// @param t          Time [s]; the Earth rotation angle is ω_E t.
-/// @param windECEF   Steady wind as an ECEF vector [m/s] (zero = calm).
-/// @param gust       Gust in body axes; only its linear part is used here.
+    /// @brief Air-relative velocity in body axes.
+    /// @param g          Pose (body → ECI rotation R, ECI position p).
+    /// @param nu_B       Body twist [ω_B; v_B], ECI-relative, body axes.
+    /// @param t          Time [s]; the Earth rotation angle is ω_E t.
+    /// @param windECEF   Steady wind as an ECEF vector [m/s] (zero = calm).
+    /// @param gust       Gust in body axes; only its linear part is used here.
     template <class S>
     [[nodiscard]] Eigen::Matrix<S, 3, 1>
     AirRelativeVelocity_B(const ODE::RKMK::Lie::SE3<S>& g,
@@ -74,9 +74,9 @@ namespace Aetherion::FlightDynamics {
         return v_rel;
     }
 
-/// @brief Body angular rate relative to the air mass: the ECI-relative rate
-/// minus the Earth rate (the atmosphere rotates with the Earth) minus the
-/// angular velocity of the gust field.
+    /// @brief Body angular rate relative to the air mass: the ECI-relative rate
+    /// minus the Earth rate (the atmosphere rotates with the Earth) minus the
+    /// angular velocity of the gust field.
     template <class S>
     [[nodiscard]] Eigen::Matrix<S, 3, 1>
     AirRelativeRates_B(const ODE::RKMK::Lie::SE3<S>& g,

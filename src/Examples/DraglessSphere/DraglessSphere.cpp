@@ -48,9 +48,9 @@ namespace Aetherion::Examples::DraglessSphere {
     {
         const auto& cfg = getConfig();
 
-        const RigidBody::Config rb_cfg = loadVehicleConfig();          // step 1
-        const double theta0 = computeInitialERA(cfg.startTime); // step 2
-        const RigidBody::StateD x0 = buildInitialState(rb_cfg, theta0);// step 3
+        const RigidBody::Config rb_cfg = loadVehicleConfig();           // step 1
+        const double theta0 = computeInitialERA(cfg.startTime);         // step 2
+        const RigidBody::StateD x0 = buildInitialState(rb_cfg, theta0); // step 3
 
         AE_CORE_INFO("Initial ECI position  = [{:.3f}, {:.3f}, {:.3f}] m",
             x0.g.p.x(), x0.g.p.y(), x0.g.p.z());

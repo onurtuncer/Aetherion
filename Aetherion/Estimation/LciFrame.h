@@ -32,7 +32,7 @@
 #include <Aetherion/Coordinate/LocalToInertial.h>
 #include <Aetherion/Environment/Gravity.h>
 #include <Aetherion/Environment/WGS84.h>
-#include <Aetherion/ODE/RKMK/Core/Scalar.h>  // Core::sqrt_s
+#include <Aetherion/ODE/RKMK/Core/Scalar.h> // Core::sqrt_s
 
 namespace Aetherion::Estimation {
 
@@ -42,25 +42,25 @@ namespace Aetherion::Estimation {
         using Mat3 = Eigen::Matrix<S, 3, 3>;
         using Vec3 = Eigen::Matrix<S, 3, 1>;
 
-        Vec3 r_W0 = Vec3::Zero();      ///< ECI position of the origin [m]
-        Mat3 R_WL = Mat3::Identity();  ///< LCI -> ECI; columns are N, E, D of the origin at t0
-        S era0_rad = S(0);  ///< Earth rotation angle at t0; the ECEF->ECI mapping of a later measurement needs era(t)
+        Vec3 r_W0 = Vec3::Zero();     ///< ECI position of the origin [m]
+        Mat3 R_WL = Mat3::Identity(); ///< LCI -> ECI; columns are N, E, D of the origin at t0
+        S era0_rad = S(0);            ///< Earth rotation angle at t0; the ECEF->ECI mapping of a later measurement needs era(t)
 
-  /// Earth rotation angle at t0 + t: what the ECEF -> ECI rotation of a
-  /// measurement taken t seconds after the frame epoch uses.
+        /// Earth rotation angle at t0 + t: what the ECEF -> ECI rotation of a
+        /// measurement taken t seconds after the frame epoch uses.
         [[nodiscard]] S earthRotationAngle(const S& t_since_t0_s) const
         {
             return era0_rad + S(Environment::WGS84::kRotationRate_rad_s) * t_since_t0_s;
         }
 
-  /// Frame from the geodetic origin (WGS-84 latitude, longitude, ellipsoidal
-  /// height) and the Earth rotation angle at t0. These are the `lat0_deg`,
-  /// `lon0_deg`, `alt0_ft` of the replayed run's sidecar, converted.
+        /// Frame from the geodetic origin (WGS-84 latitude, longitude, ellipsoidal
+        /// height) and the Earth rotation angle at t0. These are the `lat0_deg`,
+        /// `lon0_deg`, `alt0_ft` of the replayed run's sidecar, converted.
         [[nodiscard]] static LciFrame FromGeodetic(const S& lat0_rad, const S& lon0_rad, const S& h0_m, const S& era0_rad)
         {
             const auto r_E = Coordinate::GeodeticToECEF(lat0_rad, lon0_rad, h0_m);
             const auto r_W = Coordinate::ECEFToECI(r_E, era0_rad);
-            const auto R = Coordinate::NEDToInertialRotationMatrix(lat0_rad, lon0_rad, era0_rad);  // row-major
+            const auto R = Coordinate::NEDToInertialRotationMatrix(lat0_rad, lon0_rad, era0_rad); // row-major
 
             LciFrame f;
             f.era0_rad = era0_rad;
@@ -76,8 +76,8 @@ namespace Aetherion::Estimation {
         [[nodiscard]] Vec3 rotateToLci(const Vec3& u_W) const { return R_WL.transpose() * u_W; }
         [[nodiscard]] Vec3 rotateToEci(const Vec3& u_L) const { return R_WL * u_L; }
 
-  /// Gravitational acceleration at LCI position p, resolved in LCI: the
-  /// WGS-84 central + J2 model of Environment/Gravity.h.
+        /// Gravitational acceleration at LCI position p, resolved in LCI: the
+        /// WGS-84 central + J2 model of Environment/Gravity.h.
         [[nodiscard]] Vec3 gravity(const Vec3& p) const
         {
             const Vec3 r_W = toEci(p);
@@ -85,10 +85,10 @@ namespace Aetherion::Estimation {
             return rotateToLci(Vec3(g_W[0], g_W[1], g_W[2]));
         }
 
-  /// Gradient dg_L/dp. Central term only, -(mu/r^3)(I - 3 u u^T) with
-  /// u = r_W/|r_W|: of order 1.5e-6 s^-2 (the squared Schuler frequency).
-  /// The J2 contribution to the gradient is another 1e-3 smaller and is
-  /// omitted; the gradient enters only the error dynamics, never the state.
+        /// Gradient dg_L/dp. Central term only, -(mu/r^3)(I - 3 u u^T) with
+        /// u = r_W/|r_W|: of order 1.5e-6 s^-2 (the squared Schuler frequency).
+        /// The J2 contribution to the gradient is another 1e-3 smaller and is
+        /// omitted; the gradient enters only the error dynamics, never the state.
         [[nodiscard]] Mat3 gravityGradient(const Vec3& p) const
         {
             const Vec3 r_W = toEci(p);
@@ -101,4 +101,4 @@ namespace Aetherion::Estimation {
         }
     };
 
-}  // namespace Aetherion::Estimation
+} // namespace Aetherion::Estimation

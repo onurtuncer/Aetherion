@@ -133,7 +133,7 @@
 #include <fmu4cpp/fmu_base.hpp>
 
 // Standard library
-#include <algorithm>      // std::clamp
+#include <algorithm> // std::clamp
 #include <array>
 #include <cmath>
 #include <memory>
@@ -187,8 +187,8 @@ namespace AE_EX = Aetherion::Examples::F16SteadyFlight;
 namespace AE_ENV = Aetherion::Environment;
 
 // ── Type aliases ──────────────────────────────────────────────────────────────
-using F16VF = AE_EX::F16VF;       // VectorField<J2Gravity, F16Aero, F16Prop, ConstMass>
-using F16Stepper = AE_EX::F16Stepper;  // SixDoFStepper<F16VF>
+using F16VF = AE_EX::F16VF;           // VectorField<J2Gravity, F16Aero, F16Prop, ConstMass>
+using F16Stepper = AE_EX::F16Stepper; // SixDoFStepper<F16VF>
 
 // ── Module-level constants ────────────────────────────────────────────────────
 namespace {
@@ -204,19 +204,19 @@ namespace {
     constexpr double kDefault_lat0_deg = 36.01917;
     constexpr double kDefault_lon0_deg = -75.67444;
     constexpr double kDefault_heading0_deg = 45.0;
-    constexpr double kDefault_roll0_deg = 0.0;     // wings-level, as NASA sims 04/05
-    constexpr double kDefault_xcg_from_ac_ft = 1.132;   // (35%−25%) × 11.32 ft
+    constexpr double kDefault_roll0_deg = 0.0;        // wings-level, as NASA sims 04/05
+    constexpr double kDefault_xcg_from_ac_ft = 1.132; // (35%−25%) × 11.32 ft
 
     // Default solver tuning — match NewtonOptions defaults so behaviour is
     // unchanged unless the FMI master overrides these parameters.
     constexpr double kDefault_newton_abs_tol = 1.0e-12;
     constexpr double kDefault_newton_rel_tol = 1.0e-10;
-    constexpr double kDefault_max_step_s = 0.0;  // 0 → use the communication step directly
+    constexpr double kDefault_max_step_s = 0.0; // 0 → use the communication step directly
 
     // Environment defaults: calm air on a standard day.
     constexpr double kDefault_wind_mps = 0.0;
-    constexpr double kDefault_turb_sigma_mps = 0.0;    // all three zero = turbulence off
-    constexpr double kDefault_turb_L_m = 533.4;  // 1750 ft, MIL-F-8785C above 2000 ft
+    constexpr double kDefault_turb_sigma_mps = 0.0; // all three zero = turbulence off
+    constexpr double kDefault_turb_L_m = 533.4;     // 1750 ft, MIL-F-8785C above 2000 ft
     constexpr double kDefault_turb_seed = 1.0;
     constexpr double kDefault_atm_deltaT_K = 0.0;
     constexpr double kDefault_atm_deltaP_Pa = 0.0;
@@ -229,65 +229,65 @@ namespace {
 struct F16PlantState
 {
     // ── Integration state ─────────────────────────────────────────────────────
-    std::array<double, 9> R{};   // SO(3) rotation matrix, row-major (body → ECI)
-    std::array<double, 3> r_I{};   // ECI position [m]
-    std::array<double, 6> nu_B{};   // body twist: [wx, wy, wz (rad/s), vx, vy, vz (m/s)]
-    double mass_kg{};   // vehicle mass [kg]
+    std::array<double, 9> R{};    // SO(3) rotation matrix, row-major (body → ECI)
+    std::array<double, 3> r_I{};  // ECI position [m]
+    std::array<double, 6> nu_B{}; // body twist: [wx, wy, wz (rad/s), vx, vy, vz (m/s)]
+    double mass_kg{};             // vehicle mass [kg]
 
     // ── Control surface state (preserved across save/restore) ─────────────────
-    double el_deg{};   // elevator  [deg]
-    double ail_deg{};   // aileron   [deg]
-    double rdr_deg{};   // rudder    [deg]
-    double pwr_pct{};   // throttle  [0–100]
+    double el_deg{};  // elevator  [deg]
+    double ail_deg{}; // aileron   [deg]
+    double rdr_deg{}; // rudder    [deg]
+    double pwr_pct{}; // throttle  [0–100]
 
     // ── Output cache (updated in do_step, registered by pointer) ─────────────
-    double alt_m{};  // altitude above MSL [m]
-    double lat_deg{};  // geodetic latitude [deg]
-    double lon_deg{};  // geodetic longitude [deg]
-    double yaw_rad{};  // ZYX Euler yaw   (body → NED) [rad]
-    double pitch_rad{};  // ZYX Euler pitch (body → NED) [rad]
-    double roll_rad{};  // ZYX Euler roll  (body → NED) [rad]
-    double p_rad_s{};  // body roll  rate wrt ECI [rad/s]
-    double q_rad_s{};  // body pitch rate wrt ECI [rad/s]
-    double r_rad_s{};  // body yaw   rate wrt ECI [rad/s]
-    double v_north_m_s{};  // NED north velocity [m/s]
-    double v_east_m_s{};  // NED east  velocity [m/s]
-    double v_down_m_s{};  // NED down  velocity [m/s]
-    double alpha_deg{};  // angle of attack [deg]
-    double beta_deg{};  // sideslip angle  [deg]
-    double mach{};  // Mach number [-]
-    double qbar_Pa{};  // dynamic pressure [Pa]
-    double vt_m_s{};  // true airspeed [m/s]
-    double aero_Fx_N{};  // aero body-X force  [N]
-    double aero_Fy_N{};  // aero body-Y force  [N]
-    double aero_Fz_N{};  // aero body-Z force  [N]
-    double aero_Mx_Nm{};  // aero roll  moment  [N·m]  (about AC)
-    double aero_My_Nm{};  // aero pitch moment  [N·m]  (about AC)
-    double aero_Mz_Nm{};  // aero yaw   moment  [N·m]
-    double rho_kg_m3{};  // air density [kg/m³]
-    double T_K{};  // ambient temperature [K]
-    double P_Pa{};  // ambient pressure [Pa]
-    double a_m_s{};  // speed of sound [m/s]
-    double g_m_s2{};  // local gravity magnitude [m/s²]
-    double specificForce_x_m_s2{};  // body-X specific force at the CG [m/s²]
-    double specificForce_y_m_s2{};  // body-Y specific force at the CG [m/s²]
-    double specificForce_z_m_s2{};  // body-Z specific force at the CG [m/s²]
-    double thrust_N{};  // net propulsive force, body +X [N]
+    double alt_m{};                // altitude above MSL [m]
+    double lat_deg{};              // geodetic latitude [deg]
+    double lon_deg{};              // geodetic longitude [deg]
+    double yaw_rad{};              // ZYX Euler yaw   (body → NED) [rad]
+    double pitch_rad{};            // ZYX Euler pitch (body → NED) [rad]
+    double roll_rad{};             // ZYX Euler roll  (body → NED) [rad]
+    double p_rad_s{};              // body roll  rate wrt ECI [rad/s]
+    double q_rad_s{};              // body pitch rate wrt ECI [rad/s]
+    double r_rad_s{};              // body yaw   rate wrt ECI [rad/s]
+    double v_north_m_s{};          // NED north velocity [m/s]
+    double v_east_m_s{};           // NED east  velocity [m/s]
+    double v_down_m_s{};           // NED down  velocity [m/s]
+    double alpha_deg{};            // angle of attack [deg]
+    double beta_deg{};             // sideslip angle  [deg]
+    double mach{};                 // Mach number [-]
+    double qbar_Pa{};              // dynamic pressure [Pa]
+    double vt_m_s{};               // true airspeed [m/s]
+    double aero_Fx_N{};            // aero body-X force  [N]
+    double aero_Fy_N{};            // aero body-Y force  [N]
+    double aero_Fz_N{};            // aero body-Z force  [N]
+    double aero_Mx_Nm{};           // aero roll  moment  [N·m]  (about AC)
+    double aero_My_Nm{};           // aero pitch moment  [N·m]  (about AC)
+    double aero_Mz_Nm{};           // aero yaw   moment  [N·m]
+    double rho_kg_m3{};            // air density [kg/m³]
+    double T_K{};                  // ambient temperature [K]
+    double P_Pa{};                 // ambient pressure [Pa]
+    double a_m_s{};                // speed of sound [m/s]
+    double g_m_s2{};               // local gravity magnitude [m/s²]
+    double specificForce_x_m_s2{}; // body-X specific force at the CG [m/s²]
+    double specificForce_y_m_s2{}; // body-Y specific force at the CG [m/s²]
+    double specificForce_z_m_s2{}; // body-Z specific force at the CG [m/s²]
+    double thrust_N{};             // net propulsive force, body +X [N]
 
     // ── Environment outputs ───────────────────────────────────────────────────
-    double wind_north_m_s{};  // total wind at the CG, NED north (steady + gust) [m/s]
+    double wind_north_m_s{}; // total wind at the CG, NED north (steady + gust) [m/s]
     double wind_east_m_s{};  // total wind at the CG, NED east  [m/s]
     double wind_down_m_s{};  // total wind at the CG, NED down  [m/s]
-    double gust_u_m_s{};  // Dryden gust, body x [m/s]
-    double gust_v_m_s{};  // Dryden gust, body y [m/s]
-    double gust_w_m_s{};  // Dryden gust, body z [m/s]
-    double gust_p_rad_s{};  // angular velocity of the gust field, body x [rad/s]
-    double gust_q_rad_s{};  // angular velocity of the gust field, body y [rad/s]
-    double gust_r_rad_s{};  // angular velocity of the gust field, body z [rad/s]
+    double gust_u_m_s{};     // Dryden gust, body x [m/s]
+    double gust_v_m_s{};     // Dryden gust, body y [m/s]
+    double gust_w_m_s{};     // Dryden gust, body z [m/s]
+    double gust_p_rad_s{};   // angular velocity of the gust field, body x [rad/s]
+    double gust_q_rad_s{};   // angular velocity of the gust field, body y [rad/s]
+    double gust_r_rad_s{};   // angular velocity of the gust field, body z [rad/s]
 
     // ── Turbulence filter states (preserved across save/restore) ─────────────
     std::array<double, 8> turb_x{};
-    AE_ENV::DrydenTurbulence::NoiseState turb_noise{};   // generator position and Box-Muller spare
+    AE_ENV::DrydenTurbulence::NoiseState turb_noise{}; // generator position and Box-Muller spare
 };
 static_assert(std::is_trivially_copyable_v<F16PlantState>,
     "F16PlantState must be trivially copyable for fmu4cpp state save/restore.");
@@ -369,7 +369,7 @@ public:
         cfg.pose.lon_deg = p_lon0_deg_;
         cfg.pose.alt_m = p_alt0_ft_ * kFt_m;
         cfg.pose.azimuth_deg = p_heading0_deg_;
-        cfg.pose.zenith_deg = 90.0 - trim.alpha_deg;   // nearly horizontal, nose-up by alpha
+        cfg.pose.zenith_deg = 90.0 - trim.alpha_deg; // nearly horizontal, nose-up by alpha
         cfg.pose.roll_deg = p_roll0_deg_;
 
         cfg.velocityNED.north_mps = vNorth_mps;
@@ -506,9 +506,9 @@ public:
     // Overridden to keep m_state (Eigen) consistent with the restored state_ (POD).
     void setFmuState(void* fmuState) override
     {
-        fmu_base::setFmuState(fmuState);   // copies saved F16PlantState → state_
+        fmu_base::setFmuState(fmuState); // copies saved F16PlantState → state_
         if (m_stepper.has_value())
-            unpackState();                 // re-derives m_state from state_
+            unpackState(); // re-derives m_state from state_
     }
 
     // ── reset ─────────────────────────────────────────────────────────────────

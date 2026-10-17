@@ -65,7 +65,7 @@ namespace {
     constexpr double kAlt_ft = 10013.0;
     constexpr double kAlt_m = kAlt_ft * 0.3048;
     constexpr double kHeading_deg = 45.0;
-    constexpr double kRoll_deg = 0.0;          // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
+    constexpr double kRoll_deg = 0.0; // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
     constexpr double kVelocity_fps = 400.0;
     constexpr double kVelocity_mps = kVelocity_fps * 0.3048;
     constexpr double kTAS_fps = 565.685;
@@ -77,16 +77,16 @@ namespace {
     // to the right of the 45° NE courseline at t = 20 s.
     // NASA TM-2015-218675 §B-13.4 specifies the step is applied at t = 20 s.
     constexpr double kAltCmd_ft = 10013.0;   // hold initial altitude [ft]
-    constexpr double kBaseChiCmd_deg = 45.0;    // hold NE course [deg]
-    constexpr double kLatStep_ft = 2000.0;    // lateral step right of course [ft]
-    constexpr double kLatStepTime_s = 20.0;    // step applied at t = 20 s
+    constexpr double kBaseChiCmd_deg = 45.0; // hold NE course [deg]
+    constexpr double kLatStep_ft = 2000.0;   // lateral step right of course [ft]
+    constexpr double kLatStepTime_s = 20.0;  // step applied at t = 20 s
 }
 
 namespace Aetherion::Examples::F16LateralSideStep {
 
     using Sim = F16AltitudeChange::F16AltitudeChangeSimulator;
 
-// ── logStartupBanner ──────────────────────────────────────────────────────────
+    // ── logStartupBanner ──────────────────────────────────────────────────────────
 
     void F16LateralSideStepApplication::logStartupBanner() const
     {
@@ -103,20 +103,20 @@ namespace Aetherion::Examples::F16LateralSideStep {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── writeCsvHeader ────────────────────────────────────────────────────────────
+    // ── writeCsvHeader ────────────────────────────────────────────────────────────
 
     void F16LateralSideStepApplication::writeCsvHeader(std::ofstream& csv) const
     {
         Simulation::Snapshot2Traits::write_header(csv);
     }
 
-// ── prepareSimulation ─────────────────────────────────────────────────────────
+    // ── prepareSimulation ─────────────────────────────────────────────────────────
 
     void F16LateralSideStepApplication::prepareSimulation() const
     {
         const auto& simCfg = getConfig();
 
-    // ── 1. Load models ────────────────────────────────────────────────────────
+        // ── 1. Load models ────────────────────────────────────────────────────────
         const std::string inertiaPath = F16_INERTIA_FILE;
         const std::string aeroPath = F16_AERO_FILE;
         const std::string propPath = F16_PROP_FILE;
@@ -137,19 +137,19 @@ namespace Aetherion::Examples::F16LateralSideStep {
         AE_CORE_INFO("Loading control from '{}'", controlPath);
         auto ctrl_model = std::make_shared<const Serialization::DAVEMLControlModel>(controlPath);
 
-    // ── 2. Trim solver ────────────────────────────────────────────────────────
-    // Apparent weight at the trim point: J2 attraction — the same gravity
-    // J2GravityPolicy applies during integration — less the centripetal relief of
-    // level flight over the rotating Earth.  Trimming against the static weight
-    // would leave the vehicle with excess lift on the first step.
+        // ── 2. Trim solver ────────────────────────────────────────────────────────
+        // Apparent weight at the trim point: J2 attraction — the same gravity
+        // J2GravityPolicy applies during integration — less the centripetal relief of
+        // level flight over the rotating Earth.  Trimming against the static weight
+        // would leave the vehicle with excess lift on the first step.
         const double weight_lbf = FlightDynamics::LevelFlightTrimWeight_lbf(
             ip.mass_kg, kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps);
         FlightDynamics::TrimInputs tin{};
         tin.vt_fps = kTAS_fps;
         tin.alt_ft = kAlt_ft;
         tin.weight_lbf = weight_lbf;
-    // Aero damping at the rate F16AeroPolicy will actually see — the transport
-    // rate.  Pitch attitude is not known yet and q does not depend on it.
+        // Aero damping at the rate F16AeroPolicy will actually see — the transport
+        // rate.  Pitch attitude is not known yet and q does not depend on it.
         tin.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, 0.0, kRoll_deg);
 
@@ -164,7 +164,7 @@ namespace Aetherion::Examples::F16LateralSideStep {
         AE_CORE_INFO("  el    = {:.4f} deg", trim.el_deg);
         AE_CORE_INFO("  pwr   = {:.4f} %%", trim.pwr_pct);
 
-    // ── 3. Initial state ──────────────────────────────────────────────────────
+        // ── 3. Initial state ──────────────────────────────────────────────────────
         RigidBody::Config cfg{};
         cfg.pose.lat_deg = kLat_deg;
         cfg.pose.lon_deg = kLon_deg;
@@ -175,8 +175,8 @@ namespace Aetherion::Examples::F16LateralSideStep {
         cfg.velocityNED.north_mps = kVelocity_mps;
         cfg.velocityNED.east_mps = kVelocity_mps;
         cfg.velocityNED.down_mps = 0.0;
-    // Attitude held fixed against the local-level frame, which tips forward at the
-    // transport rate as the vehicle moves over the curved Earth.
+        // Attitude held fixed against the local-level frame, which tips forward at the
+        // transport rate as the vehicle moves over the curved Earth.
         cfg.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, trim.alpha_deg, kRoll_deg);
         cfg.inertialParameters = ip;
@@ -184,8 +184,8 @@ namespace Aetherion::Examples::F16LateralSideStep {
         const double theta0 = computeInitialERA(simCfg.startTime);
         const RigidBody::StateD x0 = buildInitialState(cfg, theta0);
 
-    // ── 4. Autopilot commands ─────────────────────────────────────────────────
-    // keasCmd computed from US1976 atmosphere so deltaVequiv ≈ 0 at t=0.
+        // ── 4. Autopilot commands ─────────────────────────────────────────────────
+        // keasCmd computed from US1976 atmosphere so deltaVequiv ≈ 0 at t=0.
         const auto atm_trim = Environment::US1976Atmosphere(kAlt_m);
         constexpr double kRhoSL_kg_m3 = 1.225;
         constexpr double kKt_mps = 0.5144444;
@@ -196,7 +196,7 @@ namespace Aetherion::Examples::F16LateralSideStep {
         cmds.altCmd_ft = kAltCmd_ft;
         cmds.keasCmd_kt = keas_kt;
         cmds.baseChiCmd_deg = kBaseChiCmd_deg;
-        cmds.latOffset_ft = 0.0;          // dynamic; overridden by latStepOffset_ft
+        cmds.latOffset_ft = 0.0; // dynamic; overridden by latStepOffset_ft
         cmds.latStepTime_s = kLatStepTime_s;
         cmds.latStepOffset_ft = kLatStep_ft;
         cmds.coursePsi_deg = kHeading_deg;
@@ -213,7 +213,7 @@ namespace Aetherion::Examples::F16LateralSideStep {
             x0, theta0, cmds, kXcgFromAC_m);
     }
 
-// ── writeInitialSnapshot ──────────────────────────────────────────────────────
+    // ── writeInitialSnapshot ──────────────────────────────────────────────────────
 
     void F16LateralSideStepApplication::writeInitialSnapshot(std::ofstream& csv) const
     {
@@ -223,7 +223,7 @@ namespace Aetherion::Examples::F16LateralSideStep {
             s2.time, s2.altitudeMsl_m, s2.trueAirspeed_m_s, s2.mach);
     }
 
-// ── stepAndRecord ─────────────────────────────────────────────────────────────
+    // ── stepAndRecord ─────────────────────────────────────────────────────────────
 
     auto F16LateralSideStepApplication::stepAndRecord(
         std::ofstream& csv, double h, bool doWrite) const -> StepObservation
@@ -249,7 +249,7 @@ namespace Aetherion::Examples::F16LateralSideStep {
         };
     }
 
-// ── logFinalSummary ───────────────────────────────────────────────────────────
+    // ── logFinalSummary ───────────────────────────────────────────────────────────
 
     void F16LateralSideStepApplication::logFinalSummary() const
     {
@@ -257,7 +257,7 @@ namespace Aetherion::Examples::F16LateralSideStep {
         constexpr double kToDeg = 180.0 / std::numbers::pi;
         constexpr double kFt = 1.0 / 0.3048;
 
-    // Compute lateral displacement from initial position (for reporting)
+        // Compute lateral displacement from initial position (for reporting)
         constexpr double kRE_m = 6'371'000.0;
         constexpr double kLat0 = kLat_deg * (std::numbers::pi / 180.0);
         constexpr double kLon0 = kLon_deg * (std::numbers::pi / 180.0);
@@ -282,7 +282,7 @@ namespace Aetherion::Examples::F16LateralSideStep {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
+    // ── Private helpers ───────────────────────────────────────────────────────────
 
     double F16LateralSideStepApplication::computeInitialERA(double t0) noexcept
     {

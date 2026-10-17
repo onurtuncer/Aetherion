@@ -69,8 +69,8 @@ TEST_CASE("CentralGravity - direction is radial", "[environment][gravity]")
 
 TEST_CASE("CentralGravity - surface magnitude & direction", "[gravity][central]")
 {
-    const double mu = 3.986004418e14;  // [m^3/s^2]
-    const double Re = 6378137.0;       // [m] WGS-84 equatorial radius
+    const double mu = 3.986004418e14; // [m^3/s^2]
+    const double Re = 6378137.0;      // [m] WGS-84 equatorial radius
 
     Vec3<double> r{ Re, 0.0, 0.0 };
     auto g = CentralGravity(r, mu);

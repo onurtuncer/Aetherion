@@ -39,10 +39,10 @@ namespace Aetherion::Examples::NorthwardCannonball {
 
     using SWADSim = SphereWithAtmosphericDrag::SphereWithAtmosphericDragSimulator;
 
-/// @brief Application for NASA TM-2015-218675 Atmospheric Scenario 10.
-///
-/// Sphere with drag (CD=0.1) fired northward from sea level at 45° under J₂ gravity.
-/// Reuses SphereWithAtmosphericDragSimulator (J2 + DragOnlyAeroPolicy).
+    /// @brief Application for NASA TM-2015-218675 Atmospheric Scenario 10.
+    ///
+    /// Sphere with drag (CD=0.1) fired northward from sea level at 45° under J₂ gravity.
+    /// Reuses SphereWithAtmosphericDragSimulator (J2 + DragOnlyAeroPolicy).
     class NorthwardCannonballApplication : public Simulation::Application
     {
     public:

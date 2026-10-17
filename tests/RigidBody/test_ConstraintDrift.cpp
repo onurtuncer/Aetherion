@@ -60,9 +60,9 @@ namespace {
     // ---------------------------------------------------------------------
     // Shared problem definition
     // ---------------------------------------------------------------------
-    constexpr double kT = 600.0;   // trajectory length [s]
-    constexpr double kH = 0.1;     // step size [s]
-    constexpr int kSample = 50;      // record every kSample steps
+    constexpr double kT = 600.0; // trajectory length [s]
+    constexpr double kH = 0.1;   // step size [s]
+    constexpr int kSample = 50;  // record every kSample steps
 
     constexpr double kIxx = 0.10, kIyy = 0.25, kIzz = 0.32;
 
@@ -154,7 +154,7 @@ namespace {
     Vec13 quaternion_initial_state()
     {
         Vec13 y = Vec13::Zero();
-        y(0) = 1.0;                     // identity quaternion
+        y(0) = 1.0; // identity quaternion
         y.segment<3>(7) = kOmega0;
         y.segment<3>(10) = kV0;
         return y;
@@ -207,7 +207,7 @@ namespace {
                 yPlain = quaternion_rk4_step(yPlain, kH);
 
                 yRenrm = quaternion_rk4_step(yRenrm, kH);
-                yRenrm.segment<4>(0).normalize();     // ad hoc projection
+                yRenrm.segment<4>(0).normalize(); // ad hoc projection
             }
 
             out.t.push_back(kT);

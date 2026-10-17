@@ -19,10 +19,10 @@
 
 namespace Aetherion::FlightDynamics {
 
-/// @brief Aerodynamic policy that returns a zero wrench (no aerodynamic forces).
-///
-/// Models a dragless, liftless body (e.g. vacuum trajectory or baseline case).
-/// Satisfies @c AeroPolicy; the compiler optimises the zero addition away entirely.
+    /// @brief Aerodynamic policy that returns a zero wrench (no aerodynamic forces).
+    ///
+    /// Models a dragless, liftless body (e.g. vacuum trajectory or baseline case).
+    /// Satisfies @c AeroPolicy; the compiler optimises the zero addition away entirely.
     struct ZeroAeroPolicy
     {
         template <class S>
@@ -39,19 +39,19 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(AeroPolicy<ZeroAeroPolicy>);
 
-/// @brief Aerodynamic policy for a sphere: pure drag, no lift, no moments.
-///
-/// Computes the drag force in the body frame using:
-/// @f[ \mathbf{F}_\mathrm{drag} = -\tfrac{1}{2}\,\rho(h)\,C_D\,S_\mathrm{ref}\,
-///     |\mathbf{v}_B|\,\mathbf{v}_B @f]
-/// where @f$\mathbf{v}_B = \nu_B^{3:5}@f$ is the body-frame linear velocity and
-/// @f$\rho(h)@f$ is the US 1976 atmospheric density at geocentric altitude
-/// @f$h \approx |\mathbf{r}_\mathrm{ECI}| - R_e@f$.
-///
-/// Satisfies @c AeroPolicy (works for both @c double and @c CppAD::AD\<double\>).
+    /// @brief Aerodynamic policy for a sphere: pure drag, no lift, no moments.
+    ///
+    /// Computes the drag force in the body frame using:
+    /// @f[ \mathbf{F}_\mathrm{drag} = -\tfrac{1}{2}\,\rho(h)\,C_D\,S_\mathrm{ref}\,
+    ///     |\mathbf{v}_B|\,\mathbf{v}_B @f]
+    /// where @f$\mathbf{v}_B = \nu_B^{3:5}@f$ is the body-frame linear velocity and
+    /// @f$\rho(h)@f$ is the US 1976 atmospheric density at geocentric altitude
+    /// @f$h \approx |\mathbf{r}_\mathrm{ECI}| - R_e@f$.
+    ///
+    /// Satisfies @c AeroPolicy (works for both @c double and @c CppAD::AD\<double\>).
     struct DragOnlyAeroPolicy
     {
-        double CD{ 0.0 }; ///< Drag coefficient [-].
+        double CD{ 0.0 };    ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].
 
         DragOnlyAeroPolicy() = default;
@@ -102,32 +102,32 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(AeroPolicy<DragOnlyAeroPolicy>);
 
-/// @brief Aerodynamic policy for an asymmetric rigid body with drag and
-///        rotary damping moments (no lift or cross-coupling terms).
-///
-/// Computes:
-///   - **Drag force**:   @f$ \mathbf{F} = -\tfrac{1}{2}\rho\,C_D\,S\,|v_\text{rel}|\,v_\text{rel} @f$
-///   - **Roll  moment**: @f$ L = \tfrac{1}{4}\rho\,|V|\,S\,b^2\,C_{lp}\,p @f$
-///   - **Pitch moment**: @f$ M = \tfrac{1}{4}\rho\,|V|\,S\,\bar{c}^2\,C_{mq}\,q @f$
-///   - **Yaw   moment**: @f$ N = \tfrac{1}{4}\rho\,|V|\,S\,b^2\,C_{nr}\,r @f$
-///
-/// All quantities in SI (m, kg, s, rad).  Reference lengths @p b and @p cbar
-/// follow the standard non-dimensional rate convention:
-///   @f$ \hat{p} = pb/(2V),\; \hat{q} = q\bar{c}/(2V),\; \hat{r} = rb/(2V) @f$
-///
-/// Uses atmosphere-relative airspeed for both drag and moment scaling,
-/// consistent with @c DragOnlyAeroPolicy.  AD-safe for use with CppAD.
-///
-/// Satisfies @c AeroPolicy.
+    /// @brief Aerodynamic policy for an asymmetric rigid body with drag and
+    ///        rotary damping moments (no lift or cross-coupling terms).
+    ///
+    /// Computes:
+    ///   - **Drag force**:   @f$ \mathbf{F} = -\tfrac{1}{2}\rho\,C_D\,S\,|v_\text{rel}|\,v_\text{rel} @f$
+    ///   - **Roll  moment**: @f$ L = \tfrac{1}{4}\rho\,|V|\,S\,b^2\,C_{lp}\,p @f$
+    ///   - **Pitch moment**: @f$ M = \tfrac{1}{4}\rho\,|V|\,S\,\bar{c}^2\,C_{mq}\,q @f$
+    ///   - **Yaw   moment**: @f$ N = \tfrac{1}{4}\rho\,|V|\,S\,b^2\,C_{nr}\,r @f$
+    ///
+    /// All quantities in SI (m, kg, s, rad).  Reference lengths @p b and @p cbar
+    /// follow the standard non-dimensional rate convention:
+    ///   @f$ \hat{p} = pb/(2V),\; \hat{q} = q\bar{c}/(2V),\; \hat{r} = rb/(2V) @f$
+    ///
+    /// Uses atmosphere-relative airspeed for both drag and moment scaling,
+    /// consistent with @c DragOnlyAeroPolicy.  AD-safe for use with CppAD.
+    ///
+    /// Satisfies @c AeroPolicy.
     struct BrickDampingAeroPolicy
     {
-        double CD{ 0.0 }; ///< Drag coefficient [-].
-        double S{ 0.0 }; ///< Reference area [m²].
-        double b{ 0.0 }; ///< Span reference length [m] (roll and yaw scaling).
+        double CD{ 0.0 };   ///< Drag coefficient [-].
+        double S{ 0.0 };    ///< Reference area [m²].
+        double b{ 0.0 };    ///< Span reference length [m] (roll and yaw scaling).
         double cbar{ 0.0 }; ///< Chord reference length [m] (pitch scaling).
-        double Clp{ 0.0 }; ///< Roll damping derivative @f$C_{l_p}@f$ [-].
-        double Cmq{ 0.0 }; ///< Pitch damping derivative @f$C_{m_q}@f$ [-].
-        double Cnr{ 0.0 }; ///< Yaw damping derivative @f$C_{n_r}@f$ [-].
+        double Clp{ 0.0 };  ///< Roll damping derivative @f$C_{l_p}@f$ [-].
+        double Cmq{ 0.0 };  ///< Pitch damping derivative @f$C_{m_q}@f$ [-].
+        double Cnr{ 0.0 };  ///< Yaw damping derivative @f$C_{n_r}@f$ [-].
 
         BrickDampingAeroPolicy() = default;
         BrickDampingAeroPolicy(double cd, double s, double b_,
@@ -189,26 +189,26 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(AeroPolicy<BrickDampingAeroPolicy>);
 
-/// @brief Aerodynamic drag policy for a sphere in a constant steady wind.
-///
-/// Extends @c DragOnlyAeroPolicy by subtracting the ambient wind velocity
-/// (in addition to the Earth surface velocity) from the body-frame velocity
-/// before computing drag.  The wind is specified as a constant vector in the
-/// ECEF frame; it is rotated to ECI at each call using the current ERA
-/// @f$ \theta_{ERA} = \omega_E \, t @f$.
-///
-/// Drag force:
-/// @f[ \mathbf{F} = -\tfrac{1}{2}\rho\,C_D\,S_\text{ref}\,
-///     |\mathbf{v}_\text{rel}|\,\mathbf{v}_\text{rel} @f]
-/// where
-/// @f$ \mathbf{v}_\text{rel} = \mathbf{v}_B
-///     - \mathbf{v}_\text{surface,body}
-///     - \mathbf{v}_\text{wind,body} @f$.
-///
-/// Satisfies @c AeroPolicy.
+    /// @brief Aerodynamic drag policy for a sphere in a constant steady wind.
+    ///
+    /// Extends @c DragOnlyAeroPolicy by subtracting the ambient wind velocity
+    /// (in addition to the Earth surface velocity) from the body-frame velocity
+    /// before computing drag.  The wind is specified as a constant vector in the
+    /// ECEF frame; it is rotated to ECI at each call using the current ERA
+    /// @f$ \theta_{ERA} = \omega_E \, t @f$.
+    ///
+    /// Drag force:
+    /// @f[ \mathbf{F} = -\tfrac{1}{2}\rho\,C_D\,S_\text{ref}\,
+    ///     |\mathbf{v}_\text{rel}|\,\mathbf{v}_\text{rel} @f]
+    /// where
+    /// @f$ \mathbf{v}_\text{rel} = \mathbf{v}_B
+    ///     - \mathbf{v}_\text{surface,body}
+    ///     - \mathbf{v}_\text{wind,body} @f$.
+    ///
+    /// Satisfies @c AeroPolicy.
     struct SteadyWindDragPolicy
     {
-        double CD{ 0.0 }; ///< Drag coefficient [-].
+        double CD{ 0.0 };    ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].
         /// Wind velocity in ECEF frame [m/s].
         double v_wind_ecef_x{ 0.0 };
@@ -272,30 +272,30 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(AeroPolicy<SteadyWindDragPolicy>);
 
-/// @brief General drag policy that supports any pluggable wind model.
-///
-/// Combines atmosphere-relative drag with an arbitrary @c WindModel:
-/// @f[
-///   \mathbf{v}_\text{rel} = \mathbf{v}_B
-///     - \underbrace{R^T(\omega_E \times r_\text{ECI})}_\text{Earth surface}
-///     - \underbrace{R^T R_\text{ECEF\to ECI}(t)\,\mathbf{v}_\text{wind,ECEF}(h,t)}_\text{wind}
-/// @f]
-///
-/// The wind velocity is obtained from the WindModel via
-/// @c WindModel::velocity_ecef(h, t), which may depend on altitude, time,
-/// or any other quantity.  Concrete models: @c ZeroWind, @c ConstantECEFWind,
-/// @c LinearWindShear (all in WindModels.h).
-///
-/// @tparam Wind  A type satisfying the @c WindModel concept.
-/// Satisfies @c AeroPolicy.
+    /// @brief General drag policy that supports any pluggable wind model.
+    ///
+    /// Combines atmosphere-relative drag with an arbitrary @c WindModel:
+    /// @f[
+    ///   \mathbf{v}_\text{rel} = \mathbf{v}_B
+    ///     - \underbrace{R^T(\omega_E \times r_\text{ECI})}_\text{Earth surface}
+    ///     - \underbrace{R^T R_\text{ECEF\to ECI}(t)\,\mathbf{v}_\text{wind,ECEF}(h,t)}_\text{wind}
+    /// @f]
+    ///
+    /// The wind velocity is obtained from the WindModel via
+    /// @c WindModel::velocity_ecef(h, t), which may depend on altitude, time,
+    /// or any other quantity.  Concrete models: @c ZeroWind, @c ConstantECEFWind,
+    /// @c LinearWindShear (all in WindModels.h).
+    ///
+    /// @tparam Wind  A type satisfying the @c WindModel concept.
+    /// Satisfies @c AeroPolicy.
     template <class Wind>
     struct WindAwareDragPolicy
     {
         static_assert(Environment::is_wind_model_v<Wind>,
             "Wind must be a registered WindModel (specialise Environment::is_wind_model<Wind>).");
-        double CD{ 0.0 }; ///< Drag coefficient [-].
+        double CD{ 0.0 };    ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].
-        Wind wind{};      ///< Wind model instance.
+        Wind wind{};         ///< Wind model instance.
 
         WindAwareDragPolicy() = default;
         WindAwareDragPolicy(double cd, double s_ref, Wind w)

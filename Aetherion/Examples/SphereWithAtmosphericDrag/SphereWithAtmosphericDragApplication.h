@@ -51,13 +51,13 @@
 
 namespace Aetherion::Examples::SphereWithAtmosphericDrag {
 
-/// @brief Concrete Application subclass for the NASA TM-2015-218675 Atmospheric Scenario 6.
-///
-/// Runs a sphere with aerodynamic drag (DragOnlyAeroPolicy, CD from JSON config)
-/// under J2 gravity and the US 1976 atmosphere, reproducing the Atmos-06 reference
-/// trajectory.
-///
-/// Reference: NASA TM-2015-218675, Section B.1.6 / Table 30.
+    /// @brief Concrete Application subclass for the NASA TM-2015-218675 Atmospheric Scenario 6.
+    ///
+    /// Runs a sphere with aerodynamic drag (DragOnlyAeroPolicy, CD from JSON config)
+    /// under J2 gravity and the US 1976 atmosphere, reproducing the Atmos-06 reference
+    /// trajectory.
+    ///
+    /// Reference: NASA TM-2015-218675, Section B.1.6 / Table 30.
     class SphereWithAtmosphericDragApplication : public Simulation::Application
     {
     public:

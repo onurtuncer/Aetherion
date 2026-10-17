@@ -41,7 +41,7 @@ namespace Aetherion::Estimation::Replay {
 
     struct CsvTable
     {
-        LogContract::ColumnMap columns;  ///< normalised name -> index
+        LogContract::ColumnMap columns; ///< normalised name -> index
         std::vector<std::vector<double>> rows;
 
         [[nodiscard]] std::size_t column(std::string_view name) const
@@ -72,9 +72,9 @@ namespace Aetherion::Estimation::Replay {
                 return std::numeric_limits<double>::quiet_NaN();
             return v;
         }
-    }  // namespace detail
+    } // namespace detail
 
-/// Reads a whole CSV from `in`: header bound for (log, cfg), then rows.
+    /// Reads a whole CSV from `in`: header bound for (log, cfg), then rows.
     [[nodiscard]] inline CsvTable
     readCsv(std::istream& in, LogContract::Log log, const Configuration& cfg, std::string_view what = "csv")
     {
@@ -82,7 +82,7 @@ namespace Aetherion::Estimation::Replay {
         if (!std::getline(in, line))
             throw std::runtime_error(std::string(what) + ": empty file");
         if (!line.empty() && static_cast<unsigned char>(line[0]) == 0xEF && line.size() >= 3)
-            line.erase(0, 3);  // UTF-8 BOM
+            line.erase(0, 3); // UTF-8 BOM
 
         CsvTable t;
         t.columns = LogContract::bindColumns(log, line, cfg);
@@ -124,4 +124,4 @@ namespace Aetherion::Estimation::Replay {
         return readCsv(in, log, cfg, path.filename().string());
     }
 
-}  // namespace Aetherion::Estimation::Replay
+} // namespace Aetherion::Estimation::Replay

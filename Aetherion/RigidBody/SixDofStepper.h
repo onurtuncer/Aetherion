@@ -53,32 +53,32 @@ namespace Aetherion::RigidBody {
     // KinematicsXiField<double> is the fixed kinematic model -- not a template
     // parameter. For a different kinematic model, derive a new stepper.
     // --------------------------------------------------------------------------
-/// @brief High-level 6-DoF integrator facade for rigid-body flight dynamics.
-///
-/// Combines the @c KinematicsXiField (SE(3) kinematic ODE) with a user-supplied
-/// @c VectorField (Newton-Euler ODE) into a single @c step() call that advances
-/// the full state @f$ (g, \nu_B, m, \ldots) \in SE(3) \times \mathbb{R}^{\text{EuclidDim}} @f$.
-///
-/// Internally uses a 3-stage Radau IIA RKMK integrator with implicit Newton solve.
-/// The Newton convergence options can be tuned via @c options().
-///
-/// @tparam VectorField    Must satisfy @c VectorFieldOnProductSE3\<VF, EuclidDim, double\>.
-/// @tparam EuclidDim      Euclidean state dimension (default 7: 6 twist + 1 mass).
-///                        Must be ≥ 7. Extra components beyond 7 are zero-initialised
-///                        by @c pack() and ignored by @c unpack() — reserved for
-///                        future augmented-state use (e.g. Kalman-filter bias states).
-/// @tparam IntegratorPolicy  Must satisfy @c IntegratorFor\<IP, KinematicsXiField, VF, EuclidDim\>.
-///
-/// **Typical usage:**
-/// @code
-/// using VF      = RigidBody::VectorField<CentralGravityPolicy>;
-/// using Stepper = RigidBody::SixDoFStepper<VF>;          // EuclidDim = 7
-///
-/// Stepper stepper(ip);
-/// auto res = stepper.step(t0, state, h);
-/// if (res.converged)
-///     state = SixDoFStepper<VF>::unpack(res);
-/// @endcode
+    /// @brief High-level 6-DoF integrator facade for rigid-body flight dynamics.
+    ///
+    /// Combines the @c KinematicsXiField (SE(3) kinematic ODE) with a user-supplied
+    /// @c VectorField (Newton-Euler ODE) into a single @c step() call that advances
+    /// the full state @f$ (g, \nu_B, m, \ldots) \in SE(3) \times \mathbb{R}^{\text{EuclidDim}} @f$.
+    ///
+    /// Internally uses a 3-stage Radau IIA RKMK integrator with implicit Newton solve.
+    /// The Newton convergence options can be tuned via @c options().
+    ///
+    /// @tparam VectorField    Must satisfy @c VectorFieldOnProductSE3\<VF, EuclidDim, double\>.
+    /// @tparam EuclidDim      Euclidean state dimension (default 7: 6 twist + 1 mass).
+    ///                        Must be ≥ 7. Extra components beyond 7 are zero-initialised
+    ///                        by @c pack() and ignored by @c unpack() — reserved for
+    ///                        future augmented-state use (e.g. Kalman-filter bias states).
+    /// @tparam IntegratorPolicy  Must satisfy @c IntegratorFor\<IP, KinematicsXiField, VF, EuclidDim\>.
+    ///
+    /// **Typical usage:**
+    /// @code
+    /// using VF      = RigidBody::VectorField<CentralGravityPolicy>;
+    /// using Stepper = RigidBody::SixDoFStepper<VF>;          // EuclidDim = 7
+    ///
+    /// Stepper stepper(ip);
+    /// auto res = stepper.step(t0, state, h);
+    /// if (res.converged)
+    ///     state = SixDoFStepper<VF>::unpack(res);
+    /// @endcode
     template <class VectorField,
         int EuclidDim = RigidBody6DoFEuclidDim,
         class IntegratorPolicy = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<

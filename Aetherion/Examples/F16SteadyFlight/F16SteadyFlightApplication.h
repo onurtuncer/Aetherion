@@ -45,10 +45,10 @@
 
 namespace Aetherion::Examples::F16SteadyFlight {
 
-/// @brief Application for NASA TM-2015-218675 Check-Case 11.
-///
-/// F-16 at 335.15 KTAS, 10 013 ft, heading 45°, Kitty Hawk NC.
-/// Inertia, aerodynamics, and propulsion are all loaded from DAVE-ML files.
+    /// @brief Application for NASA TM-2015-218675 Check-Case 11.
+    ///
+    /// F-16 at 335.15 KTAS, 10 013 ft, heading 45°, Kitty Hawk NC.
+    /// Inertia, aerodynamics, and propulsion are all loaded from DAVE-ML files.
     class F16SteadyFlightApplication : public Simulation::Application
     {
     public:

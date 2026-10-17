@@ -10,9 +10,9 @@
 
 namespace Aetherion::FlightDynamics {
 
-/// @brief Mass policy for a vehicle with constant mass (no propellant burn).
-///
-/// @c mdot() always returns zero.  Satisfies @c MassPolicy.
+    /// @brief Mass policy for a vehicle with constant mass (no propellant burn).
+    ///
+    /// @c mdot() always returns zero.  Satisfies @c MassPolicy.
     struct ConstantMassPolicy
     {
         /// @brief Mass rate — always zero.
@@ -28,10 +28,10 @@ namespace Aetherion::FlightDynamics {
 
     static_assert(MassPolicy<ConstantMassPolicy>);
 
-/// @brief Mass policy for a constant propellant burn rate.
-///
-/// @c mdot() returns a fixed negative value @c mdot_kgs [kg/s].
-/// Satisfies @c MassPolicy.
+    /// @brief Mass policy for a constant propellant burn rate.
+    ///
+    /// @c mdot() returns a fixed negative value @c mdot_kgs [kg/s].
+    /// Satisfies @c MassPolicy.
     struct LinearBurnPolicy
     {
         double mdot_kgs{ 0.0 }; ///< Constant mass flow rate [kg/s] (negative for burning propellant).

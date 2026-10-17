@@ -38,7 +38,7 @@ namespace {
 
     const Configuration kNavBaroGnss{ { BlockId::NavCore, BlockId::GyroBias, BlockId::AccelBias, BlockId::BaroBias },
         { MeasurementId::GnssPosition, MeasurementId::Barometer } };
-}  // namespace
+} // namespace
 
 int main(int argc, char** argv)
 {

@@ -82,11 +82,11 @@ TEST_CASE("DAVEMLControlModel: SAS-off vs SAS-on differ in elevator output",
     DAVEMLControlModel ctrl(kControlFile);
 
     DAVEMLControlModel::Inputs base;
-    base.apOn = 0.0;      // isolate SAS from autopilot demands
+    base.apOn = 0.0; // isolate SAS from autopilot demands
     base.altMsl_ft = 10013.0;
     base.Vequiv_kt = 300.0;
-    base.alpha_deg = 2.65;   // near trim — keeps elevator away from hard-stops
-    base.qb_rad_s = 0.05;   // nonzero pitch rate excites SAS
+    base.alpha_deg = 2.65; // near trim — keeps elevator away from hard-stops
+    base.qb_rad_s = 0.05;  // nonzero pitch rate excites SAS
 
     auto off = base;
     off.sasOn = 0.0;
@@ -113,16 +113,16 @@ TEST_CASE("DAVEMLControlModel: autopilot altitude error drives elevator",
     // pilot-stick bias saturating the elevator before the AP term takes effect:
     base.altMsl_ft = 10013.0;
     base.Vequiv_kt = 300.0;
-    base.keasCmd_kt = 300.0;    // zero airspeed error
+    base.keasCmd_kt = 300.0; // zero airspeed error
     base.alpha_deg = 2.65;
-    base.theta_deg = 2.65;   // pitch ≈ AoA in level flight
-    base.longStk_frac = base.longStkTrim;  // pilot stick at trim — zero stick bias
+    base.theta_deg = 2.65;                  // pitch ≈ AoA in level flight
+    base.longStk_frac = base.longStkTrim;   // pilot stick at trim — zero stick bias
     base.throttle_frac = base.throttleTrim; // throttle at trim
 
     auto hold = base;
-    hold.altCmd_ft = 10013.0;  // on-altitude, zero error
+    hold.altCmd_ft = 10013.0; // on-altitude, zero error
     auto climb = base;
-    climb.altCmd_ft = 10513.0;  // +500 ft command
+    climb.altCmd_ft = 10513.0; // +500 ft command
 
     auto out_hold = ctrl.evaluate(hold);
     auto out_climb = ctrl.evaluate(climb);

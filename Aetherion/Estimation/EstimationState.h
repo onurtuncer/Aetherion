@@ -45,10 +45,10 @@ namespace Aetherion::Estimation {
         using VecX = Eigen::Matrix<S, Eigen::Dynamic, 1>;
         using Tangent = typename SE23<S>::Tangent;
 
-        SE23<S> X;                      ///< Navigation core: attitude body -> LCI, velocity, position in LCI
-        Vec3 gyroBias = Vec3::Zero();   ///< [rad/s], body
-        Vec3 accelBias = Vec3::Zero();  ///< [m/s^2], body
-        S baroBias = S(0);              ///< [m] of pressure altitude
+        SE23<S> X;                     ///< Navigation core: attitude body -> LCI, velocity, position in LCI
+        Vec3 gyroBias = Vec3::Zero();  ///< [rad/s], body
+        Vec3 accelBias = Vec3::Zero(); ///< [m/s^2], body
+        S baroBias = S(0);             ///< [m] of pressure altitude
 
         template <ErrorConvention C>
         [[nodiscard]] EstimationState retract(const Configuration& cfg, const VecX& delta) const
@@ -88,4 +88,4 @@ namespace Aetherion::Estimation {
         }
     };
 
-}  // namespace Aetherion::Estimation
+} // namespace Aetherion::Estimation

@@ -42,11 +42,11 @@ namespace Aetherion::ODE::RKMK::Core {
     template <class S>
     concept ScalarLike =
         requires(S a, S b) {
-        // construction
+            // construction
             S{ 0 };
             S{ 1 };
 
-        // arithmetic
+            // arithmetic
             {
                 a + b
             } -> std::convertible_to<S>;
@@ -63,7 +63,7 @@ namespace Aetherion::ODE::RKMK::Core {
                 -a
             } -> std::convertible_to<S>;
 
-        // comparisons (needed for CondExp wrappers on doubles)
+            // comparisons (needed for CondExp wrappers on doubles)
             {
                 a < b
             } -> std::convertible_to<bool>;
@@ -88,7 +88,7 @@ namespace Aetherion::ODE::RKMK::Core {
             {
                 v.size()
             } -> std::convertible_to<Eigen::Index>;
-        // element access (vector overload)
+            // element access (vector overload)
             {
                 v(0)
             } -> std::convertible_to<typename V::Scalar>;

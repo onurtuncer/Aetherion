@@ -33,8 +33,8 @@ TEST_CASE("DirectionNEDFromAzimuthZenith - straight up at equator", "[coordinate
 {
     const double lat = 0.0;
     const double lon = 0.0;
-    const double theta = 0.0;   // Earth rotation angle
-    const double az = 0.0;   // azimuth doesn't matter for zenith=0
+    const double theta = 0.0; // Earth rotation angle
+    const double az = 0.0;    // azimuth doesn't matter for zenith=0
     const double zen = 0.0;   // zenith = 0 => along Up, which is D = -1 in NED
 
     Vec3<double> dir_ned = DirectionNEDFromAzimuthZenith(az, zen);

@@ -29,22 +29,22 @@
 
 namespace Aetherion::Examples::TumblingBrickWithDamping {
 
-/// @brief Six-DoF vector field for the NASA Atmos-03 tumbling brick with
-///        aerodynamic damping case.
-///
-/// Policy configuration:
-/// - Gravity  : J2 oblateness perturbation (WGS-84)
-/// - Aero     : Drag + rotary damping (Clp, Cmq, Cnr from NASA TM Table 5)
-/// - Thrust   : None
-/// - Mass     : Constant
+    /// @brief Six-DoF vector field for the NASA Atmos-03 tumbling brick with
+    ///        aerodynamic damping case.
+    ///
+    /// Policy configuration:
+    /// - Gravity  : J2 oblateness perturbation (WGS-84)
+    /// - Aero     : Drag + rotary damping (Clp, Cmq, Cnr from NASA TM Table 5)
+    /// - Thrust   : None
+    /// - Mass     : Constant
     using TumblingBrickWithDampingVF = RigidBody::VectorField<
-        FlightDynamics::J2GravityPolicy,          ///< Gravity: J2 perturbation.
-        FlightDynamics::BrickDampingAeroPolicy,   ///< Aero: drag + rate damping.
-        FlightDynamics::ZeroPropulsionPolicy,     ///< Propulsion: none.
-        FlightDynamics::ConstantMassPolicy        ///< Mass: constant.
+        FlightDynamics::J2GravityPolicy,        ///< Gravity: J2 perturbation.
+        FlightDynamics::BrickDampingAeroPolicy, ///< Aero: drag + rate damping.
+        FlightDynamics::ZeroPropulsionPolicy,   ///< Propulsion: none.
+        FlightDynamics::ConstantMassPolicy      ///< Mass: constant.
         >;
 
-/// @brief RKMK integrator stepper for @c TumblingBrickWithDampingVF.
+    /// @brief RKMK integrator stepper for @c TumblingBrickWithDampingVF.
     using TumblingBrickWithDampingStepper = RigidBody::SixDoFStepper<TumblingBrickWithDampingVF>;
 
 } // namespace Aetherion::Examples::TumblingBrickWithDamping

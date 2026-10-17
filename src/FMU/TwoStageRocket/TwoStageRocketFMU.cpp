@@ -93,7 +93,7 @@
 #include <fmu4cpp/fmu_base.hpp>
 
 // Standard library
-#include <algorithm>      // std::min
+#include <algorithm> // std::min
 #include <array>
 #include <cmath>
 #include <memory>
@@ -150,8 +150,8 @@ namespace {
     constexpr double kDefault_vEast0_mps = 0.0;
     constexpr double kDefault_vDown0_mps = 0.0;
 
-    constexpr double kDefault_stg2_ignition_time_s = 0.0;  // ignite immediately after staging
-    constexpr double kDefault_max_step_s = 0.0;  // 0 → use the communication step directly
+    constexpr double kDefault_stg2_ignition_time_s = 0.0; // ignite immediately after staging
+    constexpr double kDefault_max_step_s = 0.0;           // 0 → use the communication step directly
 
     // Environment defaults: calm air on a standard day.
     constexpr double kDefault_wind_mps = 0.0;
@@ -166,11 +166,11 @@ namespace {
 struct TwoStageRocketState
 {
     // ── Integration state ─────────────────────────────────────────────────────
-    std::array<double, 9> R{};   // SO(3) rotation matrix, row-major (body → ECI)
-    std::array<double, 3> r_I{};   // ECI position [m]
-    std::array<double, 6> nu_B{};   // body twist: [wx, wy, wz (rad/s), vx, vy, vz (m/s)]
-    double mass_kg{};   // vehicle mass [kg]
-    double sim_time_s{};   // elapsed simulation time inside the simulator [s]
+    std::array<double, 9> R{};    // SO(3) rotation matrix, row-major (body → ECI)
+    std::array<double, 3> r_I{};  // ECI position [m]
+    std::array<double, 6> nu_B{}; // body twist: [wx, wy, wz (rad/s), vx, vy, vz (m/s)]
+    double mass_kg{};             // vehicle mass [kg]
+    double sim_time_s{};          // elapsed simulation time inside the simulator [s]
 
     // ── Fuel / staging state (preserved across save/restore) ──────────────────
     double stg1_fuel_used_kg{};
@@ -178,38 +178,38 @@ struct TwoStageRocketState
     bool staged{};
 
     // ── Output cache (updated in do_step, registered by pointer) ─────────────
-    double alt_m{};  // altitude above MSL [m]
-    double lat_deg{};  // geodetic latitude [deg]
-    double lon_deg{};  // geodetic longitude [deg]
-    double g_m_s2{};  // local gravity magnitude [m/s²]
-    double yaw_rad{};  // ZYX Euler yaw   (body → NED) [rad]
-    double pitch_rad{};  // ZYX Euler pitch (body → NED) [rad]
-    double roll_rad{};  // ZYX Euler roll  (body → NED) [rad]
-    double p_rad_s{};  // body roll  rate wrt ECI [rad/s]
-    double q_rad_s{};  // body pitch rate wrt ECI [rad/s]
-    double r_rad_s{};  // body yaw   rate wrt ECI [rad/s]
-    double altRate_m_s{};  // dh/dt [m/s]
-    double v_north_m_s{};  // NED north velocity [m/s]
-    double v_east_m_s{};  // NED east  velocity [m/s]
-    double v_down_m_s{};  // NED down  velocity [m/s]
-    double a_m_s{};  // speed of sound [m/s]
-    double rho_kg_m3{};  // air density [kg/m³]
-    double P_Pa{};  // ambient pressure [Pa]
-    double T_K{};  // ambient temperature [K]
-    double aero_Fx_N{};  // aero body-X force  [N]
-    double aero_Fy_N{};  // aero body-Y force  [N]
-    double aero_Fz_N{};  // aero body-Z force  [N]
-    double aero_Mx_Nm{};  // aero roll  moment  [N·m]
-    double aero_My_Nm{};  // aero pitch moment  [N·m]
-    double aero_Mz_Nm{};  // aero yaw   moment  [N·m]
-    double mach{};  // Mach number [-]
-    double qbar_Pa{};  // dynamic pressure [Pa]
-    double vt_m_s{};  // true airspeed [m/s]
-    double thrust_N{};  // total axial thrust, body +x [N]
-    double mdot_kgs{};  // propellant consumption rate [kg/s]
-    double specificForce_x_m_s2{};  // body-X specific force at the CG [m/s²]
-    double specificForce_y_m_s2{};  // body-Y specific force at the CG [m/s²]
-    double specificForce_z_m_s2{};  // body-Z specific force at the CG [m/s²]
+    double alt_m{};                // altitude above MSL [m]
+    double lat_deg{};              // geodetic latitude [deg]
+    double lon_deg{};              // geodetic longitude [deg]
+    double g_m_s2{};               // local gravity magnitude [m/s²]
+    double yaw_rad{};              // ZYX Euler yaw   (body → NED) [rad]
+    double pitch_rad{};            // ZYX Euler pitch (body → NED) [rad]
+    double roll_rad{};             // ZYX Euler roll  (body → NED) [rad]
+    double p_rad_s{};              // body roll  rate wrt ECI [rad/s]
+    double q_rad_s{};              // body pitch rate wrt ECI [rad/s]
+    double r_rad_s{};              // body yaw   rate wrt ECI [rad/s]
+    double altRate_m_s{};          // dh/dt [m/s]
+    double v_north_m_s{};          // NED north velocity [m/s]
+    double v_east_m_s{};           // NED east  velocity [m/s]
+    double v_down_m_s{};           // NED down  velocity [m/s]
+    double a_m_s{};                // speed of sound [m/s]
+    double rho_kg_m3{};            // air density [kg/m³]
+    double P_Pa{};                 // ambient pressure [Pa]
+    double T_K{};                  // ambient temperature [K]
+    double aero_Fx_N{};            // aero body-X force  [N]
+    double aero_Fy_N{};            // aero body-Y force  [N]
+    double aero_Fz_N{};            // aero body-Z force  [N]
+    double aero_Mx_Nm{};           // aero roll  moment  [N·m]
+    double aero_My_Nm{};           // aero pitch moment  [N·m]
+    double aero_Mz_Nm{};           // aero yaw   moment  [N·m]
+    double mach{};                 // Mach number [-]
+    double qbar_Pa{};              // dynamic pressure [Pa]
+    double vt_m_s{};               // true airspeed [m/s]
+    double thrust_N{};             // total axial thrust, body +x [N]
+    double mdot_kgs{};             // propellant consumption rate [kg/s]
+    double specificForce_x_m_s2{}; // body-X specific force at the CG [m/s²]
+    double specificForce_y_m_s2{}; // body-Y specific force at the CG [m/s²]
+    double specificForce_z_m_s2{}; // body-Z specific force at the CG [m/s²]
 };
 static_assert(std::is_trivially_copyable_v<TwoStageRocketState>,
     "TwoStageRocketState must be trivially copyable for fmu4cpp state save/restore.");
@@ -347,7 +347,7 @@ public:
     // restored state_ (POD).
     void setFmuState(void* fmuState) override
     {
-        fmu_base::setFmuState(fmuState);   // copies saved TwoStageRocketState → state_
+        fmu_base::setFmuState(fmuState); // copies saved TwoStageRocketState → state_
         if (m_sim.has_value())
             unpackState();
     }
@@ -867,7 +867,7 @@ private:
     double p_atm_deltaP_Pa_{ kDefault_atm_deltaP_Pa };
 
     // ── Runtime objects ───────────────────────────────────────────────────────
-    double m_theta0{ 0.0 };   ///< Earth Rotation Angle at t=0 [rad].
+    double m_theta0{ 0.0 }; ///< Earth Rotation Angle at t=0 [rad].
 
     // Simulator is empty until exit_initialisation_mode; cleared on reset.
     std::optional<RocketSimulator> m_sim;

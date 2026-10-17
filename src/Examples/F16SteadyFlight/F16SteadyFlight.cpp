@@ -43,17 +43,17 @@
 
 // ── NASA Scenario 11 initial conditions ──────────────────────────────────────
 namespace {
-    constexpr double kLat_deg = 36.01917;    // Kitty Hawk, NC
+    constexpr double kLat_deg = 36.01917; // Kitty Hawk, NC
     constexpr double kLon_deg = -75.67444;
     constexpr double kAlt_ft = 10013.0;
-    constexpr double kAlt_m = kAlt_ft * 0.3048;   // 3051.9624 m
+    constexpr double kAlt_m = kAlt_ft * 0.3048; // 3051.9624 m
 
-    constexpr double kHeading_deg = 45.0;         // NE
-    constexpr double kRoll_deg = 0.0;          // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
-    constexpr double kVelocity_fps = 400.0;         // NE components in ft/s
-    constexpr double kVelocity_mps = kVelocity_fps * 0.3048;  // 121.92 m/s
+    constexpr double kHeading_deg = 45.0;                    // NE
+    constexpr double kRoll_deg = 0.0;                        // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
+    constexpr double kVelocity_fps = 400.0;                  // NE components in ft/s
+    constexpr double kVelocity_mps = kVelocity_fps * 0.3048; // 121.92 m/s
 
-    constexpr double kTAS_fps = 565.685;       // 335.15 KTAS
+    constexpr double kTAS_fps = 565.685; // 335.15 KTAS
     constexpr double kLbf_N = 4.448221615260751;
     constexpr double kFtLbf_Nm = 1.355817948329279;
     constexpr double kDeg = std::numbers::pi / 180.0;
@@ -63,13 +63,13 @@ namespace {
     // Equations of motion require moments about the CG (35 % MAC standard).
     // Offset = (35% - 25%) / 100 × c̄ = 0.10 × 11.32 ft × 0.3048 m/ft = 0.345 m.
     // Must match TrimSolver::xcg_from_ac_ft × kFt_m.
-    constexpr double kXcgFromAC_m = (35.0 - 25.0) / 100.0 * 11.32   // cbar_ft
-                                    * 0.3048; // ft to m  → 0.34486 m ≈ 1.132 ft
+    constexpr double kXcgFromAC_m = (35.0 - 25.0) / 100.0 * 11.32 // cbar_ft
+                                    * 0.3048;                     // ft to m  → 0.34486 m ≈ 1.132 ft
 }
 
 namespace Aetherion::Examples::F16SteadyFlight {
 
-// ── logStartupBanner ──────────────────────────────────────────────────────────
+    // ── logStartupBanner ──────────────────────────────────────────────────────────
 
     void F16SteadyFlightApplication::logStartupBanner() const
     {
@@ -83,20 +83,20 @@ namespace Aetherion::Examples::F16SteadyFlight {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── writeCsvHeader — Snapshot2 (31-column NASA format) ───────────────────────
+    // ── writeCsvHeader — Snapshot2 (31-column NASA format) ───────────────────────
 
     void F16SteadyFlightApplication::writeCsvHeader(std::ofstream& csv) const
     {
         Simulation::Snapshot2Traits::write_header(csv);
     }
 
-// ── prepareSimulation ─────────────────────────────────────────────────────────
+    // ── prepareSimulation ─────────────────────────────────────────────────────────
 
     void F16SteadyFlightApplication::prepareSimulation() const
     {
         const auto& simCfg = getConfig();
 
-    // ── 1. Load inertia from DAVE-ML ─────────────────────────────────────────
+        // ── 1. Load inertia from DAVE-ML ─────────────────────────────────────────
         const std::string inertiaPath = F16_INERTIA_FILE;
         if (inertiaPath.empty())
             throw std::runtime_error("F16_INERTIA_FILE not configured.");
@@ -106,7 +106,7 @@ namespace Aetherion::Examples::F16SteadyFlight {
         AE_CORE_INFO("  Ixx={:.1f}  Iyy={:.1f}  Izz={:.1f}  Ixz={:.1f}  [kg·m²]",
             ip.Ixx, ip.Iyy, ip.Izz, ip.Ixz);
 
-    // ── 2. Load aero and prop models ─────────────────────────────────────────
+        // ── 2. Load aero and prop models ─────────────────────────────────────────
         const std::string aeroPath = F16_AERO_FILE;
         const std::string propPath = F16_PROP_FILE;
         if (aeroPath.empty() || propPath.empty())
@@ -116,19 +116,19 @@ namespace Aetherion::Examples::F16SteadyFlight {
         AE_CORE_INFO("Loading prop model from '{}'", propPath);
         auto prop_model = std::make_shared<const Serialization::DAVEMLPropModel>(propPath);
 
-    // ── 3. Run trim solver ────────────────────────────────────────────────────
-    // Apparent weight at the trim point: J2 attraction — the same gravity
-    // J2GravityPolicy applies during integration — less the centripetal relief of
-    // level flight over the rotating Earth.  Trimming against the static weight
-    // would leave the vehicle with excess lift on the first step.
+        // ── 3. Run trim solver ────────────────────────────────────────────────────
+        // Apparent weight at the trim point: J2 attraction — the same gravity
+        // J2GravityPolicy applies during integration — less the centripetal relief of
+        // level flight over the rotating Earth.  Trimming against the static weight
+        // would leave the vehicle with excess lift on the first step.
         const double weight_lbf = FlightDynamics::LevelFlightTrimWeight_lbf(
             ip.mass_kg, kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps);
         FlightDynamics::TrimInputs tin{};
         tin.vt_fps = kTAS_fps;
         tin.alt_ft = kAlt_ft;
         tin.weight_lbf = weight_lbf;
-    // Aero damping at the rate F16AeroPolicy will actually see — the transport
-    // rate.  Pitch attitude is not known yet and q does not depend on it.
+        // Aero damping at the rate F16AeroPolicy will actually see — the transport
+        // rate.  Pitch attitude is not known yet and q does not depend on it.
         tin.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, 0.0, kRoll_deg);
 
@@ -147,7 +147,7 @@ namespace Aetherion::Examples::F16SteadyFlight {
         AE_CORE_INFO("  pwr   = {:.4f} %%", trim.pwr_pct);
         AE_CORE_INFO("  |r|   = {:.3e} lbf", trim.residual_norm);
 
-    // ── Propulsive wrench at trim — magnitude check ───────────────────────────
+        // ── Propulsive wrench at trim — magnitude check ───────────────────────────
         {
             const double alt_m = kAlt_ft * FlightDynamics::TrimSolver::kFt_m;
             const double a_fps = Environment::US1976Atmosphere(alt_m).a / FlightDynamics::TrimSolver::kFt_m;
@@ -168,19 +168,19 @@ namespace Aetherion::Examples::F16SteadyFlight {
             AE_CORE_INFO("  Mx = {:.4f} N·m,  Mz = {:.4f} N·m", po.mx_Nm, po.mz_Nm);
         }
 
-    // ── 4. Build initial state ────────────────────────────────────────────────
+        // ── 4. Build initial state ────────────────────────────────────────────────
         RigidBody::Config cfg{};
         cfg.pose.lat_deg = kLat_deg;
         cfg.pose.lon_deg = kLon_deg;
         cfg.pose.alt_m = kAlt_m;
         cfg.pose.azimuth_deg = kHeading_deg;
-        cfg.pose.zenith_deg = 90.0 - trim.alpha_deg;  // nearly horizontal, slight nose-up
-        cfg.pose.roll_deg = kRoll_deg;  // standard: roll=0 → z-down; apply NASA φ directly
+        cfg.pose.zenith_deg = 90.0 - trim.alpha_deg; // nearly horizontal, slight nose-up
+        cfg.pose.roll_deg = kRoll_deg;               // standard: roll=0 → z-down; apply NASA φ directly
         cfg.velocityNED.north_mps = kVelocity_mps;
         cfg.velocityNED.east_mps = kVelocity_mps;
         cfg.velocityNED.down_mps = 0.0;
-    // Attitude held fixed against the local-level frame, which tips forward at the
-    // transport rate as the vehicle moves over the curved Earth.
+        // Attitude held fixed against the local-level frame, which tips forward at the
+        // transport rate as the vehicle moves over the curved Earth.
         cfg.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, trim.alpha_deg, kRoll_deg);
         cfg.inertialParameters = ip;
@@ -194,7 +194,7 @@ namespace Aetherion::Examples::F16SteadyFlight {
             kXcgFromAC_m);
     }
 
-// ── writeInitialSnapshot ──────────────────────────────────────────────────────
+    // ── writeInitialSnapshot ──────────────────────────────────────────────────────
 
     void F16SteadyFlightApplication::writeInitialSnapshot(std::ofstream& csv) const
     {
@@ -204,7 +204,7 @@ namespace Aetherion::Examples::F16SteadyFlight {
             s2.time, s2.altitudeMsl_m, s2.trueAirspeed_m_s, s2.mach);
     }
 
-// ── stepAndRecord ─────────────────────────────────────────────────────────────
+    // ── stepAndRecord ─────────────────────────────────────────────────────────────
 
     auto F16SteadyFlightApplication::stepAndRecord(
         std::ofstream& csv, double h, bool doWrite) const -> StepObservation
@@ -229,7 +229,7 @@ namespace Aetherion::Examples::F16SteadyFlight {
         };
     }
 
-// ── logFinalSummary ───────────────────────────────────────────────────────────
+    // ── logFinalSummary ───────────────────────────────────────────────────────────
 
     void F16SteadyFlightApplication::logFinalSummary() const
     {
@@ -250,7 +250,7 @@ namespace Aetherion::Examples::F16SteadyFlight {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
+    // ── Private helpers ───────────────────────────────────────────────────────────
 
     double F16SteadyFlightApplication::computeInitialERA(double t0) noexcept
     {

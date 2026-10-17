@@ -75,10 +75,10 @@ namespace {
 
     // Parameters representative of the TwoStageRocket example mid-S1-burn
     // (the regime where the sign bug caused divergence).
-    constexpr double kMass_kg = 280'000.0;    // after ~7 s of burn
+    constexpr double kMass_kg = 280'000.0; // after ~7 s of burn
     constexpr double kIxx = 330'000.0;
     constexpr double kIyy = 32'000'000.0; // ≈ 30 MN·m²
-    constexpr double kXcg_m = 3.5;    // ~half of max 7.5 m offset
+    constexpr double kXcg_m = 3.5;        // ~half of max 7.5 m offset
 
     InertialParameters rocket_params()
     {
@@ -86,7 +86,7 @@ namespace {
         ip.mass_kg = kMass_kg;
         ip.Ixx = kIxx;
         ip.Iyy = kIyy;
-        ip.Izz = kIyy;      // axisymmetric
+        ip.Izz = kIyy; // axisymmetric
         ip.Ixy = 0.0;
         ip.Iyz = 0.0;
         ip.Ixz = 0.0;
@@ -101,7 +101,7 @@ namespace {
     // altitude so J2 gravity is well-defined.
     ODE::RKMK::Lie::SE3<double> pitched_pose()
     {
-        constexpr double alt_m = 30'000.0;     // 30 km — within atmosphere
+        constexpr double alt_m = 30'000.0; // 30 km — within atmosphere
         constexpr double pitch = 55.0 * std::numbers::pi / 180.0;
 
         ODE::RKMK::Lie::SE3<double> g = ODE::RKMK::Lie::SE3<double>::Identity();
@@ -278,10 +278,10 @@ TEST_CASE("Spatial inertia: free-fall with CG offset gives zero angular accelera
 
     StateD s0;
     s0.g = pitched_pose();
-    s0.nu_B = Eigen::Matrix<double, 6, 1>::Zero();  // at rest
+    s0.nu_B = Eigen::Matrix<double, 6, 1>::Zero(); // at rest
     s0.m = ip.mass_kg;
 
-    constexpr double dt = 0.001;   // 1 ms — same as Scenario 17 time step
+    constexpr double dt = 0.001; // 1 ms — same as Scenario 17 time step
 
     auto result = stepper.step(0.0, s0, dt);
 
@@ -306,7 +306,7 @@ TEST_CASE("Spatial inertia: free-fall with CG offset gives zero angular accelera
             REQUIRE(res.converged);
             s = TestStepper::unpack(res);
         }
-        REQUIRE(std::abs(s.nu_B(1)) < 1.0e-7);   // 100 steps of noise
+        REQUIRE(std::abs(s.nu_B(1)) < 1.0e-7); // 100 steps of noise
     }
 }
 
@@ -331,7 +331,7 @@ TEST_CASE("Spatial inertia: no cross-coupling when CG is at MRC (DXCG=0)",
     ip.Ixz = 0.0;
     ip.xbar_m = 0.0;
     ip.ybar_m = 0.0;
-    ip.zbar_m = 0.0;  // CG = MRC
+    ip.zbar_m = 0.0; // CG = MRC
 
     using TestVF = VectorField<FlightDynamics::J2GravityPolicy>;
     TestVF vf(ip);

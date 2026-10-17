@@ -28,21 +28,21 @@
 
 namespace Aetherion::Examples::TumblingBrickNoDamping {
 
-/// @brief Six-DoF vector field for the NASA Atmos-02 tumbling brick case.
-///
-/// Policy configuration:
-/// - Gravity  : J2 oblateness perturbation (WGS-84: μ, Re, J2)
-/// - Aero     : None — free torque-free tumble (Euler equations only)
-/// - Thrust   : None
-/// - Mass     : Constant (no propellant consumption)
+    /// @brief Six-DoF vector field for the NASA Atmos-02 tumbling brick case.
+    ///
+    /// Policy configuration:
+    /// - Gravity  : J2 oblateness perturbation (WGS-84: μ, Re, J2)
+    /// - Aero     : None — free torque-free tumble (Euler equations only)
+    /// - Thrust   : None
+    /// - Mass     : Constant (no propellant consumption)
     using TumblingBrickNoDampingVF = RigidBody::VectorField<
-        FlightDynamics::J2GravityPolicy,       ///< Gravity: J2 perturbation (WGS-84).
-        FlightDynamics::ZeroAeroPolicy,        ///< Aerodynamics: none (no damping).
-        FlightDynamics::ZeroPropulsionPolicy,  ///< Propulsion: none.
-        FlightDynamics::ConstantMassPolicy     ///< Mass: constant.
+        FlightDynamics::J2GravityPolicy,      ///< Gravity: J2 perturbation (WGS-84).
+        FlightDynamics::ZeroAeroPolicy,       ///< Aerodynamics: none (no damping).
+        FlightDynamics::ZeroPropulsionPolicy, ///< Propulsion: none.
+        FlightDynamics::ConstantMassPolicy    ///< Mass: constant.
         >;
 
-/// @brief RKMK integrator stepper for @c TumblingBrickNoDampingVF.
+    /// @brief RKMK integrator stepper for @c TumblingBrickNoDampingVF.
     using TumblingBrickNoDampingStepper = RigidBody::SixDoFStepper<TumblingBrickNoDampingVF>;
 
 } // namespace Aetherion::Examples::TumblingBrickNoDamping

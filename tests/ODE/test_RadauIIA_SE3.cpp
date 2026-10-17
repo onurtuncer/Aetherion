@@ -261,7 +261,7 @@ TEST_CASE("RadauIIA_RKMK_SE3: pure translation constant velocity matches p0 + h*
 {
     using SE3d = Lie::SE3<double>;
 
-   // const Eigen::Quaterniond q0 = Eigen::AngleAxisd(0.4, Eigen::Vector3d(0.2, -0.5, 0.1).normalized());
+    // const Eigen::Quaterniond q0 = Eigen::AngleAxisd(0.4, Eigen::Vector3d(0.2, -0.5, 0.1).normalized());
     const Eigen::Quaterniond q0(Eigen::AngleAxisd(0.4, Eigen::Vector3d(0.2, -0.5, 0.1).normalized()));
 
     const Eigen::Vector3d p0(-3.0, 0.2, 5.0);
@@ -282,7 +282,7 @@ TEST_CASE("RadauIIA_RKMK_SE3: pure translation constant velocity matches p0 + h*
     const auto g1 = Lie::to_qp(res.g1);
 
     const Eigen::Matrix3d R0 = q0.normalized().toRotationMatrix();
-    const Eigen::Vector3d p_ref = p0 + h * (R0 * f.v);   // <-- key fix
+    const Eigen::Vector3d p_ref = p0 + h * (R0 * f.v); // <-- key fix
 
     REQUIRE((g1.p - p_ref).norm() == Approx(0.0).margin(1e-10));
 

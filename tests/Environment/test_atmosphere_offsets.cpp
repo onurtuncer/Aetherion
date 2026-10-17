@@ -30,7 +30,7 @@ using Catch::Matchers::WithinRel;
 namespace {
     constexpr double kG0 = 9.80665;
     constexpr double kR = 287.05287;
-    constexpr double kRe = 6356766.0;   // geopotential reference radius
+    constexpr double kRe = 6356766.0; // geopotential reference radius
 
     // Geometric altitude of a geopotential layer base.
     double geometricOf(double H_m) { return H_m * kRe / (kRe - H_m); }
@@ -63,7 +63,7 @@ TEST_CASE("AtmosphereOffsets: ISA + 15 K at sea level", "[US1976][offsets]")
     const auto s = US1976Atmosphere(0.0, AtmosphereOffsets{ .deltaT_K = 15.0, .deltaP_sl_Pa = 0.0 });
     CHECK_THAT(s.T, WithinAbs(303.15, 1e-9));
     CHECK_THAT(s.p, WithinAbs(101325.0, 1e-6));
-    CHECK_THAT(s.rho, WithinRel(101325.0 / (kR * 303.15), 1e-9));   // 1.1644 kg/m^3
+    CHECK_THAT(s.rho, WithinRel(101325.0 / (kR * 303.15), 1e-9)); // 1.1644 kg/m^3
     CHECK_THAT(s.a, WithinRel(std::sqrt(1.4 * kR * 303.15), 1e-9));
 }
 
@@ -120,7 +120,7 @@ TEST_CASE("AtmosphereOffsets: pressure is continuous across layer bases", "[US19
             const double pl = US1976Atmosphere(h - 0.01, off).p;
             const double pu = US1976Atmosphere(h + 0.01, off).p;
             INFO("dT=" << off.deltaT_K << " H=" << H);
-            CHECK_THAT(pu, WithinRel(pl, 1e-4));   // the published table is itself rounded to ~1e-6
+            CHECK_THAT(pu, WithinRel(pl, 1e-4)); // the published table is itself rounded to ~1e-6
         }
     }
 }

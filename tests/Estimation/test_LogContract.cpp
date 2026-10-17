@@ -39,7 +39,7 @@ namespace {
 
     const Configuration kGnssPosBaro{ { BlockId::NavCore, BlockId::GyroBias, BlockId::AccelBias, BlockId::BaroBias },
         { MeasurementId::GnssPosition, MeasurementId::Barometer } };
-}  // namespace
+} // namespace
 
 TEST_CASE("Current IMU, baro and F-16 truth logs bind", "[estimation][logcontract]")
 {
@@ -103,7 +103,7 @@ TEST_CASE("Sidecar parsing: no trailing newline, lines without '='", "[estimatio
 {
     const auto kv = parseSidecar("# run 7\nlat0_deg = 36.5\nlon0_deg=-121.25\nalt0_ft=10000\n\n"
                                  "gps_latency_s=0.2\nrealtime_factor=1");
-    REQUIRE(kv.at("lat0_deg") == "36.5");  // trimmed
+    REQUIRE(kv.at("lat0_deg") == "36.5"); // trimmed
     REQUIRE(kv.at("realtime_factor") == "1");
     REQUIRE_FALSE(kv.contains("# run 7"));
 }

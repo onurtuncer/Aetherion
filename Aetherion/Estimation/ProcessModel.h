@@ -73,7 +73,7 @@
 
 namespace Aetherion::Estimation {
 
-/// One IMU sample, body frame: inertial angular rate and specific force.
+    /// One IMU sample, body frame: inertial angular rate and specific force.
     template <class S>
     struct ImuSample
     {
@@ -81,29 +81,29 @@ namespace Aetherion::Estimation {
         Eigen::Matrix<S, 3, 1> accel_m_s2;
     };
 
-/// Continuous-time noise densities (square roots of the PSDs).
+    /// Continuous-time noise densities (square roots of the PSDs).
     template <class S>
     struct ProcessNoise
     {
-        S gyroNoise = S(0);      ///< [rad/s/sqrt(Hz)]
-        S accelNoise = S(0);     ///< [m/s^2/sqrt(Hz)]
-        S gyroBiasWalk = S(0);   ///< [rad/s^2/sqrt(Hz)]
-        S accelBiasWalk = S(0);  ///< [m/s^3/sqrt(Hz)]
-        S baroBiasWalk = S(0);   ///< [m/s/sqrt(Hz)]
+        S gyroNoise = S(0);     ///< [rad/s/sqrt(Hz)]
+        S accelNoise = S(0);    ///< [m/s^2/sqrt(Hz)]
+        S gyroBiasWalk = S(0);  ///< [rad/s^2/sqrt(Hz)]
+        S accelBiasWalk = S(0); ///< [m/s^3/sqrt(Hz)]
+        S baroBiasWalk = S(0);  ///< [m/s/sqrt(Hz)]
     };
 
-/// Dimension of the noise vector n for a configuration.
+    /// Dimension of the noise vector n for a configuration.
     [[nodiscard]] constexpr int noiseDimension(const Configuration& cfg)
     {
-        int n = 6;  // IMU white noise
+        int n = 6; // IMU white noise
         for (const BlockSpec& s : kBlockLibrary)
             if (s.process == ProcessModelKind::RandomWalk && cfg.has(s.id))
                 n += s.dim;
         return n;
     }
 
-/// Column of block b's random-walk driver in n, or -1 if b is not a carried
-/// random-walk block.
+    /// Column of block b's random-walk driver in n, or -1 if b is not a carried
+    /// random-walk block.
     [[nodiscard]] constexpr int noiseOffset(const Configuration& cfg, BlockId b)
     {
         int n = 6;
@@ -133,16 +133,16 @@ namespace Aetherion::Estimation {
 
         [[nodiscard]] const LciFrame<S>& frame() const { return frame_; }
 
-  /// One step of the nonlinear model. Biases are random walks: their mean
-  /// propagation is the identity.
-  ///
-  /// The specific force is rotated by the mid-step attitude R Exp(w dt/2),
-  /// which is the velocity increment integral(R Exp(w t) a dt) to second
-  /// order. Rotating by the start-of-step attitude instead drops the
-  /// dt^2/2 [a]x coupling of the gyro bias into velocity, and the
-  /// linearisation of the step then disagrees with Phi at first order (the
-  /// finite-difference test shows a residual ratio of 2, not 8, per halving
-  /// of dt).
+        /// One step of the nonlinear model. Biases are random walks: their mean
+        /// propagation is the identity.
+        ///
+        /// The specific force is rotated by the mid-step attitude R Exp(w dt/2),
+        /// which is the velocity increment integral(R Exp(w t) a dt) to second
+        /// order. Rotating by the start-of-step attitude instead drops the
+        /// dt^2/2 [a]x coupling of the gyro bias into velocity, and the
+        /// linearisation of the step then disagrees with Phi at first order (the
+        /// finite-difference test shows a residual ratio of 2, not 8, per halving
+        /// of dt).
         [[nodiscard]] State propagate(const State& x, const ImuSample<S>& u, const S& dt) const
         {
             namespace SO3 = ODE::RKMK::Lie::SO3;
@@ -158,8 +158,8 @@ namespace Aetherion::Estimation {
             return out;
         }
 
-  /// Continuous error dynamics at x: F (n x n) and G (n x m) with
-  /// n = cfg.dimension(), m = noiseDimension(cfg).
+        /// Continuous error dynamics at x: F (n x n) and G (n x m) with
+        /// n = cfg.dimension(), m = noiseDimension(cfg).
         template <ErrorConvention C>
         void errorJacobians(const Configuration& cfg, const State& x, const ImuSample<S>& u, MatX& F, MatX& G) const
         {
@@ -220,7 +220,7 @@ namespace Aetherion::Estimation {
             }
         }
 
-  /// Diagonal PSD matrix Qc of n for a configuration.
+        /// Diagonal PSD matrix Qc of n for a configuration.
         [[nodiscard]] MatX continuousNoiseCovariance(const Configuration& cfg, const ProcessNoise<S>& q) const
         {
             MatX Qc = MatX::Zero(noiseDimension(cfg), noiseDimension(cfg));
@@ -242,9 +242,9 @@ namespace Aetherion::Estimation {
             return Qc;
         }
 
-  /// Propagate x over one IMU step and return the discrete error transition
-  /// Phi and process noise Qd for convention C (trapezoidal F, G; see the
-  /// header comment). P propagates as Phi P Phi^T + Qd.
+        /// Propagate x over one IMU step and return the discrete error transition
+        /// Phi and process noise Qd for convention C (trapezoidal F, G; see the
+        /// header comment). P propagates as Phi P Phi^T + Qd.
         template <ErrorConvention C>
         [[nodiscard]] State step(const Configuration& cfg,
             const State& x,
@@ -272,4 +272,4 @@ namespace Aetherion::Estimation {
         LciFrame<S> frame_;
     };
 
-}  // namespace Aetherion::Estimation
+} // namespace Aetherion::Estimation

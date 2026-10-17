@@ -98,7 +98,7 @@ TEST_CASE("LocalOrientationNED - pure roll", "[orientation][ned]")
 
     // Base attitude: body aligned with NED.
     // Apply roll about body x_B which is aligned with N (North).
-    const double roll_cmd = 30.0 * pi / 180.0; // 30 degrees
+    const double roll_cmd = 30.0 * pi / 180.0;                 // 30 degrees
     const std::array<double, 3> axis_forward{ 1.0, 0.0, 0.0 }; // NED x-axis (North)
     const Quat<double> q_body_to_inertial = AxisAngleToQuat(axis_forward, roll_cmd);
 

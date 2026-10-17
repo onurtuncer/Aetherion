@@ -28,7 +28,7 @@ TEST_CASE("Block order is canonical, not insertion order", "[estimation][configu
     const Configuration a{ { BlockId::BaroBias, BlockId::GyroBias, BlockId::NavCore }, {} };
     const Configuration b{ { BlockId::NavCore, BlockId::GyroBias, BlockId::BaroBias }, {} };
     REQUIRE(a.offset(BlockId::GyroBias) == 9);
-    REQUIRE(a.offset(BlockId::BaroBias) == 12);  // accel bias absent: no gap
+    REQUIRE(a.offset(BlockId::BaroBias) == 12); // accel bias absent: no gap
     REQUIRE(a.offset(BlockId::AccelBias) == -1);
     REQUIRE(a.hash() == b.hash());
 }

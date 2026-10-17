@@ -281,7 +281,7 @@ namespace Aetherion::Testing::Flat {
     inline Vec13 initial_state(const Eigen::Vector3d& w0, const Eigen::Vector3d& v0)
     {
         Vec13 y = Vec13::Zero();
-        y(0) = 1.0;                     // identity quaternion
+        y(0) = 1.0; // identity quaternion
         y.segment<3>(7) = w0;
         y.segment<3>(10) = v0;
         return y;
@@ -290,7 +290,7 @@ namespace Aetherion::Testing::Flat {
     inline Eigen::Matrix3d rotation_from(const Vec13& y)
     {
         const Eigen::Quaterniond q(y(0), y(1), y(2), y(3));
-        return q.toRotationMatrix();    // no normalisation -- deliberate
+        return q.toRotationMatrix(); // no normalisation -- deliberate
     }
 
     inline double orthonormality_defect(const Eigen::Matrix3d& R)

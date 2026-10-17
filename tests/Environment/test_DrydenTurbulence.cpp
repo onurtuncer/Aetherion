@@ -33,8 +33,8 @@ using Catch::Matchers::WithinRel;
 
 namespace {
 
-    constexpr double kV = 200.0;   // airspeed [m/s]
-    constexpr double kL = 533.4;   // scale length [m]
+    constexpr double kV = 200.0; // airspeed [m/s]
+    constexpr double kL = 533.4; // scale length [m]
     constexpr double kPi = std::numbers::pi;
 
     DrydenParameters testParams(double su = 1.0, double sv = 2.0, double sw = 3.0)
@@ -152,7 +152,7 @@ TEST_CASE("DrydenTurbulence: variance of every linear channel is sigma^2, p matc
     const auto prm = testParams(1.0, 2.0, 3.0);
     DrydenTurbulence t(prm, 1);
     const double dt = 0.02;
-    const int N = 10'000'000;           // 2e5 s: ~3.7e4 correlation times of L/V
+    const int N = 10'000'000; // 2e5 s: ~3.7e4 correlation times of L/V
 
     std::vector<double> u, v, w, p;
     u.reserve(N);
@@ -187,7 +187,7 @@ TEST_CASE("DrydenTurbulence: spectrum matches MIL-F-8785C, including the sqrt(3)
     const auto prm = testParams(1.0, 2.0, 3.0);
     DrydenTurbulence t(prm, 3);
     const double dt = 0.02;
-    const int Nseg = 4096;                       // 81.9 s per segment, d_omega = 0.077 rad/s
+    const int Nseg = 4096;                          // 81.9 s per segment, d_omega = 0.077 rad/s
     const std::vector<int> bins = { 2, 5, 13, 39 }; // 0.15, 0.38, 1.0, 3.0 rad/s (corner V/L = 0.375)
     Periodogram pu(Nseg, dt, bins), pw(Nseg, dt, bins);
 
@@ -241,7 +241,7 @@ TEST_CASE("DrydenTurbulence: statistics do not depend on the step size", "[dryde
     CHECK_THAT(s[0].var, WithinRel(9.0, 0.05));
     CHECK_THAT(s[1].var, WithinRel(9.0, 0.05));
     CHECK_THAT(s[1].var, WithinRel(s[0].var, 0.06));
-    CHECK_THAT(vr[1], WithinRel(vr[0], 0.08));   // the lagged-derivative channel too
+    CHECK_THAT(vr[1], WithinRel(vr[0], 0.08)); // the lagged-derivative channel too
     CHECK(vr[0] > 0.0);
 }
 
@@ -286,7 +286,7 @@ TEST_CASE("DrydenTurbulence: a restored noise state reproduces the realisation g
     // Three checkpoints in a row, one of them after an odd number of gaussian
     // draws (a Box-Muller spare pending), each replayed exactly.
     DrydenTurbulence a(testParams(), 42);
-    for (int i = 0; i < 37; ++i) a.step(0.02, kV);     // 37 steps: an odd number of draws is likely
+    for (int i = 0; i < 37; ++i) a.step(0.02, kV); // 37 steps: an odd number of draws is likely
     const auto x = a.states();
     const auto n = a.noiseState();
     CHECK(n.seed == 42);
@@ -296,7 +296,7 @@ TEST_CASE("DrydenTurbulence: a restored noise state reproduces the realisation g
     original.reserve(200);
     for (int i = 0; i < 200; ++i) original.push_back(a.step(0.02, kV));
 
-    DrydenTurbulence b(testParams(), 7);               // different seed, different history
+    DrydenTurbulence b(testParams(), 7); // different seed, different history
     for (int i = 0; i < 11; ++i) b.step(0.02, kV);
     b.setStates(x);
     b.setNoiseState(n);

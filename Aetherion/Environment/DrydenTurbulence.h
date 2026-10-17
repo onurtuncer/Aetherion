@@ -87,29 +87,29 @@
 
 namespace Aetherion::Environment {
 
-/// Gust state seen by an aero policy, body axes.
+    /// Gust state seen by an aero policy, body axes.
     struct GustState
     {
-        double u_mps{ 0.0 };  ///< Gust velocity along body x [m/s]
-        double v_mps{ 0.0 };  ///< Gust velocity along body y [m/s]
-        double w_mps{ 0.0 };  ///< Gust velocity along body z (down) [m/s]
-        double p_rad_s{ 0.0 };  ///< Angular velocity of the air about body x [rad/s]
-        double q_rad_s{ 0.0 };  ///< Angular velocity of the air about body y [rad/s]
-        double r_rad_s{ 0.0 };  ///< Angular velocity of the air about body z [rad/s]
+        double u_mps{ 0.0 };   ///< Gust velocity along body x [m/s]
+        double v_mps{ 0.0 };   ///< Gust velocity along body y [m/s]
+        double w_mps{ 0.0 };   ///< Gust velocity along body z (down) [m/s]
+        double p_rad_s{ 0.0 }; ///< Angular velocity of the air about body x [rad/s]
+        double q_rad_s{ 0.0 }; ///< Angular velocity of the air about body y [rad/s]
+        double r_rad_s{ 0.0 }; ///< Angular velocity of the air about body z [rad/s]
 
         [[nodiscard]] Eigen::Vector3d linear() const { return { u_mps, v_mps, w_mps }; }
         [[nodiscard]] Eigen::Vector3d angular() const { return { p_rad_s, q_rad_s, r_rad_s }; }
     };
 
-/// Spectral parameters of the Dryden model (MIL-F-8785C scale lengths).
+    /// Spectral parameters of the Dryden model (MIL-F-8785C scale lengths).
     struct DrydenParameters
     {
-        double sigma_u_mps{ 0.0 };   ///< RMS longitudinal gust [m/s]; all sigmas zero = off
-        double sigma_v_mps{ 0.0 };   ///< RMS lateral gust [m/s]
-        double sigma_w_mps{ 0.0 };   ///< RMS vertical gust [m/s]
-        double L_u_m{ 533.4 }; ///< Longitudinal scale length [m] (1750 ft)
-        double L_v_m{ 533.4 }; ///< Lateral scale length [m]
-        double L_w_m{ 533.4 }; ///< Vertical scale length [m]
+        double sigma_u_mps{ 0.0 };  ///< RMS longitudinal gust [m/s]; all sigmas zero = off
+        double sigma_v_mps{ 0.0 };  ///< RMS lateral gust [m/s]
+        double sigma_w_mps{ 0.0 };  ///< RMS vertical gust [m/s]
+        double L_u_m{ 533.4 };      ///< Longitudinal scale length [m] (1750 ft)
+        double L_v_m{ 533.4 };      ///< Lateral scale length [m]
+        double L_w_m{ 533.4 };      ///< Vertical scale length [m]
         double wingspan_m{ 9.144 }; ///< Wingspan b for the rotational gusts [m] (F-16: 30 ft)
 
         [[nodiscard]] bool isOff() const noexcept
@@ -118,18 +118,18 @@ namespace Aetherion::Environment {
         }
     };
 
-/// MIL-F-8785C low-altitude (h < 1000 ft) scale lengths and intensities.
-///
-/// @param alt_agl_m  Height above ground [m]; clamped to [3 m, 304.8 m].
-/// @param W20_mps    Mean wind speed at 20 ft (6.1 m) above ground [m/s].
-///                   The specification's "light / moderate / severe" are
-///                   W20 = 15 / 30 / 45 kt.
-/// @param wingspan_m Wingspan for the rotational gusts [m].
-///
-/// Above 2000 ft the specification's intensities come from a chart of
-/// probability of exceedance versus altitude (MIL-F-8785C Figure 7) that is
-/// not reproduced here; set the six numbers directly for that regime, with
-/// the default 533.4 m scale lengths.
+    /// MIL-F-8785C low-altitude (h < 1000 ft) scale lengths and intensities.
+    ///
+    /// @param alt_agl_m  Height above ground [m]; clamped to [3 m, 304.8 m].
+    /// @param W20_mps    Mean wind speed at 20 ft (6.1 m) above ground [m/s].
+    ///                   The specification's "light / moderate / severe" are
+    ///                   W20 = 15 / 30 / 45 kt.
+    /// @param wingspan_m Wingspan for the rotational gusts [m].
+    ///
+    /// Above 2000 ft the specification's intensities come from a chart of
+    /// probability of exceedance versus altitude (MIL-F-8785C Figure 7) that is
+    /// not reproduced here; set the six numbers directly for that regime, with
+    /// the default 533.4 m scale lengths.
     inline DrydenParameters DrydenLowAltitudeParameters(double alt_agl_m, double W20_mps,
         double wingspan_m = 9.144)
     {
@@ -150,8 +150,8 @@ namespace Aetherion::Environment {
 
     namespace detail {
 
-    /// Matrix exponential by scaling and squaring with a Taylor series.
-    /// Adequate for the small, well-conditioned Van Loan blocks used here.
+        /// Matrix exponential by scaling and squaring with a Taylor series.
+        /// Adequate for the small, well-conditioned Van Loan blocks used here.
         template <int N>
         Eigen::Matrix<double, N, N> MatrixExponential(const Eigen::Matrix<double, N, N>& M)
         {
@@ -175,9 +175,9 @@ namespace Aetherion::Environment {
             return result;
         }
 
-    /// Exact discretisation of  dx = A x dt + B dW  (unit-intensity white
-    /// noise): returns Phi = exp(A dt) and Q = integral of exp(As) B B^T
-    /// exp(A^T s) ds over [0, dt], by Van Loan's block exponential.
+        /// Exact discretisation of  dx = A x dt + B dW  (unit-intensity white
+        /// noise): returns Phi = exp(A dt) and Q = integral of exp(As) B B^T
+        /// exp(A^T s) ds over [0, dt], by Van Loan's block exponential.
         template <int N>
         void VanLoanDiscretise(const Eigen::Matrix<double, N, N>& A,
             const Eigen::Matrix<double, N, 1>& B,
@@ -192,11 +192,11 @@ namespace Aetherion::Environment {
             const auto E = MatrixExponential<2 * N>(M);
             Phi = E.template block<N, N>(N, N).transpose();
             Q = Phi * E.template block<N, N>(0, N);
-        // Symmetrise against round-off.
+            // Symmetrise against round-off.
             Q = 0.5 * (Q + Q.transpose()).eval();
         }
 
-    /// Lower Cholesky factor with a guard against tiny negative pivots.
+        /// Lower Cholesky factor with a guard against tiny negative pivots.
         template <int N>
         Eigen::Matrix<double, N, N> SafeCholesky(const Eigen::Matrix<double, N, N>& Q)
         {
@@ -216,8 +216,8 @@ namespace Aetherion::Environment {
 
     } // namespace detail
 
-/// Dryden turbulence filter bank, stepped at a fixed dt between integrator
-/// sub-steps.  See the header comment for the model and the conventions.
+    /// Dryden turbulence filter bank, stepped at a fixed dt between integrator
+    /// sub-steps.  See the header comment for the model and the conventions.
     class DrydenTurbulence
     {
     public:
@@ -231,7 +231,7 @@ namespace Aetherion::Environment {
             reseed(seed);
         }
 
-    /// Restart the noise stream. Does not clear the filter states.
+        /// Restart the noise stream. Does not clear the filter states.
         void reseed(std::uint64_t seed)
         {
             m_rng.seed(seed);
@@ -240,11 +240,11 @@ namespace Aetherion::Environment {
             m_haveSpare = false;
         }
 
-    /// Where the noise stream is: enough to put the generator back exactly.
-    /// The engine is not copied out (mt19937_64 carries 2.5 kB); the seed and
-    /// the number of draws since seeding describe its position, and the
-    /// Box-Muller spare, if one is pending, completes it. Trivially copyable,
-    /// so an FMU can hold it in its state record next to states().
+        /// Where the noise stream is: enough to put the generator back exactly.
+        /// The engine is not copied out (mt19937_64 carries 2.5 kB); the seed and
+        /// the number of draws since seeding describe its position, and the
+        /// Box-Muller spare, if one is pending, completes it. Trivially copyable,
+        /// so an FMU can hold it in its state record next to states().
         struct NoiseState
         {
             std::uint64_t seed{ 1 };
@@ -258,8 +258,8 @@ namespace Aetherion::Environment {
             return NoiseState{ m_seed, m_draws, m_spare, m_haveSpare };
         }
 
-    /// Put the stream back where noiseState() found it: the next gaussian()
-    /// is the one that followed. Costs one engine draw per draw replayed.
+        /// Put the stream back where noiseState() found it: the next gaussian()
+        /// is the one that followed. Costs one engine draw per draw replayed.
         void setNoiseState(const NoiseState& n)
         {
             m_rng.seed(n.seed);
@@ -270,7 +270,7 @@ namespace Aetherion::Environment {
             m_haveSpare = n.haveSpare;
         }
 
-    /// Zero the filter states (the gust starts from calm).
+        /// Zero the filter states (the gust starts from calm).
         void resetStates() noexcept
         {
             m_x.fill(0.0);
@@ -280,15 +280,15 @@ namespace Aetherion::Environment {
         [[nodiscard]] const DrydenParameters& parameters() const noexcept { return m_params; }
         void setParameters(const DrydenParameters& p) noexcept { m_params = p; }
 
-    /// Filter states, for save/restore.  Layout:
-    ///   0: u
-    ///   1,2,3: v shaping (2) and r lag
-    ///   4,5,6: w shaping (2) and q lag
-    ///   7: p
+        /// Filter states, for save/restore.  Layout:
+        ///   0: u
+        ///   1,2,3: v shaping (2) and r lag
+        ///   4,5,6: w shaping (2) and q lag
+        ///   7: p
         [[nodiscard]] const std::array<double, kNumStates>& states() const noexcept { return m_x; }
         void setStates(const std::array<double, kNumStates>& x) noexcept { m_x = x; }
 
-    /// Gust corresponding to the current filter states at airspeed V.
+        /// Gust corresponding to the current filter states at airspeed V.
         [[nodiscard]] GustState current(double V_mps) const
         {
             const double V = std::max(V_mps, 1.0);
@@ -302,11 +302,11 @@ namespace Aetherion::Environment {
             return g;
         }
 
-    /// Advance the filters by dt at airspeed V_mps and return the new gust.
-    ///
-    /// dt must be the same from call to call for the statistics to be those
-    /// of the continuous model (the discretisation is exact for any single
-    /// dt, but a varying dt changes the process, not just its realisation).
+        /// Advance the filters by dt at airspeed V_mps and return the new gust.
+        ///
+        /// dt must be the same from call to call for the statistics to be those
+        /// of the continuous model (the discretisation is exact for any single
+        /// dt, but a varying dt changes the process, not just its realisation).
         GustState step(double dt, double V_mps)
         {
             if (m_params.isOff() || dt <= 0.0) {
@@ -316,14 +316,14 @@ namespace Aetherion::Environment {
             const double b = std::max(m_params.wingspan_m, 0.1);
             constexpr double kPi = std::numbers::pi;
 
-        // ── u: first-order Gauss-Markov, exact ZOH ───────────────────────────
+            // ── u: first-order Gauss-Markov, exact ZOH ───────────────────────────
             {
                 const double a = V / m_params.L_u_m;
                 const double phi = std::exp(-a * dt);
                 m_x[0] = (phi * m_x[0]) + (m_params.sigma_u_mps * std::sqrt(std::max(0.0, 1.0 - (phi * phi))) * gaussian());
             }
 
-        // ── p: first-order Gauss-Markov on MIL-F-8785C Phi_p, exact ZOH ──────
+            // ── p: first-order Gauss-Markov on MIL-F-8785C Phi_p, exact ZOH ──────
             {
                 const double a = kPi * V / (4.0 * b);
                 const double Lw = m_params.L_w_m;
@@ -332,7 +332,7 @@ namespace Aetherion::Environment {
                 m_x[7] = (phi * m_x[7]) + (std::sqrt(var) * std::sqrt(std::max(0.0, 1.0 - (phi * phi))) * gaussian());
             }
 
-        // ── v with r lag (corner pi V / 3b), w with q lag (corner pi V / 4b) ─
+            // ── v with r lag (corner pi V / 3b), w with q lag (corner pi V / 4b) ─
             stepSecondOrderWithLag(m_params.sigma_v_mps, m_params.L_v_m, V,
                 kPi * V / (3.0 * b), dt, m_x[1], m_x[2], m_x[3], m_cacheV);
             stepSecondOrderWithLag(m_params.sigma_w_mps, m_params.L_w_m, V,
@@ -342,21 +342,21 @@ namespace Aetherion::Environment {
         }
 
     private:
-    // The exact discretisation depends only on (sigma, L, V, corner, dt).  V
-    // changes slowly in flight and not at all in a statistics test, so the
-    // transition matrix and the noise factor are recomputed only when one of
-    // those inputs moves.
+        // The exact discretisation depends only on (sigma, L, V, corner, dt).  V
+        // changes slowly in flight and not at all in a statistics test, so the
+        // transition matrix and the noise factor are recomputed only when one of
+        // those inputs moves.
         struct LagCache
         {
             double sigma{ -1.0 }, L{ -1.0 }, V{ -1.0 }, al{ -1.0 }, dt{ -1.0 };
             Eigen::Matrix3d Phi{ Eigen::Matrix3d::Identity() };
             Eigen::Matrix3d Lc{ Eigen::Matrix3d::Zero() };
         };
-    // Output gain K of the second-order shaping filter: with the canonical
-    // states (x1, x2) driven by unit-intensity white noise and the double pole
-    // at -a, the stationary covariance is diag(1/(4a^3), 1/(4a)), so the
-    // output K (a^2 x1 + sqrt(3) a x2) has variance K^2 a.  K = sigma / sqrt(a)
-    // makes it sigma^2.
+        // Output gain K of the second-order shaping filter: with the canonical
+        // states (x1, x2) driven by unit-intensity white noise and the double pole
+        // at -a, the stationary covariance is diag(1/(4a^3), 1/(4a)), so the
+        // output K (a^2 x1 + sqrt(3) a x2) has variance K^2 a.  K = sigma / sqrt(a)
+        // makes it sigma^2.
         static double outputSecondOrder(double sigma, double L, double V, double x1, double x2)
         {
             const double a = V / L;
@@ -364,12 +364,12 @@ namespace Aetherion::Environment {
             return K * ((a * a * x1) + (std::numbers::sqrt3 * a * x2));
         }
 
-    // Exact ZOH step of the 3-state system: second-order shaping filter
-    // (x1, x2) plus the first-order lag xlag on its time derivative divided by V.
-    //   x1' = x2
-    //   x2' = -a^2 x1 - 2a x2 + xi
-    //   xlag' = -al xlag + al * (d/dt output) / V
-    // where d/dt output = K(-sqrt3 a^3 x1 + a^2 (1 - 2 sqrt3) x2 + sqrt3 a xi).
+        // Exact ZOH step of the 3-state system: second-order shaping filter
+        // (x1, x2) plus the first-order lag xlag on its time derivative divided by V.
+        //   x1' = x2
+        //   x2' = -a^2 x1 - 2a x2 + xi
+        //   xlag' = -al xlag + al * (d/dt output) / V
+        // where d/dt output = K(-sqrt3 a^3 x1 + a^2 (1 - 2 sqrt3) x2 + sqrt3 a xi).
         void stepSecondOrderWithLag(double sigma, double L, double V, double al, double dt,
             double& x1, double& x2, double& xlag, LagCache& cache)
         {
@@ -406,7 +406,7 @@ namespace Aetherion::Environment {
             xlag = xn(2);
         }
 
-    // Box-Muller on the top 53 bits of mt19937_64: platform-independent.
+        // Box-Muller on the top 53 bits of mt19937_64: platform-independent.
         double gaussian()
         {
             if (m_haveSpare) {
@@ -428,7 +428,7 @@ namespace Aetherion::Environment {
         double uniform01()
         {
             ++m_draws;
-            const std::uint64_t bits = m_rng() >> 11;             // 53 bits
+            const std::uint64_t bits = m_rng() >> 11; // 53 bits
             return static_cast<double>(bits) * (1.0 / 9007199254740992.0);
         }
 

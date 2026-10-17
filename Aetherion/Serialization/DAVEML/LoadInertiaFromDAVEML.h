@@ -37,15 +37,15 @@
 
 namespace Aetherion::Serialization {
 
-/// @brief Load a @c RigidBody::InertialParameters from a DAVE-ML inertia file.
-///
-/// @param path     Path to the @c .dml / @c .xml DAVE-ML file.
-/// @param inputs   Optional map of input varID → value to set before
-///                 evaluating calculated outputs (e.g. @c {"CG_PCT_MAC", 35.0}).
-///                 The values are interpreted in the units declared in the file.
-/// @return         InertialParameters populated in SI units.
-/// @throws std::runtime_error  if the file cannot be read or a required
-///                             varID evaluation fails.
+    /// @brief Load a @c RigidBody::InertialParameters from a DAVE-ML inertia file.
+    ///
+    /// @param path     Path to the @c .dml / @c .xml DAVE-ML file.
+    /// @param inputs   Optional map of input varID → value to set before
+    ///                 evaluating calculated outputs (e.g. @c {"CG_PCT_MAC", 35.0}).
+    ///                 The values are interpreted in the units declared in the file.
+    /// @return         InertialParameters populated in SI units.
+    /// @throws std::runtime_error  if the file cannot be read or a required
+    ///                             varID evaluation fails.
     RigidBody::InertialParameters LoadInertiaFromDAVEML(
         const std::string& path,
         const std::unordered_map<std::string, double>& inputs = {});

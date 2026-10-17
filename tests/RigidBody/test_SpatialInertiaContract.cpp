@@ -177,8 +177,8 @@ TEST_CASE("Spatial inertia: a torque about the centre of mass turns the body the
 
     CHECK((wdotA - wdotExpected).norm() < 1e-12);
     CHECK((wdotB - wdotExpected).norm() < 1e-12);
-    CHECK(xA.segment<3>(3).norm() < 1e-12);                            // A's origin (the CM) does not accelerate
-    CHECK((xB.segment<3>(3) - c.cross(wdotB)).norm() < 1e-12);         // B's origin swings about the CM
+    CHECK(xA.segment<3>(3).norm() < 1e-12);                    // A's origin (the CM) does not accelerate
+    CHECK((xB.segment<3>(3) - c.cross(wdotB)).norm() < 1e-12); // B's origin swings about the CM
 }
 
 TEST_CASE("Mass state: free-fall acceleration is g whatever the integrated mass says",
@@ -196,7 +196,7 @@ TEST_CASE("Mass state: free-fall acceleration is g whatever the integrated mass 
         INFO("mass state " << mState);
         CHECK_THAT(xdot(5), WithinAbs(-10.0, 1e-12));
         CHECK(xdot.head<5>().norm() < 1e-12);
-        CHECK(xdot(6) == 0.0);  // ConstantMassPolicy
+        CHECK(xdot(6) == 0.0); // ConstantMassPolicy
     }
 }
 
@@ -204,13 +204,13 @@ TEST_CASE("Mass state: a force divides by the mass M was built with, and follows
     "[spatial_inertia][contract][mass][regression]")
 {
     BodyWrenchPolicy force;
-    force.w(3) = 40.0;  // 40 N along body x
+    force.w(3) = 40.0; // 40 N along body x
 
     VectorField<BodyWrenchPolicy> vf(params(10.0, { 1.0, 1.0, 1.0 }, Eigen::Vector3d::Zero()), force);
     const SE3d g = SE3d::Identity();
 
     CHECK_THAT(vf(0.0, g, restState(10.0))(3), WithinAbs(4.0, 1e-12));
-    CHECK_THAT(vf(0.0, g, restState(2.0))(3), WithinAbs(4.0, 1e-12));   // the state does not scale M
+    CHECK_THAT(vf(0.0, g, restState(2.0))(3), WithinAbs(4.0, 1e-12)); // the state does not scale M
 
     vf.setInertialParameters(params(5.0, { 1.0, 1.0, 1.0 }, Eigen::Vector3d::Zero()));
     CHECK(vf.mass_kg == 5.0);

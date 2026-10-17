@@ -35,16 +35,16 @@ namespace Aetherion::Examples::F16SteadyFlight {
     public:
         static constexpr double kOmegaEarth_rad_s = 7.2921150e-5;
 
-    /// @param ip          Inertial parameters (mass, MOI) read from F16_inertia.dml.
-    /// @param trim        Trim solution (alpha, elevator, throttle).
-    /// @param aero_model  Parsed F16_aero.dml model.
-    /// @param prop_model  Parsed F16_prop.dml model.
-    /// @param x0          Initial state (ECI frame).
-    /// @param theta0      Earth Rotation Angle at t = 0 [rad].
-    /// @param opt         Newton solver options (tolerances, max iterations).
-    /// @param xcg_from_ac_m  CG distance aft of aerodynamic reference centre [m].
-    ///                       Used in F16AeroPolicy to transfer moments from AC to CG.
-    ///                       Must equal TrimSolver::xcg_from_ac_ft × kFt_m.
+        /// @param ip          Inertial parameters (mass, MOI) read from F16_inertia.dml.
+        /// @param trim        Trim solution (alpha, elevator, throttle).
+        /// @param aero_model  Parsed F16_aero.dml model.
+        /// @param prop_model  Parsed F16_prop.dml model.
+        /// @param x0          Initial state (ECI frame).
+        /// @param theta0      Earth Rotation Angle at t = 0 [rad].
+        /// @param opt         Newton solver options (tolerances, max iterations).
+        /// @param xcg_from_ac_m  CG distance aft of aerodynamic reference centre [m].
+        ///                       Used in F16AeroPolicy to transfer moments from AC to CG.
+        ///                       Must equal TrimSolver::xcg_from_ac_ft × kFt_m.
         explicit F16SteadyFlightSimulator(
             const RigidBody::InertialParameters& ip,
             const FlightDynamics::TrimPoint& trim,

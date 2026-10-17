@@ -96,22 +96,22 @@ namespace AE_SR = Aetherion::Serialization;
 
 namespace {
     constexpr double kFt_m = 0.3048;
-    constexpr double kKt_ms = 0.514444;   // 1 knot in m/s
-    constexpr double kRho_SL_kg_m3 = 1.225;      // ISA sea-level air density
+    constexpr double kKt_ms = 0.514444;     // 1 knot in m/s
+    constexpr double kRho_SL_kg_m3 = 1.225; // ISA sea-level air density
     constexpr double kRad2Deg = 180.0 / std::numbers::pi;
     constexpr double kDeg2Rad = std::numbers::pi / 180.0;
 
     // Design-point trim commands matching F16_control.dml initialValues
     constexpr double kTrimAlt_ft = 10013.0;
-    constexpr double kTrimKEAS_kt = 287.809;  // 2.878e2 kt from DML
+    constexpr double kTrimKEAS_kt = 287.809; // 2.878e2 kt from DML
     constexpr double kTrimHdg_deg = 45.0;
 
     // Sensor feedbacks at the same trim point — F16PlantFMU defaults
-    constexpr double kTrimVt_m_s = 565.685 * kFt_m;    // trim TAS
-    constexpr double kTrimRho_kg_m3 = 0.9042;             // ~10 000 ft ISA density
-    constexpr double kTrimAlpha_deg = 2.6538;             // trim AoA from F16_control.dml
-    constexpr double kTrimRoll_rad = 0.0;                // wings-level
-    constexpr double kTrimLat_deg = 36.01917;          // Kitty Hawk, NC
+    constexpr double kTrimVt_m_s = 565.685 * kFt_m; // trim TAS
+    constexpr double kTrimRho_kg_m3 = 0.9042;       // ~10 000 ft ISA density
+    constexpr double kTrimAlpha_deg = 2.6538;       // trim AoA from F16_control.dml
+    constexpr double kTrimRoll_rad = 0.0;           // wings-level
+    constexpr double kTrimLat_deg = 36.01917;       // Kitty Hawk, NC
     constexpr double kTrimLon_deg = -75.67444;
 }
 

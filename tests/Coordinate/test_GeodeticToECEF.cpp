@@ -37,7 +37,7 @@ TEST_CASE("GeodeticToECEF - equator prime meridian", "[coordinate][geodetic]")
 
     auto r = GeodeticToECEF(lat, lon, h);
 
-    const double a = 6378137.0;  // WGS-84 semi-major axis
+    const double a = 6378137.0; // WGS-84 semi-major axis
 
     REQUIRE(r[0] == Approx(a).margin(1e-6));
     REQUIRE(r[1] == Approx(0.0).margin(1e-6));
@@ -55,7 +55,7 @@ TEST_CASE("GeodeticToECEF - north pole", "[coordinate][geodetic]")
     const double a = 6378137.0;
     const double f = 1.0 / 298.257223563;
     const double e2 = f * (2.0 - f);
-    const double b = a * std::sqrt(1.0 - e2);  // semi-minor axis
+    const double b = a * std::sqrt(1.0 - e2); // semi-minor axis
 
     REQUIRE(r[0] == Approx(0.0).margin(1e-6));
     REQUIRE(r[1] == Approx(0.0).margin(1e-6));

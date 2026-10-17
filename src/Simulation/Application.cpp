@@ -188,8 +188,8 @@ namespace Aetherion::Simulation {
 
         std::size_t step_count = 0;
         std::size_t failed_steps = 0;
-        std::size_t stalled_steps = 0;   // consecutive failures that left the clock where it was
-        double t_current = 0.0;   // elapsed
+        std::size_t stalled_steps = 0; // consecutive failures that left the clock where it was
+        double t_current = 0.0;        // elapsed
 
         while (t_current < t_end - 1e-12)
         {

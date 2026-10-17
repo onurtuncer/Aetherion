@@ -25,8 +25,8 @@
 
 #include "Snapshot1.h"
 #include <Aetherion/RigidBody/State.h>
-#include <Aetherion/Coordinate/InertialToLocal.h>   // ECIToECEF, ECEFToGeodeticWGS84,
-                                                     // ECEFToNED, NEDToInertialRotationMatrix
+#include <Aetherion/Coordinate/InertialToLocal.h> // ECIToECEF, ECEFToGeodeticWGS84,
+                                                  // ECEFToNED, NEDToInertialRotationMatrix
 #include <Aetherion/Environment/Atmosphere.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/FlightDynamics/Policies/PolicyConcepts.h>
@@ -34,7 +34,7 @@
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
 #include <Eigen/Dense>
-#include <algorithm>   // std::clamp
+#include <algorithm> // std::clamp
 #include <cmath>
 
 namespace Aetherion::Simulation {
@@ -62,7 +62,7 @@ namespace Aetherion::Simulation {
         namespace Env = Aetherion::Environment;
 
         using Vec3d = Eigen::Vector3d;
-        using CArr3 = Coord::Vec3<double>;   // std::array<double,3>
+        using CArr3 = Coord::Vec3<double>; // std::array<double,3>
 
         Snapshot1 snap;
 
@@ -139,7 +139,7 @@ namespace Aetherion::Simulation {
         const CArr3 v_ned_arr = Coord::ECEFToNED(v_ecef_arr, lat_rad, lon_rad);
 
         snap.feVelocity_m_s = Vec3d(v_ned_arr[0], v_ned_arr[1], v_ned_arr[2]);
-        snap.altitudeRateWrtMsl_m_s = -v_ned_arr[2];   // dh/dt = −v_down
+        snap.altitudeRateWrtMsl_m_s = -v_ned_arr[2]; // dh/dt = −v_down
 
         // ── 7. ZYX Euler angles (body → NED) ─────────────────────────────────
         //

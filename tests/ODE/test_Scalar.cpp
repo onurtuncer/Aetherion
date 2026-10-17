@@ -163,7 +163,7 @@ TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: J(0)=I and small-angle se
 
     const Eigen::Matrix3d J = so3_left_jacobian_from_ABC(w_small);
 
-   // REQUIRE((J - Eigen::Matrix3d::Identity()).norm() == Approx(0.0).margin(1e-12));
+    // REQUIRE((J - Eigen::Matrix3d::Identity()).norm() == Approx(0.0).margin(1e-12));
 
     const Eigen::Matrix3d J_ser =
         Eigen::Matrix3d::Identity() + 0.5 * W + (1.0 / 6.0) * W2;

@@ -34,21 +34,21 @@
 
 namespace Aetherion::RigidBody {
 
-/// @brief Stateless kinematics field for a free rigid body (right-trivialised SE(3)).
-///
-/// Implements the "where" equation on SE(3):
-/// @f[ \dot{g} = g\,\hat{\xi} @f]
-/// where @f$\xi = [\omega_B;\,v_B] \in \mathbb{R}^6@f$ is the body-frame twist and
-/// @f$\hat{\cdot}: \mathbb{R}^6 \to \mathfrak{se}(3)@f$ is the isomorphism.
-///
-/// In the RKMK setting the integrator calls this field to obtain the Lie-algebra
-/// element that drives the exponential update of @f$g@f$.  The result is @f$\xi@f$
-/// itself — the identity map — because the body-frame twist *is* the right-trivialised
-/// velocity.
-///
-/// The call operator is templated on @c S (not the class) so that the same instance
-/// is callable for both @c double (runtime) and @c CppAD::AD\<double\> (Newton Jacobian
-/// tape) without duplication.
+    /// @brief Stateless kinematics field for a free rigid body (right-trivialised SE(3)).
+    ///
+    /// Implements the "where" equation on SE(3):
+    /// @f[ \dot{g} = g\,\hat{\xi} @f]
+    /// where @f$\xi = [\omega_B;\,v_B] \in \mathbb{R}^6@f$ is the body-frame twist and
+    /// @f$\hat{\cdot}: \mathbb{R}^6 \to \mathfrak{se}(3)@f$ is the isomorphism.
+    ///
+    /// In the RKMK setting the integrator calls this field to obtain the Lie-algebra
+    /// element that drives the exponential update of @f$g@f$.  The result is @f$\xi@f$
+    /// itself — the identity map — because the body-frame twist *is* the right-trivialised
+    /// velocity.
+    ///
+    /// The call operator is templated on @c S (not the class) so that the same instance
+    /// is callable for both @c double (runtime) and @c CppAD::AD\<double\> (Newton Jacobian
+    /// tape) without duplication.
     class KinematicsXiField
     {
     public:

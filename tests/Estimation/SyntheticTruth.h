@@ -37,11 +37,11 @@
 
 namespace Aetherion::Estimation::Testing {
 
-// Gaussian samples that are the same on every platform. std::normal_distribution
-// is implementation-defined -- libstdc++ and MSVC draw different sequences
-// from the same engine -- so a "deterministic" seed gave Linux CI a different
-// 240 s run than Windows, and a bound set on one failed on the other.
-// Box-Muller on the engine's own bits, as Environment/DrydenTurbulence.h does.
+    // Gaussian samples that are the same on every platform. std::normal_distribution
+    // is implementation-defined -- libstdc++ and MSVC draw different sequences
+    // from the same engine -- so a "deterministic" seed gave Linux CI a different
+    // 240 s run than Windows, and a bound set on one failed on the other.
+    // Box-Muller on the engine's own bits, as Environment/DrydenTurbulence.h does.
     class PortableGaussian
     {
     public:
@@ -68,7 +68,7 @@ namespace Aetherion::Estimation::Testing {
         }
 
     private:
-        double uniform() { return static_cast<double>(rng_() >> 11) * 0x1.0p-53; }  // [0, 1), 53 bits
+        double uniform() { return static_cast<double>(rng_() >> 11) * 0x1.0p-53; } // [0, 1), 53 bits
 
         std::mt19937_64 rng_;
         double spare_ = 0.0;
@@ -81,16 +81,16 @@ namespace Aetherion::Estimation::Testing {
         using Vec3 = Eigen::Vector3d;
 
         double V = 120.0;
-        double psiDot = 0.05;                              // rad/s: a 126 s circle, V*psiDot = 6 m/s^2 (0.6 g) lateral
-        double h = 500.0;                                  // m above the LCI origin
-        double bank0 = std::atan2(120.0 * 0.05, 9.80665);  // coordinated: ~31.5 deg
+        double psiDot = 0.05;                             // rad/s: a 126 s circle, V*psiDot = 6 m/s^2 (0.6 g) lateral
+        double h = 500.0;                                 // m above the LCI origin
+        double bank0 = std::atan2(120.0 * 0.05, 9.80665); // coordinated: ~31.5 deg
         double bankAmp = 15.0 * kDeg, bankRate = 0.3;
         double pitchAmp = 8.0 * kDeg, pitchRate = 0.5;
 
         [[nodiscard]] double bank(double t) const { return bank0 + bankAmp * std::sin(bankRate * t); }
         [[nodiscard]] double theta(double t) const { return pitchAmp * std::sin(pitchRate * t); }
 
-  /// Navigation core at t; biases zero.
+        /// Navigation core at t; biases zero.
         [[nodiscard]] EstimationState<double> at(double t) const
         {
             namespace SO3 = ODE::RKMK::Lie::SO3;
@@ -109,9 +109,9 @@ namespace Aetherion::Estimation::Testing {
             return { -V * psiDot * std::sin(psi), V * psiDot * std::cos(psi), 0.0 };
         }
 
-  /// Body rate (R^T R_dot)^vee for R = Rz(psi) Rx(phi) Ry(theta):
-  ///   omega = Ry^T [ Rx^T (0, 0, psi_dot) + (phi_dot, 0, 0) ] + (0, theta_dot, 0)
-  ///         = (c_th phi_dot - s_th c_phi psi_dot,  s_phi psi_dot + theta_dot,  s_th phi_dot + c_th c_phi psi_dot).
+        /// Body rate (R^T R_dot)^vee for R = Rz(psi) Rx(phi) Ry(theta):
+        ///   omega = Ry^T [ Rx^T (0, 0, psi_dot) + (phi_dot, 0, 0) ] + (0, theta_dot, 0)
+        ///         = (c_th phi_dot - s_th c_phi psi_dot,  s_phi psi_dot + theta_dot,  s_th phi_dot + c_th c_phi psi_dot).
         [[nodiscard]] Vec3 bodyRate(double t) const
         {
             const double th = theta(t), ph = bank(t);
@@ -121,7 +121,7 @@ namespace Aetherion::Estimation::Testing {
             return { cth * phDot - sth * cph * psiDot, sph * psiDot + thDot, sth * phDot + cth * cph * psiDot };
         }
 
-  /// The ideal IMU of this truth at time t: inertial rate and specific force, body frame.
+        /// The ideal IMU of this truth at time t: inertial rate and specific force, body frame.
         [[nodiscard]] ImuSample<double> imu(double t, const LciFrame<double>& frame) const
         {
             const EstimationState<double> x = at(t);
@@ -129,4 +129,4 @@ namespace Aetherion::Estimation::Testing {
         }
     };
 
-}  // namespace Aetherion::Estimation::Testing
+} // namespace Aetherion::Estimation::Testing

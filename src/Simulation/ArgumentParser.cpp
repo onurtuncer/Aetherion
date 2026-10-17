@@ -25,7 +25,7 @@ namespace Aetherion::Simulation {
     {
         handlers_[flag] = std::move(handler);
         descriptions_[flag] = description;
-        order_.push_back(flag);   // keep insertion order for help text
+        order_.push_back(flag); // keep insertion order for help text
     }
 
     void ArgumentParser::parse(int argc, char** argv)
@@ -46,7 +46,7 @@ namespace Aetherion::Simulation {
             if (i + 1 >= argc)
                 throw std::invalid_argument(arg + " requires a value.");
 
-            it->second(argv[++i]);   // invoke the registered handler
+            it->second(argv[++i]); // invoke the registered handler
         }
     }
 

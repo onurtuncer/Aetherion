@@ -57,9 +57,9 @@ namespace {
   <variableDef varID="x_sft2b" units="slug-ft2"  initialValue="5.0"/>
 </DAVEfunc>)";
 
-// catch_discover_tests runs every TEST_CASE as its own process, so under
-// `ctest -j` several cases write this file at once: each gets its own name, or
-// one case's remove() deletes the file another is still reading.
+    // catch_discover_tests runs every TEST_CASE as its own process, so under
+    // `ctest -j` several cases write this file at once: each gets its own name, or
+    // one case's remove() deletes the file another is still reading.
     std::string writeMinDML()
     {
         std::random_device rd;
@@ -170,7 +170,7 @@ TEST_CASE("DAVEMLReader: DXCG re-evaluates after setInput", "[daveml][smoke]")
 
     // Move CG forward by 5% MAC:  DXCG = 0.01 * 11.32 * (35 - 30) = 0.566 ft
     r.setInput("CG_PCT_MAC", 30.0);
-    const double expected_ft = 0.01 * 11.32 * (35.0 - 30.0);  // 0.566 ft
+    const double expected_ft = 0.01 * 11.32 * (35.0 - 30.0); // 0.566 ft
     CHECK_THAT(r.getValue("DXCG"), WithinRel(expected_ft, 1e-9));
 
     // In SI
@@ -194,7 +194,7 @@ TEST_CASE("LoadInertiaFromDAVEML: F-16 inertia at reference CG", "[daveml][smoke
     CHECK_THAT(ip.Ixz, WithinRel(982.0 * kSlugFt2_to_kgm2, 1e-9));
     CHECK_THAT(ip.Ixy, WithinAbs(0.0, 1e-12));
     CHECK_THAT(ip.Iyz, WithinAbs(0.0, 1e-12));
-    CHECK_THAT(ip.xbar_m, WithinAbs(0.0, 1e-12));  // at reference CG
+    CHECK_THAT(ip.xbar_m, WithinAbs(0.0, 1e-12)); // at reference CG
     CHECK_THAT(ip.ybar_m, WithinAbs(0.0, 1e-12));
     CHECK_THAT(ip.zbar_m, WithinAbs(0.0, 1e-12));
 }

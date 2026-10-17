@@ -13,15 +13,15 @@
 
 namespace Aetherion::Coordinate {
 
-/// @brief 3-element column vector (CppAD-friendly, no Eigen dependency).
+    /// @brief 3-element column vector (CppAD-friendly, no Eigen dependency).
     template <class Scalar>
     using Vec3 = std::array<Scalar, 3>;
 
-/// @brief Unit quaternion @f$[w,\,x,\,y,\,z]@f$ — body → ECI convention.
+    /// @brief Unit quaternion @f$[w,\,x,\,y,\,z]@f$ — body → ECI convention.
     template <class Scalar>
     using Quat = std::array<Scalar, 4>; // [w, x, y, z], body->ECI
 
-/// @brief Row-major 3×3 rotation matrix stored as a flat 9-element array.
+    /// @brief Row-major 3×3 rotation matrix stored as a flat 9-element array.
     template <class Scalar>
     using Mat3 = std::array<Scalar, 9>; // row-major 3x3
 

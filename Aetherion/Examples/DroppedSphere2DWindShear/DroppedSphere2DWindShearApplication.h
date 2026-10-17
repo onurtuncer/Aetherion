@@ -25,10 +25,10 @@
 
 namespace Aetherion::Examples::DroppedSphere2DWindShear {
 
-/// @brief Application for NASA TM-2015-218675 Atmospheric Scenario 8.
-///
-/// Sphere (CD=0.1) dropped from 9144 m in a power-law altitude wind shear:
-/// v_E(h) = 21.336 × (h/9144)^(4/3) m/s (east only).
+    /// @brief Application for NASA TM-2015-218675 Atmospheric Scenario 8.
+    ///
+    /// Sphere (CD=0.1) dropped from 9144 m in a power-law altitude wind shear:
+    /// v_E(h) = 21.336 × (h/9144)^(4/3) m/s (east only).
     class DroppedSphere2DWindShearApplication : public Simulation::Application
     {
     public:

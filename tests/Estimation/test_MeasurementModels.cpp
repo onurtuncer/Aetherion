@@ -65,8 +65,8 @@ namespace {
         return y;
     }
 
-// H by central differences: the innovation at the estimate x, fed with the
-// measurement a truth perturbed by +-eps e_j would produce.
+    // H by central differences: the innovation at the estimate x, fed with the
+    // measurement a truth perturbed by +-eps e_j would produce.
     template <ErrorConvention C, class Innovation>
     MatX finiteDifferenceH(const EstimationState<double>& x, int m, Innovation innovation, double eps = 1e-6)
     {
@@ -82,7 +82,7 @@ namespace {
         }
         return H;
     }
-}  // namespace
+} // namespace
 
 // ---------------------------------------------------------------------------
 TEST_CASE("pressure altitude inverts the standard atmosphere", "[estimation][measurement][baro]")
@@ -93,9 +93,9 @@ TEST_CASE("pressure altitude inverts the standard atmosphere", "[estimation][mea
         REQUIRE(pressureAltitude_m(p) == Catch::Approx(h).margin(1e-6));
     }
     REQUIRE(pressureAltitude_m(101325.0) == Catch::Approx(0.0).margin(1e-9));
-    REQUIRE(pressureAltitude_m(102325.0) < -80.0);  // a high-QNH day reads below sea level
+    REQUIRE(pressureAltitude_m(102325.0) < -80.0); // a high-QNH day reads below sea level
     REQUIRE(pressureAltitude_m(102325.0) > -90.0);
-  // Above the ceiling: the model's isothermal decay, continuous at 84.852 km.
+    // Above the ceiling: the model's isothermal decay, continuous at 84.852 km.
     const double p_top = Aetherion::Environment::US1976Atmosphere(84852.0).p;
     REQUIRE(pressureAltitude_m(p_top) == Catch::Approx(84852.0).margin(1e-3));
     REQUIRE(pressureAltitude_m(Aetherion::Environment::US1976Atmosphere(90000.0).p) ==
@@ -111,23 +111,23 @@ TEST_CASE("GNSS fix maps into LCI and back through the coordinate library", "[es
     const double era = f.earthRotationAngle(t);
     REQUIRE(era == Catch::Approx(0.3 + WGS84::kRotationRate_rad_s * t));
 
-  // At the frame epoch the fix is a few km north-east and 3 km up:
-  // (N, E, D) ~ (+1.2 km, +1.3 km, -3 km), the D a touch above -3 km from
-  // the curvature drop over ~1.8 km (0.25 m) and the origin's own 3 m.
+    // At the frame epoch the fix is a few km north-east and 3 km up:
+    // (N, E, D) ~ (+1.2 km, +1.3 km, -3 km), the D a touch above -3 km from
+    // the curvature drop over ~1.8 km (0.25 m) and the origin's own 3 m.
     const Vec3 p0 = m.gnssPositionLci(fix, f.era0_rad);
     REQUIRE(p0[0] == Catch::Approx(1200.0).margin(30.0));
     REQUIRE(p0[1] == Catch::Approx(1300.0).margin(30.0));
     REQUIRE(p0[2] == Catch::Approx(-2997.0).margin(1.0));
 
-  // 100 s later the same Earth-fixed point has moved ~37 km east in the
-  // inertial frame (w_e R cos(lat) * 100 s), and the curvature drop over
-  // that distance (~107 m) shows in D. The frame is inertial: this is
-  // correct, and it is why the ERA at the fix's time matters.
+    // 100 s later the same Earth-fixed point has moved ~37 km east in the
+    // inertial frame (w_e R cos(lat) * 100 s), and the curvature drop over
+    // that distance (~107 m) shows in D. The frame is inertial: this is
+    // correct, and it is why the ERA at the fix's time matters.
     const Vec3 p = m.gnssPositionLci(fix, era);
     REQUIRE(p[1] - p0[1] == Catch::Approx(WGS84::kRotationRate_rad_s * t * 6371e3 * std::cos(fix.lat_rad)).epsilon(0.02));
     REQUIRE(p[2] > p0[2] + 100.0);
 
-  // Round trip: ECI -> ECEF(era) -> geodetic reproduces the fix.
+    // Round trip: ECI -> ECEF(era) -> geodetic reproduces the fix.
     const Vec3 r_W = f.toEci(p);
     const auto r_E = Aetherion::Coordinate::ECIToECEF(std::array<double, 3>{ r_W[0], r_W[1], r_W[2] }, era);
     double lat{}, lon{}, h{};
@@ -136,13 +136,13 @@ TEST_CASE("GNSS fix maps into LCI and back through the coordinate library", "[es
     REQUIRE(lon == Catch::Approx(fix.lon_rad).margin(1e-11));
     REQUIRE(h == Catch::Approx(fix.height_m).margin(1e-5));
 
-  // The barometer's height function sees the same point to its stated 0.1 m.
+    // The barometer's height function sees the same point to its stated 0.1 m.
     REQUIRE(m.ellipsoidalHeight(p) == Catch::Approx(fix.height_m).margin(0.1));
 
-  // NED -> LCI at the origin at t0 is the identity (the frame axes are NED there).
+    // NED -> LCI at the origin at t0 is the identity (the frame axes are NED there).
     const GnssFix<double> origin{ 36.0192 * kDeg, -75.6744 * kDeg, 3.0 };
     REQUIRE((m.nedToLci(origin, f.era0_rad) - Mat3::Identity()).norm() < 1e-12);
-  // and 100 s later it has rotated by w_e * 100 s about the Earth's axis.
+    // and 100 s later it has rotated by w_e * 100 s about the Earth's axis.
     const Mat3 C = m.nedToLci(origin, era);
     REQUIRE(C.isUnitary(1e-12));
     REQUIRE((C - Mat3::Identity()).norm() > 1e-3);
@@ -155,14 +155,14 @@ TEST_CASE("GNSS velocity carries the transport term", "[estimation][measurement]
     const GnssFix<double> fix{ 36.03 * kDeg, -75.66 * kDeg, 3000.0 };
     const double era = f.earthRotationAngle(100.0);
 
-  // Stationary on the ground: inertial speed is w_e * distance from the axis.
+    // Stationary on the ground: inertial speed is w_e * distance from the axis.
     const Vec3 v0 = m.gnssVelocityLci(fix, Vec3::Zero(), era);
     const auto r_E = Aetherion::Coordinate::GeodeticToECEF(fix.lat_rad, fix.lon_rad, fix.height_m);
     const double expected = WGS84::kRotationRate_rad_s * std::hypot(r_E[0], r_E[1]);
     REQUIRE(v0.norm() == Catch::Approx(expected).epsilon(1e-9));
-    REQUIRE(expected > 370.0);  // 465 m/s cos(36 deg)
+    REQUIRE(expected > 370.0); // 465 m/s cos(36 deg)
 
-  // A NED velocity adds linearly, through the same rotation as nedToLci.
+    // A NED velocity adds linearly, through the same rotation as nedToLci.
     const Vec3 v_ned(100.0, -20.0, 5.0);
     const Vec3 v1 = m.gnssVelocityLci(fix, v_ned, era);
     REQUIRE((v1 - v0 - m.nedToLci(fix, era) * v_ned).norm() < 1e-9);
@@ -173,8 +173,8 @@ TEST_CASE("ellipsoidal height gradient matches central differences", "[estimatio
     const MeasurementModels<double> m(testFrame());
     const Vec3 p = testState().X.p;
     const Vec3 g = m.ellipsoidalHeightGradient(p);
-    REQUIRE(g.norm() == Catch::Approx(1.0).margin(1e-6));  // a unit "up"
-    REQUIRE(g[2] < -0.99);                                 // mostly -D
+    REQUIRE(g.norm() == Catch::Approx(1.0).margin(1e-6)); // a unit "up"
+    REQUIRE(g[2] < -0.99);                                // mostly -D
     for (int j = 0; j < 3; ++j)
     {
         Vec3 d = Vec3::Zero();
@@ -196,7 +196,7 @@ TEST_CASE("innovation Jacobians match finite differences in both conventions", "
         VecX z;
         MatX H, R;
 
-    // Position
+        // Position
         m.template gnssPosition<C>(cfg, x, x.X.p, Sigma, z, H, R);
         REQUIRE(z.norm() == 0.0);
         const MatX Hp = finiteDifferenceH<C>(x, 3, [&](const auto& est, const auto& truth) {
@@ -208,7 +208,7 @@ TEST_CASE("innovation Jacobians match finite differences in both conventions", "
         INFO(toString(C) << " position: |H - H_fd| = " << (H - Hp).norm());
         REQUIRE((H - Hp).norm() < 1e-6 * std::max(1.0, Hp.norm()));
 
-    // Velocity
+        // Velocity
         m.template gnssVelocity<C>(cfg, x, x.X.v, Sigma, z, H, R);
         const MatX Hv = finiteDifferenceH<C>(x, 3, [&](const auto& est, const auto& truth) {
             VecX zz;
@@ -219,10 +219,10 @@ TEST_CASE("innovation Jacobians match finite differences in both conventions", "
         INFO(toString(C) << " velocity: |H - H_fd| = " << (H - Hv).norm());
         REQUIRE((H - Hv).norm() < 1e-6 * std::max(1.0, Hv.norm()));
 
-    // Barometer. h = |r_W| - r_surface with |r_W| ~ 6.4e6 m carries ~1e-9 m
-    // of round-off, which a 1e-6 step turns into 5e-4; a larger step runs
-    // into the RI attitude columns' truncation, eps^2 |p|/6. 1e-5 balances
-    // the two at ~1e-4; the CppAD test below is the tight one.
+        // Barometer. h = |r_W| - r_surface with |r_W| ~ 6.4e6 m carries ~1e-9 m
+        // of round-off, which a 1e-6 step turns into 5e-4; a larger step runs
+        // into the RI attitude columns' truncation, eps^2 |p|/6. 1e-5 balances
+        // the two at ~1e-4; the CppAD test below is the tight one.
         m.template barometer<C>(cfg, x, m.predictBarometer(x), 2.0, z, H, R);
         REQUIRE(z.norm() == 0.0);
         REQUIRE(R(0, 0) == Catch::Approx(4.0));
@@ -244,7 +244,7 @@ TEST_CASE("innovation Jacobians match finite differences in both conventions", "
     check(std::integral_constant<ErrorConvention, ErrorConvention::RightInvariant>{});
     check(std::integral_constant<ErrorConvention, ErrorConvention::LeftInvariant>{});
 
-  // The measurement covariance is rotated for LI, not for RI: same eigenvalues.
+    // The measurement covariance is rotated for LI, not for RI: same eigenvalues.
     VecX z;
     MatX H, Rri, Rli;
     m.template gnssPosition<ErrorConvention::RightInvariant>(cfg, x, x.X.p, Sigma, z, H, Rri);

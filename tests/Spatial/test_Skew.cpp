@@ -106,8 +106,8 @@ TEMPLATE_TEST_CASE("Spatial::skew implements the cross product: skew(a) * b == a
 
     const Mat3 A = Aetherion::Spatial::skew<Scalar>(a);
 
-    const Vec3 lhs = A * b;         // skew(a) b
-    const Vec3 rhs = a.cross(b);    // a x b
+    const Vec3 lhs = A * b;      // skew(a) b
+    const Vec3 rhs = a.cross(b); // a x b
 
     const auto abs_tol = abs_tol_for_linear_algebra<Scalar>();
     const auto rel_tol = rel_tol_for_linear_algebra<Scalar>();

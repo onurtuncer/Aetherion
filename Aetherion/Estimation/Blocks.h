@@ -41,12 +41,12 @@
 
 namespace Aetherion::Estimation {
 
-/// Which invariant error the filter linearises about (doc/sensor_fusion.rst,
-/// "Error convention"). With X the true and Xhat the estimated navigation
-/// core: left-invariant eta = Xhat^-1 X (body-frame error components),
-/// right-invariant eta = X Xhat^-1 (world-frame components). The choice is a
-/// template parameter of the models, so both filters exist; it is part of
-/// the configuration descriptor, so each has its own hash.
+    /// Which invariant error the filter linearises about (doc/sensor_fusion.rst,
+    /// "Error convention"). With X the true and Xhat the estimated navigation
+    /// core: left-invariant eta = Xhat^-1 X (body-frame error components),
+    /// right-invariant eta = X Xhat^-1 (world-frame components). The choice is a
+    /// template parameter of the models, so both filters exist; it is part of
+    /// the configuration descriptor, so each has its own hash.
     enum class ErrorConvention : std::uint8_t
     {
         LeftInvariant,
@@ -67,36 +67,36 @@ namespace Aetherion::Estimation {
 
     enum class BlockId : std::uint8_t
     {
-        NavCore,    ///< SE2(3) attitude, velocity, position
-        GyroBias,   ///< Gyroscope bias, body frame
-        AccelBias,  ///< Accelerometer bias, body frame
-        BaroBias,   ///< Barometer bias in metres of pressure altitude
+        NavCore,   ///< SE2(3) attitude, velocity, position
+        GyroBias,  ///< Gyroscope bias, body frame
+        AccelBias, ///< Accelerometer bias, body frame
+        BaroBias,  ///< Barometer bias in metres of pressure altitude
     };
 
     inline constexpr std::size_t kBlockCount = 4;
 
     enum class ProcessModelKind : std::uint8_t
     {
-        Strapdown,   ///< IMU-driven SE2(3) kinematics in LCI
-        RandomWalk,  ///< x_dot = w, w white
+        Strapdown,  ///< IMU-driven SE2(3) kinematics in LCI
+        RandomWalk, ///< x_dot = w, w white
     };
 
     struct BlockSpec
     {
         BlockId id;
-        std::string_view name;   ///< Stable identifier; part of the configuration hash
-        int dim;                 ///< Error-state dimension
-        std::string_view units;  ///< Per-component units, comma-separated groups
-        std::string_view frame;  ///< Frame the components are resolved in
+        std::string_view name;  ///< Stable identifier; part of the configuration hash
+        int dim;                ///< Error-state dimension
+        std::string_view units; ///< Per-component units, comma-separated groups
+        std::string_view frame; ///< Frame the components are resolved in
         ProcessModelKind process;
-        int rank;  ///< Canonical position; lower comes first
+        int rank; ///< Canonical position; lower comes first
     };
 
-// Canonical block library. Rank order is the error-vector order; the
-// navigation core is always first. New blocks get a new rank and a new
-// name; an existing entry is never edited in place (it would silently
-// change every configuration hash that uses it -- which is the intent of
-// the hash, but should be a deliberate act, not a side effect).
+    // Canonical block library. Rank order is the error-vector order; the
+    // navigation core is always first. New blocks get a new rank and a new
+    // name; an existing entry is never edited in place (it would silently
+    // change every configuration hash that uses it -- which is the intent of
+    // the hash, but should be a deliberate act, not a side effect).
     inline constexpr std::array<BlockSpec, kBlockCount> kBlockLibrary{ {
         { BlockId::NavCore, "nav_core", 9, "rad[3],m/s[3],m[3]", "LCI", ProcessModelKind::Strapdown, 0 },
         { BlockId::GyroBias, "gyro_bias", 3, "rad/s[3]", "body", ProcessModelKind::RandomWalk, 1 },
@@ -118,15 +118,15 @@ namespace Aetherion::Estimation {
         return "?";
     }
 
-// Offsets inside the navigation core (tangent order phi, nu, rho).
+    // Offsets inside the navigation core (tangent order phi, nu, rho).
     namespace NavCoreLayout {
-        inline constexpr int kAttitude = 0;  ///< phi, rad
-        inline constexpr int kVelocity = 3;  ///< nu,  m/s
-        inline constexpr int kPosition = 6;  ///< rho, m
-    }  // namespace NavCoreLayout
+        inline constexpr int kAttitude = 0; ///< phi, rad
+        inline constexpr int kVelocity = 3; ///< nu,  m/s
+        inline constexpr int kPosition = 6; ///< rho, m
+    } // namespace NavCoreLayout
 
-// The library must be indexed by BlockId and listed in rank order; the
-// offset computation in Configuration.h relies on both.
+    // The library must be indexed by BlockId and listed in rank order; the
+    // offset computation in Configuration.h relies on both.
     static_assert(
         [] {
             for (std::size_t i = 0; i < kBlockCount; ++i)
@@ -140,4 +140,4 @@ namespace Aetherion::Estimation {
         }(),
         "kBlockLibrary must be indexed by BlockId, in rank order, nav_core first");
 
-}  // namespace Aetherion::Estimation
+} // namespace Aetherion::Estimation

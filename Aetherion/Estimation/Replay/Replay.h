@@ -88,17 +88,17 @@
 
 namespace Aetherion::Estimation::Replay {
 
-/// Which clock each record lives on, as functions of the record, the
-/// time-base fit and the run configuration. The defaults are the Hemerion
-/// convention as understood on 2026-10-13 (file header).
+    /// Which clock each record lives on, as functions of the record, the
+    /// time-base fit and the run configuration. The defaults are the Hemerion
+    /// convention as understood on 2026-10-13 (file header).
     struct ReplayTiming
     {
         std::function<double(const ImuRecord&, const TimeBaseFit&, const RunConfiguration&)> imu =
             [](const ImuRecord& r, const TimeBaseFit&, const RunConfiguration&) { return r.partTime; };
 
-  /// The part clock, unwrapped: the multiple of the wrap period that puts
-  /// it nearest the fit-mapped host time. Exact while the host mapping is
-  /// good to a quarter period (128 s), which even an unpaced run is.
+        /// The part clock, unwrapped: the multiple of the wrap period that puts
+        /// it nearest the fit-mapped host time. Exact while the host mapping is
+        /// good to a quarter period (128 s), which even an unpaced run is.
         std::function<double(const BaroRecord&, const TimeBaseFit&, const RunConfiguration&)> baro =
             [](const BaroRecord& r, const TimeBaseFit& f, const RunConfiguration&) {
                 constexpr double W = LogContract::Baro::kPartTimeWrap_s;
@@ -106,7 +106,7 @@ namespace Aetherion::Estimation::Replay {
                 return r.partTime + W * std::round((ref - r.partTime) / W);
             };
 
-  /// nominal_time_s when the log has it, else the mapped arrival time less the latency.
+        /// nominal_time_s when the log has it, else the mapped arrival time less the latency.
         std::function<double(const GpsRecord&, const TimeBaseFit&, const RunConfiguration&)> gps =
             [](const GpsRecord& r, const TimeBaseFit& f, const RunConfiguration& run) {
                 if (std::isfinite(r.nominalTime))
@@ -117,19 +117,19 @@ namespace Aetherion::Estimation::Replay {
 
     struct ReplayOptions
     {
-        ProcessNoise<double> noise{ 2e-4, 5e-3, 2e-6, 2e-5, 0.05 };  ///< Hemerion's IMU densities at 100 Hz (its step 4)
-        double baroSigma_m = 1.0;                                    ///< pressure-altitude noise given to the filter
-        double gnssVelSigma_m_s = 0.1;                               ///< used when the log carries no speed accuracy
-        double gnssHorizSigma_m = 1.5;                               ///< used when a fix carries no horizontal accuracy
-        double gnssVertSigma_m = 3.0;                                ///< used when a fix carries no vertical accuracy
-        double gnssHorizScale = 1.0;  ///< sigma_N = sigma_E = gnssHorizScale * horizontal_accuracy_m
-        int minFixType = LogContract::Gps::kFixType3D;  ///< Hemerion's enum (0 none, 1 2D, 2 3D); fixes below it are skipped
-  /// Initial 1-sigma in physical coordinates: attitude (3, rad), velocity (3), position (3), then the bias blocks.
+        ProcessNoise<double> noise{ 2e-4, 5e-3, 2e-6, 2e-5, 0.05 }; ///< Hemerion's IMU densities at 100 Hz (its step 4)
+        double baroSigma_m = 1.0;                                   ///< pressure-altitude noise given to the filter
+        double gnssVelSigma_m_s = 0.1;                              ///< used when the log carries no speed accuracy
+        double gnssHorizSigma_m = 1.5;                              ///< used when a fix carries no horizontal accuracy
+        double gnssVertSigma_m = 3.0;                               ///< used when a fix carries no vertical accuracy
+        double gnssHorizScale = 1.0;                                ///< sigma_N = sigma_E = gnssHorizScale * horizontal_accuracy_m
+        int minFixType = LogContract::Gps::kFixType3D;              ///< Hemerion's enum (0 none, 1 2D, 2 3D); fixes below it are skipped
+                                                                    /// Initial 1-sigma in physical coordinates: attitude (3, rad), velocity (3), position (3), then the bias blocks.
         Eigen::VectorXd initialSigma;
-  /// Perturbation added to the truth at initialisation, in the same physical coordinates (default none).
+        /// Perturbation added to the truth at initialisation, in the same physical coordinates (default none).
         Eigen::VectorXd initialError;
         ReplayTiming timing;
-        double outputEvery_s = 0.0;  ///< 0: every IMU sample
+        double outputEvery_s = 0.0; ///< 0: every IMU sample
     };
 
     struct UpdateRow
@@ -145,10 +145,10 @@ namespace Aetherion::Estimation::Replay {
         double t = 0.0;
         EstimationState<double> estimate;
         EstimationState<double> truth;
-        Eigen::VectorXd error;         ///< filter coordinates, navigation core + biases (biases against zero truth)
-        Eigen::VectorXd sigma;         ///< sqrt(diag P)
-        double neesNav = 0.0;          ///< navigation core only (9 dof)
-        Eigen::Vector3d eulerErr_rad;  ///< yaw, pitch, roll error in local NED
+        Eigen::VectorXd error;        ///< filter coordinates, navigation core + biases (biases against zero truth)
+        Eigen::VectorXd sigma;        ///< sqrt(diag P)
+        double neesNav = 0.0;         ///< navigation core only (9 dof)
+        Eigen::Vector3d eulerErr_rad; ///< yaw, pitch, roll error in local NED
     };
 
     struct ReplaySummary
@@ -157,9 +157,9 @@ namespace Aetherion::Estimation::Replay {
         TimeBaseFit timeBase;
         std::size_t imuSamples = 0, gnssPositionUpdates = 0, gnssVelocityUpdates = 0, baroUpdates = 0, skippedFixes = 0;
         double duration_s = 0.0;
-        double aneesNav = 0.0;  ///< mean NEES of the navigation core over the second half, / 9
-        double posRms_m = 0.0, velRms_m_s = 0.0, tiltRms_deg = 0.0, yawRms_deg = 0.0;  ///< second half
-        double nisGnssPosition = 0.0, nisGnssVelocity = 0.0, nisBaro = 0.0;            ///< mean NIS / dim, second half
+        double aneesNav = 0.0;                                                        ///< mean NEES of the navigation core over the second half, / 9
+        double posRms_m = 0.0, velRms_m_s = 0.0, tiltRms_deg = 0.0, yawRms_deg = 0.0; ///< second half
+        double nisGnssPosition = 0.0, nisGnssVelocity = 0.0, nisBaro = 0.0;           ///< mean NIS / dim, second half
     };
 
     struct ReplayResult
@@ -195,7 +195,7 @@ namespace Aetherion::Estimation::Replay {
             return g;
         }
 
-/// The host <- part clock fit over the IMU log.
+        /// The host <- part clock fit over the IMU log.
         [[nodiscard]] inline TimeBaseFit fitImuTimeBase(const std::vector<ImuRecord>& imu)
         {
             std::vector<double> part, host;
@@ -209,7 +209,7 @@ namespace Aetherion::Estimation::Replay {
             return fitTimeBase(part, host);
         }
 
-/// Initial 1-sigma in physical coordinates when the options give none of the right size.
+        /// Initial 1-sigma in physical coordinates when the options give none of the right size.
         [[nodiscard]] inline Eigen::VectorXd defaultInitialSigma(const Configuration& cfg)
         {
             constexpr double kDeg = std::numbers::pi / 180.0;
@@ -226,7 +226,7 @@ namespace Aetherion::Estimation::Replay {
             return sig;
         }
 
-/// Physical perturbation of x: world-frame attitude error, dv, dp, biases.
+        /// Physical perturbation of x: world-frame attitude error, dv, dp, biases.
         inline void perturb(EstimationState<double>& x, const Configuration& cfg, const Eigen::VectorXd& err)
         {
             const int nav = cfg.offset(BlockId::NavCore);
@@ -242,7 +242,7 @@ namespace Aetherion::Estimation::Replay {
                 x.baroBias += err[o];
         }
 
-/// Fill the summary's statistics over the second half of [t0, tEnd].
+        /// Fill the summary's statistics over the second half of [t0, tEnd].
         inline void summarise(ReplayResult& res, double t0, double tEnd)
         {
             constexpr double kDeg = std::numbers::pi / 180.0;
@@ -297,7 +297,7 @@ namespace Aetherion::Estimation::Replay {
             S.nisGnssVelocity = nV ? nisV / static_cast<double>(nV) : 0.0;
             S.nisBaro = nB ? nisB / static_cast<double>(nB) : 0.0;
         }
-    }  // namespace detail
+    } // namespace detail
 
     template <ErrorConvention C>
     [[nodiscard]] ReplayResult replay(const LogSet& logs, const Configuration& cfg, const ReplayOptions& opt)
@@ -314,14 +314,14 @@ namespace Aetherion::Estimation::Replay {
         res.summary.timeBase = detail::fitImuTimeBase(logs.imu);
         const TimeBaseFit& fit = res.summary.timeBase;
 
-  // Frame and filter.
+        // Frame and filter.
         const LciFrame<double> frame =
             LciFrame<double>::FromGeodetic(logs.run.lat0_deg * kDeg, logs.run.lon0_deg * kDeg, logs.run.alt0_m, 0.0);
         const MeasurementModels<double> meas(frame);
         InvariantEKF<double, C> ekf(cfg, frame, opt.noise);
         const int n = cfg.dimension();
 
-  // Initial state from the truth at the first IMU sample.
+        // Initial state from the truth at the first IMU sample.
         const double t0 = opt.timing.imu(logs.imu.front(), fit, logs.run);
         EstimationState<double> x0 = truthToState(detail::interpolateTruth(logs.truth, t0), frame);
         const Eigen::VectorXd sig = (opt.initialSigma.size() == n) ? opt.initialSigma : detail::defaultInitialSigma(cfg);
@@ -329,11 +329,11 @@ namespace Aetherion::Estimation::Replay {
             detail::perturb(x0, cfg, opt.initialError);
         ekf.initialise(x0, ekf.covarianceFromPhysical(x0, Eigen::MatrixXd(sig.cwiseProduct(sig).asDiagonal())));
 
-  // Measurement events on the simulation time base, in order.
+        // Measurement events on the simulation time base, in order.
         struct Event
         {
             double t;
-            int kind;  // 0 gps, 1 baro
+            int kind; // 0 gps, 1 baro
             std::size_t index;
         };
         std::vector<Event> events;
@@ -344,7 +344,7 @@ namespace Aetherion::Estimation::Replay {
         std::stable_sort(events.begin(), events.end(), [](const Event& a, const Event& b) { return a.t < b.t; });
         std::size_t nextEvent = 0;
         while (nextEvent < events.size() && events[nextEvent].t < t0)
-            ++nextEvent;  // measurements before the first IMU sample cannot be applied
+            ++nextEvent; // measurements before the first IMU sample cannot be applied
 
         const bool useGnssPos = cfg.has(MeasurementId::GnssPosition);
         const bool useGnssVel = cfg.has(MeasurementId::GnssVelocity);
@@ -416,7 +416,7 @@ namespace Aetherion::Estimation::Replay {
             res.states.push_back(std::move(row));
         };
 
-  // Main loop.
+        // Main loop.
         double tPrev = t0;
         double tLastOut = -1e300;
         record(t0);
@@ -426,12 +426,12 @@ namespace Aetherion::Estimation::Replay {
             const ImuRecord& s = logs.imu[k];
             const double t = opt.timing.imu(s, fit, logs.run);
             if (t <= tPrev)
-                continue;  // duplicate or out-of-order stamp: skip the sample
-    // Readings held over [tPrev, t]: the average of the bounding samples.
+                continue; // duplicate or out-of-order stamp: skip the sample
+                          // Readings held over [tPrev, t]: the average of the bounding samples.
             const ImuRecord& u0 = logs.imu[k - 1];
             const ImuSample<double> u{ 0.5 * (u0.gyro_rad_s + s.gyro_rad_s), 0.5 * (u0.accel_m_s2 + s.accel_m_s2) };
 
-    // Split the interval at every measurement inside it.
+            // Split the interval at every measurement inside it.
             double tCur = tPrev;
             while (nextEvent < events.size() && events[nextEvent].t <= t)
             {
@@ -455,18 +455,18 @@ namespace Aetherion::Estimation::Replay {
             }
         }
 
-        detail::summarise(res, t0, tPrev);  // over the second half
+        detail::summarise(res, t0, tPrev); // over the second half
         return res;
     }
 
-/// Dispatch on a run-time convention.
+    /// Dispatch on a run-time convention.
     [[nodiscard]] inline ReplayResult
     replay(ErrorConvention c, const LogSet& logs, const Configuration& cfg, const ReplayOptions& opt)
     {
         return c == ErrorConvention::RightInvariant ? replay<ErrorConvention::RightInvariant>(logs, cfg, opt) : replay<ErrorConvention::LeftInvariant>(logs, cfg, opt);
     }
 
-// ---- output -----------------------------------------------------------------
+    // ---- output -----------------------------------------------------------------
 
     inline void writeStates(std::ostream& out, const ReplayResult& r, const Configuration& cfg)
     {
@@ -528,4 +528,4 @@ namespace Aetherion::Estimation::Replay {
             << "(bias NEES needs the realised biases, which the sensor FMUs do not publish yet)\n";
     }
 
-}  // namespace Aetherion::Estimation::Replay
+} // namespace Aetherion::Estimation::Replay
