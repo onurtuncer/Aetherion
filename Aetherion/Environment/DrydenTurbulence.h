@@ -399,7 +399,14 @@ namespace Aetherion::Environment {
             }
 
             const Eigen::Vector3d x(x1, x2, xlag);
-            const Eigen::Vector3d n(gaussian(), gaussian(), gaussian());
+            // Draw in a fixed order: the order in which function arguments are
+            // evaluated is unspecified, so n(gaussian(), gaussian(), gaussian())
+            // could assign the same draws to different components on different
+            // compilers.
+            const double n0 = gaussian();
+            const double n1 = gaussian();
+            const double n2 = gaussian();
+            const Eigen::Vector3d n(n0, n1, n2);
             const Eigen::Vector3d xn = (cache.Phi * x) + (cache.Lc * n);
             x1 = xn(0);
             x2 = xn(1);

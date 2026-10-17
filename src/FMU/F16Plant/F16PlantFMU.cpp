@@ -97,8 +97,10 @@
 //  air-relative and unchanged by wind; the initial ground velocity is the
 //  trim airspeed along the heading plus the wind.  Turbulence (Dryden,
 //  MIL-F-8785C) is stepped once per integrator sub-step at the current
-//  airspeed and held constant over the step; its eight filter states are in
-//  the saved FMU state, the noise stream is not rewound by setFMUState.
+//  airspeed and held constant over the step.  The saved FMU state carries the
+//  eight filter states, the position of the noise stream and the gust held by
+//  the aero and propulsion policies, so a restored run replays the original
+//  realisation exactly.
 //  atm.* shifts the US1976 atmosphere for the forces, the trim and out.P_Pa,
 //  out.T_K, out.rho_kg_m3, out.a_m_s alike.  All defaults reproduce the
 //  calm, standard-day plant bit for bit.
@@ -288,6 +290,11 @@ struct F16PlantState
     // ── Turbulence filter states (preserved across save/restore) ─────────────
     std::array<double, 8> turb_x{};
     AE_ENV::DrydenTurbulence::NoiseState turb_noise{}; // generator position and Box-Muller spare
+    // Gust the aero and propulsion policies hold over the last step.  The next
+    // step forms its airspeed from it before advancing the filters, so it is
+    // part of the state: without it a restored run drew the next gust at a
+    // different airspeed (second pre-DOI audit, finding N02).
+    AE_ENV::GustState held_gust{};
 };
 static_assert(std::is_trivially_copyable_v<F16PlantState>,
     "F16PlantState must be trivially copyable for fmu4cpp state save/restore.");
@@ -325,8 +332,11 @@ public:
         m_propModel = std::make_shared<const AE_SR::DAVEMLPropModel>(propPath);
 
         // 3. Earth Rotation Angle at fmi2EnterInitializationMode time — needed
-        //    for the ECI initial state below.
-        m_theta0 = kOmegaEarth_rad_s * currentTime();
+        //    for the ECI initial state below.  ECI coincides with ECEF at FMI
+        //    time 0, so the angle at time t is theta0 + omega (t - t0) = omega t
+        //    (the convention AirRelative uses for the wind).
+        m_t0 = currentTime();
+        m_theta0 = kOmegaEarth_rad_s * m_t0;
 
         // 4. Solve trim: find (alpha, elevator, throttle) for the given flight
         //    condition.  The weight is the apparent weight at the trim point: the
@@ -518,6 +528,7 @@ public:
         m_aeroModel.reset();
         m_propModel.reset();
         m_ip = {};
+        m_t0 = 0.0;
         m_theta0 = 0.0;
         m_state = {};
         state_ = F16PlantState{};
@@ -1004,6 +1015,7 @@ private:
         state_.mass_kg = m_state.m;
         state_.turb_x = m_turb.has_value() ? m_turb->states() : std::array<double, 8>{};
         state_.turb_noise = m_turb.has_value() ? m_turb->noiseState() : AE_ENV::DrydenTurbulence::NoiseState{};
+        state_.held_gust = m_stepper.has_value() ? m_stepper->vectorField().aero.gust() : AE_ENV::GustState{};
     }
 
     // ── unpackState ───────────────────────────────────────────────────────────
@@ -1029,11 +1041,14 @@ private:
             m_turb->setNoiseState(state_.turb_noise);
         }
 
-        // Re-sync control surface state into VF (also restored from POD)
+        // Re-sync control surface state and the held gust into VF (also
+        // restored from POD).
         if (!m_stepper.has_value()) return;
         auto& vf = m_stepper->vectorField();
         vf.aero.setControls(state_.el_deg, state_.ail_deg, state_.rdr_deg);
         vf.thrust.pwr_pct = state_.pwr_pct;
+        vf.aero.setGust(state_.held_gust);
+        vf.thrust.setGust(state_.held_gust);
     }
 
     // ── populateOutputCache ───────────────────────────────────────────────────
@@ -1048,7 +1063,11 @@ private:
     {
         if (!m_stepper.has_value()) return;
 
-        const double theta_GST = m_theta0 + (kOmegaEarth_rad_s * t);
+        // t is absolute FMI time and theta0 already holds the rotation up to
+        // t0: adding omega t counted the start time twice, and a run started at
+        // t0 = 100 s reported its initial longitude 0.42 deg west of the
+        // configured one (second pre-DOI audit, finding N07).
+        const double theta_GST = m_theta0 + (kOmegaEarth_rad_s * (t - m_t0));
         const auto& vf = m_stepper->vectorField();
 
         // MakeSnapshot1 (two-policy overload) fills kinematics, atmosphere, and
@@ -1216,7 +1235,8 @@ private:
     std::shared_ptr<const AE_SR::DAVEMLAeroModel> m_aeroModel;
     std::shared_ptr<const AE_SR::DAVEMLPropModel> m_propModel;
     AE_RB::InertialParameters m_ip{};
-    double m_theta0{ 0.0 };
+    double m_t0{ 0.0 };     // FMI time at initialisation [s]
+    double m_theta0{ 0.0 }; // Earth Rotation Angle at m_t0 [rad]
 
     // Stepper is empty until exit_initialisation_mode; cleared on reset.
     std::optional<F16Stepper> m_stepper;
