@@ -587,8 +587,19 @@ where :math:`\bar{q} = \tfrac{1}{2}\rho V_T^2` is dynamic pressure.
 **Gridded tables.** The database contains multi-dimensional breakpoint
 sets spanning angle of attack, Mach number, sideslip angle, and control
 deflection, as defined in Morelli's adaptation of the Stevens & Lewis
-nonlinear model.  Interpolation is bilinear in each table dimension;
-extrapolation clamps to the nearest breakpoint.
+nonlinear model.  Interpolation is multilinear in the table dimensions.
+Past the first or last breakpoint each ``independentVarRef`` decides:
+with ``extrapolate="neither"`` (the default, and what every F-16 table
+uses) the input is held at the edge; ``"min"``, ``"max"`` and ``"both"``
+let the edge segment's line continue below, above or on both sides; and
+``min`` / ``max`` attributes hold the input further in any mode.  A
+``variableDef``'s ``minValue`` / ``maxValue`` hold its value whether it is
+computed or supplied as an input (``vt`` has ``minValue="0.1"``).  A
+table is checked when the file is loaded — one ``bpRef`` per
+``independentVarRef``, every breakpoint set defined, strictly increasing
+and at least two long, and a ``dataTable`` of exactly the product of the
+breakpoint counts — and anything else is rejected with a message naming
+the table.
 
 **Embedded check-case** (nominal, all rates and deflections zero):
 

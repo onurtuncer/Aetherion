@@ -49,8 +49,12 @@ catch_discover_tests(test_daveml_reader)
 # DAVE-ML aero model smoke tests
 set(DAVEML_F16_AERO "${PROJECT_SOURCE_DIR}/data/F16_S119_source/F16_aero.dml")
 
-add_executable(test_daveml_aero_model test_DAVEMLAeroModel.cpp test_DAVEMLAeroModelErrors.cpp
-                                      test_DAVEMLAeroModelTapes.cpp)
+add_executable(
+  test_daveml_aero_model
+  test_DAVEMLAeroModel.cpp
+  test_DAVEMLAeroModelErrors.cpp
+  test_DAVEMLAeroModelTapes.cpp
+  test_DAVEMLAeroModelLimits.cpp)
 
 target_compile_definitions(test_daveml_aero_model PRIVATE "DAVEML_AERO_FILE=\"${DAVEML_F16_AERO}\"")
 

@@ -18,6 +18,8 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
+#include <string>
+#include <type_traits>
 #include <unordered_set>
 
 namespace Aetherion::Serialization {
@@ -53,6 +55,26 @@ static std::vector<double> parseDoubles(const std::string& text)
         if (iss) iss.putback(c);
     }
     return v;
+}
+
+// =============================================================================
+// Limits (AD-safe)
+// =============================================================================
+
+// Hold x to [lo, hi]; an infinite bound is no bound. For AD the clamp is a
+// CondExp, which records no comparison: a tape stays valid across a limit and
+// simply holds the value (and a zero derivative) beyond it.
+template<class S>
+static S clampToLimits(S x, double lo, double hi)
+{
+    if constexpr (std::is_same_v<S, double>) {
+        if (x < lo) x = lo;
+        if (x > hi) x = hi;
+    } else {
+        if (lo > -std::numeric_limits<double>::infinity()) x = CppAD::CondExpLt(x, S(lo), S(lo), x);
+        if (hi <  std::numeric_limits<double>::infinity()) x = CppAD::CondExpGt(x, S(hi), S(hi), x);
+    }
+    return x;
 }
 
 // =============================================================================
@@ -254,25 +276,29 @@ template<class S>
 static S ndInterp(const std::vector<double>& data,
                   const std::vector<std::size_t>& dims,
                   const std::vector<const std::vector<double>*>& bps,
+                  const std::vector<double>& lo,
+                  const std::vector<double>& hi,
                   const std::vector<S>& inputs)
 {
     std::size_t ndim = dims.size();
     assert(inputs.size() == ndim);
 
-    // For each dimension find the segment index and the weight. The segment
-    // search compares the S input with the breakpoints, so for AD every
-    // comparison is recorded and a later evaluation in another segment is
-    // reported by compare_change_number(); the index itself is a constant of
-    // the tape, as it must be. Below the first breakpoint the first segment is
-    // used, above the last the last one (the weight then extrapolates
-    // linearly, as before; independentVarRef limits are applied elsewhere).
+    // For each dimension find the segment index and the weight. The input is
+    // first held to the table's [lo, hi] (independentVarRef min / max and
+    // extrapolate, fixed at load): by default that is the breakpoint range,
+    // so past an edge the edge value is returned; where extrapolation is
+    // allowed the edge segment's line continues. The clamp is a CondExp and
+    // records nothing. The segment search compares the S input with the
+    // breakpoints, so for AD every comparison is recorded and a later
+    // evaluation in another segment is reported by compare_change_number();
+    // the index itself is a constant of the tape, as it must be.
     std::vector<std::size_t> idx(ndim);
     std::vector<S>           wt(ndim);
 
     for (std::size_t d = 0; d < ndim; ++d) {
         const auto& bp = *bps[d];
-        assert(bp.size() >= 2);
-        const S& x = inputs[d];
+        assert(bp.size() >= 2);   // checked when the table was loaded
+        const S x = clampToLimits<S>(inputs[d], lo[d], hi[d]);
         const std::size_t last = bp.size() - 2;   // index of the last segment
 
         // One comparison per breakpoint passed: below the table the first
@@ -410,16 +436,37 @@ static void parseFunctionTables(
     std::unordered_map<std::string, DAVEMLAeroModel::GridTable>& tables,
     VarInfoMap& info)
 {
+    constexpr double kInf = std::numeric_limits<double>::infinity();
+
     for (const auto& xn : doc.select_nodes("//function")) {
         auto fnode = xn.node();
-
-        std::vector<std::string> inputVarIDs;
-        for (const auto& ivr : fnode.select_nodes("independentVarRef"))
-            inputVarIDs.emplace_back(ivr.node().attribute("varID").as_string());
 
         auto dvr = fnode.child("dependentVarRef");
         if (!dvr) continue;
         std::string depVarID = dvr.attribute("varID").as_string();
+        const std::string where = "DAVEMLAeroModel: table for '" + depVarID + "'";
+
+        // Independent variables with their limits: min / max hold the input
+        // in any mode; extrapolate (neither, the default, min, max or both)
+        // says on which side the input may run past the breakpoints.
+        std::vector<std::string> inputVarIDs;
+        std::vector<double>      ivMin, ivMax;
+        std::vector<bool>        extrapBelow, extrapAbove;
+        for (const auto& ivr : fnode.select_nodes("independentVarRef")) {
+            auto n = ivr.node();
+            inputVarIDs.emplace_back(n.attribute("varID").as_string());
+            auto minA = n.attribute("min");
+            auto maxA = n.attribute("max");
+            ivMin.push_back(minA ? minA.as_double() : -kInf);
+            ivMax.push_back(maxA ? maxA.as_double() :  kInf);
+            auto exA = n.attribute("extrapolate");
+            const std::string ex = exA ? trimWS(exA.as_string()) : "neither";
+            if (ex != "neither" && ex != "min" && ex != "max" && ex != "both")
+                throw std::runtime_error(where + ": independentVarRef '" + inputVarIDs.back()
+                    + "' has extrapolate=\"" + ex + "\"; expected neither, min, max or both");
+            extrapBelow.push_back(ex == "min" || ex == "both");
+            extrapAbove.push_back(ex == "max" || ex == "both");
+        }
 
         // Gridded table definition — inline or referenced
         auto gdef = fnode.select_node(".//griddedTableDef").node();
@@ -440,10 +487,54 @@ static void parseFunctionTables(
         auto dtNode = gdef.child("dataTable");
         if (dtNode) gt.data = parseDoubles(dtNode.child_value());
 
-        // Compute dims from breakpoints
+        // Check the table against its breakpoints now, naming what is wrong.
+        // Evaluation indexes the data by the breakpoint grid, so a dataTable
+        // shorter than the grid was read past its end (second pre-DOI audit,
+        // finding N04), and the asserts that stood for this are gone in a
+        // Release build.
+        if (gt.bpIDs.size() != gt.inputVarIDs.size())
+            throw std::runtime_error(where + " has " + std::to_string(gt.inputVarIDs.size())
+                + " independentVarRef(s) but " + std::to_string(gt.bpIDs.size()) + " bpRef(s)");
+        if (gt.bpIDs.empty())
+            throw std::runtime_error(where + " has no breakpoints");
+
+        std::size_t expected = 1;
         for (const auto& bpID : gt.bpIDs) {
             auto it = bps.find(bpID);
-            gt.dims.push_back(it != bps.end() ? it->second.size() : 1);
+            if (it == bps.end())
+                throw std::runtime_error(where + " refers to breakpoint '" + bpID + "', which is not defined");
+            const auto& bp = it->second;
+            if (bp.size() < 2)
+                throw std::runtime_error(where + ": breakpoint '" + bpID + "' has "
+                    + std::to_string(bp.size()) + " value(s); at least 2 are needed");
+            for (std::size_t i = 1; i < bp.size(); ++i)
+                if (!(bp[i] > bp[i - 1]))
+                    throw std::runtime_error(where + ": breakpoint '" + bpID
+                        + "' is not strictly increasing at index " + std::to_string(i));
+            if (expected > std::numeric_limits<std::size_t>::max() / bp.size())
+                throw std::runtime_error(where + ": the breakpoint grid is too large");
+            expected *= bp.size();
+            gt.dims.push_back(bp.size());
+        }
+        if (gt.data.size() != expected)
+            throw std::runtime_error(where + ": dataTable has " + std::to_string(gt.data.size())
+                + " value(s), the breakpoints need " + std::to_string(expected));
+
+        // The range each input is held to before the segment search: the
+        // breakpoint range, unless extrapolation is allowed on that side, and
+        // the min / max attributes in any case -- "the more limiting of", as
+        // Janus puts it. The attributes used to be read and ignored (second
+        // pre-DOI audit, finding N03).
+        for (std::size_t d = 0; d < gt.dims.size(); ++d) {
+            const auto& bp = bps.at(gt.bpIDs[d]);
+            double lo = ivMin[d];
+            double hi = ivMax[d];
+            if (!extrapBelow[d]) lo = std::max(lo, bp.front());
+            if (!extrapAbove[d]) hi = std::min(hi, bp.back());
+            if (lo > hi)
+                throw std::runtime_error(where + ": independentVarRef '" + gt.inputVarIDs[d] + "' has min > max");
+            gt.lo.push_back(lo);
+            gt.hi.push_back(hi);
         }
 
         tables[depVarID] = std::move(gt);
@@ -574,7 +665,13 @@ DAVEMLAeroModel::evaluate(const Inputs<S>& in) const
     // Evaluate each step in topological order
     for (const auto& step : m_steps) {
         const auto& id = step.varID;
-        if (step.isInput && vars.contains(id)) continue;  // keep DML-input values, recompute everything else
+        if (step.isInput && vars.contains(id)) {
+            // A supplied input is kept as supplied, within its variableDef
+            // minValue / maxValue; the limits used to apply to computed
+            // variables only (second pre-DOI audit, finding N03).
+            if (step.hasMinMax) vars[id] = clampToLimits<S>(vars[id], step.minVal, step.maxVal);
+            continue;
+        }
 
         // Table > MathML calc > const initialValue (table overrides default)
         if (step.isTable)                    vars[id] = interpolate<S>(m_tables.at(id), vars);
@@ -582,15 +679,7 @@ DAVEMLAeroModel::evaluate(const Inputs<S>& in) const
         else if (step.isConst)               vars[id] = S(step.constVal);
         if (!vars.contains(id))              vars[id] = S(0.0);
 
-        if (step.hasMinMax) {
-            if constexpr (std::is_same_v<S, double>) {
-                vars[id] = std::clamp(vars[id], step.minVal, step.maxVal);
-            } else {
-                auto& v = vars[id];
-                v = CppAD::CondExpLt(v, S(step.minVal), S(step.minVal), v);
-                v = CppAD::CondExpGt(v, S(step.maxVal), S(step.maxVal), v);
-            }
-        }
+        if (step.hasMinMax) vars[id] = clampToLimits<S>(vars[id], step.minVal, step.maxVal);
     }
 
     Outputs<S> out;
@@ -630,7 +719,7 @@ S DAVEMLAeroModel::interpolate(
                 "DAVEMLAeroModel: breakpoint '" + bpID + "' not found");
         bps.push_back(&it->second);
     }
-    return ndInterp<S>(fn.data, fn.dims, bps, inputs);
+    return ndInterp<S>(fn.data, fn.dims, bps, fn.lo, fn.hi, inputs);
 }
 
 template<class S>
@@ -653,7 +742,12 @@ DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, S> vars) const
 {
     for (const auto& step : m_steps) {
         const auto& id = step.varID;
-        if (step.isInput && vars.contains(id)) continue;  // keep DML-input values, recompute everything else
+        if (step.isInput && vars.contains(id)) {
+            // A supplied input is kept as supplied, within its variableDef
+            // minValue / maxValue (see evaluate()).
+            if (step.hasMinMax) vars[id] = clampToLimits<S>(vars[id], step.minVal, step.maxVal);
+            continue;
+        }
         // Table takes priority over initialValue (initialValue is just a default)
         if (step.isTable)                    vars[id] = interpolate<S>(m_tables.at(id), vars);
         else if (!step.mathmlXml.empty())    vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
@@ -661,16 +755,7 @@ DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, S> vars) const
         if (!vars.contains(id))              vars[id] = S(0.0);
 
         // Apply variableDef minValue / maxValue clamping
-        if (step.hasMinMax) {
-            if constexpr (std::is_same_v<S, double>) {
-                vars[id] = std::clamp(vars[id], step.minVal, step.maxVal);
-            } else {
-                // AD-safe conditional clamping
-                auto& v = vars[id];
-                v = CppAD::CondExpLt(v, S(step.minVal), S(step.minVal), v);
-                v = CppAD::CondExpGt(v, S(step.maxVal), S(step.maxVal), v);
-            }
-        }
+        if (step.hasMinMax) vars[id] = clampToLimits<S>(vars[id], step.minVal, step.maxVal);
     }
     return vars;
 }

@@ -17,6 +17,9 @@
 //   - Extended MathML  — <abs>, <piecewise>/<piece>/<otherwise>,
 //     comparison ops <lt>, <gt>, <leq>, <geq>, <eq>.
 //   - Topological evaluation order (Kahn's algorithm over the dep. graph).
+//   - independentVarRef min / max / extrapolate, and variableDef minValue /
+//     maxValue on supplied inputs as well as computed variables. A table is
+//     checked against its breakpoints when the file is loaded.
 //
 // CppAD note
 // ──────────
@@ -29,8 +32,9 @@
 // evaluators in ODE/RKMK/Core/Newton.h do). Note that ADFun's change
 // counting is off by default; call compare_change_count(1) on the tape.
 // Interpolation weights are computed in S, so first derivatives are exact
-// inside a segment. Min/max limits on variables use CondExpLt/CondExpGt and
-// need no re-recording.
+// inside a segment. Min/max limits on variables, and the independentVarRef
+// limits a table input is held to, use CondExpLt/CondExpGt and need no
+// re-recording.
 // ------------------------------------------------------------------------------
 
 #pragma once
@@ -117,6 +121,12 @@ public:
         std::vector<std::string> bpIDs;        ///< matching breakpoint-def IDs
         std::vector<double>      data;         ///< row-major flattened data
         std::vector<std::size_t> dims;         ///< [n0, n1, ...] sizes per dim
+        /// Per dimension, the range the input is held to before the segment
+        /// search: independentVarRef min / max, and the breakpoint range on
+        /// each side where extrapolate does not allow going past it. Infinite
+        /// when unbounded. Fixed at load, so the clamp needs no re-recording.
+        std::vector<double>      lo;
+        std::vector<double>      hi;
     };
 
     /// @brief One evaluation step in the topologically sorted graph.
@@ -127,7 +137,8 @@ public:
         bool        isInput{ false };
         bool        isConst{ false };
         double      constVal{ 0.0 };
-        /// Output clamp from variableDef minValue / maxValue attributes.
+        /// Clamp from variableDef minValue / maxValue, applied to the computed
+        /// value or, for an input, to the supplied one.
         bool   hasMinMax{ false };
         double minVal{  -std::numeric_limits<double>::infinity() };
         double maxVal{   std::numeric_limits<double>::infinity() };

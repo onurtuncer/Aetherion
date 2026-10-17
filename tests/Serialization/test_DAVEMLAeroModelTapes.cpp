@@ -61,7 +61,9 @@ const char* const kPiecewiseDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 </DAVEfunc>)";
 
 // y = table(x) with breakpoints 0, 1, 2 and values 0, 1, 4: slope 1 on the
-// first segment, slope 3 on the second.
+// first segment, slope 3 on the second. extrapolate="neither" with min 0 and
+// max 2, as the F-16 deck's tables, so outside [0, 2] the input is held at
+// the edge.
 const char* const kTableDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 <DAVEfunc>
   <variableDef varID="x" units="nd" initialValue="0.5"><isInput/></variableDef>
@@ -152,11 +154,19 @@ TEST_CASE("DAVEMLAeroModel tape: a table segment is recorded and its change is r
     CHECK_THAT(g.Jacobian(std::vector<double>{ 1.5 })[0], WithinAbs(3.0, 1e-12));
     CHECK(g.compare_change_number() == 0);
 
-    // Below and above the table: first / last segment, reported when crossed.
-    CHECK_THAT(direct(m, -0.5), WithinAbs(-0.5, 1e-12));   // first segment's line
-    CHECK_THAT(direct(m, 2.5), WithinAbs(5.5, 1e-12));     // last segment's line
+    // Outside the table: the independentVarRef says extrapolate="neither"
+    // with min 0 and max 2, so the input is held at the edge and the model
+    // gives the edge values, not the segments' lines (this test used to pin
+    // the lines, -0.5 and 5.5: second pre-DOI audit, finding N03). The hold
+    // is a CondExp, so a tape recorded at -0.5 -- held at 0, first segment --
+    // is still the model at 0.5 and reports the change at 1.5 like any other.
+    CHECK_THAT(direct(m, -0.5), WithinAbs(0.0, 1e-12));
+    CHECK_THAT(direct(m, 2.5), WithinAbs(4.0, 1e-12));
     auto h = tapeRaw(m, -0.5);
-    h.Forward(0, std::vector<double>{ 0.5 });
+    CHECK_THAT(h.Forward(0, std::vector<double>{ -0.3 })[0], WithinAbs(0.0, 1e-12));
+    CHECK(h.compare_change_number() == 0);
+    CHECK_THAT(h.Jacobian(std::vector<double>{ -0.3 })[0], WithinAbs(0.0, 1e-12));
+    CHECK_THAT(h.Forward(0, std::vector<double>{ 0.5 })[0], WithinAbs(0.5, 1e-12));
     CHECK(h.compare_change_number() == 0);                 // still the first segment
     h.Forward(0, std::vector<double>{ 1.5 });
     CHECK(h.compare_change_number() > 0);
