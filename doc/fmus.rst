@@ -48,14 +48,29 @@ The two plant FMUs declare ``canGetAndSetFMUstate`` and
 ``canSerializeFMUstate``, so a master may checkpoint a step and roll back to
 it; the autopilot keeps no state beyond its registered variables and declares
 neither.  A checkpoint is the model's state record together with the FMU's
-clock and, for ``F16Plant``, the position of the turbulence noise stream, so a
-rolled-back run reproduces the original one gust for gust.  (Until v0.17.2
-the clock was not part of it and the first ``fmi2DoStep`` after a rollback was
-rejected, and the noise stream was not, so a rolled-back turbulent run diverged
-at once -- pre-DOI audit findings F05 and F06.)  ``test_fmu4cpp_state`` pins the
-clock contract in process; ``src/FMU/F16Plant/test_f16plant.py`` drives the
-packaged FMU through FMPy and is part of CTest whenever a Python with ``fmpy``
-is found at configure time.
+clock and, for ``F16Plant``, the turbulence filter states, the position of the
+noise stream and the gust the aero and propulsion policies hold, so a
+rolled-back run reproduces the original one gust for gust -- from the
+in-memory state, from the serialized state, and from the serialized state
+restored into a fresh instance.  (Until v0.17.2 the clock was not part of it
+and the first ``fmi2DoStep`` after a rollback was rejected, and the noise stream
+was not, so a rolled-back turbulent run diverged at once -- pre-DOI audit
+findings F05 and F06; until v0.17.4 the held gust was not, and the replay
+drifted by ~1e-7 within a few steps -- second audit, N02.)
+
+``F16Plant`` may be started at any FMI time: Earth-fixed outputs (latitude,
+longitude, NED velocity, attitude) are the same as for a run started at 0 s.
+(Until v0.17.4 the start time was counted twice in the output frame, and a run
+started at 100 s reported its initial longitude 0.42° west of the configured
+one -- second audit, N07.)
+
+``test_fmu4cpp_state`` pins the clock contract in process;
+``src/FMU/F16Plant/test_f16plant.py`` drives the packaged FMU through FMPy --
+trim stability, calm rollback, turbulent rollback (in memory, serialized, fresh
+instance) and a nonzero start time -- and is part of CTest whenever a Python
+with ``fmpy`` is found at configure time.  The GCC Release CI job installs FMPy
+and configures with ``-DAETHERION_REQUIRE_FMPY=ON``, which makes configure fail
+if the test cannot be registered.
 
 .. _fmu_version:
 

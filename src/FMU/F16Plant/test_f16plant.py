@@ -17,6 +17,19 @@ Tests
    Restore the checkpoint, re-run t=5 s → t=10 s, recording trajectory (B).
    Assert |A − B| ≤ 1e-10 at every output step (bitwise determinism).
 
+3. Turbulent save / restore
+   As test 2 with Dryden turbulence on (sigma 1 m/s on all three axes), the
+   gust outputs watched as well, replayed three ways: from the in-memory
+   state, from the serialized state, and from the serialized state restored
+   into a freshly initialised instance.  All three must reproduce the
+   original exactly (second pre-DOI audit, finding N02: the gust held by the
+   policies was not restored).
+
+4. Nonzero start time
+   Initialise at FMI time 100 s: the initial latitude and longitude must be
+   the configured ones, and the run must match one started at 0 s (second
+   pre-DOI audit, finding N07: the start time was counted twice).
+
 Usage
 ─────
   pip install fmpy numpy
@@ -85,7 +98,7 @@ def _vr_map(model_desc):
 # ─────────────────────────────────────────────────────────────────────────────
 # Helper: instantiate and initialise, return (slave, vrs, unzipdir)
 # ─────────────────────────────────────────────────────────────────────────────
-def _boot(fmu_path: pathlib.Path, unzipdir: str, start: float = 0.0):
+def _boot(fmu_path: pathlib.Path, unzipdir: str, start: float = 0.0, params=None):
     model_desc = read_model_description(str(fmu_path))
     vrs = _vr_map(model_desc)
 
@@ -98,9 +111,37 @@ def _boot(fmu_path: pathlib.Path, unzipdir: str, start: float = 0.0):
     slave.instantiate()
     slave.setupExperiment(startTime=start)
     slave.enterInitializationMode()
-    # Parameters keep their defaults (NASA Scenario 11 trim condition).
+    # Parameters keep their defaults (NASA Scenario 11 trim condition) unless
+    # given here.
+    if params:
+        slave.setReal([vrs[k] for k in params], list(params.values()))
     slave.exitInitializationMode()   # ← trim solver runs here
     return slave, vrs, model_desc
+
+
+_TURB = {"turb.sigma_u_mps": 1.0, "turb.sigma_v_mps": 1.0, "turb.sigma_w_mps": 1.0}
+_GUSTS = ["out.gust_u_m_s", "out.gust_v_m_s", "out.gust_w_m_s",
+          "out.gust_p_rad_s", "out.gust_q_rad_s", "out.gust_r_rad_s"]
+
+
+def _run(slave, vrs, names, t, dt, n):
+    """n steps of dt from t; returns (array of the named outputs after each step, t)."""
+    rows = []
+    for _ in range(n):
+        slave.doStep(t, dt, True)
+        t += dt
+        rows.append(slave.getReal([vrs[k] for k in names]))
+    return np.array(rows), t
+
+
+def _report(label, ref, got, names):
+    d = np.abs(ref - got)
+    if d.max() == 0.0:
+        print(f"  {label}: identical")
+        return True
+    i = np.unravel_index(d.argmax(), d.shape)
+    print(f"  {label}: FAIL, max |diff| {d.max():.3e} in {names[i[1]]} at step {i[0]}")
+    return False
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -280,6 +321,104 @@ def test_state_restore(fmu_path: pathlib.Path, dt: float, t_checkpoint: float, t
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Test 3 — Turbulent save / restore (in memory, serialized, fresh instance)
+# ─────────────────────────────────────────────────────────────────────────────
+def test_turbulent_restore(fmu_path: pathlib.Path, dt: float, n_before: int = 4, n_after: int = 25):
+    print(f"\n{'─'*60}")
+    print(f"Test 3: Turbulent save/restore  sigma=1 m/s  dt={dt} s  "
+          f"checkpoint after {n_before} steps, {n_after} replayed")
+    print(f"{'─'*60}")
+
+    names = _WATCHED + _GUSTS
+    unzipdir = tempfile.mkdtemp(prefix="f16plant_turb_")
+    try:
+        extract(str(fmu_path), unzipdir)
+        slave, vrs, _ = _boot(fmu_path, unzipdir, params=_TURB)
+        _, t = _run(slave, vrs, names, 0.0, dt, n_before)
+        t_ck = t
+
+        state = slave.getFMUState()
+        blob = slave.serializeFMUstate(state)
+        ref, _ = _run(slave, vrs, names, t_ck, dt, n_after)
+        if np.abs(ref[:, len(_WATCHED):]).max() == 0.0:
+            print("  FAIL: the gust outputs are all zero; turbulence is not on")
+            return False
+
+        ok = True
+        slave.setFMUState(state)
+        got, _ = _run(slave, vrs, names, t_ck, dt, n_after)
+        ok &= _report("in-memory state", ref, got, names)
+
+        slave.setFMUState(slave.deSerializeFMUstate(blob))
+        got, _ = _run(slave, vrs, names, t_ck, dt, n_after)
+        ok &= _report("serialized state", ref, got, names)
+        slave.freeFMUState(state)
+        slave.terminate()
+        slave.freeInstance()
+
+        fresh, vrs2, _ = _boot(fmu_path, unzipdir, params=_TURB)
+        fresh.setFMUState(fresh.deSerializeFMUstate(blob))
+        got, _ = _run(fresh, vrs2, names, t_ck, dt, n_after)
+        ok &= _report("serialized state in a fresh instance", ref, got, names)
+        fresh.terminate()
+        fresh.freeInstance()
+
+        print(f"\n  {'PASS' if ok else 'FAIL'}")
+        return ok
+    finally:
+        shutil.rmtree(unzipdir, ignore_errors=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test 4 — Nonzero start time
+# ─────────────────────────────────────────────────────────────────────────────
+def test_nonzero_start(fmu_path: pathlib.Path, dt: float, t_start: float = 100.0, n: int = 50):
+    print(f"\n{'─'*60}")
+    print(f"Test 4: Nonzero start time  t0={t_start} s  dt={dt} s  {n} steps")
+    print(f"{'─'*60}")
+
+    names = ["out.lat_deg", "out.lon_deg", "out.alt_m", "out.yaw_rad", "out.pitch_rad", "out.roll_rad",
+             "out.v_north_m_s", "out.v_east_m_s", "out.v_down_m_s", "out.vt_m_s", "out.alpha_deg"]
+    unzipdir = tempfile.mkdtemp(prefix="f16plant_epoch_")
+    try:
+        extract(str(fmu_path), unzipdir)
+
+        runs = {}
+        start = {}
+        for t0 in (0.0, t_start):
+            slave, vrs, _ = _boot(fmu_path, unzipdir, start=t0)
+            # The configured position as the instance holds it (the model
+            # description rounds start values).
+            start = dict(zip(("lat0_deg", "lon0_deg"), slave.getReal([vrs["lat0_deg"], vrs["lon0_deg"]])))
+            first = slave.getReal([vrs[k] for k in names])
+            traj, _ = _run(slave, vrs, names, t0, dt, n)
+            runs[t0] = (np.array(first), traj)
+            slave.terminate()
+            slave.freeInstance()
+
+        ok = True
+        first = runs[t_start][0]
+        for key, idx in (("lat0_deg", 0), ("lon0_deg", 1)):
+            if key in start:
+                err = abs(first[idx] - start[key])
+                print(f"  initial {names[idx]:12s} {first[idx]:.9f}  configured {start[key]:.9f}  |diff| {err:.2e}")
+                ok &= err < 1e-9
+
+        # The plant is the same at any epoch: Earth-relative outputs agree
+        # with the t0 = 0 run to round-off (the ECI positions differ by a
+        # rotation, so not bit for bit).
+        d = np.abs(runs[0.0][1] - runs[t_start][1])
+        i = np.unravel_index(d.argmax(), d.shape)
+        print(f"  max |run(t0) - run(0)| over {n} steps: {d.max():.2e} ({names[i[1]]})")
+        ok &= d.max() < 1e-6
+
+        print(f"\n  {'PASS' if ok else 'FAIL'}")
+        return ok
+    finally:
+        shutil.rmtree(unzipdir, ignore_errors=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
@@ -334,6 +473,8 @@ def main():
             t_end=args.checkpoint * 2,
         )
     )
+    results.append(test_turbulent_restore(fmu_path, dt=args.dt))
+    results.append(test_nonzero_start(fmu_path, dt=args.dt))
 
     print(f"\n{'═'*60}")
     passed = sum(results)

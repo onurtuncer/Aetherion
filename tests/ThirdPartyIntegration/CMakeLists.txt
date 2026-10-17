@@ -94,7 +94,14 @@ catch_discover_tests(test_cppad)
 # The FMPy smoke test of the packaged F16Plant FMU (trim stability, then checkpoint / rollback / replay with bitwise
 # agreement) drives the FMU through an FMI master, which the C++ tests cannot. It is part of CTest whenever the FMU is
 # built and a Python with fmpy is found; otherwise configure says so and the test is absent rather than silently
-# passing. (Audit R02: this test caught the rollback defect F05 and was not in the gate.)
+# passing. (Audit R02: this test caught the rollback defect F05 and was not in the gate.) With AETHERION_REQUIRE_FMPY a
+# configure that cannot register it fails instead, so a gate that sets it cannot lose the test without saying so (the
+# GCC Release job sets it; second pre-DOI audit).
+option(AETHERION_REQUIRE_FMPY "Fail configure if the FMPy test of the F16Plant FMU cannot be registered" OFF)
+set(_aetherion_fmpy_missing "")
+if(NOT TARGET F16Plant_fmi2)
+  set(_aetherion_fmpy_missing "the F16Plant FMU is not built")
+endif()
 if(TARGET F16Plant_fmi2)
   find_package(Python3 COMPONENTS Interpreter QUIET)
   if(Python3_Interpreter_FOUND)
@@ -114,9 +121,16 @@ if(TARGET F16Plant_fmi2)
                    "PYTHONIOENCODING=utf-8")
       message(STATUS "f16plant_fmpy_rollback registered (${Python3_EXECUTABLE})")
     else()
-      message(STATUS "fmpy not importable by ${Python3_EXECUTABLE}: f16plant_fmpy_rollback is not registered")
+      set(_aetherion_fmpy_missing "fmpy and numpy are not importable by ${Python3_EXECUTABLE}")
     endif()
   else()
-    message(STATUS "No Python interpreter: f16plant_fmpy_rollback is not registered")
+    set(_aetherion_fmpy_missing "no Python interpreter was found")
   endif()
+endif()
+if(_aetherion_fmpy_missing)
+  if(AETHERION_REQUIRE_FMPY)
+    message(FATAL_ERROR "AETHERION_REQUIRE_FMPY is ON but f16plant_fmpy_rollback cannot be registered: "
+                        "${_aetherion_fmpy_missing}")
+  endif()
+  message(STATUS "f16plant_fmpy_rollback is not registered: ${_aetherion_fmpy_missing}")
 endif()

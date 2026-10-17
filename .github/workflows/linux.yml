@@ -32,8 +32,17 @@ jobs:
           sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
           sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
 
+      # The production-FMU test (f16plant_fmpy_rollback: trim, rollback, turbulent and serialized rollback, nonzero
+      # start time) runs under FMPy; AETHERION_REQUIRE_FMPY makes configure fail rather than leave it out.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Install FMPy
+        run: python -m pip install fmpy numpy
+
       - name: Configure (GCC Release)
-        run: cmake --preset=gcc-release
+        run: cmake --preset=gcc-release -DAETHERION_REQUIRE_FMPY=ON -DPython3_EXECUTABLE="$(which python)"
 
       - name: Build
         run: cmake --build --preset=gcc-release
