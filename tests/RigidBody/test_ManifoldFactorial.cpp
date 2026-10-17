@@ -127,16 +127,16 @@ namespace {
     constexpr double kDriftT = 600.0;
     constexpr double kDriftH = 0.1;
 
-    constexpr int kDriftSample = 50;   // record every kDriftSample steps
+    constexpr int kDriftSample = 50; // record every kDriftSample steps
 
     struct DriftResult
     {
-        double rkmk_radau{ 0.0 };   // (a) MK  + implicit Radau IIA 5
+        double rkmk_radau{ 0.0 }; // (a) MK  + implicit Radau IIA 5
         double rkmk_rk4{ 0.0 };   // (d) MK  + explicit RK4
-        double flat_radau{ 0.0 };   // (c) no MK + implicit Radau IIA 5
-        double flat_gauss{ 0.0 };   // no MK + implicit Gauss 6 (symplectic)
+        double flat_radau{ 0.0 }; // (c) no MK + implicit Radau IIA 5
+        double flat_gauss{ 0.0 }; // no MK + implicit Gauss 6 (symplectic)
         double flat_rk4{ 0.0 };   // (b) no MK + explicit RK4
-        double flat_renrm{ 0.0 };   // (b) + per-step projection
+        double flat_renrm{ 0.0 }; // (b) + per-step projection
         int worst_iters{ 0 };
 
         // Sampled time histories, in the same cell order, for the figure.
@@ -331,7 +331,7 @@ namespace {
     // trend.  At h lambda = -100 the 3-stage Gauss amplification factor is
     // still only -0.787, and 6000 steps of that underflows -- which would
     // wrongly suggest Gauss handles the transient.
-    constexpr double kStiffRate = 1.0e3;    // c/m [1/s]; time constant 1 ms
+    constexpr double kStiffRate = 1.0e3; // c/m [1/s]; time constant 1 ms
     constexpr double kStiffT = 600.0;
     constexpr double kStiffH = 0.1;
 
@@ -365,9 +365,9 @@ namespace {
 
     struct StiffCell
     {
-        double speed{ 0.0 };        // ||v_B(T)||, exact value is 0
-        double defect{ 0.0 };       // ||R^T R - I||_F at T
-        int diverged_at{ -1 };   // step index of first non-finite state
+        double speed{ 0.0 };   // ||v_B(T)||, exact value is 0
+        double defect{ 0.0 };  // ||R^T R - I||_F at T
+        int diverged_at{ -1 }; // step index of first non-finite state
     };
 
     // One row of the stiffness sweep: retained fraction ||v_B(T)|| / ||v_0||
@@ -402,7 +402,7 @@ namespace {
         static const StiffResult r = [] {
             StiffResult out;
 
-            const double c = kStiffRate * 1.0;    // mass = 1 kg
+            const double c = kStiffRate * 1.0; // mass = 1 kg
 
             StiffVF vf{ asymmetric_body(), FlightDynamics::ZeroGravityPolicy{},
                 LinearDampingAero{ c } };

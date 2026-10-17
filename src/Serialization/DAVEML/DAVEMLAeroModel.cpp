@@ -9,7 +9,7 @@
 #include <Aetherion/Serialization/DAVEML/DAVEMLAeroModel.h>
 
 #include <pugixml.hpp>
-#include <cppad/cppad.hpp>   // for CppAD::Value, CppAD::CondExpLt
+#include <cppad/cppad.hpp> // for CppAD::Value, CppAD::CondExpLt
 
 #include <algorithm>
 #include <cmath>
@@ -24,9 +24,9 @@
 
 namespace Aetherion::Serialization {
 
-// =============================================================================
-// XML helpers
-// =============================================================================
+    // =============================================================================
+    // XML helpers
+    // =============================================================================
 
     static std::string nodeToStr(const pugi::xml_node& n)
     {
@@ -42,7 +42,7 @@ namespace Aetherion::Serialization {
         return s.substr(b, s.find_last_not_of(" \t\n\r") - b + 1);
     }
 
-// Parse comma/whitespace separated doubles (for breakpoints and data tables)
+    // Parse comma/whitespace separated doubles (for breakpoints and data tables)
     static std::vector<double> parseDoubles(const std::string& text)
     {
         std::vector<double> v;
@@ -57,13 +57,13 @@ namespace Aetherion::Serialization {
         return v;
     }
 
-// =============================================================================
-// Limits (AD-safe)
-// =============================================================================
+    // =============================================================================
+    // Limits (AD-safe)
+    // =============================================================================
 
-// Hold x to [lo, hi]; an infinite bound is no bound. For AD the clamp is a
-// CondExp, which records no comparison: a tape stays valid across a limit and
-// simply holds the value (and a zero derivative) beyond it.
+    // Hold x to [lo, hi]; an infinite bound is no bound. For AD the clamp is a
+    // CondExp, which records no comparison: a tape stays valid across a limit and
+    // simply holds the value (and a zero derivative) beyond it.
     template <class S>
     static S clampToLimits(S x, double lo, double hi)
     {
@@ -77,27 +77,27 @@ namespace Aetherion::Serialization {
         return x;
     }
 
-// =============================================================================
-// MathML node evaluator (templated, AD-safe)
-// =============================================================================
+    // =============================================================================
+    // MathML node evaluator (templated, AD-safe)
+    // =============================================================================
 
     template <class S>
     static S evalNode(const pugi::xml_node& node,
         const std::unordered_map<std::string, S>& vars);
 
-// Branching (comparisons, piecewise conditions, table-segment selection) is
-// done on S itself. For S = double that is an ordinary comparison. For
-// S = CppAD::AD<double> the comparison is evaluated on the current values AND
-// recorded on the tape, so that a later ADFun::Forward(0, x) at a point where
-// it would go the other way reports it through compare_change_number(): the
-// tape's branch is then known to be stale and the caller re-records. (Reducing
-// the operand to a double with CppAD::Value(Var2Par(.)) recorded nothing, and
-// a tape kept across a breakpoint or a piecewise boundary silently evaluated
-// the other region's expression -- pre-DOI audit finding F01.) The value of a
-// recorded comparison does not depend on the comparison being recorded, so
-// the double and AD paths agree wherever the tape is valid.
+    // Branching (comparisons, piecewise conditions, table-segment selection) is
+    // done on S itself. For S = double that is an ordinary comparison. For
+    // S = CppAD::AD<double> the comparison is evaluated on the current values AND
+    // recorded on the tape, so that a later ADFun::Forward(0, x) at a point where
+    // it would go the other way reports it through compare_change_number(): the
+    // tape's branch is then known to be stale and the caller re-records. (Reducing
+    // the operand to a double with CppAD::Value(Var2Par(.)) recorded nothing, and
+    // a tape kept across a breakpoint or a piecewise boundary silently evaluated
+    // the other region's expression -- pre-DOI audit finding F01.) The value of a
+    // recorded comparison does not depend on the comparison being recorded, so
+    // the double and AD paths agree wherever the tape is valid.
 
-// ── Arithmetic: times / plus / minus / divide / power ──────────────────────
+    // ── Arithmetic: times / plus / minus / divide / power ──────────────────────
     template <class S>
     static S evalArithmeticOp(const std::string& opName,
         const std::vector<pugi::xml_node>& operands,
@@ -127,7 +127,7 @@ namespace Aetherion::Serialization {
             "DAVEMLAeroModel MathML: unsupported operator <" + opName + ">");
     }
 
-// ── Unary math functions: abs / cos / sin / tan / sqrt ──────────────────────
+    // ── Unary math functions: abs / cos / sin / tan / sqrt ──────────────────────
     template <class S>
     static S evalUnaryMathOp(const std::string& opName,
         const std::vector<pugi::xml_node>& operands,
@@ -143,7 +143,7 @@ namespace Aetherion::Serialization {
         if (opName == "cos") return cos(x);
         if (opName == "sin") return sin(x);
         if (opName == "tan") return tan(x);
-        return sqrt(x);  // opName == "sqrt"
+        return sqrt(x); // opName == "sqrt"
     }
 
     static bool isUnaryMathOp(const std::string& opName)
@@ -151,8 +151,8 @@ namespace Aetherion::Serialization {
         return opName == "abs" || opName == "cos" || opName == "sin" || opName == "tan" || opName == "sqrt";
     }
 
-// ── csymbol — DAVE-ML named functions (e.g. atan2) ──────────────────────────
-// Syntax: <apply><csymbol ...>atan2</csymbol><ci>y</ci><ci>x</ci></apply>
+    // ── csymbol — DAVE-ML named functions (e.g. atan2) ──────────────────────────
+    // Syntax: <apply><csymbol ...>atan2</csymbol><ci>y</ci><ci>x</ci></apply>
     template <class S>
     static S evalCsymbolOp(const pugi::xml_node& op,
         const std::vector<pugi::xml_node>& operands,
@@ -167,9 +167,9 @@ namespace Aetherion::Serialization {
             "DAVEMLAeroModel MathML: unsupported csymbol '" + fnName + "'");
     }
 
-// ── Comparisons (return S(1) for true, S(0) for false) ──────────────────────
-// Used as piecewise conditions. The comparison is made on S so that CppAD
-// records it (see the note above evalNode).
+    // ── Comparisons (return S(1) for true, S(0) for false) ──────────────────────
+    // Used as piecewise conditions. The comparison is made on S so that CppAD
+    // records it (see the note above evalNode).
     template <class S>
     static S evalComparisonOp(const std::string& opName,
         const std::vector<pugi::xml_node>& operands,
@@ -187,7 +187,7 @@ namespace Aetherion::Serialization {
         else if (opName == "geq")
             cond = (lhs >= rhs);
         else
-            cond = (lhs == rhs);  // "eq"
+            cond = (lhs == rhs); // "eq"
         return cond ? S(1.0) : S(0.0);
     }
 
@@ -203,7 +203,7 @@ namespace Aetherion::Serialization {
         auto op = node.first_child();
         std::string opName = op.name();
 
-    // Collect operand subtrees (skip operator element)
+        // Collect operand subtrees (skip operator element)
         std::vector<pugi::xml_node> operands;
         for (auto c = op.next_sibling(); c; c = c.next_sibling())
             operands.push_back(c);
@@ -220,7 +220,7 @@ namespace Aetherion::Serialization {
         if (isComparisonOp(opName) && operands.size() == 2)
             return evalComparisonOp<S>(opName, operands, vars);
 
-    // <apply><piecewise>...</piecewise></apply> — piecewise is the whole apply
+        // <apply><piecewise>...</piecewise></apply> — piecewise is the whole apply
         if (opName == "piecewise")
             return evalNode<S>(op, vars);
 
@@ -237,9 +237,9 @@ namespace Aetherion::Serialization {
         for (auto child = node.first_child(); child; child = child.next_sibling()) {
             std::string cn = child.name();
             if (cn == "piece") {
-                auto val = child.first_child();            // expression
-                auto cond = val.next_sibling();              // condition
-                const bool condTrue = (evalNode<S>(cond, vars) != S(0.0));  // recorded for AD
+                auto val = child.first_child();                            // expression
+                auto cond = val.next_sibling();                            // condition
+                const bool condTrue = (evalNode<S>(cond, vars) != S(0.0)); // recorded for AD
                 if (condTrue && !matched) {
                     result = evalNode<S>(val, vars);
                     matched = true;
@@ -275,9 +275,9 @@ namespace Aetherion::Serialization {
             "DAVEMLAeroModel MathML: unexpected element <" + tag + ">");
     }
 
-// =============================================================================
-// N-D linear interpolation (AD-safe)
-// =============================================================================
+    // =============================================================================
+    // N-D linear interpolation (AD-safe)
+    // =============================================================================
 
     template <class S>
     static S ndInterp(const std::vector<double>& data,
@@ -290,42 +290,42 @@ namespace Aetherion::Serialization {
         std::size_t ndim = dims.size();
         assert(inputs.size() == ndim);
 
-    // For each dimension find the segment index and the weight. The input is
-    // first held to the table's [lo, hi] (independentVarRef min / max and
-    // extrapolate, fixed at load): by default that is the breakpoint range,
-    // so past an edge the edge value is returned; where extrapolation is
-    // allowed the edge segment's line continues. The clamp is a CondExp and
-    // records nothing. The segment search compares the S input with the
-    // breakpoints, so for AD every comparison is recorded and a later
-    // evaluation in another segment is reported by compare_change_number();
-    // the index itself is a constant of the tape, as it must be.
+        // For each dimension find the segment index and the weight. The input is
+        // first held to the table's [lo, hi] (independentVarRef min / max and
+        // extrapolate, fixed at load): by default that is the breakpoint range,
+        // so past an edge the edge value is returned; where extrapolation is
+        // allowed the edge segment's line continues. The clamp is a CondExp and
+        // records nothing. The segment search compares the S input with the
+        // breakpoints, so for AD every comparison is recorded and a later
+        // evaluation in another segment is reported by compare_change_number();
+        // the index itself is a constant of the tape, as it must be.
         std::vector<std::size_t> idx(ndim);
         std::vector<S> wt(ndim);
 
         for (std::size_t d = 0; d < ndim; ++d) {
             const auto& bp = *bps[d];
-            assert(bp.size() >= 2);   // checked when the table was loaded
+            assert(bp.size() >= 2); // checked when the table was loaded
             const S x = clampToLimits<S>(inputs[d], lo[d], hi[d]);
-            const std::size_t last = bp.size() - 2;   // index of the last segment
+            const std::size_t last = bp.size() - 2; // index of the last segment
 
-        // One comparison per breakpoint passed: below the table the first
-        // one already fails and segment 0 is used, above it the loop runs to
-        // the last segment. Points in the same segment record the same
-        // comparison results, so no spurious change is reported.
+            // One comparison per breakpoint passed: below the table the first
+            // one already fails and segment 0 is used, above it the loop runs to
+            // the last segment. Points in the same segment record the same
+            // comparison results, so no spurious change is reported.
             std::size_t i = 0;
-            while (i < last && !(x < S(bp[i + 1]))) ++i;   // x >= bp[i+1]: next segment
+            while (i < last && !(x < S(bp[i + 1]))) ++i; // x >= bp[i+1]: next segment
             idx[d] = i;
 
             const double span = bp[i + 1] - bp[i];
             wt[d] = (span > 0.0) ? (x - S(bp[i])) / S(span) : S(0.0);
         }
 
-    // N-D bilinear interpolation: iterate over 2^ndim vertices
+        // N-D bilinear interpolation: iterate over 2^ndim vertices
         S result = S(0.0);
         std::size_t nvert = 1U << ndim;
         for (std::size_t v = 0; v < nvert; ++v)
         {
-        // Linear index into the data table for this vertex
+            // Linear index into the data table for this vertex
             std::size_t linearIdx = 0;
             S weight = S(1.0);
             std::size_t stride = 1;
@@ -340,20 +340,20 @@ namespace Aetherion::Serialization {
         return result;
     }
 
-// =============================================================================
-// DAVEMLAeroModel — construction helpers
-// =============================================================================
+    // =============================================================================
+    // DAVEMLAeroModel — construction helpers
+    // =============================================================================
 
     namespace {
 
-// Per-variable metadata collected while walking the DAVE-ML XML tree, prior
-// to topological sorting and EvalStep construction.
+        // Per-variable metadata collected while walking the DAVE-ML XML tree, prior
+        // to topological sorting and EvalStep construction.
         struct VarInfo
         {
             bool isInput{ false };
             bool isConst{ false };
             double constVal{ 0.0 };
-            std::string mathmlXml;   // non-empty if calculated
+            std::string mathmlXml; // non-empty if calculated
             std::set<std::string> deps;
             bool hasMinMax{ false };
             double minVal{ -std::numeric_limits<double>::infinity() };
@@ -363,7 +363,7 @@ namespace Aetherion::Serialization {
 
     } // namespace
 
-// Top-level griddedTableDef by gtID (resolves <griddedTableRef gtID="...">).
+    // Top-level griddedTableDef by gtID (resolves <griddedTableRef gtID="...">).
     static std::unordered_map<std::string, pugi::xml_node>
     collectTopLevelTableDefs(const pugi::xml_document& doc)
     {
@@ -393,8 +393,8 @@ namespace Aetherion::Serialization {
             deps.insert(trimWS(ci.node().child_value()));
     }
 
-// Collect variableDef entries (input/const/calculated) and their MathML
-// dependency graph; also captures the sref/cbar/bspan geometry constants.
+    // Collect variableDef entries (input/const/calculated) and their MathML
+    // dependency graph; also captures the sref/cbar/bspan geometry constants.
     static void parseVariableDefs(const pugi::xml_document& doc, VarInfoMap& info,
         double& srefFt2, double& cbarFt, double& bspanFt)
     {
@@ -420,7 +420,7 @@ namespace Aetherion::Serialization {
                 if (maxA) vi.maxVal = maxA.as_double();
             }
 
-        // Reference geometry constants
+            // Reference geometry constants
             if (varID == "sref") srefFt2 = vi.constVal;
             if (varID == "cbar") cbarFt = vi.constVal;
             if (varID == "bspan") bspanFt = vi.constVal;
@@ -437,9 +437,9 @@ namespace Aetherion::Serialization {
         }
     }
 
-// Parse <function>/<griddedTableDef> (inline or via <griddedTableRef>) into
-// gridded lookup tables, and register each table's output as a variableDef
-// depending on its input vars.
+    // Parse <function>/<griddedTableDef> (inline or via <griddedTableRef>) into
+    // gridded lookup tables, and register each table's output as a variableDef
+    // depending on its input vars.
     static void parseFunctionTables(
         const pugi::xml_document& doc,
         const std::unordered_map<std::string, pugi::xml_node>& topLevelTableDefs,
@@ -457,9 +457,9 @@ namespace Aetherion::Serialization {
             std::string depVarID = dvr.attribute("varID").as_string();
             const std::string where = "DAVEMLAeroModel: table for '" + depVarID + "'";
 
-        // Independent variables with their limits: min / max hold the input
-        // in any mode; extrapolate (neither, the default, min, max or both)
-        // says on which side the input may run past the breakpoints.
+            // Independent variables with their limits: min / max hold the input
+            // in any mode; extrapolate (neither, the default, min, max or both)
+            // says on which side the input may run past the breakpoints.
             std::vector<std::string> inputVarIDs;
             std::vector<double> ivMin, ivMax;
             std::vector<bool> extrapBelow, extrapAbove;
@@ -478,7 +478,7 @@ namespace Aetherion::Serialization {
                 extrapAbove.push_back(ex == "max" || ex == "both");
             }
 
-        // Gridded table definition — inline or referenced
+            // Gridded table definition — inline or referenced
             auto gdef = fnode.select_node(".//griddedTableDef").node();
             if (!gdef) {
                 auto ref = fnode.select_node(".//griddedTableRef").node();
@@ -497,11 +497,11 @@ namespace Aetherion::Serialization {
             auto dtNode = gdef.child("dataTable");
             if (dtNode) gt.data = parseDoubles(dtNode.child_value());
 
-        // Check the table against its breakpoints now, naming what is wrong.
-        // Evaluation indexes the data by the breakpoint grid, so a dataTable
-        // shorter than the grid was read past its end (second pre-DOI audit,
-        // finding N04), and the asserts that stood for this are gone in a
-        // Release build.
+            // Check the table against its breakpoints now, naming what is wrong.
+            // Evaluation indexes the data by the breakpoint grid, so a dataTable
+            // shorter than the grid was read past its end (second pre-DOI audit,
+            // finding N04), and the asserts that stood for this are gone in a
+            // Release build.
             if (gt.bpIDs.size() != gt.inputVarIDs.size())
                 throw std::runtime_error(where + " has " + std::to_string(gt.inputVarIDs.size()) + " independentVarRef(s) but " + std::to_string(gt.bpIDs.size()) + " bpRef(s)");
             if (gt.bpIDs.empty())
@@ -526,11 +526,11 @@ namespace Aetherion::Serialization {
             if (gt.data.size() != expected)
                 throw std::runtime_error(where + ": dataTable has " + std::to_string(gt.data.size()) + " value(s), the breakpoints need " + std::to_string(expected));
 
-        // The range each input is held to before the segment search: the
-        // breakpoint range, unless extrapolation is allowed on that side, and
-        // the min / max attributes in any case -- "the more limiting of", as
-        // Janus puts it. The attributes used to be read and ignored (second
-        // pre-DOI audit, finding N03).
+            // The range each input is held to before the segment search: the
+            // breakpoint range, unless extrapolation is allowed on that side, and
+            // the min / max attributes in any case -- "the more limiting of", as
+            // Janus puts it. The attributes used to be read and ignored (second
+            // pre-DOI audit, finding N03).
             for (std::size_t d = 0; d < gt.dims.size(); ++d) {
                 const auto& bp = bps.at(gt.bpIDs[d]);
                 double lo = ivMin[d];
@@ -545,16 +545,16 @@ namespace Aetherion::Serialization {
 
             tables[depVarID] = std::move(gt);
 
-        // Register this var in info if not already there, with deps on inputs
+            // Register this var in info if not already there, with deps on inputs
             if (!info.contains(depVarID)) info[depVarID] = {};
             for (const auto& iv : inputVarIDs)
                 info[depVarID].deps.insert(iv);
         }
     }
 
-// Topological sort of the variable dependency graph (Kahn's algorithm).
-// Any remaining nodes after a cycle or unreachable state are appended in
-// arbitrary order so construction never fails outright on malformed input.
+    // Topological sort of the variable dependency graph (Kahn's algorithm).
+    // Any remaining nodes after a cycle or unreachable state are appended in
+    // arbitrary order so construction never fails outright on malformed input.
     static std::vector<std::string> topoSortVars(const VarInfoMap& info)
     {
         std::unordered_map<std::string, int> inDeg;
@@ -563,7 +563,7 @@ namespace Aetherion::Serialization {
             for (const auto& dep : vi.deps)
                 if (info.contains(dep)) inDeg[dep]; // ensure dep exists
         }
-    // Build reverse adj: dep → set of vars that need dep
+        // Build reverse adj: dep → set of vars that need dep
         std::unordered_map<std::string, std::vector<std::string>> rdeps;
         for (const auto& [id, vi] : info) {
             for (const auto& dep : vi.deps) {
@@ -571,7 +571,7 @@ namespace Aetherion::Serialization {
                 inDeg[id]; // ensure exists
             }
         }
-    // Count real in-degrees
+        // Count real in-degrees
         for (const auto& [id, vi] : info) inDeg[id] = 0;
         for (const auto& [id, vi] : info)
             for (const auto& dep : vi.deps)
@@ -590,14 +590,14 @@ namespace Aetherion::Serialization {
                 if (--inDeg[rdep] == 0) ready.push(rdep);
             }
         }
-    // Any remaining (cycle or unreachable) — append in arbitrary order
+        // Any remaining (cycle or unreachable) — append in arbitrary order
         for (const auto& [id, vi] : info)
             if (inDeg.contains(id) && inDeg[id] > 0) sorted.push_back(id);
 
         return sorted;
     }
 
-// Build the topologically-sorted EvalStep list consumed by evaluate<S>().
+    // Build the topologically-sorted EvalStep list consumed by evaluate<S>().
     static std::vector<DAVEMLAeroModel::EvalStep> buildEvalSteps(
         const std::vector<std::string>& sorted,
         const VarInfoMap& info,
@@ -624,9 +624,9 @@ namespace Aetherion::Serialization {
         return steps;
     }
 
-// =============================================================================
-// DAVEMLAeroModel — construction
-// =============================================================================
+    // =============================================================================
+    // DAVEMLAeroModel — construction
+    // =============================================================================
 
     DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
     {
@@ -647,9 +647,9 @@ namespace Aetherion::Serialization {
         m_steps = buildEvalSteps(sorted, info, m_tables);
     }
 
-// =============================================================================
-// DAVEMLAeroModel::evaluate<S>
-// =============================================================================
+    // =============================================================================
+    // DAVEMLAeroModel::evaluate<S>
+    // =============================================================================
 
     template <class S>
     DAVEMLAeroModel::Outputs<S>
@@ -658,7 +658,7 @@ namespace Aetherion::Serialization {
         std::unordered_map<std::string, S> vars;
         vars.reserve(m_steps.size() + 16);
 
-    // Seed inputs (DAVE-ML standard variable names from the aero file)
+        // Seed inputs (DAVE-ML standard variable names from the aero file)
         vars["vt"] = in.vt_fps;
         vars["alpha"] = in.alpha_deg;
         vars["beta"] = in.beta_deg;
@@ -669,18 +669,18 @@ namespace Aetherion::Serialization {
         vars["ail"] = in.ail_deg;
         vars["rdr"] = in.rdr_deg;
 
-    // Evaluate each step in topological order
+        // Evaluate each step in topological order
         for (const auto& step : m_steps) {
             const auto& id = step.varID;
             if (step.isInput && vars.contains(id)) {
-            // A supplied input is kept as supplied, within its variableDef
-            // minValue / maxValue; the limits used to apply to computed
-            // variables only (second pre-DOI audit, finding N03).
+                // A supplied input is kept as supplied, within its variableDef
+                // minValue / maxValue; the limits used to apply to computed
+                // variables only (second pre-DOI audit, finding N03).
                 if (step.hasMinMax) vars[id] = clampToLimits<S>(vars[id], step.minVal, step.maxVal);
                 continue;
             }
 
-        // Table > MathML calc > const initialValue (table overrides default)
+            // Table > MathML calc > const initialValue (table overrides default)
             if (step.isTable)
                 vars[id] = interpolate<S>(m_tables.at(id), vars);
             else if (!step.mathmlXml.empty())
@@ -706,9 +706,9 @@ namespace Aetherion::Serialization {
         return out;
     }
 
-// =============================================================================
-// Helper implementations
-// =============================================================================
+    // =============================================================================
+    // Helper implementations
+    // =============================================================================
 
     template <class S>
     S DAVEMLAeroModel::interpolate(
@@ -742,9 +742,9 @@ namespace Aetherion::Serialization {
         return evalNode<S>(d.first_child(), vars);
     }
 
-// =============================================================================
-// DAVEMLAeroModel::evaluateRaw<S>  — generic, map-based entry point
-// =============================================================================
+    // =============================================================================
+    // DAVEMLAeroModel::evaluateRaw<S>  — generic, map-based entry point
+    // =============================================================================
 
     template <class S>
     std::unordered_map<std::string, S>
@@ -753,12 +753,12 @@ namespace Aetherion::Serialization {
         for (const auto& step : m_steps) {
             const auto& id = step.varID;
             if (step.isInput && vars.contains(id)) {
-            // A supplied input is kept as supplied, within its variableDef
-            // minValue / maxValue (see evaluate()).
+                // A supplied input is kept as supplied, within its variableDef
+                // minValue / maxValue (see evaluate()).
                 if (step.hasMinMax) vars[id] = clampToLimits<S>(vars[id], step.minVal, step.maxVal);
                 continue;
             }
-        // Table takes priority over initialValue (initialValue is just a default)
+            // Table takes priority over initialValue (initialValue is just a default)
             if (step.isTable)
                 vars[id] = interpolate<S>(m_tables.at(id), vars);
             else if (!step.mathmlXml.empty())
@@ -767,13 +767,13 @@ namespace Aetherion::Serialization {
                 vars[id] = S(step.constVal);
             if (!vars.contains(id)) vars[id] = S(0.0);
 
-        // Apply variableDef minValue / maxValue clamping
+            // Apply variableDef minValue / maxValue clamping
             if (step.hasMinMax) vars[id] = clampToLimits<S>(vars[id], step.minVal, step.maxVal);
         }
         return vars;
     }
 
-// Explicit template instantiations for double and AD<double>
+    // Explicit template instantiations for double and AD<double>
     template DAVEMLAeroModel::Outputs<double>
     DAVEMLAeroModel::evaluate(const Inputs<double>&) const;
 

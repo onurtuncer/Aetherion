@@ -43,7 +43,7 @@ TEST_CASE("CppAD: derivative of x^2 at x = 3", "[cppad]")
 
     REQUIRE(dy.size() == 1);
 
-    const double expected = 6.0;        // d/dx (x^2) at x=3
+    const double expected = 6.0; // d/dx (x^2) at x=3
     const double tol = 1e-10;
     REQUIRE(std::fabs(dy[0] - expected) < tol);
 }

@@ -20,23 +20,23 @@ namespace Aetherion::Serialization {
         std::unordered_map<std::string, double> vars;
         vars.reserve(64);
 
-    // ── Pilot controls ────────────────────────────────────────────────────────
+        // ── Pilot controls ────────────────────────────────────────────────────────
         vars["throttle"] = in.throttle_frac;
         vars["longStk"] = in.longStk_frac;
         vars["latStk"] = in.latStk_frac;
         vars["pedal"] = in.pedal_frac;
 
-    // ── Mode flags ────────────────────────────────────────────────────────────
+        // ── Mode flags ────────────────────────────────────────────────────────────
         vars["sasOn"] = in.sasOn;
         vars["apOn"] = in.apOn;
 
-    // ── Autopilot commands ────────────────────────────────────────────────────
+        // ── Autopilot commands ────────────────────────────────────────────────────
         vars["altCmd"] = in.altCmd_ft;
         vars["keasCmd"] = in.keasCmd_kt;
         vars["latOffset"] = in.latOffset_ft;
         vars["baseChiCmd"] = in.baseChiCmd_deg;
 
-    // ── Sensor feedbacks ──────────────────────────────────────────────────────
+        // ── Sensor feedbacks ──────────────────────────────────────────────────────
         vars["altMsl"] = in.altMsl_ft;
         vars["Vequiv"] = in.Vequiv_kt;
         vars["alpha"] = in.alpha_deg;
@@ -48,16 +48,16 @@ namespace Aetherion::Serialization {
         vars["qb"] = in.qb_rad_s;
         vars["rb"] = in.rb_rad_s;
 
-    // ── Trim values (caller-supplied; override DML initialValue defaults) ─────
+        // ── Trim values (caller-supplied; override DML initialValue defaults) ─────
         vars["throttleTrim"] = in.throttleTrim;
         vars["longStkTrim"] = in.longStkTrim;
 
-    // ── F16_gnc.dml circumnavigator inputs (unused for Scenario 13.x) ─────────
+        // ── F16_gnc.dml circumnavigator inputs (unused for Scenario 13.x) ─────────
         vars["ownshipN_deg"] = in.ownshipN_deg;
         vars["ownshipE_deg"] = in.ownshipE_deg;
         vars["circlePoleSW"] = in.circlePoleSW;
 
-    // ── Evaluate the full DML graph ───────────────────────────────────────────
+        // ── Evaluate the full DML graph ───────────────────────────────────────────
         const auto result = m_impl.evaluateRaw(std::move(vars));
 
         auto get = [&](const char* id) -> double {

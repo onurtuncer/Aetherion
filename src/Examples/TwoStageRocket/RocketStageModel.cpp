@@ -24,7 +24,7 @@ namespace Aetherion::Examples::TwoStageRocket {
         if (!m_propDml) throw std::invalid_argument("RocketStageModel: propDml is null");
     }
 
-// ── propulsion ────────────────────────────────────────────────────────────────
+    // ── propulsion ────────────────────────────────────────────────────────────────
 
     RocketPropulsionResult RocketStageModel::propulsion(double t_sim) const
     {
@@ -46,12 +46,12 @@ namespace Aetherion::Examples::TwoStageRocket {
         };
 
         RocketPropulsionResult out;
-        out.thrust_N = get("thrust");  // bodyThrustForce_X [N]
-        out.mdot_kgs = get("mdot");    // propellant consumption rate [kg/s]
+        out.thrust_N = get("thrust"); // bodyThrustForce_X [N]
+        out.mdot_kgs = get("mdot");   // propellant consumption rate [kg/s]
         return out;
     }
 
-// ── inertialParameters ────────────────────────────────────────────────────────
+    // ── inertialParameters ────────────────────────────────────────────────────────
 
     RigidBody::InertialParameters RocketStageModel::inertialParameters() const
     {
@@ -71,20 +71,20 @@ namespace Aetherion::Examples::TwoStageRocket {
         ip.mass_kg = get("XMASS");
         ip.Ixx = get("XIXX");
         ip.Iyy = get("XIYY");
-        ip.Izz = get("XIZZ");  // = XIYY for this axisymmetric vehicle
-        ip.Ixz = get("XIZX");  // zero
-        ip.Ixy = get("XIXY");  // zero
-        ip.Iyz = get("XIYZ");  // zero
-    // DXCG [m, sign=+FWD]: CG is DXCG forward of MRC in body +x.
-    // InertialParameters.xbar_m = x-offset of CG from body origin (MRC)
-    // → positive when CG is forward of MRC, consistent with VectorField coupling.
+        ip.Izz = get("XIZZ"); // = XIYY for this axisymmetric vehicle
+        ip.Ixz = get("XIZX"); // zero
+        ip.Ixy = get("XIXY"); // zero
+        ip.Iyz = get("XIYZ"); // zero
+                              // DXCG [m, sign=+FWD]: CG is DXCG forward of MRC in body +x.
+                              // InertialParameters.xbar_m = x-offset of CG from body origin (MRC)
+                              // → positive when CG is forward of MRC, consistent with VectorField coupling.
         ip.xbar_m = get("DXCG");
-        ip.ybar_m = 0.0;          // DYCG = 0 (axisymmetric)
-        ip.zbar_m = 0.0;          // DZCG = 0 (axisymmetric)
+        ip.ybar_m = 0.0; // DYCG = 0 (axisymmetric)
+        ip.zbar_m = 0.0; // DZCG = 0 (axisymmetric)
         return ip;
     }
 
-// ── advance ───────────────────────────────────────────────────────────────────
+    // ── advance ───────────────────────────────────────────────────────────────────
 
     bool RocketStageModel::advance(double dt_s, double mdot_kgs)
     {
@@ -101,7 +101,7 @@ namespace Aetherion::Examples::TwoStageRocket {
             m_fuel.stg1FuelUsed_kg = kStg1MaxFuel_kg;
             m_fuel.staged = true;
             m_fuel.stg2FuelUsed_kg = 0.0;
-            return true;  // caller must drop kStg1DryMass_kg from state
+            return true; // caller must drop kStg1DryMass_kg from state
         }
         return false;
     }

@@ -38,8 +38,8 @@ namespace {
 
     using AD = CppAD::AD<double>;
 
-/// Writes `body` wrapped in a DAVEfunc element to a temp file named after
-/// `tag`, loads it, and removes the file again, also when loading throws.
+    /// Writes `body` wrapped in a DAVEfunc element to a temp file named after
+    /// `tag`, loads it, and removes the file again, also when loading throws.
     DAVEMLAeroModel loadDML(const std::string& tag, const std::string& body)
     {
         struct TempFile
@@ -59,7 +59,7 @@ namespace {
         return DAVEMLAeroModel(file.path.string());
     }
 
-// cx follows alpha but is limited to [-1, 2]; cm is limited above only.
+    // cx follows alpha but is limited to [-1, 2]; cm is limited above only.
     const char* const kLimitedDML = R"(
   <variableDef varID="alpha" units="deg" initialValue="0"><isInput/></variableDef>
   <variableDef varID="cx" units="nd" minValue="-1" maxValue="2">
@@ -85,17 +85,17 @@ TEST_CASE("DAVEMLAeroModel: variable limits clamp in evaluate (double)", "[davem
     DAVEMLAeroModel::Inputs<double> in;
     in.alpha_deg = 5.0;
     auto out = m.evaluate(in);
-    CHECK_THAT(out.cx, WithinAbs(2.0, 1e-12));   // clamped to maxValue
-    CHECK_THAT(out.cm, WithinAbs(0.5, 1e-12));   // 0.5, at the limit
+    CHECK_THAT(out.cx, WithinAbs(2.0, 1e-12)); // clamped to maxValue
+    CHECK_THAT(out.cm, WithinAbs(0.5, 1e-12)); // 0.5, at the limit
 
     in.alpha_deg = -5.0;
     out = m.evaluate(in);
-    CHECK_THAT(out.cx, WithinAbs(-1.0, 1e-12));  // clamped to minValue
-    CHECK_THAT(out.cm, WithinAbs(-0.5, 1e-12));  // no lower limit
+    CHECK_THAT(out.cx, WithinAbs(-1.0, 1e-12)); // clamped to minValue
+    CHECK_THAT(out.cm, WithinAbs(-0.5, 1e-12)); // no lower limit
 
     in.alpha_deg = 1.5;
     out = m.evaluate(in);
-    CHECK_THAT(out.cx, WithinAbs(1.5, 1e-12));   // inside the band
+    CHECK_THAT(out.cx, WithinAbs(1.5, 1e-12)); // inside the band
 }
 
 TEST_CASE("DAVEMLAeroModel: variable limits clamp in evaluate (AD<double>)", "[daveml_aero][limits][cppad]")

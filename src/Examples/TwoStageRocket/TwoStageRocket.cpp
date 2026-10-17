@@ -54,12 +54,12 @@ namespace {
     // Launch from the equator at the prime meridian
     constexpr double kLat_deg = 0.0;
     constexpr double kLon_deg = 0.0;
-    constexpr double kAlt_m = 0.0;   // sea level
+    constexpr double kAlt_m = 0.0; // sea level
 
     // Initial attitude: yaw East (90°), pitch 55.22° up from horizontal
-    constexpr double kAzimuth_deg = 90.0;   // pointing East
-    constexpr double kPitch_deg = 55.22;  // nose up from horizontal
-    constexpr double kZenith_deg = 90.0 - kPitch_deg;  // = 34.78° from vertical
+    constexpr double kAzimuth_deg = 90.0;             // pointing East
+    constexpr double kPitch_deg = 55.22;              // nose up from horizontal
+    constexpr double kZenith_deg = 90.0 - kPitch_deg; // = 34.78° from vertical
     constexpr double kRoll_deg = 0.0;
 
     // Rocket is stationary on the launch pad (ECEF velocity = 0)
@@ -77,7 +77,7 @@ namespace {
 
 namespace Aetherion::Examples::TwoStageRocket {
 
-// ── logStartupBanner ──────────────────────────────────────────────────────────
+    // ── logStartupBanner ──────────────────────────────────────────────────────────
 
     void TwoStageRocketApplication::logStartupBanner() const
     {
@@ -91,20 +91,20 @@ namespace Aetherion::Examples::TwoStageRocket {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── writeCsvHeader — Snapshot2 (31-column NASA format) ───────────────────────
+    // ── writeCsvHeader — Snapshot2 (31-column NASA format) ───────────────────────
 
     void TwoStageRocketApplication::writeCsvHeader(std::ofstream& csv) const
     {
         Simulation::Snapshot2Traits::write_header(csv);
     }
 
-// ── prepareSimulation ─────────────────────────────────────────────────────────
+    // ── prepareSimulation ─────────────────────────────────────────────────────────
 
     void TwoStageRocketApplication::prepareSimulation() const
     {
         const auto& simCfg = getConfig();
 
-    // ── 1. Check DML paths ────────────────────────────────────────────────────
+        // ── 1. Check DML paths ────────────────────────────────────────────────────
         const std::string inertiaPath = TWOSTAGE_INERTIA_FILE;
         const std::string propPath = TWOSTAGE_PROP_FILE;
         const std::string aeroPath = TWOSTAGE_AERO_FILE;
@@ -113,15 +113,15 @@ namespace Aetherion::Examples::TwoStageRocket {
         if (propPath.empty()) throw std::runtime_error("TWOSTAGE_PROP_FILE not configured.");
         if (aeroPath.empty()) throw std::runtime_error("TWOSTAGE_AERO_FILE not configured.");
 
-    // ── 2. Load DML engines ───────────────────────────────────────────────────
+        // ── 2. Load DML engines ───────────────────────────────────────────────────
         AE_CORE_INFO("Loading inertia DML from '{}'", inertiaPath);
         auto inertiaDml = std::make_shared<Serialization::DAVEMLAeroModel>(inertiaPath);
 
         AE_CORE_INFO("Loading propulsion DML from '{}'", propPath);
         auto propDml = std::make_shared<Serialization::DAVEMLAeroModel>(propPath);
 
-    // ── Compute S2 ignition time ──────────────────────────────────────────────
-    // Query S2 mdot from the propulsion DML so S2 burns exactly through endTime.
+        // ── Compute S2 ignition time ──────────────────────────────────────────────
+        // Query S2 mdot from the propulsion DML so S2 burns exactly through endTime.
         const double stg2IgnitionTime_s = [&]() -> double {
             std::unordered_map<std::string, double> s2vars;
             s2vars["stg1firing"] = 0.0;
@@ -133,11 +133,11 @@ namespace Aetherion::Examples::TwoStageRocket {
             };
             const double mdot = get("mdot", 1308.1);
             const double burnDur = RocketStageModel::kStg2MaxFuel_kg / mdot;
-        // Fire S2 when the body pitch angle matches the reference simulation's
-        // S2 ignition pitch (~24.44 deg).  Because the pitch decays at
-        // ~0.197 deg/s during coast (vs the reference's ~0.163 deg/s), igniting
-        // ~15.8 s earlier (post-burn coast ≈ 21 s) brings the body to the
-        // reference pitch angle at ignition while conserving orbital energy.
+            // Fire S2 when the body pitch angle matches the reference simulation's
+            // S2 ignition pitch (~24.44 deg).  Because the pitch decays at
+            // ~0.197 deg/s during coast (vs the reference's ~0.163 deg/s), igniting
+            // ~15.8 s earlier (post-burn coast ≈ 21 s) brings the body to the
+            // reference pitch angle at ignition while conserving orbital energy.
             constexpr double kPostBurnCoast_s = 7.0;
             const double ignTime = simCfg.endTime - kPostBurnCoast_s - burnDur;
             AE_CORE_INFO("S2 ignition time: {:.3f} s  (burn duration: {:.3f} s, post-burn coast: {:.1f} s)",
@@ -148,8 +148,8 @@ namespace Aetherion::Examples::TwoStageRocket {
         AE_CORE_INFO("Loading aero DML from '{}'", aeroPath);
         auto aeroDml = std::make_shared<const Serialization::DAVEMLAeroModel>(aeroPath);
 
-    // ── 3. Query liftoff inertial parameters from inertia DML ─────────────────
-    //    Use a temporary RocketStageModel at initial (zero fuel) state.
+        // ── 3. Query liftoff inertial parameters from inertia DML ─────────────────
+        //    Use a temporary RocketStageModel at initial (zero fuel) state.
         RocketStageModel stageModel0(inertiaDml, propDml);
         const RigidBody::InertialParameters ip = stageModel0.inertialParameters();
 
@@ -159,7 +159,7 @@ namespace Aetherion::Examples::TwoStageRocket {
         AE_CORE_INFO("  Iyy   = {:.3e} kg·m²  (= Izz)", ip.Iyy);
         AE_CORE_INFO("  DXCG  = {:.4f} m  (CG forward of MRC)", ip.xbar_m);
 
-    // ── 4. Build initial 6-DoF state ──────────────────────────────────────────
+        // ── 4. Build initial 6-DoF state ──────────────────────────────────────────
         const double theta0 = kOmegaE * simCfg.startTime;
 
         RigidBody::Config cfg{};
@@ -207,7 +207,7 @@ namespace Aetherion::Examples::TwoStageRocket {
             x0.g.p.x(), x0.g.p.y(), x0.g.p.z());
         AE_CORE_INFO("Initial mass         = {:.1f} kg", x0.m);
 
-    // ── 5. Construct simulator ────────────────────────────────────────────────
+        // ── 5. Construct simulator ────────────────────────────────────────────────
         AE_CORE_INFO("Constructing TwoStageRocketSimulator...");
         m_Simulator = std::make_unique<TwoStageRocketSimulator<>>(
             ip, x0, theta0,
@@ -217,7 +217,7 @@ namespace Aetherion::Examples::TwoStageRocket {
             stg2IgnitionTime_s);
     }
 
-// ── writeInitialSnapshot ──────────────────────────────────────────────────────
+    // ── writeInitialSnapshot ──────────────────────────────────────────────────────
 
     void TwoStageRocketApplication::writeInitialSnapshot(std::ofstream& csv) const
     {
@@ -232,7 +232,7 @@ namespace Aetherion::Examples::TwoStageRocket {
             fuel.staged ? "YES" : "no");
     }
 
-// ── stepAndRecord ─────────────────────────────────────────────────────────────
+    // ── stepAndRecord ─────────────────────────────────────────────────────────────
 
     auto TwoStageRocketApplication::stepAndRecord(
         std::ofstream& csv, double h, bool doWrite) const -> StepObservation
@@ -258,7 +258,7 @@ namespace Aetherion::Examples::TwoStageRocket {
         };
     }
 
-// ── logFinalSummary ───────────────────────────────────────────────────────────
+    // ── logFinalSummary ───────────────────────────────────────────────────────────
 
     void TwoStageRocketApplication::logFinalSummary() const
     {

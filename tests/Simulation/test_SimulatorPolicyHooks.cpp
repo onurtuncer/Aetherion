@@ -36,8 +36,8 @@ namespace {
         return ip;
     }
 
-// 1 km above the equator at longitude 0 (ECI == ECEF at theta_gst = 0),
-// body axes aligned with ECI, moving 100 m/s along ECI +Y (east).
+    // 1 km above the equator at longitude 0 (ECI == ECEF at theta_gst = 0),
+    // body axes aligned with ECI, moving 100 m/s along ECI +Y (east).
     RigidBody::StateD lowState()
     {
         RigidBody::StateD s;
@@ -50,7 +50,7 @@ namespace {
         return s;
     }
 
-/// Zero-wrench aero policy exposing the optional hooks MakeSnapshot2 looks for.
+    /// Zero-wrench aero policy exposing the optional hooks MakeSnapshot2 looks for.
     struct WindyDayAeroPolicy
     {
         Eigen::Vector3d wind{ Eigen::Vector3d::Zero() };
@@ -69,7 +69,7 @@ namespace {
 
     static_assert(FlightDynamics::AeroPolicy<WindyDayAeroPolicy>);
 
-/// Simulator built from a pre-made vector field, with a hook that edits it in place.
+    /// Simulator built from a pre-made vector field, with a hook that edits it in place.
     class PrebuiltFieldSimulator
         : public Simulation::ISimulator<DraglessSphereVF, Simulation::Snapshot1>
     {
@@ -77,7 +77,7 @@ namespace {
         PrebuiltFieldSimulator(DraglessSphereVF vf, RigidBody::StateD s0)
             : ISimulator(std::move(vf), std::move(s0))
         {
-            validate();  // the base's default check accepts anything
+            validate(); // the base's default check accepts anything
         }
 
         void scaleInertia(double k) { mutableVectorField().M *= k; }

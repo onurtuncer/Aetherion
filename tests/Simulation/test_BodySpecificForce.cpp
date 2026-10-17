@@ -32,10 +32,10 @@ using Catch::Approx;
 
 namespace {
 
-// A vehicle in the atmosphere: ~10 km altitude above the equator on the ECI +X
-// axis, flying along body +x, nose level.  Body axes are aligned with ECI here
-// only to keep the expected values readable — the policies are evaluated in the
-// body frame either way.
+    // A vehicle in the atmosphere: ~10 km altitude above the equator on the ECI +X
+    // axis, flying along body +x, nose level.  Body axes are aligned with ECI here
+    // only to keep the expected values readable — the policies are evaluated in the
+    // body frame either way.
     RigidBody::StateD makeAtmosphericState(double mass_kg = 1000.0,
         double u_m_s = 200.0)
     {
@@ -44,12 +44,12 @@ namespace {
         s.g.q = Eigen::Quaterniond::Identity();
         s.g.p = Eigen::Vector3d(Environment::WGS84::kSemiMajorAxis_m + 10000.0, 0.0, 0.0);
         s.nu_B.setZero();
-        s.nu_B(3) = u_m_s;   // body-x velocity
+        s.nu_B(3) = u_m_s; // body-x velocity
         s.m = mass_kg;
         return s;
     }
 
-// Far above the atmosphere, so DragOnlyAeroPolicy returns a vanishing force.
+    // Far above the atmosphere, so DragOnlyAeroPolicy returns a vanishing force.
     RigidBody::StateD makeExoatmosphericState(double mass_kg = 1000.0)
     {
         RigidBody::StateD s = makeAtmosphericState(mass_kg);
@@ -57,8 +57,8 @@ namespace {
         return s;
     }
 
-// Constant body-frame force, for arithmetic checks that do not depend on any
-// physical model.  Satisfies AeroPolicy / PropulsionPolicy.
+    // Constant body-frame force, for arithmetic checks that do not depend on any
+    // physical model.  Satisfies AeroPolicy / PropulsionPolicy.
     struct ConstantBodyForcePolicy
     {
         double Fx{ 0.0 };
@@ -72,8 +72,8 @@ namespace {
         {
             Spatial::Wrench<S> w{};
             w.f.setZero();
-        // Non-zero moments, to prove they are discarded rather than leaking into
-        // the force channels.
+            // Non-zero moments, to prove they are discarded rather than leaking into
+            // the force channels.
             w.f(0) = S(1234.0);
             w.f(1) = S(-5678.0);
             w.f(2) = S(9012.0);
@@ -142,7 +142,7 @@ TEST_CASE("BodySpecificForce: gravity magnitude at the same state is not zero",
 TEST_CASE("BodySpecificForce: drag-only sphere is antiparallel to velocity",
     "[BodySpecificForce]")
 {
-    const FlightDynamics::DragOnlyAeroPolicy aero{ 0.5, 1.0 };  // CD, S_ref [m²]
+    const FlightDynamics::DragOnlyAeroPolicy aero{ 0.5, 1.0 }; // CD, S_ref [m²]
     const FlightDynamics::ZeroPropulsionPolicy thrust{};
 
     RigidBody::StateD s = makeAtmosphericState(1000.0, 200.0);

@@ -300,7 +300,7 @@ namespace Aetherion::ODE::RKMK::Core {
 
             CppAD::ADFun<double> f;
             f.Dependent(ax, ay);
-            f.compare_change_count(1);   // off by default: switch change tracking on
+            f.compare_change_count(1); // off by default: switch change tracking on
             return f;
         }
 
@@ -438,7 +438,7 @@ namespace Aetherion::ODE::RKMK::Core {
 
             CppAD::ADFun<double> f;
             f.Dependent(ax, ay);
-            f.compare_change_count(1);   // off by default: switch change tracking on
+            f.compare_change_count(1); // off by default: switch change tracking on
             return f;
         }
 

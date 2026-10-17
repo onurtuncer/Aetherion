@@ -56,7 +56,7 @@ namespace Aetherion::Examples::DraglessSphere {
                 time(),
                 state(),
                 currentTheta(),
-                vectorField().gravity);   // forward the policy the integrator uses
+                vectorField().gravity); // forward the policy the integrator uses
         }
 
         [[nodiscard]]

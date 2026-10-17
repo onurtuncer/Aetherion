@@ -58,12 +58,12 @@
 
 // ── Scenario 15 constants ─────────────────────────────────────────────────────
 namespace {
-    constexpr double kLat_deg = 89.95;       // Initial geodetic latitude  [deg]
-    constexpr double kLon_deg = -45.0;        // Initial geodetic longitude [deg]
-    constexpr double kAlt_ft = 10000.0;     // Initial altitude MSL       [ft]
+    constexpr double kLat_deg = 89.95;  // Initial geodetic latitude  [deg]
+    constexpr double kLon_deg = -45.0;  // Initial geodetic longitude [deg]
+    constexpr double kAlt_ft = 10000.0; // Initial altitude MSL       [ft]
     constexpr double kAlt_m = kAlt_ft * 0.3048;
-    constexpr double kHeading_deg = 90.0;        // East
-    constexpr double kTAS_fps = 563.643;     // True airspeed              [ft/s]
+    constexpr double kHeading_deg = 90.0; // East
+    constexpr double kTAS_fps = 563.643;  // True airspeed              [ft/s]
     constexpr double kTAS_mps = kTAS_fps * 0.3048;
     constexpr double kLbf_N = 4.448221615260751;
     constexpr double kXcgFromAC_m = (35.0 - 25.0) / 100.0 * 11.32 * 0.3048;
@@ -78,7 +78,7 @@ namespace Aetherion::Examples::CircleNorthPole {
 
     using Sim = F16AltitudeChange::F16AltitudeChangeSimulator;
 
-// ── logStartupBanner ──────────────────────────────────────────────────────────
+    // ── logStartupBanner ──────────────────────────────────────────────────────────
 
     void CircleNorthPoleApplication::logStartupBanner() const
     {
@@ -93,20 +93,20 @@ namespace Aetherion::Examples::CircleNorthPole {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── writeCsvHeader ────────────────────────────────────────────────────────────
+    // ── writeCsvHeader ────────────────────────────────────────────────────────────
 
     void CircleNorthPoleApplication::writeCsvHeader(std::ofstream& csv) const
     {
         Simulation::Snapshot2Traits::write_header(csv);
     }
 
-// ── prepareSimulation ─────────────────────────────────────────────────────────
+    // ── prepareSimulation ─────────────────────────────────────────────────────────
 
     void CircleNorthPoleApplication::prepareSimulation() const
     {
         const auto& simCfg = getConfig();
 
-    // ── 1. Load models ────────────────────────────────────────────────────────
+        // ── 1. Load models ────────────────────────────────────────────────────────
         const std::string inertiaPath = F16_INERTIA_FILE;
         const std::string aeroPath = F16_AERO_FILE;
         const std::string propPath = F16_PROP_FILE;
@@ -127,19 +127,19 @@ namespace Aetherion::Examples::CircleNorthPole {
         AE_CORE_INFO("Loading control from '{}'", controlPath);
         auto ctrl_model = std::make_shared<const Serialization::DAVEMLControlModel>(controlPath);
 
-    // ── 2. Trim solver at 10 000 ft / 563.643 ft/s ───────────────────────────
-    // Apparent weight at the trim point: J2 attraction — the same gravity
-    // J2GravityPolicy applies during integration — less the centripetal relief of
-    // level flight over the rotating Earth.  Trimming against the static weight
-    // would leave the vehicle with excess lift on the first step.
+        // ── 2. Trim solver at 10 000 ft / 563.643 ft/s ───────────────────────────
+        // Apparent weight at the trim point: J2 attraction — the same gravity
+        // J2GravityPolicy applies during integration — less the centripetal relief of
+        // level flight over the rotating Earth.  Trimming against the static weight
+        // would leave the vehicle with excess lift on the first step.
         const double weight_lbf = FlightDynamics::LevelFlightTrimWeight_lbf(
             ip.mass_kg, kLat_deg, kAlt_m, 0.0, kTAS_mps);
         FlightDynamics::TrimInputs tin{};
         tin.vt_fps = kTAS_fps;
         tin.alt_ft = kAlt_ft;
         tin.weight_lbf = weight_lbf;
-    // Aero damping at the rate F16AeroPolicy will actually see — the transport
-    // rate.  Pitch attitude is not known yet and q does not depend on it.
+        // Aero damping at the rate F16AeroPolicy will actually see — the transport
+        // rate.  Pitch attitude is not known yet and q does not depend on it.
         tin.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, 0.0, kTAS_mps, kHeading_deg, 0.0, 0.0);
 
@@ -154,8 +154,8 @@ namespace Aetherion::Examples::CircleNorthPole {
         AE_CORE_INFO("  el    = {:.4f} deg", trim.el_deg);
         AE_CORE_INFO("  pwr   = {:.4f} %%", trim.pwr_pct);
 
-    // ── 3. Initial state ──────────────────────────────────────────────────────
-    // Velocity NED: purely east (heading = 90°), level flight, no wind.
+        // ── 3. Initial state ──────────────────────────────────────────────────────
+        // Velocity NED: purely east (heading = 90°), level flight, no wind.
         RigidBody::Config cfg{};
         cfg.pose.lat_deg = kLat_deg;
         cfg.pose.lon_deg = kLon_deg;
@@ -166,8 +166,8 @@ namespace Aetherion::Examples::CircleNorthPole {
         cfg.velocityNED.north_mps = 0.0;
         cfg.velocityNED.east_mps = kTAS_mps;
         cfg.velocityNED.down_mps = 0.0;
-    // Attitude held fixed against the local-level frame, which tips forward at the
-    // transport rate as the vehicle moves over the curved Earth.
+        // Attitude held fixed against the local-level frame, which tips forward at the
+        // transport rate as the vehicle moves over the curved Earth.
         cfg.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, 0.0, kTAS_mps, kHeading_deg, trim.alpha_deg, 0.0);
         cfg.inertialParameters = ip;
@@ -175,9 +175,9 @@ namespace Aetherion::Examples::CircleNorthPole {
         const double theta0 = computeInitialERA(simCfg.startTime);
         const RigidBody::StateD x0 = buildInitialState(cfg, theta0);
 
-    // ── 4. Autopilot commands ─────────────────────────────────────────────────
-    // KEAS command is derived from US1976 atmosphere at trim altitude so that
-    // deltaVequiv ≈ 0 at t=0 (prevents spurious throttle correction).
+        // ── 4. Autopilot commands ─────────────────────────────────────────────────
+        // KEAS command is derived from US1976 atmosphere at trim altitude so that
+        // deltaVequiv ≈ 0 at t=0 (prevents spurious throttle correction).
         const auto atm_trim = Environment::US1976Atmosphere(kAlt_m);
         constexpr double kRhoSL_kg_m3 = 1.225;
         constexpr double kKt_mps = 0.5144444;
@@ -186,9 +186,9 @@ namespace Aetherion::Examples::CircleNorthPole {
         Sim::AutopilotCmds cmds;
         cmds.altCmd_ft = kAltCmd_ft;
         cmds.keasCmd_kt = keas_kt;
-        cmds.baseChiCmd_deg = kHeading_deg;     // east; circumnavigator overrides steering
+        cmds.baseChiCmd_deg = kHeading_deg; // east; circumnavigator overrides steering
         cmds.latOffset_ft = 0.0;
-        cmds.circlePoleSW = 1.0;             // engage north-pole circumnavigator
+        cmds.circlePoleSW = 1.0; // engage north-pole circumnavigator
 
         AE_CORE_INFO("Autopilot commands:");
         AE_CORE_INFO("  altCmd       = {:.0f} ft  (hold)", cmds.altCmd_ft);
@@ -202,7 +202,7 @@ namespace Aetherion::Examples::CircleNorthPole {
             x0, theta0, cmds, kXcgFromAC_m);
     }
 
-// ── writeInitialSnapshot ──────────────────────────────────────────────────────
+    // ── writeInitialSnapshot ──────────────────────────────────────────────────────
 
     void CircleNorthPoleApplication::writeInitialSnapshot(std::ofstream& csv) const
     {
@@ -212,7 +212,7 @@ namespace Aetherion::Examples::CircleNorthPole {
             s2.time, s2.altitudeMsl_m, s2.trueAirspeed_m_s, s2.mach);
     }
 
-// ── stepAndRecord ─────────────────────────────────────────────────────────────
+    // ── stepAndRecord ─────────────────────────────────────────────────────────────
 
     auto CircleNorthPoleApplication::stepAndRecord(
         std::ofstream& csv, double h, bool doWrite) const -> StepObservation
@@ -239,7 +239,7 @@ namespace Aetherion::Examples::CircleNorthPole {
         };
     }
 
-// ── logFinalSummary ───────────────────────────────────────────────────────────
+    // ── logFinalSummary ───────────────────────────────────────────────────────────
 
     void CircleNorthPoleApplication::logFinalSummary() const
     {
@@ -262,7 +262,7 @@ namespace Aetherion::Examples::CircleNorthPole {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
+    // ── Private helpers ───────────────────────────────────────────────────────────
 
     double CircleNorthPoleApplication::computeInitialERA(double t0) noexcept
     {

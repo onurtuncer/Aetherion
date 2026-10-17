@@ -60,8 +60,8 @@ TEST_CASE("Spatial momentum equals I * twist", "[spatial][momentum]")
     Aetherion::Spatial::Inertia<Scalar> I(mass, I_com, c);
 
     Aetherion::Spatial::Twist<Scalar> v{};
-    v.v << 1.0, 2.0, 3.0,   // ω
-        4.0, 5.0, 6.0;  // linear
+    v.v << 1.0, 2.0, 3.0, // ω
+        4.0, 5.0, 6.0;    // linear
 
     auto h = I * v;
 

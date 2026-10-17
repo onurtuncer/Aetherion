@@ -21,14 +21,14 @@ TEST_CASE("US1976Atmosphere - sea level values (double)", "[US1976][values]")
     const auto s = Environment::US1976Atmosphere(h);
 
     // Reference values from US1976 at sea level
-    const double T_ref = 288.15;     // K
-    const double p_ref = 101325.0;   // Pa
-    const double rho_ref = 1.225;      // kg/m^3 (approx)
-    const double a_ref = 340.29399;  // m/s (sqrt(1.4 * 287.05287 * 288.15))
+    const double T_ref = 288.15;    // K
+    const double p_ref = 101325.0;  // Pa
+    const double rho_ref = 1.225;   // kg/m^3 (approx)
+    const double a_ref = 340.29399; // m/s (sqrt(1.4 * 287.05287 * 288.15))
 
     REQUIRE(s.T == Approx(T_ref).margin(1e-6));
     REQUIRE(s.p == Approx(p_ref).margin(0.5));       // 0.5 Pa tolerance
-    REQUIRE(s.rho == Approx(rho_ref).epsilon(1e-3));   // ~0.1% relative
+    REQUIRE(s.rho == Approx(rho_ref).epsilon(1e-3)); // ~0.1% relative
     REQUIRE(s.a == Approx(a_ref).epsilon(1e-5));
 }
 
@@ -86,7 +86,7 @@ TEST_CASE("US1976Atmosphere - CppAD derivatives vs finite differences", "[US1976
     const double dadh_ad = J[3];
 
     // ----- Finite-difference derivatives as reference ------------------------
-    const double dh = 10.0;  // 10 m step, small enough but not too small
+    const double dh = 10.0; // 10 m step, small enough but not too small
 
     auto fd = central_difference(
         [](double h) { return Environment::US1976Atmosphere(h); },
@@ -165,7 +165,7 @@ TEST_CASE("US1976Atmosphere - pressure/density monotonic and fields positive",
 {
     const double h_min = 0.0;
     const double h_max = 84000.0; // slightly below model top to avoid clamp artifacts
-    const double dh = 1000.0;  // 1 km steps
+    const double dh = 1000.0;     // 1 km steps
 
     auto s_prev = Environment::US1976Atmosphere(h_min);
 

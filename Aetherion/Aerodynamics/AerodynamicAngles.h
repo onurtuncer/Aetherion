@@ -31,12 +31,12 @@
 
 namespace Aetherion::Aerodynamics {
 
-/// @brief Precomputed aerodynamic angles and speed derived from a body-frame velocity vector.
-///
-/// All fields are populated by AnglesFromVelocityBody() and are provided as a
-/// convenience bundle so downstream computations (force, moment) can reuse them
-/// without re-deriving each quantity independently.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @brief Precomputed aerodynamic angles and speed derived from a body-frame velocity vector.
+    ///
+    /// All fields are populated by AnglesFromVelocityBody() and are provided as a
+    /// convenience bundle so downstream computations (force, moment) can reuse them
+    /// without re-deriving each quantity independently.
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
     template <class Scalar>
     struct AeroAngles
     {
@@ -48,14 +48,14 @@ namespace Aetherion::Aerodynamics {
         Scalar w;         ///< Body-axis z component of air-relative velocity (down) [m/s].
     };
 
-/// @brief Computes angle of attack, sideslip, and airspeed from the body-frame air-relative velocity.
-///
-/// Uses smooth (branch-free) approximations of atan2 and sqrt so the result is
-/// differentiable everywhere — required for CppAD tape recording.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
-/// @param v_body_m_s Air-relative velocity vector expressed in body axes [m/s].
-/// @param eps Smoothing parameter for the speed regularisation; default 1e-12.
-/// @return AeroAngles struct containing alpha, beta, speed, and the raw u/v/w components.
+    /// @brief Computes angle of attack, sideslip, and airspeed from the body-frame air-relative velocity.
+    ///
+    /// Uses smooth (branch-free) approximations of atan2 and sqrt so the result is
+    /// differentiable everywhere — required for CppAD tape recording.
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @param v_body_m_s Air-relative velocity vector expressed in body axes [m/s].
+    /// @param eps Smoothing parameter for the speed regularisation; default 1e-12.
+    /// @return AeroAngles struct containing alpha, beta, speed, and the raw u/v/w components.
     template <class Scalar>
     inline AeroAngles<Scalar> AnglesFromVelocityBody(
         const Vec3<Scalar>& v_body_m_s,
@@ -67,50 +67,50 @@ namespace Aetherion::Aerodynamics {
 
         const Scalar speed = SpeedFromVelocity(v_body_m_s, eps);
 
-    // beta = atan2(v, sqrt(u^2 + w^2))
+        // beta = atan2(v, sqrt(u^2 + w^2))
         const Scalar uw = CppAD::sqrt(u * u + w * w + eps * eps);
         const Scalar beta = CppAD::atan2(v, uw);
 
-    // alpha = atan2(w, u)
+        // alpha = atan2(w, u)
         const Scalar alpha = CppAD::atan2(w, u);
 
         return AeroAngles<Scalar>{ alpha, beta, speed, u, v, w };
     }
 
-/// @brief Cosine of the angle of attack.
-/// @tparam Scalar Numeric scalar type.
-/// @param alpha_rad Angle of attack [rad].
-/// @return cos(alpha_rad).
+    /// @brief Cosine of the angle of attack.
+    /// @tparam Scalar Numeric scalar type.
+    /// @param alpha_rad Angle of attack [rad].
+    /// @return cos(alpha_rad).
     template <class Scalar>
     inline Scalar CosAlpha(const Scalar& alpha_rad)
     {
         return CppAD::cos(alpha_rad);
     }
 
-/// @brief Sine of the angle of attack.
-/// @tparam Scalar Numeric scalar type.
-/// @param alpha_rad Angle of attack [rad].
-/// @return sin(alpha_rad).
+    /// @brief Sine of the angle of attack.
+    /// @tparam Scalar Numeric scalar type.
+    /// @param alpha_rad Angle of attack [rad].
+    /// @return sin(alpha_rad).
     template <class Scalar>
     inline Scalar SinAlpha(const Scalar& alpha_rad)
     {
         return CppAD::sin(alpha_rad);
     }
 
-/// @brief Cosine of the sideslip angle.
-/// @tparam Scalar Numeric scalar type.
-/// @param beta_rad Sideslip angle [rad].
-/// @return cos(beta_rad).
+    /// @brief Cosine of the sideslip angle.
+    /// @tparam Scalar Numeric scalar type.
+    /// @param beta_rad Sideslip angle [rad].
+    /// @return cos(beta_rad).
     template <class Scalar>
     inline Scalar CosBeta(const Scalar& beta_rad)
     {
         return CppAD::cos(beta_rad);
     }
 
-/// @brief Sine of the sideslip angle.
-/// @tparam Scalar Numeric scalar type.
-/// @param beta_rad Sideslip angle [rad].
-/// @return sin(beta_rad).
+    /// @brief Sine of the sideslip angle.
+    /// @tparam Scalar Numeric scalar type.
+    /// @param beta_rad Sideslip angle [rad].
+    /// @return sin(beta_rad).
     template <class Scalar>
     inline Scalar SinBeta(const Scalar& beta_rad)
     {

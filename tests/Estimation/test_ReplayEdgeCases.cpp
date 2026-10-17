@@ -64,11 +64,11 @@ namespace {
         g.verticalAccuracy_m = 3.0;
         g.fixType = fixType;
         g.hasVelocity = withVelocity;
-        g.speedAccuracy_m_s = 0.0;  // not reported: the harness falls back to ReplayOptions::gnssVelSigma_m_s
+        g.speedAccuracy_m_s = 0.0; // not reported: the harness falls back to ReplayOptions::gnssVelSigma_m_s
         return g;
     }
 
-/// One second at rest at the LCI origin, 100 Hz IMU, with one of each awkward record.
+    /// One second at rest at the LCI origin, 100 Hz IMU, with one of each awkward record.
     LogSet stationaryLogs()
     {
         LogSet logs;
@@ -87,7 +87,7 @@ namespace {
             r.accel_m_s2 = Eigen::Vector3d(0.0, 0.0, -9.8);
             logs.imu.push_back(r);
             if (k == 50)
-                logs.imu.push_back(r);  // duplicate stamp: skipped
+                logs.imu.push_back(r); // duplicate stamp: skipped
         }
         for (double t : { 0.0, 1.0 })
         {
@@ -100,16 +100,16 @@ namespace {
             logs.truth.push_back(tr);
         }
 
-        logs.gps.push_back(fix(kNaN, 1000.0 + 0.2 + 0.1, true, LogContract::Gps::kFixType3D, true));  // host - latency = 0.2
-        logs.gps.push_back(fix(-0.5, 999.6, true, LogContract::Gps::kFixType3D, true));  // before the first IMU sample
-        logs.gps.push_back(fix(0.4, 1000.5, false, 0, false));                            // epoch without a fix
-        logs.gps.push_back(fix(0.6, 1000.7, true, 1, false));                             // 2D: below minFixType
-        logs.gps.push_back(fix(0.805, 1000.9, true, LogContract::Gps::kFixType3D, false)); // splits an IMU interval
+        logs.gps.push_back(fix(kNaN, 1000.0 + 0.2 + 0.1, true, LogContract::Gps::kFixType3D, true)); // host - latency = 0.2
+        logs.gps.push_back(fix(-0.5, 999.6, true, LogContract::Gps::kFixType3D, true));              // before the first IMU sample
+        logs.gps.push_back(fix(0.4, 1000.5, false, 0, false));                                       // epoch without a fix
+        logs.gps.push_back(fix(0.6, 1000.7, true, 1, false));                                        // 2D: below minFixType
+        logs.gps.push_back(fix(0.805, 1000.9, true, LogContract::Gps::kFixType3D, false));           // splits an IMU interval
 
         logs.baro.push_back({ 0.3, 1000.3, Aetherion::Environment::US1976Atmosphere(kAlt0).p, 15.0 });
         return logs;
     }
-}  // namespace
+} // namespace
 
 TEST_CASE("Replay: empty logs are rejected", "[estimation][replay][negative]")
 {
@@ -126,7 +126,7 @@ TEST_CASE("Replay: awkward records on a stationary log, default sigmas", "[estim
 {
     const LogSet logs = stationaryLogs();
     ReplayOptions opt;
-    opt.outputEvery_s = 0.1;  // initialSigma left empty: the harness's defaults apply
+    opt.outputEvery_s = 0.1; // initialSigma left empty: the harness's defaults apply
 
     for (const ErrorConvention c : { ErrorConvention::RightInvariant, ErrorConvention::LeftInvariant })
     {
@@ -135,21 +135,21 @@ TEST_CASE("Replay: awkward records on a stationary log, default sigmas", "[estim
         INFO(toString(c));
 
         CHECK(s.convention == c);
-        CHECK(s.imuSamples == 100);  // 102 records, the first starts the run, the duplicate is skipped
+        CHECK(s.imuSamples == 100); // 102 records, the first starts the run, the duplicate is skipped
         CHECK(s.duration_s == Catch::Approx(1.0));
-    // The fix before t0 is dropped silently; the dropout and the 2D fix are counted.
+        // The fix before t0 is dropped silently; the dropout and the 2D fix are counted.
         CHECK(s.skippedFixes == 2);
         CHECK(s.gnssPositionUpdates == 2);
         CHECK(s.gnssVelocityUpdates == 1);
         CHECK(s.baroUpdates == 1);
-    // The fix without nominal_time_s is placed at the mapped arrival less the latency.
+        // The fix without nominal_time_s is placed at the mapped arrival less the latency.
         REQUIRE_FALSE(r.updates.empty());
         CHECK(r.updates.front().t == Catch::Approx(0.2).margin(1e-6));
         CHECK(r.updates.front().id == MeasurementId::GnssPosition);
-    // Decimated output: t0 and every 0.1 s.
+        // Decimated output: t0 and every 0.1 s.
         CHECK(r.states.size() == 11);
         CHECK(r.states.front().sigma.size() == 16);
-    // At rest from the truth, the estimate stays put.
+        // At rest from the truth, the estimate stays put.
         CHECK(s.posRms_m < 1.0);
         CHECK(std::isfinite(s.aneesNav));
     }
@@ -163,13 +163,13 @@ TEST_CASE("Replay: measurements the configuration does not use are ignored", "[e
 
     ReplayOptions opt;
     opt.initialError = Eigen::VectorXd::Zero(posOnly.dimension());
-    opt.initialError[0] = 0.001;  // a small attitude perturbation, no bias blocks to perturb
+    opt.initialError[0] = 0.001; // a small attitude perturbation, no bias blocks to perturb
 
     const ReplayResult r = replay<ErrorConvention::RightInvariant>(logs, posOnly, opt);
     CHECK(r.summary.gnssPositionUpdates == 2);
     CHECK(r.summary.gnssVelocityUpdates == 0);
     CHECK(r.summary.baroUpdates == 0);
-    CHECK(r.states.size() == 101);  // every IMU sample
+    CHECK(r.states.size() == 101); // every IMU sample
     CHECK(r.states.front().error.size() == 9);
 }
 
@@ -212,10 +212,10 @@ TEST_CASE("Replay: truth interpolation clamps at the ends and wraps longitude", 
     truth[1] = truth[0];
     truth[1].time = 20.0;
     truth[1].lat_deg = 2.0;
-    truth[1].lon_deg = -179.0;  // across the antimeridian
+    truth[1].lon_deg = -179.0; // across the antimeridian
     truth[1].alt_m = 200.0;
     truth[1].vNed_m_s = Eigen::Vector3d(20.0, 0.0, 0.0);
-    truth[1].yaw_rad = -std::numbers::pi + 0.1;  // across +-pi
+    truth[1].yaw_rad = -std::numbers::pi + 0.1; // across +-pi
 
     const GeodeticTruth mid = Replay::detail::interpolateTruth(truth, 15.0);
     CHECK(mid.lat_rad == Catch::Approx(1.5 * kDeg));
@@ -224,19 +224,19 @@ TEST_CASE("Replay: truth interpolation clamps at the ends and wraps longitude", 
     CHECK(mid.vNed[0] == Catch::Approx(15.0));
     CHECK(std::abs(std::remainder(mid.yaw_rad - std::numbers::pi, 2.0 * std::numbers::pi)) < 1e-12);
 
-    CHECK(Replay::detail::interpolateTruth(truth, 0.0).alt_m == Catch::Approx(100.0));   // before the first record
-    CHECK(Replay::detail::interpolateTruth(truth, 99.0).alt_m == Catch::Approx(200.0));  // after the last
+    CHECK(Replay::detail::interpolateTruth(truth, 0.0).alt_m == Catch::Approx(100.0));  // before the first record
+    CHECK(Replay::detail::interpolateTruth(truth, 99.0).alt_m == Catch::Approx(200.0)); // after the last
     truth.resize(1);
-    CHECK(Replay::detail::interpolateTruth(truth, 12.0).alt_m == Catch::Approx(100.0));  // a single record
+    CHECK(Replay::detail::interpolateTruth(truth, 12.0).alt_m == Catch::Approx(100.0)); // a single record
 }
 
 TEST_CASE("Replay timing: the barometer part clock is unwrapped against the host clock", "[estimation][replay][time]")
 {
     const ReplayTiming timing;
-    TimeBaseFit fit;  // host == part
+    TimeBaseFit fit; // host == part
     const RunConfiguration run;
     const double W = LogContract::Baro::kPartTimeWrap_s;
-    const BaroRecord b{ 3.0, W + 3.0, 101325.0, 15.0 };  // the register has wrapped once
+    const BaroRecord b{ 3.0, W + 3.0, 101325.0, 15.0 }; // the register has wrapped once
     CHECK(timing.baro(b, fit, run) == Catch::Approx(W + 3.0));
 }
 
@@ -293,17 +293,17 @@ TEST_CASE("Logs: loading from a directory", "[estimation][replay][logs]")
     const auto truthPath = dir / "truth.csv";
     const Configuration baroOnly{ { BlockId::NavCore, BlockId::BaroBias }, { MeasurementId::Barometer } };
 
-  // Nothing there yet.
+    // Nothing there yet.
     REQUIRE_THROWS_WITH(loadLogs(dir, truthPath, baroOnly), ContainsSubstring("cannot open"));
 
     std::ofstream(dir / "imu_samples.csv") << kImuHeader << "\n0,0.0,1000.0,0,0,-9.8,0,0,0\n";
     std::ofstream(dir / "baro_samples.csv") << kBaroHeader << "\n0,0.0,1000.0,70000.0,-5.0\n";
     std::ofstream(truthPath) << kTruthHeader << "\n0, 0.0, 3000.0, 36.0, -75.0, 0, 0, 0, 0, 0, 0\n";
 
-  // The sidecar defaults to the truth file with .config; absent, that is an error.
+    // The sidecar defaults to the truth file with .config; absent, that is an error.
     REQUIRE_THROWS_WITH(loadLogs(dir, truthPath, baroOnly), ContainsSubstring("truth.config"));
 
-  // An explicit sidecar path; the GPS log is not needed by this configuration.
+    // An explicit sidecar path; the GPS log is not needed by this configuration.
     const auto sidecar = dir / "run.cfg";
     std::ofstream(sidecar) << kSidecar;
     const LogSet logs = loadLogs(dir, truthPath, baroOnly, sidecar);
@@ -312,7 +312,7 @@ TEST_CASE("Logs: loading from a directory", "[estimation][replay][logs]")
     CHECK(logs.truth.size() == 1);
     CHECK(logs.run.gpsLatency_s == Catch::Approx(0.1));
 
-  // A configuration with GNSS needs gps_fixes.csv.
+    // A configuration with GNSS needs gps_fixes.csv.
     REQUIRE_THROWS_WITH(loadLogs(dir, truthPath, kNavBaroGnss16, sidecar), ContainsSubstring("gps_fixes.csv"));
 
     std::filesystem::remove_all(dir);
@@ -330,8 +330,8 @@ TEST_CASE("CSV reader: empty input, BOM, cell parsing, files", "[estimation][rep
     const CsvTable t = readCsv(bom, LogContract::Log::BaroSamples, baroOnly);
     REQUIRE(t.has("sample_index"));
     CHECK(t.at(0, "part_time_s") == Catch::Approx(1.5));
-    CHECK(t.at(0, "pressure_pa") == 1.0);           // boolean spelling
-    CHECK(std::isnan(t.at(0, "temperature_c")));    // not a number
+    CHECK(t.at(0, "pressure_pa") == 1.0);        // boolean spelling
+    CHECK(std::isnan(t.at(0, "temperature_c"))); // not a number
 
     CHECK(Replay::detail::parseCell(" False ") == 0.0);
     CHECK(Replay::detail::parseCell("True") == 1.0);

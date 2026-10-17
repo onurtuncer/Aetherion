@@ -67,9 +67,9 @@ using Quatd = AC::Quat<double>;
 
 static constexpr double kPi = std::numbers::pi_v<double>;
 static constexpr double kD2R = kPi / 180.0;
-static constexpr double kOmegaE = 7.2921150e-5;    // WGS-84 Earth rotation [rad/s]
-static constexpr double kReq = 6378137.0;        // WGS-84 semi-major axis [m]
-static constexpr double kFlat = 1.0 / 298.257223563; // WGS-84 flattening
+static constexpr double kOmegaE = 7.2921150e-5;       // WGS-84 Earth rotation [rad/s]
+static constexpr double kReq = 6378137.0;             // WGS-84 semi-major axis [m]
+static constexpr double kFlat = 1.0 / 298.257223563;  // WGS-84 flattening
 static constexpr double kRpol = kReq * (1.0 - kFlat); // polar radius [m]
 
 // --- Test helpers -------------------------------------------------------------
@@ -589,7 +589,7 @@ TEST_CASE("BuildInitialStateVector - earth rotation: zero NED velocity gives non
         const auto x0 = RB::BuildInitialStateVector(MakeCfg(45.0, 90.0, 0.0), theta);
         const double v_eci_norm = x0.segment<3>(SL::IDX_V).norm();
         INFO("theta=" << theta << "  |v_eci|=" << v_eci_norm);
-        REQUIRE(v_eci_norm > 100.0);  // must be of order omega_E * Re ~ 465 m/s
+        REQUIRE(v_eci_norm > 100.0); // must be of order omega_E * Re ~ 465 m/s
     }
 }
 
@@ -598,12 +598,12 @@ TEST_CASE("BuildInitialStateVector - earth rotation: equator surface speed equal
 {
     // At the equator with v_NED = [0,0,0] and theta = 0, the ECI velocity
     // is purely in the +Y_ECI direction with magnitude omega_E * (Re + h).
-    const double h = 9144.0;   // NASA Atmos-01 initial altitude
+    const double h = 9144.0; // NASA Atmos-01 initial altitude
     const auto x0 = RB::BuildInitialStateVector(MakeCfg(0.0, 0.0, h), 0.0);
 
     // WGS-84: prime vertical radius of curvature N at equator equals kReq
     const double e2 = 2.0 * kFlat - kFlat * kFlat;
-    const double N = kReq / std::sqrt(1.0 - e2 * 0.0);  // lat=0 => sin=0
+    const double N = kReq / std::sqrt(1.0 - e2 * 0.0); // lat=0 => sin=0
     const double expected_speed = kOmegaE * (N + h);
 
     REQUIRE(x0[SL::IDX_V + 0] == Approx(0.0).margin(1e-6));

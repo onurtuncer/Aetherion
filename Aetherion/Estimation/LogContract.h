@@ -61,42 +61,42 @@ namespace Aetherion::Estimation::LogContract {
             case Log::BaroSamples:
                 return "baro_samples.csv";
             case Log::Truth:
-                return "truth.csv";  // f16_truth.csv / rocket_truth.csv in practice
+                return "truth.csv"; // f16_truth.csv / rocket_truth.csv in practice
         }
         return "?";
     }
 
-// ── Column names ----------------------------------------------------------
+    // ── Column names ----------------------------------------------------------
 
     namespace Gps {
-// Arrival time on the flight computer's clock (the fix carries no time of
-// its own: iTOW is left at 0), so it includes the GPS latency.
+        // Arrival time on the flight computer's clock (the fix carries no time of
+        // its own: iTOW is left at 0), so it includes the GPS latency.
         inline constexpr std::string_view kHostTime = "host_time_s";
-// fix_count * fix_period: the fix's epoch in simulation time, index-based,
-// so the latency cancels in it. The validity time the replay uses when
-// present. Epochs without a fix are still written, with every other
-// field empty (Hemerion f16_flight_computer.cpp, gps_csv).
+        // fix_count * fix_period: the fix's epoch in simulation time, index-based,
+        // so the latency cancels in it. The validity time the replay uses when
+        // present. Epochs without a fix are still written, with every other
+        // field empty (Hemerion f16_flight_computer.cpp, gps_csv).
         inline constexpr std::string_view kNominalTime = "nominal_time_s";
         inline constexpr std::string_view kLatitude = "latitude_deg";
         inline constexpr std::string_view kLongitude = "longitude_deg";
-// NAV-PVT `height` (offset 32). Hemerion's emitter writes the plant's
-// altitude into both `height` and `hMSL` (no geoid model on either side),
-// so the content is the plant's geodetic altitude.
+        // NAV-PVT `height` (offset 32). Hemerion's emitter writes the plant's
+        // altitude into both `height` and `hMSL` (no geoid model on either side),
+        // so the content is the plant's geodetic altitude.
         inline constexpr std::string_view kAltitude = "altitude_m";
         inline constexpr std::string_view kHorizAcc = "horizontal_accuracy_m";
         inline constexpr std::string_view kVertAcc = "vertical_accuracy_m";
-// Hemerion's own enum (gpsTypes.hpp), not UBX's: 0 no fix, 1 2D, 2 3D.
+        // Hemerion's own enum (gpsTypes.hpp), not UBX's: 0 no fix, 1 2D, 2 3D.
         inline constexpr std::string_view kFixType = "fix_type";
         inline constexpr int kFixType3D = 2;
-// Not yet written by Hemerion: GpsFix decodes only gSpeed and course,
-// although the emitter already encodes velN/E/D and sAcc. Proposed
-// names; a configuration with GnssVelocity cannot replay until they
-// exist.
+        // Not yet written by Hemerion: GpsFix decodes only gSpeed and course,
+        // although the emitter already encodes velN/E/D and sAcc. Proposed
+        // names; a configuration with GnssVelocity cannot replay until they
+        // exist.
         inline constexpr std::string_view kVelNorth = "vel_north_mps";
         inline constexpr std::string_view kVelEast = "vel_east_mps";
         inline constexpr std::string_view kVelDown = "vel_down_mps";
         inline constexpr std::string_view kSpeedAcc = "speed_accuracy_mps";
-    }  // namespace Gps
+    } // namespace Gps
 
     namespace Imu {
         inline constexpr std::string_view kPartTime = "part_time_s";
@@ -107,19 +107,19 @@ namespace Aetherion::Estimation::LogContract {
         inline constexpr std::string_view kGyroX = "gyro_x_rad_s";
         inline constexpr std::string_view kGyroY = "gyro_y_rad_s";
         inline constexpr std::string_view kGyroZ = "gyro_z_rad_s";
-    }  // namespace Imu
+    } // namespace Imu
 
     namespace Baro {
-// The BMP390's SENSORTIME register: wraps every 512 s.
+        // The BMP390's SENSORTIME register: wraps every 512 s.
         inline constexpr std::string_view kPartTime = "part_time_s";
         inline constexpr double kPartTimeWrap_s = 512.0;
         inline constexpr std::string_view kHostTime = "host_time_s";
         inline constexpr std::string_view kPressure = "pressure_pa";
         inline constexpr std::string_view kTemperature = "temperature_c";
-    }  // namespace Baro
+    } // namespace Baro
 
-// Truth columns after normalisation (instance prefix and [TYPE] suffix
-// stripped): "f16::out.lat_deg[REAL]" -> "out.lat_deg".
+    // Truth columns after normalisation (instance prefix and [TYPE] suffix
+    // stripped): "f16::out.lat_deg[REAL]" -> "out.lat_deg".
     namespace Truth {
         inline constexpr std::string_view kTime = "time";
         inline constexpr std::string_view kLatitude = "out.lat_deg";
@@ -128,25 +128,25 @@ namespace Aetherion::Estimation::LogContract {
         inline constexpr std::string_view kVelNorth = "out.v_north_m_s";
         inline constexpr std::string_view kVelEast = "out.v_east_m_s";
         inline constexpr std::string_view kVelDown = "out.v_down_m_s";
-// ZYX Euler, body -> NED. Adequate for the F-16 cases; singular at
-// 90 deg pitch, and not logged at all by rocket_gps_ecos.
+        // ZYX Euler, body -> NED. Adequate for the F-16 cases; singular at
+        // 90 deg pitch, and not logged at all by rocket_gps_ecos.
         inline constexpr std::string_view kYaw = "out.yaw_rad";
         inline constexpr std::string_view kPitch = "out.pitch_rad";
         inline constexpr std::string_view kRoll = "out.roll_rad";
-    }  // namespace Truth
+    } // namespace Truth
 
-// Run-configuration sidecar keys. lat0/lon0/alt0 define the LCI origin.
+    // Run-configuration sidecar keys. lat0/lon0/alt0 define the LCI origin.
     namespace Sidecar {
         inline constexpr std::string_view kLat0 = "lat0_deg";
         inline constexpr std::string_view kLon0 = "lon0_deg";
         inline constexpr std::string_view kAlt0Ft = "alt0_ft";
         inline constexpr std::string_view kGpsLatency = "gps_latency_s";
         inline constexpr std::string_view kRealtimeFactor = "realtime_factor";
-    }  // namespace Sidecar
+    } // namespace Sidecar
 
-// ── Requirements per configuration ----------------------------------------
+    // ── Requirements per configuration ----------------------------------------
 
-/// Columns this repository reads from `log` when replaying `cfg`.
+    /// Columns this repository reads from `log` when replaying `cfg`.
     [[nodiscard]] inline std::vector<std::string_view> requiredColumns(Log log, const Configuration& cfg)
     {
         switch (log)
@@ -180,7 +180,7 @@ namespace Aetherion::Estimation::LogContract {
         return { Sidecar::kLat0, Sidecar::kLon0, Sidecar::kAlt0Ft, Sidecar::kGpsLatency, Sidecar::kRealtimeFactor };
     }
 
-// ── Header binding ---------------------------------------------------------
+    // ── Header binding ---------------------------------------------------------
 
     namespace detail {
         [[nodiscard]] inline std::string_view trim(std::string_view s)
@@ -192,7 +192,7 @@ namespace Aetherion::Estimation::LogContract {
             return s.substr(b, s.find_last_not_of(ws) - b + 1);
         }
 
-/// "f16::out.lat_deg[REAL]" -> "out.lat_deg"; plain names unchanged.
+        /// "f16::out.lat_deg[REAL]" -> "out.lat_deg"; plain names unchanged.
         [[nodiscard]] inline std::string_view normalise(std::string_view s)
         {
             s = trim(s);
@@ -203,14 +203,14 @@ namespace Aetherion::Estimation::LogContract {
                 s = s.substr(sep + 2);
             return s;
         }
-    }  // namespace detail
+    } // namespace detail
 
-/// Column name -> index in the header.
+    /// Column name -> index in the header.
     using ColumnMap = std::map<std::string, std::size_t, std::less<>>;
 
-/// Splits `header` on commas, normalises each name, and checks that every
-/// required column for (log, cfg) is present. Throws std::runtime_error
-/// naming all missing columns.
+    /// Splits `header` on commas, normalises each name, and checks that every
+    /// required column for (log, cfg) is present. Throws std::runtime_error
+    /// naming all missing columns.
     [[nodiscard]] inline ColumnMap bindColumns(Log log, std::string_view header, const Configuration& cfg)
     {
         ColumnMap map;
@@ -239,8 +239,8 @@ namespace Aetherion::Estimation::LogContract {
         return map;
     }
 
-/// Parses `key=value` lines; blank lines and lines without '=' are ignored.
-/// Throws std::runtime_error naming all required keys that are absent.
+    /// Parses `key=value` lines; blank lines and lines without '=' are ignored.
+    /// Throws std::runtime_error naming all required keys that are absent.
     [[nodiscard]] inline std::map<std::string, std::string, std::less<>> parseSidecar(std::string_view text)
     {
         std::map<std::string, std::string, std::less<>> kv;
@@ -270,4 +270,4 @@ namespace Aetherion::Estimation::LogContract {
         return kv;
     }
 
-}  // namespace Aetherion::Estimation::LogContract
+} // namespace Aetherion::Estimation::LogContract

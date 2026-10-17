@@ -158,7 +158,7 @@ TEMPLATE_TEST_CASE("Gravity wrench: a body at rest accelerates at g at every poi
 
     CHECK(xdot.head<3>().norm() < 1e-9);
     CHECK((xdot.segment<3>(3) - a_body).norm() < 1e-9);
-    CHECK_THAT(a_body.norm(), WithinAbs(9.7, 0.15));   // 30 km up
+    CHECK_THAT(a_body.norm(), WithinAbs(9.7, 0.15)); // 30 km up
 }
 
 TEST_CASE("Gravity wrench: VectorField adds the moment c x F of the gravity force and nothing else",

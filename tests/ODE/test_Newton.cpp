@@ -407,9 +407,9 @@ namespace {
         {
             Eigen::Matrix<S, Eigen::Dynamic, 1> r(1);
             if (x(0) < S(1.0))
-                r(0) = x(0) - S(2.0);          // slope 1
+                r(0) = x(0) - S(2.0); // slope 1
             else
-                r(0) = S(2.0) * x(0) - S(3.0);  // slope 2
+                r(0) = S(2.0) * x(0) - S(3.0); // slope 2
             return r;
         }
     };
@@ -434,24 +434,24 @@ TEST_CASE("CppADResidualJacobian: re-records the tape when a branch changes", "[
     Eigen::VectorXd x(1), r;
     Eigen::MatrixXd J;
 
-    x(0) = 0.0;                       // first branch: the tape is recorded here
+    x(0) = 0.0; // first branch: the tape is recorded here
     eval(x, r, J);
     CHECK(r(0) == Approx(-2.0));
     CHECK(J(0, 0) == Approx(1.0));
     CHECK(eval.retape_count() == 0);
 
-    x(0) = 0.5;                       // same branch: no re-recording
+    x(0) = 0.5; // same branch: no re-recording
     eval(x, r, J);
     CHECK(r(0) == Approx(-1.5));
     CHECK(eval.retape_count() == 0);
 
-    x(0) = 2.0;                       // other branch: used to give 0 and slope 1
+    x(0) = 2.0; // other branch: used to give 0 and slope 1
     eval(x, r, J);
     CHECK(r(0) == Approx(1.0));
     CHECK(J(0, 0) == Approx(2.0));
     CHECK(eval.retape_count() == 1);
 
-    x(0) = 0.0;                       // and back
+    x(0) = 0.0; // and back
     eval(x, r, J);
     CHECK(r(0) == Approx(-2.0));
     CHECK(J(0, 0) == Approx(1.0));

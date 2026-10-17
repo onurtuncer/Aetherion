@@ -43,24 +43,24 @@
 
 namespace Aetherion::Simulation {
 
-/// @brief Selects the output column schema for simulation CSV files.
+    /// @brief Selects the output column schema for simulation CSV files.
     enum class SnapshotFormat : std::uint8_t
     {
-        One = 1, ///< 38 cols — Aetherion-extended (Snapshot1).
-        Two = 2, ///< 31 cols — NASA reference (Snapshot2).
+        One = 1,   ///< 38 cols — Aetherion-extended (Snapshot1).
+        Two = 2,   ///< 31 cols — NASA reference (Snapshot2).
         Three = 3, ///< Placeholder — extend Snapshot3 for the assigned scenario.
-        Four = 4, ///< Placeholder — extend Snapshot4 for the assigned scenario.
-        Five = 5, ///< Placeholder — extend Snapshot5 for the assigned scenario.
-        Six = 6, ///< Placeholder — extend Snapshot6 for the assigned scenario.
+        Four = 4,  ///< Placeholder — extend Snapshot4 for the assigned scenario.
+        Five = 5,  ///< Placeholder — extend Snapshot5 for the assigned scenario.
+        Six = 6,   ///< Placeholder — extend Snapshot6 for the assigned scenario.
     };
 
-/// @brief Primary template — intentionally undefined; specialise for each format.
+    /// @brief Primary template — intentionally undefined; specialise for each format.
     template <SnapshotFormat F>
     struct SnapshotTraits;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SnapshotFormat::One  →  Snapshot1
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SnapshotFormat::One  →  Snapshot1
+    // ─────────────────────────────────────────────────────────────────────────────
     template <>
     struct SnapshotTraits<SnapshotFormat::One>
     {
@@ -72,9 +72,9 @@ namespace Aetherion::Simulation {
         static void write_row(std::ostream& os, const Snapshot1& s) { Snapshot1_WriteCsvRow(os, s); }
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SnapshotFormat::Two  →  Snapshot2
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SnapshotFormat::Two  →  Snapshot2
+    // ─────────────────────────────────────────────────────────────────────────────
     template <>
     struct SnapshotTraits<SnapshotFormat::Two>
     {
@@ -86,9 +86,9 @@ namespace Aetherion::Simulation {
         static void write_row(std::ostream& os, const Snapshot2& s) { Snapshot2_WriteCsvRow(os, s); }
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SnapshotFormat::Three  →  Snapshot3  (placeholder — 31 cols, mirrors Two)
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SnapshotFormat::Three  →  Snapshot3  (placeholder — 31 cols, mirrors Two)
+    // ─────────────────────────────────────────────────────────────────────────────
     template <>
     struct SnapshotTraits<SnapshotFormat::Three>
     {
@@ -99,9 +99,9 @@ namespace Aetherion::Simulation {
         static void write_row(std::ostream& os, const Snapshot3& s) { Snapshot3_WriteCsvRow(os, s); }
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SnapshotFormat::Four  →  Snapshot4  (placeholder)
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SnapshotFormat::Four  →  Snapshot4  (placeholder)
+    // ─────────────────────────────────────────────────────────────────────────────
     template <>
     struct SnapshotTraits<SnapshotFormat::Four>
     {
@@ -112,9 +112,9 @@ namespace Aetherion::Simulation {
         static void write_row(std::ostream& os, const Snapshot4& s) { Snapshot4_WriteCsvRow(os, s); }
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SnapshotFormat::Five  →  Snapshot5  (placeholder)
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SnapshotFormat::Five  →  Snapshot5  (placeholder)
+    // ─────────────────────────────────────────────────────────────────────────────
     template <>
     struct SnapshotTraits<SnapshotFormat::Five>
     {
@@ -125,9 +125,9 @@ namespace Aetherion::Simulation {
         static void write_row(std::ostream& os, const Snapshot5& s) { Snapshot5_WriteCsvRow(os, s); }
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SnapshotFormat::Six  →  Snapshot6  (placeholder)
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // SnapshotFormat::Six  →  Snapshot6  (placeholder)
+    // ─────────────────────────────────────────────────────────────────────────────
     template <>
     struct SnapshotTraits<SnapshotFormat::Six>
     {
@@ -138,9 +138,9 @@ namespace Aetherion::Simulation {
         static void write_row(std::ostream& os, const Snapshot6& s) { Snapshot6_WriteCsvRow(os, s); }
     };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Convenience aliases
-// ─────────────────────────────────────────────────────────────────────────────
+    // ─────────────────────────────────────────────────────────────────────────────
+    // Convenience aliases
+    // ─────────────────────────────────────────────────────────────────────────────
     using Snapshot1Traits = SnapshotTraits<SnapshotFormat::One>;
     using Snapshot2Traits = SnapshotTraits<SnapshotFormat::Two>;
     using Snapshot3Traits = SnapshotTraits<SnapshotFormat::Three>;

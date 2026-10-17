@@ -7,7 +7,7 @@
 
 namespace Aetherion::ODE::RKMK::Lie {
 
- // Instantiate the common scalars
+    // Instantiate the common scalars
     template struct SE3<double>;
 
 #if __has_include(<cppad/cppad.hpp>)

@@ -55,17 +55,17 @@
 
 namespace Aetherion::FlightDynamics {
 
-/// @brief Earth-relative body rates that hold pitch and roll attitude fixed with
-///        respect to the local-level frame in level flight.
-///
-/// @param lat_deg     Geodetic latitude [deg].
-/// @param alt_m       Ellipsoidal height above the WGS-84 ellipsoid [m].
-/// @param vNorth_mps  Earth-relative north velocity [m/s].
-/// @param vEast_mps   Earth-relative east velocity [m/s].
-/// @param heading_deg ZYX Euler yaw, body → NED [deg].
-/// @param pitch_deg   ZYX Euler pitch, body → NED [deg].
-/// @param roll_deg    ZYX Euler roll, body → NED [deg].
-/// @return Body rates relative to the Earth-fixed frame, in body axes [rad/s].
+    /// @brief Earth-relative body rates that hold pitch and roll attitude fixed with
+    ///        respect to the local-level frame in level flight.
+    ///
+    /// @param lat_deg     Geodetic latitude [deg].
+    /// @param alt_m       Ellipsoidal height above the WGS-84 ellipsoid [m].
+    /// @param vNorth_mps  Earth-relative north velocity [m/s].
+    /// @param vEast_mps   Earth-relative east velocity [m/s].
+    /// @param heading_deg ZYX Euler yaw, body → NED [deg].
+    /// @param pitch_deg   ZYX Euler pitch, body → NED [deg].
+    /// @param roll_deg    ZYX Euler roll, body → NED [deg].
+    /// @return Body rates relative to the Earth-fixed frame, in body axes [rad/s].
     inline RigidBody::BodyRates LevelFlightBodyRates(double lat_deg, double alt_m,
         double vNorth_mps, double vEast_mps,
         double heading_deg, double pitch_deg,
@@ -75,19 +75,19 @@ namespace Aetherion::FlightDynamics {
 
         const auto [M, N] = WGS84CurvatureRadii(lat_deg * kDegRad);
 
-    // Transport rate in NED, horizontal components only — see the file header
+        // Transport rate in NED, horizontal components only — see the file header
         const double wN = vEast_mps / (N + alt_m);
         const double wE = -vNorth_mps / (M + alt_m);
 
-    // NED → body, ZYX Euler sequence
+        // NED → body, ZYX Euler sequence
         const double cPsi = std::cos(heading_deg * kDegRad), sPsi = std::sin(heading_deg * kDegRad);
         const double cThe = std::cos(pitch_deg * kDegRad), sThe = std::sin(pitch_deg * kDegRad);
         const double cPhi = std::cos(roll_deg * kDegRad), sPhi = std::sin(roll_deg * kDegRad);
 
-        const double x1 = cPsi * wN + sPsi * wE;   // after yaw
+        const double x1 = cPsi * wN + sPsi * wE; // after yaw
         const double y1 = -sPsi * wN + cPsi * wE;
 
-        const double x2 = cThe * x1;                // after pitch (no vertical component)
+        const double x2 = cThe * x1; // after pitch (no vertical component)
         const double z2 = sThe * x1;
 
         return { x2, cPhi * y1 + sPhi * z2, -sPhi * y1 + cPhi * z2 };

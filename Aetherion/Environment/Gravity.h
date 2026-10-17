@@ -13,23 +13,23 @@
 #include <cmath>
 
 #include <Aetherion/Environment/WGS84.h>
-#include <Aetherion/Environment/detail/MathWrappers.h>   // detail::SquareRoot
+#include <Aetherion/Environment/detail/MathWrappers.h> // detail::SquareRoot
 
 namespace Aetherion::Environment {
 
-/// @brief 3-element position/acceleration vector; compatible with CppAD scalar types.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @brief 3-element position/acceleration vector; compatible with CppAD scalar types.
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
     template <class Scalar>
     using Vec3 = std::array<Scalar, 3>;
 
-/// @brief Point-mass (Newtonian) gravitational acceleration in the ECI inertial frame.
-///
-/// Computes @f$ \mathbf{g} = -\frac{\mu}{r^3}\,\mathbf{r} @f$ where
-/// @f$ r = \|\mathbf{r}\| @f$ is the geocentric distance.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
-/// @param r_W Position vector from Earth's centre expressed in ECI [m].
-/// @param mu Geocentric gravitational parameter [m³/s²]; defaults to the WGS-84 value.
-/// @return Gravitational acceleration vector in ECI [m/s²].
+    /// @brief Point-mass (Newtonian) gravitational acceleration in the ECI inertial frame.
+    ///
+    /// Computes @f$ \mathbf{g} = -\frac{\mu}{r^3}\,\mathbf{r} @f$ where
+    /// @f$ r = \|\mathbf{r}\| @f$ is the geocentric distance.
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @param r_W Position vector from Earth's centre expressed in ECI [m].
+    /// @param mu Geocentric gravitational parameter [m³/s²]; defaults to the WGS-84 value.
+    /// @return Gravitational acceleration vector in ECI [m/s²].
     template <class Scalar>
     inline Vec3<Scalar> CentralGravity(
         const Vec3<Scalar>& r_W,
@@ -50,24 +50,24 @@ namespace Aetherion::Environment {
         return Vec3<Scalar>{ k * x, k * y, k * z };
     }
 
-/// @brief Gravitational acceleration including the WGS-84 J2 oblateness perturbation.
-///
-/// Adds the second zonal harmonic correction to the central-gravity term:
-/// @f[
-///   \mathbf{g}_{J2} = \mathbf{g}_0 + \frac{3}{2}\frac{J_2\,\mu\,R_e^2}{r^5}
-///   \begin{bmatrix}
-///     \left(\tfrac{5z^2}{r^2}-1\right)x \\
+    /// @brief Gravitational acceleration including the WGS-84 J2 oblateness perturbation.
+    ///
+    /// Adds the second zonal harmonic correction to the central-gravity term:
+    /// @f[
+    ///   \mathbf{g}_{J2} = \mathbf{g}_0 + \frac{3}{2}\frac{J_2\,\mu\,R_e^2}{r^5}
+    ///   \begin{bmatrix}
+    ///     \left(\tfrac{5z^2}{r^2}-1\right)x \\
 ///     \left(\tfrac{5z^2}{r^2}-1\right)y \\
 ///     \left(\tfrac{5z^2}{r^2}-3\right)z
-///   \end{bmatrix}
-/// @f]
-/// where @f$ \mathbf{g}_0 @f$ is the central-gravity term.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
-/// @param r_W Position vector from Earth's centre expressed in ECI [m].
-/// @param mu Geocentric gravitational parameter [m³/s²]; defaults to the WGS-84 value.
-/// @param Re Earth equatorial radius [m]; defaults to the WGS-84 semi-major axis.
-/// @param J2_coeff Second zonal harmonic coefficient (dimensionless); defaults to the WGS-84 value.
-/// @return Total gravitational acceleration (central + J2 perturbation) in ECI [m/s²].
+    ///   \end{bmatrix}
+    /// @f]
+    /// where @f$ \mathbf{g}_0 @f$ is the central-gravity term.
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @param r_W Position vector from Earth's centre expressed in ECI [m].
+    /// @param mu Geocentric gravitational parameter [m³/s²]; defaults to the WGS-84 value.
+    /// @param Re Earth equatorial radius [m]; defaults to the WGS-84 semi-major axis.
+    /// @param J2_coeff Second zonal harmonic coefficient (dimensionless); defaults to the WGS-84 value.
+    /// @return Total gravitational acceleration (central + J2 perturbation) in ECI [m/s²].
     template <class Scalar>
     inline Vec3<Scalar> J2(
         const Vec3<Scalar>& r_W,
@@ -77,10 +77,10 @@ namespace Aetherion::Environment {
     {
         using detail::SquareRoot;
 
-    // Central term -- no code duplication
+        // Central term -- no code duplication
         Vec3<Scalar> g = CentralGravity(r_W, mu);
 
-    // J2 perturbation delta
+        // J2 perturbation delta
         const Scalar& x = r_W[0];
         const Scalar& y = r_W[1];
         const Scalar& z = r_W[2];

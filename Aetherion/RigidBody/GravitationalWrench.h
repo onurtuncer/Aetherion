@@ -28,7 +28,7 @@
 #include <Eigen/Dense>
 
 #include "Aetherion/Spatial/Wrench.h"
-#include "Aetherion/Environment/Gravity.h"   // also pulls in WGS84.h
+#include "Aetherion/Environment/Gravity.h" // also pulls in WGS84.h
 
 namespace Aetherion::RigidBody {
 

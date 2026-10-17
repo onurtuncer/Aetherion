@@ -47,21 +47,21 @@ namespace {
 
     constexpr double kDeg = std::numbers::pi / 180.0;
 
-// F-16 Scenario-11-like attitude: heading 45°, pitch 2.65°, roll -0.172°
+    // F-16 Scenario-11-like attitude: heading 45°, pitch 2.65°, roll -0.172°
     Eigen::Quaterniond f16_trim_quaternion()
     {
         return (Eigen::AngleAxisd(45.0 * kDeg, Eigen::Vector3d::UnitZ()) * Eigen::AngleAxisd(2.65 * kDeg, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(-0.172 * kDeg, Eigen::Vector3d::UnitX()))
             .normalized();
     }
 
-// Generic non-trivial attitude: 30° pitch, 45° yaw (easier to reason about)
+    // Generic non-trivial attitude: 30° pitch, 45° yaw (easier to reason about)
     Eigen::Quaterniond pitched_quaternion()
     {
         return (Eigen::AngleAxisd(45.0 * kDeg, Eigen::Vector3d::UnitZ()) * Eigen::AngleAxisd(30.0 * kDeg, Eigen::Vector3d::UnitY()))
             .normalized();
     }
 
-// Isotropic inertia (sphere-like) so torque-free dynamics are trivial
+    // Isotropic inertia (sphere-like) so torque-free dynamics are trivial
     InertialParameters isotropic_ip(double mass_kg = 100.0, double moi = 40.0)
     {
         InertialParameters ip;
@@ -72,10 +72,10 @@ namespace {
         return ip;
     }
 
-// GEO position so J2 gravity is non-zero but small (~0.224 m/s²)
+    // GEO position so J2 gravity is non-zero but small (~0.224 m/s²)
     Eigen::Vector3d geo_pos() { return { 42164.0e3, 0.0, 0.0 }; }
 
-// Build a correct StateD (both g.q and g.R set from the same quaternion)
+    // Build a correct StateD (both g.q and g.R set from the same quaternion)
     StateD make_state_correct(const Eigen::Quaterniond& q)
     {
         StateD s;
@@ -87,12 +87,12 @@ namespace {
         return s;
     }
 
-// Build a buggy StateD (only g.R set; g.q stays at identity)
+    // Build a buggy StateD (only g.R set; g.q stays at identity)
     StateD make_state_buggy(const Eigen::Quaterniond& q)
     {
         StateD s = make_state_correct(q);
-        s.g.q = Eigen::Quaterniond::Identity();   // old bug: q never set
-    // s.g.R still holds the correct rotation matrix
+        s.g.q = Eigen::Quaterniond::Identity(); // old bug: q never set
+                                                // s.g.R still holds the correct rotation matrix
         return s;
     }
 
@@ -114,7 +114,7 @@ TEST_CASE("StateD: setting g.q then deriving g.R gives consistent members", "[st
 
     StateD s;
     s.g.q = q;
-    s.g.R = s.g.q.toRotationMatrix();  // the correct pattern
+    s.g.R = s.g.q.toRotationMatrix(); // the correct pattern
 
     const Eigen::Matrix3d R_from_q = s.g.q.toRotationMatrix();
     REQUIRE((s.g.R - R_from_q).norm() == Catch::Approx(0.0).margin(1e-14));
@@ -148,9 +148,9 @@ TEST_CASE("REGRESSION: old pattern sets only g.R, leaving g.q as identity",
     const Eigen::Quaterniond q = f16_trim_quaternion();
 
     StateD buggy;
-    buggy.g.R = q.toRotationMatrix();   // only R set — old bug
+    buggy.g.R = q.toRotationMatrix(); // only R set — old bug
 
-    const Eigen::Matrix3d R_from_q = buggy.g.q.toRotationMatrix();  // identity
+    const Eigen::Matrix3d R_from_q = buggy.g.q.toRotationMatrix(); // identity
     const double mismatch = (buggy.g.R - R_from_q).norm();
 
     // The mismatch must be substantial (identity vs actual 2.65° pitch / 45° heading)
@@ -162,7 +162,7 @@ TEST_CASE("REGRESSION: correct pattern eliminates q/R mismatch", "[state][init][
     const Eigen::Quaterniond q = f16_trim_quaternion();
 
     StateD fixed;
-    fixed.g.q = q.normalized();           // also set q — the fix
+    fixed.g.q = q.normalized(); // also set q — the fix
     fixed.g.R = fixed.g.q.toRotationMatrix();
 
     const Eigen::Matrix3d R_from_q = fixed.g.q.toRotationMatrix();
@@ -182,7 +182,7 @@ TEST_CASE("REGRESSION: stepper reads g.q, so mismatched g.q gives wrong dynamics
     using VF = RigidBody::VectorField<FlightDynamics::J2GravityPolicy>;
     using Stepper = SixDoFStepper<VF>;
 
-    const Eigen::Quaterniond q = pitched_quaternion();  // 30° pitch, 45° yaw
+    const Eigen::Quaterniond q = pitched_quaternion(); // 30° pitch, 45° yaw
     const auto ip = isotropic_ip();
 
     Stepper stepper{ ip };
@@ -206,7 +206,7 @@ TEST_CASE("REGRESSION: stepper reads g.q, so mismatched g.q gives wrong dynamics
     // With correct q (30° pitch):  body-Z gravity ≠ body-Z gravity with q=identity.
     // After 0.1 s the body-Z velocity must differ meaningfully.
     const double dv_z = std::abs(s1_c.nu_B(5) - s1_b.nu_B(5));
-    REQUIRE(dv_z > 1e-4);   // at least 0.1 mm/s difference — conservative threshold
+    REQUIRE(dv_z > 1e-4); // at least 0.1 mm/s difference — conservative threshold
 }
 
 // With the fix in place: a step from a non-trivially pitched state
@@ -233,7 +233,7 @@ TEST_CASE("Stepper: non-trivial initial attitude step is stable with correct q/R
     // Angular distance between start and end quaternion must be tiny.
     // At GEO there is no external torque → rotation barely changes in 0.1 s.
     const double angle_rad = s0.g.q.angularDistance(s1.g.q);
-    REQUIRE(angle_rad < 1e-4);   // < 0.006 degrees
+    REQUIRE(angle_rad < 1e-4); // < 0.006 degrees
 }
 
 // Sanity: stepping from a state where g.q ≠ g.R (buggy) deviates more

@@ -164,7 +164,7 @@ TEST_CASE("Simulation::Config::print on default config contains default values",
     std::cout.rdbuf(orig);
 
     const std::string out = oss.str();
-    REQUIRE(out.find("0.01") != std::string::npos);  // timeStep
-    REQUIRE(out.find('1') != std::string::npos);  // endTime or writeInterval
-    REQUIRE(out.find("output.txt") != std::string::npos);  // outputFileName
+    REQUIRE(out.find("0.01") != std::string::npos);       // timeStep
+    REQUIRE(out.find('1') != std::string::npos);          // endTime or writeInterval
+    REQUIRE(out.find("output.txt") != std::string::npos); // outputFileName
 }

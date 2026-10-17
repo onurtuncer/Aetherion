@@ -46,7 +46,7 @@ namespace {
     "aerodynamicParameters": { "S": 0.1, "CL": 0.0, "CD": 0.0, "CY": 0.0, "Cl": 0.0, "Cm": 0.0, "Cn": 0.0 }
   })");
     }
-}  // namespace
+} // namespace
 
 TEST_CASE("Config JSON: wind and wind shear are optional and default to calm", "[json][config][wind]")
 {
@@ -78,7 +78,7 @@ TEST_CASE("Config JSON: wind and wind shear sections are read", "[json][config][
     CHECK(cfg.windShear.intercept_N_mps == Catch::Approx(1.5));
     CHECK(cfg.windShear.intercept_E_mps == Catch::Approx(-2.5));
 
-  // The other sections are untouched by the optional ones.
+    // The other sections are untouched by the optional ones.
     CHECK(cfg.velocityNED.east_mps == Catch::Approx(2.0));
     CHECK(cfg.bodyRates.yaw_rad_s == Catch::Approx(0.3));
 }
@@ -210,7 +210,7 @@ TEST_CASE("AerodynamicParameters JSON: optional derivatives are read and type-ch
     CHECK(ap.b == Catch::Approx(9.14));
     CHECK(ap.cbar == Catch::Approx(3.45));
     CHECK(ap.Cmq == Catch::Approx(-8.0));
-    CHECK(ap.Clp == 0.0);  // absent: struct default
+    CHECK(ap.Clp == 0.0); // absent: struct default
 
     j["Cnr"] = "damped";
     REQUIRE_THROWS_WITH(Ser::from_json(j, ap), ContainsSubstring("not a number") && ContainsSubstring("Cnr"));

@@ -27,8 +27,8 @@ namespace detail = Aetherion::Coordinate::detail;
 using Aetherion::Coordinate::MakeLaunchStateECI;
 using Aetherion::Coordinate::LaunchStateECI;
 
-using Aetherion::Coordinate::InvertLaunchStateToLocalNED;   // <-- NED version
-using Aetherion::Coordinate::LocalStateNED;                 // <-- NED version
+using Aetherion::Coordinate::InvertLaunchStateToLocalNED; // <-- NED version
+using Aetherion::Coordinate::LocalStateNED;               // <-- NED version
 
 using Aetherion::Coordinate::DirectionNEDFromAzimuthZenith; // already NED
 
@@ -137,9 +137,9 @@ TEST_CASE("InvertLaunchStateToLocalNED - equator straight up, zero roll",
 TEST_CASE("InvertLaunchStateToLocalNED - general configuration",
     "[coordinate][inverse][launch][ned]")
 {
-    const double lat = 0.7;     // ~40 deg N
-    const double lon = -1.0;    // ~-57 deg
-    const double h = 2500.0;  // 2.5 km
+    const double lat = 0.7;  // ~40 deg N
+    const double lon = -1.0; // ~-57 deg
+    const double h = 2500.0; // 2.5 km
     const double theta = 0.8;
 
     const double az = 1.2;

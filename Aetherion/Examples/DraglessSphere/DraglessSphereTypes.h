@@ -28,20 +28,20 @@
 
 namespace Aetherion::Examples::DraglessSphere {
 
-/// @brief Six-DoF vector field for the NASA Atmos-01 dragless sphere: J2 gravity, zero aero, zero thrust, constant mass.
-///
-/// Policy configuration (all WGS-84 constants):
-/// - mu  = 3.986004418×10¹⁴ m³/s²
-/// - Re  = 6378137.0 m
-/// - J2  = 1.08262668×10⁻³
+    /// @brief Six-DoF vector field for the NASA Atmos-01 dragless sphere: J2 gravity, zero aero, zero thrust, constant mass.
+    ///
+    /// Policy configuration (all WGS-84 constants):
+    /// - mu  = 3.986004418×10¹⁴ m³/s²
+    /// - Re  = 6378137.0 m
+    /// - J2  = 1.08262668×10⁻³
     using DraglessSphereVF = RigidBody::VectorField<
-        FlightDynamics::J2GravityPolicy,       ///< Gravity model: J2 oblateness perturbation (WGS-84).
-        FlightDynamics::ZeroAeroPolicy,        ///< Aerodynamics: none (C_D = C_L = 0).
-        FlightDynamics::ZeroPropulsionPolicy,  ///< Propulsion: none (zero thrust).
-        FlightDynamics::ConstantMassPolicy     ///< Mass: constant (no propellant consumption).
+        FlightDynamics::J2GravityPolicy,      ///< Gravity model: J2 oblateness perturbation (WGS-84).
+        FlightDynamics::ZeroAeroPolicy,       ///< Aerodynamics: none (C_D = C_L = 0).
+        FlightDynamics::ZeroPropulsionPolicy, ///< Propulsion: none (zero thrust).
+        FlightDynamics::ConstantMassPolicy    ///< Mass: constant (no propellant consumption).
         >;
 
-/// @brief RKMK integrator stepper instantiated for the DraglessSphereVF vector field.
+    /// @brief RKMK integrator stepper instantiated for the DraglessSphereVF vector field.
     using DraglessSphereStepper = RigidBody::SixDoFStepper<DraglessSphereVF>;
 
 } // namespace Aetherion::Examples::DraglessSphere

@@ -61,9 +61,9 @@ TEST_CASE("AerodynamicMomentBodyFromClCmCn: matches q*S*[b*Cl, cbar*Cm, b*Cn]", 
 
     const auto M = Aero::AerodynamicMomentBodyFromClCmCn(v_body, rho, S, b, cbar, Cl, Cm, Cn, eps);
 
-    REQUIRE(M[0] == Approx(q * S * b * Cl).margin(1e-12)); // L
+    REQUIRE(M[0] == Approx(q * S * b * Cl).margin(1e-12));    // L
     REQUIRE(M[1] == Approx(q * S * cbar * Cm).margin(1e-12)); // M
-    REQUIRE(M[2] == Approx(q * S * b * Cn).margin(1e-12)); // N
+    REQUIRE(M[2] == Approx(q * S * b * Cn).margin(1e-12));    // N
 }
 
 TEST_CASE("AerodynamicMomentBodyFromClCmCn_Speed: agrees with velocity-based version", "[Aerodynamics][Moment]")

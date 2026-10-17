@@ -36,9 +36,9 @@ namespace Aetherion::Estimation {
 
     enum class MeasurementId : std::uint8_t
     {
-        GnssPosition,  ///< UBX-NAV-PVT lat, lon, height above ellipsoid
-        GnssVelocity,  ///< UBX-NAV-PVT velN, velE, velD
-        Barometer,     ///< Pressure altitude from compensated pressure, plus bias
+        GnssPosition, ///< UBX-NAV-PVT lat, lon, height above ellipsoid
+        GnssVelocity, ///< UBX-NAV-PVT velN, velE, velD
+        Barometer,    ///< Pressure altitude from compensated pressure, plus bias
     };
 
     inline constexpr std::size_t kMeasurementCount = 3;
@@ -46,9 +46,9 @@ namespace Aetherion::Estimation {
     struct MeasurementSpec
     {
         MeasurementId id;
-        std::string_view name;  ///< Stable identifier; part of the configuration hash
+        std::string_view name; ///< Stable identifier; part of the configuration hash
         int dim;
-        std::uint32_t requires_;  ///< Bitmask over BlockId
+        std::uint32_t requires_; ///< Bitmask over BlockId
     };
 
     [[nodiscard]] constexpr std::uint32_t bit(BlockId b) { return 1U << static_cast<unsigned>(b); }
@@ -74,13 +74,13 @@ namespace Aetherion::Estimation {
         }(),
         "kMeasurementLibrary must be indexed by MeasurementId");
 
-// Fixed parts of the filter form; part of the hash.
+    // Fixed parts of the filter form; part of the hash.
     inline constexpr std::string_view kDescriptorVersion = "aetherion.estimation/1";
     inline constexpr std::string_view kGroup = "SE2(3)";
-// Provisional: left- vs right-invariant is still open (doc/sensor_fusion.rst).
-// descriptor() and hash() take the convention, so both filters have a hash;
-// this is only the default, i.e. the one generated code carries until the
-// decision is taken. Changing it changes the default configuration hash.
+    // Provisional: left- vs right-invariant is still open (doc/sensor_fusion.rst).
+    // descriptor() and hash() take the convention, so both filters have a hash;
+    // this is only the default, i.e. the one generated code carries until the
+    // decision is taken. Changing it changes the default configuration hash.
     inline constexpr ErrorConvention kErrorConvention = ErrorConvention::RightInvariant;
     inline constexpr std::string_view kNavigationFrame = "LCI";
 
@@ -103,7 +103,7 @@ namespace Aetherion::Estimation {
         [[nodiscard]] constexpr std::uint32_t blockMask() const { return blocks_; }
         [[nodiscard]] constexpr std::uint32_t measurementMask() const { return measurements_; }
 
-  /// Error-state dimension.
+        /// Error-state dimension.
         [[nodiscard]] constexpr int dimension() const
         {
             int n = 0;
@@ -113,14 +113,14 @@ namespace Aetherion::Estimation {
             return n;
         }
 
-  /// Offset of block `b` in the error vector, or -1 if not carried.
+        /// Offset of block `b` in the error vector, or -1 if not carried.
         [[nodiscard]] constexpr int offset(BlockId b) const
         {
             if (!has(b))
                 return -1;
             int n = 0;
             for (const BlockSpec& s : kBlockLibrary)
-            {  // rank order
+            { // rank order
                 if (s.id == b)
                     return n;
                 if (has(s.id))
@@ -129,8 +129,8 @@ namespace Aetherion::Estimation {
             return -1;
         }
 
-  /// True if every selected measurement has its blocks, and the
-  /// navigation core is present.
+        /// True if every selected measurement has its blocks, and the
+        /// navigation core is present.
         [[nodiscard]] constexpr bool valid() const
         {
             if (!has(BlockId::NavCore))
@@ -141,10 +141,10 @@ namespace Aetherion::Estimation {
             return true;
         }
 
-  /// Canonical descriptor; the hash input. One line per item, blocks in
-  /// rank order, measurements in library order. The error convention is
-  /// named explicitly because the same block set linearised the other way
-  /// is a different filter (different F, H and corrected state).
+        /// Canonical descriptor; the hash input. One line per item, blocks in
+        /// rank order, measurements in library order. The error convention is
+        /// named explicitly because the same block set linearised the other way
+        /// is a different filter (different F, H and corrected state).
         [[nodiscard]] std::string descriptor(ErrorConvention convention = kErrorConvention) const
         {
             std::string d;
@@ -183,7 +183,7 @@ namespace Aetherion::Estimation {
             return d;
         }
 
-  /// FNV-1a 64 of descriptor(convention).
+        /// FNV-1a 64 of descriptor(convention).
         [[nodiscard]] std::uint64_t hash(ErrorConvention convention = kErrorConvention) const
         {
             std::uint64_t h = 0xcbf29ce484222325ULL;
@@ -200,10 +200,10 @@ namespace Aetherion::Estimation {
         std::uint32_t measurements_ = 0;
     };
 
-/// First configuration (decided 2026-10-08): 16 error states, updated by
-/// GNSS position, GNSS velocity and barometer. No magnetometer until
-/// Hemerion's replay equivalence (its step 9) has passed. No GNSS antenna
-/// lever arm.
+    /// First configuration (decided 2026-10-08): 16 error states, updated by
+    /// GNSS position, GNSS velocity and barometer. No magnetometer until
+    /// Hemerion's replay equivalence (its step 9) has passed. No GNSS antenna
+    /// lever arm.
     inline constexpr Configuration kNavBaroGnss16{
         { BlockId::NavCore, BlockId::GyroBias, BlockId::AccelBias, BlockId::BaroBias },
         { MeasurementId::GnssPosition, MeasurementId::GnssVelocity, MeasurementId::Barometer },
@@ -212,4 +212,4 @@ namespace Aetherion::Estimation {
     static_assert(kNavBaroGnss16.valid());
     static_assert(kNavBaroGnss16.dimension() == 16);
 
-}  // namespace Aetherion::Estimation
+} // namespace Aetherion::Estimation

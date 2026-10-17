@@ -54,16 +54,16 @@ static const std::string kAeroFile = DAVEML_F16_AERO_FILE;
 static const std::string kPropFile = DAVEML_F16_PROP_FILE;
 
 // ── Scenario-11 flight condition (English units) ──────────────────────────────
-static constexpr double kVt_fps = 565.685;   // 335.15 KTAS → ft/s
+static constexpr double kVt_fps = 565.685; // 335.15 KTAS → ft/s
 static constexpr double kAlt_ft = 10013.0;
 // Weight from DML mass (637.1596 slug) × local gravity (32.18876 ft/s²)
-static constexpr double kWeight_lbf = 20509.4;  // [lbf]
+static constexpr double kWeight_lbf = 20509.4; // [lbf]
 
 // ── AC→CG offset: (35%−25%) × 11.32 ft = 1.132 ft ───────────────────────────
-static constexpr double kXcg_ft = 1.132;    // [ft]
+static constexpr double kXcg_ft = 1.132; // [ft]
 
 // ── Reference trim values from NASA Atmos_11 ─────────────────────────────────
-static constexpr double kRefAlpha_deg = 2.643;   // [deg]
+static constexpr double kRefAlpha_deg = 2.643; // [deg]
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
@@ -92,7 +92,7 @@ TEST_CASE("TrimSolver: converges for Scenario-11 flight condition", "[trim][smok
                   << "  pwr=" << tp.pwr_pct << "  |r|=" << tp.residual_norm);
 
     CHECK(tp.converged);
-    CHECK(tp.residual_norm < 0.1);  // residual in lbf
+    CHECK(tp.residual_norm < 0.1); // residual in lbf
 }
 
 TEST_CASE("TrimSolver: trim alpha matches NASA reference", "[trim][smoke]")
@@ -137,7 +137,7 @@ TEST_CASE("TrimSolver: apparent-weight trim matches the altitude-holding NESC si
         Case{ .name = "16 equator, heading 000", .lat_deg = 0.0, .alt_ft = 10000.0, .heading_deg = 0.0, .vNorth_fps = 563.643, .vEast_fps = 0.0, .refAlpha_deg = 2.66540 },
     } };
 
-    constexpr double kMass_kg = 9298.6439;  // 637.1596 slug, from F16_inertia.dml
+    constexpr double kMass_kg = 9298.6439; // 637.1596 slug, from F16_inertia.dml
     constexpr double kFt_m = TrimSolver::kFt_m;
 
     DAVEMLAeroModel aero(kAeroFile);

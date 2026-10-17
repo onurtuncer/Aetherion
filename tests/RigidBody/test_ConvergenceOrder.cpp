@@ -198,8 +198,8 @@ namespace {
 
     // Convergence-study configuration, shared by the order tests and the CSV
     // writer so that the published figure and the assertions cannot drift apart.
-    constexpr double kT = 2.0;      // integration horizon [s]
-    constexpr double kHRef = 2.5e-4;   // reference step size  [s]
+    constexpr double kT = 2.0;       // integration horizon [s]
+    constexpr double kHRef = 2.5e-4; // reference step size  [s]
     const std::array<double, 5> kHVec{ 0.2, 0.1, 0.05, 0.025, 0.0125 };
 
     Core::NewtonOptions tight_newton()
@@ -337,7 +337,7 @@ TEST_CASE("Convergence order: explicit RK4 RKMK on SE(3) attains order 4",
         INFO("  h=" << h[i] << "  e_rot=" << e.rot[i] << "  e_pos=" << e.pos[i]);
 
     REQUIRE(p_rot > 3.5);
-    REQUIRE(p_rot < 4.6);   // must be clearly separated from the order-5 scheme
+    REQUIRE(p_rot < 4.6); // must be clearly separated from the order-5 scheme
     REQUIRE(p_pos > 3.5);
 }
 

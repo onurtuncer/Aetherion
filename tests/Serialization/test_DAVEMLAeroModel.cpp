@@ -95,8 +95,8 @@ namespace {
 
     std::string writeMathOpDML()
     {
-    // One file per process: CTest runs every test case as its own process, and
-    // with -j they wrote and deleted one shared path under each other.
+        // One file per process: CTest runs every test case as its own process, and
+        // with -j they wrote and deleted one shared path under each other.
         static const std::string path = "_ae_test_mathop_" + std::to_string(std::random_device{}()) + ".dml";
         std::ofstream f(path);
         f << kMathOpDML;
@@ -390,7 +390,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw lt true", "[daveml_aero][mathml]")
     std::filesystem::remove(path);
 
     auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
-    CHECK_THAT(result["v_lt"], WithinAbs(1.0, 1e-12));  // 4 < 5 → 1
+    CHECK_THAT(result["v_lt"], WithinAbs(1.0, 1e-12)); // 4 < 5 → 1
 }
 
 TEST_CASE("DAVEMLAeroModel: evaluateRaw lt false", "[daveml_aero][mathml]")
@@ -400,7 +400,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw lt false", "[daveml_aero][mathml]")
     std::filesystem::remove(path);
 
     auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 6.0 } });
-    CHECK_THAT(result["v_lt"], WithinAbs(0.0, 1e-12));  // 6 < 5 → 0
+    CHECK_THAT(result["v_lt"], WithinAbs(0.0, 1e-12)); // 6 < 5 → 0
 }
 
 TEST_CASE("DAVEMLAeroModel: evaluateRaw gt true", "[daveml_aero][mathml]")
@@ -410,7 +410,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw gt true", "[daveml_aero][mathml]")
     std::filesystem::remove(path);
 
     auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
-    CHECK_THAT(result["v_gt"], WithinAbs(1.0, 1e-12));  // 4 > 3 → 1
+    CHECK_THAT(result["v_gt"], WithinAbs(1.0, 1e-12)); // 4 > 3 → 1
 }
 
 TEST_CASE("DAVEMLAeroModel: evaluateRaw leq equal boundary", "[daveml_aero][mathml]")
@@ -420,7 +420,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw leq equal boundary", "[daveml_aero][math
     std::filesystem::remove(path);
 
     auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
-    CHECK_THAT(result["v_leq"], WithinAbs(1.0, 1e-12));  // 4 <= 4 → 1
+    CHECK_THAT(result["v_leq"], WithinAbs(1.0, 1e-12)); // 4 <= 4 → 1
 }
 
 TEST_CASE("DAVEMLAeroModel: evaluateRaw geq equal boundary", "[daveml_aero][mathml]")
@@ -430,7 +430,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw geq equal boundary", "[daveml_aero][math
     std::filesystem::remove(path);
 
     auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
-    CHECK_THAT(result["v_geq"], WithinAbs(1.0, 1e-12));  // 4 >= 4 → 1
+    CHECK_THAT(result["v_geq"], WithinAbs(1.0, 1e-12)); // 4 >= 4 → 1
 }
 
 TEST_CASE("DAVEMLAeroModel: evaluateRaw eq true", "[daveml_aero][mathml]")
@@ -440,7 +440,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw eq true", "[daveml_aero][mathml]")
     std::filesystem::remove(path);
 
     auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
-    CHECK_THAT(result["v_eq"], WithinAbs(1.0, 1e-12));  // 4 == 4 → 1
+    CHECK_THAT(result["v_eq"], WithinAbs(1.0, 1e-12)); // 4 == 4 → 1
 }
 
 TEST_CASE("DAVEMLAeroModel: evaluateRaw piecewise otherwise branch", "[daveml_aero][mathml]")
@@ -450,7 +450,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw piecewise otherwise branch", "[daveml_ae
     std::filesystem::remove(path);
 
     auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
-    CHECK_THAT(result["v_pw"], WithinAbs(20.0, 1e-12));  // 4 < 0 is false → otherwise
+    CHECK_THAT(result["v_pw"], WithinAbs(20.0, 1e-12)); // 4 < 0 is false → otherwise
 }
 
 TEST_CASE("DAVEMLAeroModel: evaluateRaw piecewise piece branch", "[daveml_aero][mathml]")
@@ -460,5 +460,5 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw piecewise piece branch", "[daveml_aero][
     std::filesystem::remove(path);
 
     auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", -1.0 } });
-    CHECK_THAT(result["v_pw"], WithinAbs(10.0, 1e-12));  // -1 < 0 is true → piece
+    CHECK_THAT(result["v_pw"], WithinAbs(10.0, 1e-12)); // -1 < 0 is true → piece
 }

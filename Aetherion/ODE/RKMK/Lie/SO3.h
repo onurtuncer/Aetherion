@@ -38,8 +38,8 @@
 #include <Eigen/Dense>
 
 #include <Aetherion/ODE/RKMK/Lie/Math.h>
-#include <Aetherion/ODE/RKMK/Core/Scalar.h>   // Core::so3_ABC  (canonical A/B/C)
-#include <Aetherion/Spatial/Skew.h>            // Spatial::skew<S>()
+#include <Aetherion/ODE/RKMK/Core/Scalar.h> // Core::so3_ABC  (canonical A/B/C)
+#include <Aetherion/Spatial/Skew.h>         // Spatial::skew<S>()
 
 namespace Aetherion::ODE::RKMK::Lie::SO3 {
 
@@ -59,7 +59,7 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         const S theta2 = w.dot(w);
         S A{}, B{}, C{};
         Core::so3_ABC(theta2, A, B, C);
-        (void)C;  // C is only needed for LeftJacobian
+        (void)C; // C is only needed for LeftJacobian
 
         const Eigen::Matrix<S, 3, 3> I = Eigen::Matrix<S, 3, 3>::Identity();
         const Eigen::Matrix<S, 3, 3> W = Spatial::skew(w);
@@ -84,7 +84,7 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         const S theta2 = w.dot(w);
         S A{}, B{}, C{};
         Core::so3_ABC(theta2, A, B, C);
-        (void)A;  // A is only needed for Exp_R
+        (void)A; // A is only needed for Exp_R
 
         const Eigen::Matrix<S, 3, 3> I = Eigen::Matrix<S, 3, 3>::Identity();
         const Eigen::Matrix<S, 3, 3> W = Spatial::skew(w);
@@ -158,8 +158,8 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
             S(0.5) * (R(2, 1) - R(1, 2)),
             S(0.5) * (R(0, 2) - R(2, 0)),
             S(0.5) * (R(1, 0) - R(0, 1))
-        };  // = sin(theta) · axis
-        const S s2 = half_vee.dot(half_vee);  // sin²(theta)
+        }; // = sin(theta) · axis
+        const S s2 = half_vee.dot(half_vee); // sin²(theta)
 
         // Clamp against round-off beyond [-1, 1] and away from the
         // singular derivative at ±1 (see the AD note); CondExp keeps it AD-safe.
@@ -180,7 +180,7 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         const S s = Core::sqrt_s(s2 + S(1e-300));
         const S s_safe = Core::condexp_lt(s2, eps2, S(1), s);
         const S k = Core::condexp_lt(s2, eps2, S(1) + s2 / S(6), theta / s_safe);
-        const Eigen::Matrix<S, 3, 1> w_sin = k * half_vee;  // series near I, theta/sin(theta) elsewhere
+        const Eigen::Matrix<S, 3, 1> w_sin = k * half_vee; // series near I, theta/sin(theta) elsewhere
 
         // sin²theta is also below eps2 within 1e-4 rad of theta = pi, where
         // half_vee carries almost nothing and the series would return a tiny

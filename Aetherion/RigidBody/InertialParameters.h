@@ -12,26 +12,26 @@
 
 namespace Aetherion::RigidBody {
 
-/// @brief Physical inertial properties of a rigid vehicle.
-///
-/// The inertia tensor is about the **centre of mass**, and the offset is the
-/// centre of mass **relative to the body-axes origin** (Featherstone's
-/// @f$c@f$); everything is expressed in the **body frame**. This is the
-/// AIAA S-119 / DAVE-ML convention: @c XIXX .. @c XIYZ are about the centre of
-/// mass, and @c DXCG is the centre of mass forward of the moment reference
-/// centre, which is the body origin. @c RigidBody::VectorField shifts the
-/// tensor to the origin itself (parallel-axis term), so a caller never does.
-///
-/// The inertia tensor is stored in its standard symmetric form:
-/// @f[
-///   I = \begin{bmatrix}
-///         I_{xx}  & -I_{xy} & -I_{xz} \\
+    /// @brief Physical inertial properties of a rigid vehicle.
+    ///
+    /// The inertia tensor is about the **centre of mass**, and the offset is the
+    /// centre of mass **relative to the body-axes origin** (Featherstone's
+    /// @f$c@f$); everything is expressed in the **body frame**. This is the
+    /// AIAA S-119 / DAVE-ML convention: @c XIXX .. @c XIYZ are about the centre of
+    /// mass, and @c DXCG is the centre of mass forward of the moment reference
+    /// centre, which is the body origin. @c RigidBody::VectorField shifts the
+    /// tensor to the origin itself (parallel-axis term), so a caller never does.
+    ///
+    /// The inertia tensor is stored in its standard symmetric form:
+    /// @f[
+    ///   I = \begin{bmatrix}
+    ///         I_{xx}  & -I_{xy} & -I_{xz} \\
 ///        -I_{xy}  &  I_{yy} & -I_{yz} \\
 ///        -I_{xz}  & -I_{yz} &  I_{zz}
-///       \end{bmatrix}
-/// @f]
-/// (products of inertia are positive by convention, stored with leading minus
-/// signs in the tensor).
+    ///       \end{bmatrix}
+    /// @f]
+    /// (products of inertia are positive by convention, stored with leading minus
+    /// signs in the tensor).
     struct InertialParameters
     {
         double mass_kg{ 0.0 }; ///< Vehicle mass [kg].

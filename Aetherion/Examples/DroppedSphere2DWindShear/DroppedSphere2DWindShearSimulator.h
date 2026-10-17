@@ -55,8 +55,8 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
                 time(), state(), currentTheta(),
                 vectorField().gravity, vectorField().aero);
 
-        // Correct TAS to wind-relative airspeed.
-        // Linear shear: v_wind_E(h) = gradient_E * h + intercept_E
+            // Correct TAS to wind-relative airspeed.
+            // Linear shear: v_wind_E(h) = gradient_E * h + intercept_E
             const double h = std::max(snap.altitudeMsl_m, 0.0);
             const double vE_wind = m_Grad_E * h + m_Int_E;
             const double vN_wind = m_Grad_N * h + m_Int_N;
@@ -79,7 +79,7 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
 
     private:
         double m_Theta0;
-        double m_Grad_N, m_Grad_E;  ///< NED wind altitude gradients [m/s per m]
+        double m_Grad_N, m_Grad_E; ///< NED wind altitude gradients [m/s per m]
         double m_Int_N, m_Int_E;   ///< NED wind intercepts at h=0 [m/s]
 
         static ShearWindPolicy makeAeroPolicy(

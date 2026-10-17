@@ -343,7 +343,7 @@ protected:
 private:
     int failOnStep_;
     mutable int stepsCalled_ = 0;
-    mutable double time_ = 0.0;   // elapsed, as every simulator reports it
+    mutable double time_ = 0.0; // elapsed, as every simulator reports it
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -450,7 +450,7 @@ protected:
         ++stepsCalled_;
         StepObservation obs;
         if (stepsCalled_ <= stalls_) {
-            obs.time_s = time_;      // unchanged
+            obs.time_s = time_; // unchanged
             obs.converged = false;
             obs.residual = 0.5;
             return obs;
@@ -464,7 +464,7 @@ protected:
 private:
     int stalls_;
     mutable int stepsCalled_ = 0;
-    mutable double time_ = 0.0;   // elapsed, as every simulator reports it
+    mutable double time_ = 0.0; // elapsed, as every simulator reports it
 };
 
 TEST_CASE("Application::run aborts a step that keeps failing without advancing",

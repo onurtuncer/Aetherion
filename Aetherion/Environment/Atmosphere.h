@@ -20,10 +20,10 @@ namespace Aetherion::Environment {
     template <class Scalar>
     struct Us1976State
     {
-        Scalar T;    // Temperature [K]
-        Scalar p;    // Static pressure [Pa]
-        Scalar rho;  // Density [kg/m^3]
-        Scalar a;    // Speed of sound [m/s]
+        Scalar T;   // Temperature [K]
+        Scalar p;   // Static pressure [Pa]
+        Scalar rho; // Density [kg/m^3]
+        Scalar a;   // Speed of sound [m/s]
     };
 
     /// Deviations from the standard day, applied to US1976Atmosphere().
@@ -150,9 +150,9 @@ namespace Aetherion::Environment {
         using detail::SquareRoot;
 
         // ---- Physical constants (US1976) ---------------------------------------
-        const auto g0 = Scalar(9.80665);    // [m/s^2]
-        const auto R = Scalar(287.05287);  // [J/(kg·K)] specific gas constant for air
-        const auto gamma = Scalar(1.4);       // ratio of specific heats
+        const auto g0 = Scalar(9.80665);  // [m/s^2]
+        const auto R = Scalar(287.05287); // [J/(kg·K)] specific gas constant for air
+        const auto gamma = Scalar(1.4);   // ratio of specific heats
 
         // Geopotential reference Earth radius (USSA-76) [m]
         const auto Re = Scalar(6356766.0);
@@ -179,8 +179,8 @@ namespace Aetherion::Environment {
 
         // Convert geometric altitude to geopotential altitude H
         // H = Re * h / (Re + h)
-        const Scalar H = Re * h / (Re + h);      // [m]
-        const Scalar H_km = H * Scalar(1.0e-3);  // [km]
+        const Scalar H = Re * h / (Re + h);     // [m]
+        const Scalar H_km = H * Scalar(1.0e-3); // [km]
 
         // ---- US1976 base values per layer (0..7) -------------------------------
         using Layers = detail::Us1976Layers;
@@ -204,9 +204,9 @@ namespace Aetherion::Environment {
         }
 
         const auto Hb_km = Scalar(Hb_km_arr[b]);
-        const Scalar Hb = Hb_km * Scalar(1000.0);   // [m]
-        const auto Tb = Scalar(Tb_arr[b] + dT);   // [K], shifted by deltaT_K
-        const auto Pb = Scalar(Pb_arr[b]);        // [Pa]
+        const Scalar Hb = Hb_km * Scalar(1000.0);                      // [m]
+        const auto Tb = Scalar(Tb_arr[b] + dT);                        // [K], shifted by deltaT_K
+        const auto Pb = Scalar(Pb_arr[b]);                             // [Pa]
         const Scalar Lb = Scalar(Lb_K_per_km_arr[b]) * Scalar(1.0e-3); // [K/m]
 
         // ---- Compute temperature and pressure at altitude H --------------------

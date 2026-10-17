@@ -64,7 +64,7 @@ namespace Aetherion::Test::Serialization {
             Ser::from_json(j, restored);
 
             CHECK_THAT(restored.north_mps, WithinRel(original.north_mps));
-        // east is exactly 0.0 — use WithinAbs for zero-value check
+            // east is exactly 0.0 — use WithinAbs for zero-value check
             CHECK_THAT(restored.east_mps, WithinAbs(original.east_mps, 1e-12));
             CHECK_THAT(restored.down_mps, WithinRel(original.down_mps));
         }
@@ -84,7 +84,7 @@ namespace Aetherion::Test::Serialization {
         {
             const nlohmann::json j = {
                 { "north_mps", 1.0 }
-            // east_mps and down_mps deliberately omitted
+                // east_mps and down_mps deliberately omitted
             };
 
             RigidBody::VelocityNED vel{};
@@ -93,7 +93,7 @@ namespace Aetherion::Test::Serialization {
 
         SECTION("physically meaningful values: hover with slight drift")
         {
-        // Hovering vehicle: near-zero horizontal, small positive down (sinking)
+            // Hovering vehicle: near-zero horizontal, small positive down (sinking)
             const RigidBody::VelocityNED original{ 0.05, -0.03, 0.1 };
 
             nlohmann::json j;

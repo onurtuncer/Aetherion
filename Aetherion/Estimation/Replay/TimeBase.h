@@ -38,19 +38,19 @@ namespace Aetherion::Estimation::Replay {
 
     struct TimeBaseFit
     {
-        double offset = 0.0;  ///< host = offset + scale * part
+        double offset = 0.0; ///< host = offset + scale * part
         double scale = 1.0;
-        double rmsResidual = 0.0;  ///< of host - (offset + scale * part), seconds
+        double rmsResidual = 0.0; ///< of host - (offset + scale * part), seconds
         double maxResidual = 0.0;
         std::size_t samples = 0;
 
-  /// Part-clock (nominally simulation) time of a host stamp.
+        /// Part-clock (nominally simulation) time of a host stamp.
         [[nodiscard]] double toPart(double host) const { return (host - offset) / scale; }
         [[nodiscard]] double toHost(double part) const { return offset + scale * part; }
     };
 
-/// Least-squares line through (part, host) pairs. Two or more distinct part
-/// times are required.
+    /// Least-squares line through (part, host) pairs. Two or more distinct part
+    /// times are required.
     [[nodiscard]] inline TimeBaseFit fitTimeBase(const std::vector<double>& part, const std::vector<double>& host)
     {
         if (part.size() != host.size())
@@ -59,8 +59,8 @@ namespace Aetherion::Estimation::Replay {
         if (n < 2)
             throw std::invalid_argument("fitTimeBase: fewer than two samples");
 
-  // Centred for conditioning: part times are seconds since start, host
-  // times may be a wall clock.
+        // Centred for conditioning: part times are seconds since start, host
+        // times may be a wall clock.
         double mp = 0.0, mh = 0.0;
         for (std::size_t i = 0; i < n; ++i)
         {
@@ -94,4 +94,4 @@ namespace Aetherion::Estimation::Replay {
         return f;
     }
 
-}  // namespace Aetherion::Estimation::Replay
+} // namespace Aetherion::Estimation::Replay

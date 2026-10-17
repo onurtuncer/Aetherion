@@ -15,7 +15,7 @@
 
 namespace {
 
-// Minimal valid JSON that satisfies from_json(j, RigidBody::Config)
+    // Minimal valid JSON that satisfies from_json(j, RigidBody::Config)
     const std::string kValidJson = R"({
     "pose": {
         "lat_deg": 41.1, "lon_deg": 29.0, "alt_m": 100.0,

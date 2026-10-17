@@ -54,23 +54,23 @@
 
 namespace Aetherion::Examples::TwoStageRocket {
 
-/// @brief Aerodynamic wrench policy for the NASA two-stage rocket DML model.
-///
-/// Computes CL, CD, CY, Cm, Cn from the DAVE-ML lookup tables at the current
-/// alpha/beta angles and applies the wind-to-body rotation to yield body-frame
-/// forces and moments about the MRC.
-///
-/// All quantities in SI (N, N·m). Dynamic pressure uses US 1976 density at
-/// geocentric altitude.
+    /// @brief Aerodynamic wrench policy for the NASA two-stage rocket DML model.
+    ///
+    /// Computes CL, CD, CY, Cm, Cn from the DAVE-ML lookup tables at the current
+    /// alpha/beta angles and applies the wind-to-body rotation to yield body-frame
+    /// forces and moments about the MRC.
+    ///
+    /// All quantities in SI (N, N·m). Dynamic pressure uses US 1976 density at
+    /// geocentric altitude.
     class RocketAeroPolicy
     {
     public:
-    // Reference geometry (from twostage_aero.dml constants)
-        static constexpr double kSref_m2 = 7.0;  ///< Reference area [m²].
+        // Reference geometry (from twostage_aero.dml constants)
+        static constexpr double kSref_m2 = 7.0; ///< Reference area [m²].
         static constexpr double kCbar_m = 3.0;  ///< Longitudinal reference length [m].
-        static constexpr double kBspan_m = 3.0;  ///< Lateral reference length [m].
+        static constexpr double kBspan_m = 3.0; ///< Lateral reference length [m].
 
-    // ── Construction ──────────────────────────────────────────────────────────
+        // ── Construction ──────────────────────────────────────────────────────────
 
         RocketAeroPolicy() = default;
 
@@ -79,17 +79,17 @@ namespace Aetherion::Examples::TwoStageRocket {
             : m_model(model)
         {}
 
-    // ── Environment (optional; defaults to calm air on a standard day) ────────
+        // ── Environment (optional; defaults to calm air on a standard day) ────────
 
-    /// @brief Steady wind as an ECEF vector [m/s] (see ConstantECEFWind::from_ned).
+        /// @brief Steady wind as an ECEF vector [m/s] (see ConstantECEFWind::from_ned).
         void setWindECEF(const Eigen::Vector3d& v_wind_ecef) noexcept { m_windECEF = v_wind_ecef; }
         [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return m_windECEF; }
 
-    /// @brief ISA + dT and sea-level pressure offset for the density.
+        /// @brief ISA + dT and sea-level pressure offset for the density.
         void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
         [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
 
-    // ── AeroPolicy interface ──────────────────────────────────────────────────
+        // ── AeroPolicy interface ──────────────────────────────────────────────────
 
         template <class S>
         Spatial::Wrench<S>
@@ -106,9 +106,9 @@ namespace Aetherion::Examples::TwoStageRocket {
             constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
             constexpr double kPi = std::numbers::pi;
 
-        // ── Atmosphere-relative velocity in body frame ────────────────────────
-        // Earth-surface velocity and the steady wind, through the shared helper
-        // (FlightDynamics/Policies/AirRelative.h); no gust on the rocket.
+            // ── Atmosphere-relative velocity in body frame ────────────────────────
+            // Earth-surface velocity and the steady wind, through the shared helper
+            // (FlightDynamics/Policies/AirRelative.h); no gust on the rocket.
             (void)kOmegaE;
             const Environment::GustState noGust{};
             const Eigen::Matrix<S, 3, 1> v_rel =
@@ -119,23 +119,23 @@ namespace Aetherion::Examples::TwoStageRocket {
             const S& w = v_rel(2);
             const S vt = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
 
-        // ── Aerodynamic angles [deg] ──────────────────────────────────────────
+            // ── Aerodynamic angles [deg] ──────────────────────────────────────────
             const S alpha_deg = ArcTangent(w / (u + S(1.0e-12))) * S(180.0 / kPi);
             const S beta_deg = ArcSine(v / vt) * S(180.0 / kPi);
 
-        // ── Geometric altitude above WGS-84 ellipsoid ────────────────────────
-        // Approximate: use geocentric latitude to get the ellipsoid surface
-        // radius at the current position, then subtract from the ECI radius.
-        // Correct at all latitudes (equatorial approx.: r - a gives ~21 km
-        // error at the poles which would badly misplace the atmosphere layer).
+            // ── Geometric altitude above WGS-84 ellipsoid ────────────────────────
+            // Approximate: use geocentric latitude to get the ellipsoid surface
+            // radius at the current position, then subtract from the ECI radius.
+            // Correct at all latitudes (equatorial approx.: r - a gives ~21 km
+            // error at the poles which would badly misplace the atmosphere layer).
             constexpr double a = Environment::WGS84::kSemiMajorAxis_m;
             constexpr double b = a * (1.0 - Environment::WGS84::kFlattening);
             constexpr double a2 = a * a;
             constexpr double b2 = b * b;
             const S r = SquareRoot(g.p.squaredNorm() + S(1.0e-30));
-            const S sin_gc = g.p(2) / r;                   // sin(geocentric lat)
-            const S cos2_gc = S(1) - sin_gc * sin_gc;       // cos²(geocentric lat)
-        // Ellipsoid surface radius: r_s = a·b / sqrt(b²cos²φ + a²sin²φ)
+            const S sin_gc = g.p(2) / r;              // sin(geocentric lat)
+            const S cos2_gc = S(1) - sin_gc * sin_gc; // cos²(geocentric lat)
+                                                      // Ellipsoid surface radius: r_s = a·b / sqrt(b²cos²φ + a²sin²φ)
             const S r_surf = SquareRoot(S(a2 * b2) /
                                         (S(b2) * cos2_gc + S(a2) * sin_gc * sin_gc + S(1.0e-30)));
             const S alt = r - r_surf;
@@ -143,7 +143,7 @@ namespace Aetherion::Examples::TwoStageRocket {
             const S qbar = S(0.5) * rho * vt * vt;
             const S qS = qbar * S(kSref_m2);
 
-        // ── Evaluate DAVE-ML aero tables ──────────────────────────────────────
+            // ── Evaluate DAVE-ML aero tables ──────────────────────────────────────
             if (!m_model) {
                 return Spatial::Wrench<S>{};
             }
@@ -164,12 +164,12 @@ namespace Aetherion::Examples::TwoStageRocket {
             const S Cm = get("aeroBodyMomentCoefficient_Pitch");
             const S Cn = get("aeroBodyMomentCoefficient_Yaw");
 
-        // ── Wind-to-body force transform: R_BW = Ry(alpha) * Rz(beta) ─────────
-        // F_wind = [−CD, CY, −CL]^T × qS
-        // F_body = R_BW * F_wind:
-        //   Fx = (−CD·ca·cb − CY·ca·sb + CL·sa) × qS
-        //   Fy = (−CD·sb    + CY·cb            ) × qS
-        //   Fz = (−CD·sa·cb − CY·sa·sb − CL·ca ) × qS
+            // ── Wind-to-body force transform: R_BW = Ry(alpha) * Rz(beta) ─────────
+            // F_wind = [−CD, CY, −CL]^T × qS
+            // F_body = R_BW * F_wind:
+            //   Fx = (−CD·ca·cb − CY·ca·sb + CL·sa) × qS
+            //   Fy = (−CD·sb    + CY·cb            ) × qS
+            //   Fz = (−CD·sa·cb − CY·sa·sb − CL·ca ) × qS
             const S alpha_rad = alpha_deg * S(kPi / 180.0);
             const S beta_rad = beta_deg * S(kPi / 180.0);
             const S sa = Sine(alpha_rad), ca = Cosine(alpha_rad);
@@ -179,12 +179,12 @@ namespace Aetherion::Examples::TwoStageRocket {
             const S Fy = (-CD * sb + CY * cb) * qS;
             const S Fz = (-CD * sa * cb - CY * sa * sb - CL * ca) * qS;
 
-        // ── Assemble wrench [Mx, My, Mz, Fx, Fy, Fz] ─────────────────────────
+            // ── Assemble wrench [Mx, My, Mz, Fx, Fy, Fz] ─────────────────────────
             Spatial::Wrench<S> wrench{};
             wrench.f.setZero();
-            wrench.f(0) = S(0);                          // Mx = 0 (axisymmetric body)
-            wrench.f(1) = Cm * qS * S(kCbar_m);          // My = Cm × qS × c̄
-            wrench.f(2) = Cn * qS * S(kBspan_m);         // Mz = Cn × qS × b
+            wrench.f(0) = S(0);                  // Mx = 0 (axisymmetric body)
+            wrench.f(1) = Cm * qS * S(kCbar_m);  // My = Cm × qS × c̄
+            wrench.f(2) = Cn * qS * S(kBspan_m); // Mz = Cn × qS × b
             wrench.f(3) = Fx;
             wrench.f(4) = Fy;
             wrench.f(5) = Fz;
@@ -194,7 +194,7 @@ namespace Aetherion::Examples::TwoStageRocket {
     private:
         std::shared_ptr<const Serialization::DAVEMLAeroModel> m_model;
         Eigen::Vector3d m_windECEF{ Eigen::Vector3d::Zero() }; ///< Steady wind, ECEF [m/s]
-        Environment::AtmosphereOffsets m_atm{};                               ///< ISA + dT, dP_sl
+        Environment::AtmosphereOffsets m_atm{};                ///< ISA + dT, dP_sl
     };
 
     static_assert(FlightDynamics::AeroPolicy<RocketAeroPolicy>);

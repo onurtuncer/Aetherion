@@ -106,7 +106,7 @@ TEST_CASE("StagePack fixed EuclidDim: offsets and views are correct", "[stagepac
 TEST_CASE("StagePack dynamic EuclidDim: offsets and views are correct", "[stagepack]")
 {
     using Pack = Core::StagePack<double, 2, Eigen::Dynamic>; // s=2, m runtime
-    Pack pack(/*euclid_dim=*/4); // m=4 => total = 2*(6+4)=20
+    Pack pack(/*euclid_dim=*/4);                             // m=4 => total = 2*(6+4)=20
 
     REQUIRE(pack.stages() == 2);
     REQUIRE(pack.lie_dim() == 6);

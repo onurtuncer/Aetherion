@@ -61,7 +61,7 @@ namespace {
     constexpr double kAlt_ft = 10013.0;
     constexpr double kAlt_m = kAlt_ft * 0.3048;
     constexpr double kHeading_deg = 45.0;
-    constexpr double kRoll_deg = 0.0;          // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
+    constexpr double kRoll_deg = 0.0; // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
     constexpr double kVelocity_fps = 400.0;
     constexpr double kVelocity_mps = kVelocity_fps * 0.3048;
     constexpr double kTAS_fps = 565.685;
@@ -73,16 +73,16 @@ namespace {
     // The NASA reference applies the KEAS step at t=5 s and converges to
     // KEAS ≈ 277 kt by t ≈ 10 s.
     constexpr double kAltCmd_ft = 10013.0;   // hold initial altitude
-    constexpr double kKeasCmd_kt = 277.0;      // target KEAS [kt]
-    constexpr double kKeasStepTime_s = 5.0;    // NASA applies the step at t=5 s
-    constexpr double kBaseChiCmd_deg = 45.0;     // hold NE heading
+    constexpr double kKeasCmd_kt = 277.0;    // target KEAS [kt]
+    constexpr double kKeasStepTime_s = 5.0;  // NASA applies the step at t=5 s
+    constexpr double kBaseChiCmd_deg = 45.0; // hold NE heading
 }
 
 namespace Aetherion::Examples::F16AirspeedChange {
 
     using Sim = F16AltitudeChange::F16AltitudeChangeSimulator;
 
-// ── logStartupBanner ──────────────────────────────────────────────────────────
+    // ── logStartupBanner ──────────────────────────────────────────────────────────
 
     void F16AirspeedChangeApplication::logStartupBanner() const
     {
@@ -97,20 +97,20 @@ namespace Aetherion::Examples::F16AirspeedChange {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── writeCsvHeader ────────────────────────────────────────────────────────────
+    // ── writeCsvHeader ────────────────────────────────────────────────────────────
 
     void F16AirspeedChangeApplication::writeCsvHeader(std::ofstream& csv) const
     {
         Simulation::Snapshot2Traits::write_header(csv);
     }
 
-// ── prepareSimulation ─────────────────────────────────────────────────────────
+    // ── prepareSimulation ─────────────────────────────────────────────────────────
 
     void F16AirspeedChangeApplication::prepareSimulation() const
     {
         const auto& simCfg = getConfig();
 
-    // ── 1. Load models ────────────────────────────────────────────────────────
+        // ── 1. Load models ────────────────────────────────────────────────────────
         const std::string inertiaPath = F16_INERTIA_FILE;
         const std::string aeroPath = F16_AERO_FILE;
         const std::string propPath = F16_PROP_FILE;
@@ -131,19 +131,19 @@ namespace Aetherion::Examples::F16AirspeedChange {
         AE_CORE_INFO("Loading control from '{}'", controlPath);
         auto ctrl_model = std::make_shared<const Serialization::DAVEMLControlModel>(controlPath);
 
-    // ── 2. Trim solver (same as Cases 11 / 13.1) ──────────────────────────────
-    // Apparent weight at the trim point: J2 attraction — the same gravity
-    // J2GravityPolicy applies during integration — less the centripetal relief of
-    // level flight over the rotating Earth.  Trimming against the static weight
-    // would leave the vehicle with excess lift on the first step.
+        // ── 2. Trim solver (same as Cases 11 / 13.1) ──────────────────────────────
+        // Apparent weight at the trim point: J2 attraction — the same gravity
+        // J2GravityPolicy applies during integration — less the centripetal relief of
+        // level flight over the rotating Earth.  Trimming against the static weight
+        // would leave the vehicle with excess lift on the first step.
         const double weight_lbf = FlightDynamics::LevelFlightTrimWeight_lbf(
             ip.mass_kg, kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps);
         FlightDynamics::TrimInputs tin{};
         tin.vt_fps = kTAS_fps;
         tin.alt_ft = kAlt_ft;
         tin.weight_lbf = weight_lbf;
-    // Aero damping at the rate F16AeroPolicy will actually see — the transport
-    // rate.  Pitch attitude is not known yet and q does not depend on it.
+        // Aero damping at the rate F16AeroPolicy will actually see — the transport
+        // rate.  Pitch attitude is not known yet and q does not depend on it.
         tin.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, 0.0, kRoll_deg);
 
@@ -158,7 +158,7 @@ namespace Aetherion::Examples::F16AirspeedChange {
         AE_CORE_INFO("  el    = {:.4f} deg", trim.el_deg);
         AE_CORE_INFO("  pwr   = {:.4f} %%", trim.pwr_pct);
 
-    // ── 3. Initial state ──────────────────────────────────────────────────────
+        // ── 3. Initial state ──────────────────────────────────────────────────────
         RigidBody::Config cfg{};
         cfg.pose.lat_deg = kLat_deg;
         cfg.pose.lon_deg = kLon_deg;
@@ -169,8 +169,8 @@ namespace Aetherion::Examples::F16AirspeedChange {
         cfg.velocityNED.north_mps = kVelocity_mps;
         cfg.velocityNED.east_mps = kVelocity_mps;
         cfg.velocityNED.down_mps = 0.0;
-    // Attitude held fixed against the local-level frame, which tips forward at the
-    // transport rate as the vehicle moves over the curved Earth.
+        // Attitude held fixed against the local-level frame, which tips forward at the
+        // transport rate as the vehicle moves over the curved Earth.
         cfg.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, trim.alpha_deg, kRoll_deg);
         cfg.inertialParameters = ip;
@@ -178,10 +178,10 @@ namespace Aetherion::Examples::F16AirspeedChange {
         const double theta0 = computeInitialERA(simCfg.startTime);
         const RigidBody::StateD x0 = buildInitialState(cfg, theta0);
 
-    // ── 4. Autopilot commands ─────────────────────────────────────────────────
-    // Before t=kKeasStepTime_s the controller holds the trim KEAS so that
-    // deltaVequiv ≈ 0.  At t=kKeasStepTime_s the KEAS command steps to
-    // kKeasCmd_kt, driving the throttle LQR to decelerate to the target.
+        // ── 4. Autopilot commands ─────────────────────────────────────────────────
+        // Before t=kKeasStepTime_s the controller holds the trim KEAS so that
+        // deltaVequiv ≈ 0.  At t=kKeasStepTime_s the KEAS command steps to
+        // kKeasCmd_kt, driving the throttle LQR to decelerate to the target.
         const auto atm_trim = Environment::US1976Atmosphere(kAlt_m);
         constexpr double kRhoSL_kg_m3 = 1.225;
         constexpr double kKt_mps = 0.5144444;
@@ -192,7 +192,7 @@ namespace Aetherion::Examples::F16AirspeedChange {
         cmds.altCmd_ft = kAltCmd_ft;
         cmds.keasCmd_kt = kKeasCmd_kt;
         cmds.keasStepTime_s = kKeasStepTime_s;
-        cmds.initialKeasCmd_kt = keas_trim_kt;          // hold trim KEAS before the step
+        cmds.initialKeasCmd_kt = keas_trim_kt; // hold trim KEAS before the step
         cmds.baseChiCmd_deg = kBaseChiCmd_deg;
         cmds.latOffset_ft = 0.0;
 
@@ -206,7 +206,7 @@ namespace Aetherion::Examples::F16AirspeedChange {
             x0, theta0, cmds, kXcgFromAC_m);
     }
 
-// ── writeInitialSnapshot ──────────────────────────────────────────────────────
+    // ── writeInitialSnapshot ──────────────────────────────────────────────────────
 
     void F16AirspeedChangeApplication::writeInitialSnapshot(std::ofstream& csv) const
     {
@@ -216,7 +216,7 @@ namespace Aetherion::Examples::F16AirspeedChange {
             s2.time, s2.altitudeMsl_m, s2.trueAirspeed_m_s, s2.mach);
     }
 
-// ── stepAndRecord ─────────────────────────────────────────────────────────────
+    // ── stepAndRecord ─────────────────────────────────────────────────────────────
 
     auto F16AirspeedChangeApplication::stepAndRecord(
         std::ofstream& csv, double h, bool doWrite) const -> StepObservation
@@ -241,7 +241,7 @@ namespace Aetherion::Examples::F16AirspeedChange {
         };
     }
 
-// ── logFinalSummary ───────────────────────────────────────────────────────────
+    // ── logFinalSummary ───────────────────────────────────────────────────────────
 
     void F16AirspeedChangeApplication::logFinalSummary() const
     {
@@ -266,7 +266,7 @@ namespace Aetherion::Examples::F16AirspeedChange {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
+    // ── Private helpers ───────────────────────────────────────────────────────────
 
     double F16AirspeedChangeApplication::computeInitialERA(double t0) noexcept
     {

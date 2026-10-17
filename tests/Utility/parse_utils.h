@@ -38,7 +38,7 @@ namespace NasaCsv {
         const char* last = str.data() + str.size();
         auto res = std::from_chars(first, last, value, std::chars_format::general);
         if (res.ec == std::errc{} && res.ptr == last) return value;
-        // fall through to stod on partial parse
+            // fall through to stod on partial parse
 #endif
         try {
             std::size_t idx = 0;

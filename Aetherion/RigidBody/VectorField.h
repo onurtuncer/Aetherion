@@ -65,28 +65,28 @@ namespace Aetherion::RigidBody {
 
     namespace FD = Aetherion::FlightDynamics;
 
-/// @brief Euclidean part of the 6-DoF rigid-body ODE on @f$ SE(3) \times \mathbb{R}^7 @f$.
-///
-/// Implements the Newton-Euler equations of motion in the body frame:
-/// @f[
-///   \mathbf{M}\,\dot{\nu}_B = \mathbf{W}_\mathrm{ext} - \mathrm{ad}^*(\nu_B)\,\mathbf{M}\,\nu_B
-/// @f]
-/// @f[
-///   \dot{m} = \dot{m}(t, m)
-/// @f]
-/// where @f$\mathbf{M}@f$ is the 6×6 spatial inertia, @f$\nu_B = [\omega_B;\,v_B]@f$
-/// is the body twist, and @f$\mathbf{W}_\mathrm{ext}@f$ is the sum of gravity,
-/// aerodynamic, and propulsion wrenches (all in body frame, about the body
-/// origin; the gravity policy's wrench is moved there from the centre of
-/// mass, see @c operator()).
-///
-/// The callable @c operator()(t, g, x) returns @f$\dot{\mathbf{x}} \in \mathbb{R}^7@f$
-/// with layout @f$[\dot{\nu}_B(6);\, \dot{m}(1)]@f$.
-///
-/// @tparam Gravity    Gravity policy satisfying @c GravityPolicy concept.
-/// @tparam Aero       Aerodynamic policy satisfying @c AeroPolicy concept (default: zero).
-/// @tparam Thrust     Propulsion policy satisfying @c PropulsionPolicy concept (default: zero).
-/// @tparam MassMdot   Mass-rate policy satisfying @c MassPolicy concept (default: constant).
+    /// @brief Euclidean part of the 6-DoF rigid-body ODE on @f$ SE(3) \times \mathbb{R}^7 @f$.
+    ///
+    /// Implements the Newton-Euler equations of motion in the body frame:
+    /// @f[
+    ///   \mathbf{M}\,\dot{\nu}_B = \mathbf{W}_\mathrm{ext} - \mathrm{ad}^*(\nu_B)\,\mathbf{M}\,\nu_B
+    /// @f]
+    /// @f[
+    ///   \dot{m} = \dot{m}(t, m)
+    /// @f]
+    /// where @f$\mathbf{M}@f$ is the 6×6 spatial inertia, @f$\nu_B = [\omega_B;\,v_B]@f$
+    /// is the body twist, and @f$\mathbf{W}_\mathrm{ext}@f$ is the sum of gravity,
+    /// aerodynamic, and propulsion wrenches (all in body frame, about the body
+    /// origin; the gravity policy's wrench is moved there from the centre of
+    /// mass, see @c operator()).
+    ///
+    /// The callable @c operator()(t, g, x) returns @f$\dot{\mathbf{x}} \in \mathbb{R}^7@f$
+    /// with layout @f$[\dot{\nu}_B(6);\, \dot{m}(1)]@f$.
+    ///
+    /// @tparam Gravity    Gravity policy satisfying @c GravityPolicy concept.
+    /// @tparam Aero       Aerodynamic policy satisfying @c AeroPolicy concept (default: zero).
+    /// @tparam Thrust     Propulsion policy satisfying @c PropulsionPolicy concept (default: zero).
+    /// @tparam MassMdot   Mass-rate policy satisfying @c MassPolicy concept (default: constant).
     template <
         FD::GravityPolicy Gravity,
         FD::AeroPolicy Aero = FD::ZeroAeroPolicy,
@@ -94,15 +94,15 @@ namespace Aetherion::RigidBody {
         FD::MassPolicy MassMdot = FD::ConstantMassPolicy>
     struct VectorField
     {
-        Eigen::Matrix<double, 6, 6> M;     ///< 6×6 spatial inertia about the body origin (body frame).
-        Eigen::Matrix<double, 6, 6> M_inv; ///< Inverse of @c M.
-        double mass_kg{ 0.0 }; ///< Mass @c M was built with [kg]; handed to the wrench policies.
+        Eigen::Matrix<double, 6, 6> M;                    ///< 6×6 spatial inertia about the body origin (body frame).
+        Eigen::Matrix<double, 6, 6> M_inv;                ///< Inverse of @c M.
+        double mass_kg{ 0.0 };                            ///< Mass @c M was built with [kg]; handed to the wrench policies.
         Eigen::Vector3d com_m{ Eigen::Vector3d::Zero() }; ///< Centre of mass from the body origin, body frame [m]; the gravity wrench is moved from here to the origin.
 
         Gravity gravity;     ///< Gravity wrench policy instance; returns the wrench at the centre of mass.
-        Aero aero;        ///< Aerodynamic wrench policy instance.
-        Thrust thrust;      ///< Propulsion wrench policy instance.
-        MassMdot mass_model;  ///< Mass-rate model policy instance.
+        Aero aero;           ///< Aerodynamic wrench policy instance.
+        Thrust thrust;       ///< Propulsion wrench policy instance.
+        MassMdot mass_model; ///< Mass-rate model policy instance.
 
         /// @brief Construct from inertial parameters and all policy instances.
         /// @param ip  Inertial parameters (mass, inertia tensor, CoG offset).

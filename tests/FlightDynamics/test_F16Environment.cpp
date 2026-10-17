@@ -70,7 +70,7 @@ namespace {
     constexpr double kDeg = std::numbers::pi / 180.0;
     constexpr double kLat_deg = 36.01917, kLon_deg = -75.67444, kHeading_deg = 45.0;
     constexpr double kAlt_ft = 10013.0;
-    constexpr double kV_fps = 400.0;           // per axis: vt = 565.685 ft/s
+    constexpr double kV_fps = 400.0; // per axis: vt = 565.685 ft/s
     constexpr double kMass_kg = 9298.6439;
     constexpr double kXcg_ft = 1.132;
     constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
@@ -83,7 +83,7 @@ namespace {
         std::shared_ptr<const DAVEMLAeroModel> aero;
         std::shared_ptr<const DAVEMLPropModel> prop;
         TrimPoint trim;
-        RigidBody::BodyRates rates;   // transport rate at the trim heading and pitch
+        RigidBody::BodyRates rates; // transport rate at the trim heading and pitch
     };
 
     Scene makeScene(const Environment::AtmosphereOffsets& atm = {})
@@ -310,7 +310,7 @@ TEST_CASE("F16Environment: a hot day scales the aero forces by the density ratio
     const auto w1 = hot_(pose(st), st.nu_B, kMass_kg, 0.0);
 
     const double ratio = Environment::US1976Atmosphere(alt_m, hot).rho / Environment::US1976Atmosphere(alt_m).rho;
-    CHECK(ratio < 0.98);   // 0.954 at 10 013 ft for +20 K: thinner, below the crossover
+    CHECK(ratio < 0.98); // 0.954 at 10 013 ft for +20 K: thinner, below the crossover
     for (int i = 0; i < 6; ++i) {
         if (std::abs(w0.f(i)) > 1.0) CHECK_THAT(w1.f(i), WithinRel(w0.f(i) * ratio, 1e-9));
     }

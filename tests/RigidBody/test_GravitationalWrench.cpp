@@ -71,7 +71,7 @@ TEST_CASE("GravitationalWrenchJ2AtCG: J2 perturbs equatorial gravity and keeps z
 {
     using Scalar = double;
 
-    const auto m = Scalar(1.0); // [kg]
+    const auto m = Scalar(1.0);                                        // [kg]
     const Arr3<Scalar> r_W{ Scalar(kRe_WGS84), Scalar(0), Scalar(0) }; // equator => z=0
 
     const auto w_c = Aetherion::RigidBody::GravitationalWrenchAtCG(

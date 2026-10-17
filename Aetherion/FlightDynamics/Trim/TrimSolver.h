@@ -64,57 +64,57 @@
 
 namespace Aetherion::FlightDynamics {
 
-/// @brief Fixed flight condition for the trim problem.
+    /// @brief Fixed flight condition for the trim problem.
     struct TrimInputs
     {
-        double vt_fps{};   ///< True airspeed [ft/s]
-        double alt_ft{};   ///< Geometric altitude [ft]
-        double weight_lbf{};   ///< Apparent weight at trim [lbf] — see LevelFlightTrimWeight_lbf() in TrimWeight.h
-        double beta_deg{ 0.0 };///< Sideslip angle [deg]  (0 for coordinated flight)
-        double phi_deg{ 0.0 };///< Bank angle [deg]       (0 for wings-level)
+        double vt_fps{};        ///< True airspeed [ft/s]
+        double alt_ft{};        ///< Geometric altitude [ft]
+        double weight_lbf{};    ///< Apparent weight at trim [lbf] — see LevelFlightTrimWeight_lbf() in TrimWeight.h
+        double beta_deg{ 0.0 }; ///< Sideslip angle [deg]  (0 for coordinated flight)
+        double phi_deg{ 0.0 };  ///< Bank angle [deg]       (0 for wings-level)
 
-    /// Body rates the aero model is evaluated at [rad/s], relative to the air
-    /// mass.  Level flight over a curved Earth is not rate-free: the vehicle
-    /// pitches nose-down at the transport rate to stay level, and the aero
-    /// policy sees it — see LevelFlightBodyRates() in TrimBodyRates.h.  The
-    /// terms are small (C_mq·q̂ ~ 2e-6) but at Mach 2 enough to start a 40 ft
-    /// phugoid.
+        /// Body rates the aero model is evaluated at [rad/s], relative to the air
+        /// mass.  Level flight over a curved Earth is not rate-free: the vehicle
+        /// pitches nose-down at the transport rate to stay level, and the aero
+        /// policy sees it — see LevelFlightBodyRates() in TrimBodyRates.h.  The
+        /// terms are small (C_mq·q̂ ~ 2e-6) but at Mach 2 enough to start a 40 ft
+        /// phugoid.
         RigidBody::BodyRates bodyRates{};
     };
 
-/// @brief Trim solution returned by TrimSolver::solve().
+    /// @brief Trim solution returned by TrimSolver::solve().
     struct TrimPoint
     {
-        double alpha_deg{};  ///< Angle of attack at trim [deg]
-        double el_deg{};  ///< Elevator deflection at trim [deg]
-        double pwr_pct{};  ///< Throttle at trim [0–100 %]
-        double residual_norm{};  ///< 2-norm of final residual [lbf]
+        double alpha_deg{};     ///< Angle of attack at trim [deg]
+        double el_deg{};        ///< Elevator deflection at trim [deg]
+        double pwr_pct{};       ///< Throttle at trim [0–100 %]
+        double residual_norm{}; ///< 2-norm of final residual [lbf]
         bool converged{ false };
     };
 
-/// @brief Two-stage trim solver for straight-and-level fixed-wing flight.
+    /// @brief Two-stage trim solver for straight-and-level fixed-wing flight.
     class TrimSolver
     {
     public:
-    // ── Physical / unit constants ─────────────────────────────────────────────
+        // ── Physical / unit constants ─────────────────────────────────────────────
         static constexpr double kFt_m = 0.3048;
         static constexpr double kSlugFt3_kg_m3 = 515.3788184;
         static constexpr double kLbf_N = 4.448221615260751;
         static constexpr double kFtLbf_Nm = 1.355817948329279;
         static constexpr double kDegRad = std::numbers::pi / 180.0;
 
-    // ── Solver parameters ─────────────────────────────────────────────────────
+        // ── Solver parameters ─────────────────────────────────────────────────────
         static constexpr int kMaxIter = 50;
-        static constexpr double kTol = 1.0e-5;  ///< Stage-1 convergence [lbf]
-        static constexpr double kTolThrust = 1.0e-4;  ///< Stage-2 convergence [lbf]
+        static constexpr double kTol = 1.0e-5;       ///< Stage-1 convergence [lbf]
+        static constexpr double kTolThrust = 1.0e-4; ///< Stage-2 convergence [lbf]
 
-    // ── Construction ──────────────────────────────────────────────────────────
+        // ── Construction ──────────────────────────────────────────────────────────
 
-    /// @param aero           Parsed aerodynamic model.
-    /// @param prop           Parsed propulsion model.
-    /// @param xcg_from_ac_ft CG distance aft of the aerodynamic moment reference
-    ///                       centre [ft].  Zero ⇒ CM is already about the CG.
-    ///                       For the F-16 standard loading: 1.132 ft (35 %−25 % MAC).
+        /// @param aero           Parsed aerodynamic model.
+        /// @param prop           Parsed propulsion model.
+        /// @param xcg_from_ac_ft CG distance aft of the aerodynamic moment reference
+        ///                       centre [ft].  Zero ⇒ CM is already about the CG.
+        ///                       For the F-16 standard loading: 1.132 ft (35 %−25 % MAC).
         TrimSolver(const Serialization::DAVEMLAeroModel& aero,
             const Serialization::DAVEMLPropModel& prop,
             double xcg_from_ac_ft = 0.0)
@@ -123,49 +123,49 @@ namespace Aetherion::FlightDynamics {
             , m_xcg_ft(xcg_from_ac_ft)
         {}
 
-    /// @brief Trim on a non-standard day (ISA + dT, sea-level pressure offset).
-    /// Must match the offsets given to the F16AeroPolicy the trim is used with.
+        /// @brief Trim on a non-standard day (ISA + dT, sea-level pressure offset).
+        /// Must match the offsets given to the F16AeroPolicy the trim is used with.
         void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
         [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
 
-    // ── Main interface ────────────────────────────────────────────────────────
+        // ── Main interface ────────────────────────────────────────────────────────
 
-    /// @brief Find the two-stage trim for straight-and-level flight.
+        /// @brief Find the two-stage trim for straight-and-level flight.
         TrimPoint solve(const TrimInputs& in,
             double alpha0 = 2.5,
             double el0 = -1.0) const;
 
-    /// @brief Evaluate the full 3-component residual for diagnosis.
-    ///
-    /// Returns [r_Fx, r_Fz, r_My_cg] in [lbf, lbf, ft·lbf].
+        /// @brief Evaluate the full 3-component residual for diagnosis.
+        ///
+        /// Returns [r_Fx, r_Fz, r_My_cg] in [lbf, lbf, ft·lbf].
         Eigen::Vector3d residual(const TrimInputs& in,
             double alpha_deg,
             double el_deg,
             double pwr_pct) const;
 
     private:
-    // ── Stage-1 longitudinal residual (no throttle, taped for AD) ─────────────
+        // ── Stage-1 longitudinal residual (no throttle, taped for AD) ─────────────
         template <class S>
         std::array<S, 2> longi_residual(const TrimInputs& in,
             S alpha_deg, S el_deg,
             double qbar_psf) const;
 
-    // ── Stage-2: required thrust from force balance ───────────────────────────
+        // ── Stage-2: required thrust from force balance ───────────────────────────
         double requiredThrust_lbf(const TrimInputs& in,
             double alpha_deg, double el_deg,
             double qbar_psf) const;
 
-    // ── Stage-2: invert prop model to find throttle ───────────────────────────
+        // ── Stage-2: invert prop model to find throttle ───────────────────────────
         double solveThrottle(double FEX_required_lbf,
             double alt_ft, double mach) const;
 
         const Serialization::DAVEMLAeroModel* m_aero;
         const Serialization::DAVEMLPropModel* m_prop;
-        double m_xcg_ft;  ///< CG aft of AC [ft]
-        Environment::AtmosphereOffsets m_atm{};   ///< Non-standard-day offsets (default: standard)
+        double m_xcg_ft;                        ///< CG aft of AC [ft]
+        Environment::AtmosphereOffsets m_atm{}; ///< Non-standard-day offsets (default: standard)
     };
 
-// ── Stage-1 longitudinal residual ─────────────────────────────────────────────
+    // ── Stage-1 longitudinal residual ─────────────────────────────────────────────
 
     template <class S>
     std::array<S, 2>
@@ -192,18 +192,18 @@ namespace Aetherion::FlightDynamics {
         const S qS = S(qbar_psf * Sref);
         const S FZ_aero = c.cz * qS;
 
-    // Body-Z force balance (no thrust in Z for aligned engine)
+        // Body-Z force balance (no thrust in Z for aligned engine)
         const S alpha_rad = alpha_deg * S(kDegRad);
         const S phi_rad = S(in.phi_deg * kDegRad);
         const S rFZ = FZ_aero + S(in.weight_lbf) * cos(alpha_rad) * cos(phi_rad);
 
-    // Pitching moment about the CG:  My_CG = CM×qS×cbar + x_cg_ac × FZ_aero
+        // Pitching moment about the CG:  My_CG = CM×qS×cbar + x_cg_ac × FZ_aero
         const S rMY = c.cm * qS * S(cbar) + S(m_xcg_ft) * FZ_aero;
 
         return { rFZ, rMY };
     }
 
-// ── Stage-2 helpers ───────────────────────────────────────────────────────────
+    // ── Stage-2 helpers ───────────────────────────────────────────────────────────
 
     inline double
     TrimSolver::requiredThrust_lbf(const TrimInputs& in,
@@ -231,7 +231,7 @@ namespace Aetherion::FlightDynamics {
     inline double
     TrimSolver::solveThrottle(double FEX_required_lbf, double alt_ft, double mach) const
     {
-    // Bisection on pwr_pct ∈ [0, 100] — thrust is monotone in power.
+        // Bisection on pwr_pct ∈ [0, 100] — thrust is monotone in power.
         double lo = 0.0, hi = 100.0;
 
         const double thrust_lo = m_prop->thrustX_lbf(lo, alt_ft, mach);
@@ -249,14 +249,14 @@ namespace Aetherion::FlightDynamics {
         return 0.5 * (lo + hi);
     }
 
-// ── Main solve ────────────────────────────────────────────────────────────────
+    // ── Main solve ────────────────────────────────────────────────────────────────
 
     inline TrimPoint
     TrimSolver::solve(const TrimInputs& in, double alpha0, double el0) const
     {
         using AD = CppAD::AD<double>;
 
-    // ── Atmosphere (double, not taped) ────────────────────────────────────────
+        // ── Atmosphere (double, not taped) ────────────────────────────────────────
         const double alt_m = in.alt_ft * kFt_m;
         const auto atm = Environment::US1976Atmosphere(alt_m, m_atm);
         const double rho_slug = atm.rho / kSlugFt3_kg_m3;
@@ -264,7 +264,7 @@ namespace Aetherion::FlightDynamics {
         const double qbar_psf = 0.5 * rho_slug * in.vt_fps * in.vt_fps;
         const double mach = in.vt_fps / a_fps;
 
-    // ── Stage 1: 2D Newton for (alpha, el) ───────────────────────────────────
+        // ── Stage 1: 2D Newton for (alpha, el) ───────────────────────────────────
         std::vector<double> x = { alpha0, el0 };
         bool converged = false;
 
@@ -277,39 +277,39 @@ namespace Aetherion::FlightDynamics {
                 break;
             }
 
-        // CppAD 2×2 Jacobian
+            // CppAD 2×2 Jacobian
             std::vector<AD> xa = { AD(x[0]), AD(x[1]) };
             CppAD::Independent(xa);
             const auto r_ad = longi_residual<AD>(in, xa[0], xa[1], qbar_psf);
             CppAD::ADFun<double> f(xa, std::vector<AD>{ r_ad[0], r_ad[1] });
             f.optimize();
 
-            const auto jvec = f.Jacobian(x);  // row-major 2×2
+            const auto jvec = f.Jacobian(x); // row-major 2×2
             Eigen::Matrix2d J;
             for (int i = 0; i < 2; ++i)
                 for (int j = 0; j < 2; ++j)
                     J(i, j) = jvec[static_cast<std::size_t>(i) * 2 + static_cast<std::size_t>(j)];
 
             const Eigen::Vector2d dx = J.fullPivLu().solve(-r);
-            x[0] = std::clamp(x[0] + dx(0), -10.0, 30.0);  // alpha
-            x[1] = std::clamp(x[1] + dx(1), -25.0, 25.0);  // el
+            x[0] = std::clamp(x[0] + dx(0), -10.0, 30.0); // alpha
+            x[1] = std::clamp(x[1] + dx(1), -25.0, 25.0); // el
         }
 
         const double alpha = x[0];
         const double el = x[1];
 
-    // ── Stage 2: required thrust → throttle ───────────────────────────────────
+        // ── Stage 2: required thrust → throttle ───────────────────────────────────
         const double FEX_req = requiredThrust_lbf(in, alpha, el, qbar_psf);
         const double pwr = solveThrottle(FEX_req, in.alt_ft, mach);
 
-    // ── Final residual ────────────────────────────────────────────────────────
+        // ── Final residual ────────────────────────────────────────────────────────
         const auto r_arr = longi_residual<double>(in, alpha, el, qbar_psf);
         const double r_norm = Eigen::Vector2d(r_arr[0], r_arr[1]).norm();
 
         return { alpha, el, pwr, r_norm, converged };
     }
 
-// ── Full 3-component residual for diagnosis ───────────────────────────────────
+    // ── Full 3-component residual for diagnosis ───────────────────────────────────
 
     inline Eigen::Vector3d
     TrimSolver::residual(const TrimInputs& in,

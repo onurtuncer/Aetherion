@@ -35,17 +35,17 @@
 
 namespace Aetherion::Simulation {
 
-/// @brief Build a 31-column NASA-compatible Snapshot2.
-///
-/// @tparam GravityPol  Gravity policy (satisfies @c GravityPolicy).
-/// @tparam AeroPol     Aero policy   (satisfies @c AeroPolicy).
-///
-/// @param t          Simulation time [s].
-/// @param s          Current rigid-body state.
-/// @param theta_gst  Earth Rotation Angle [rad].
-/// @param gravity    Gravity policy instance.
-/// @param aero       Aero policy instance.
-/// @return           Fully populated Snapshot2 (31 columns, NASA-compatible).
+    /// @brief Build a 31-column NASA-compatible Snapshot2.
+    ///
+    /// @tparam GravityPol  Gravity policy (satisfies @c GravityPolicy).
+    /// @tparam AeroPol     Aero policy   (satisfies @c AeroPolicy).
+    ///
+    /// @param t          Simulation time [s].
+    /// @param s          Current rigid-body state.
+    /// @param theta_gst  Earth Rotation Angle [rad].
+    /// @param gravity    Gravity policy instance.
+    /// @param aero       Aero policy instance.
+    /// @return           Fully populated Snapshot2 (31 columns, NASA-compatible).
     template <FlightDynamics::GravityPolicy GravityPol,
         FlightDynamics::AeroPolicy AeroPol>
     [[nodiscard]]
@@ -64,31 +64,31 @@ namespace Aetherion::Simulation {
 
         Snapshot2 snap;
 
-    // ── 1. Time ───────────────────────────────────────────────────────────
+        // ── 1. Time ───────────────────────────────────────────────────────────
         snap.time = t;
 
-    // ── 2. ECEF position ─────────────────────────────────────────────────
+        // ── 2. ECEF position ─────────────────────────────────────────────────
         const Vec3d r_eci = s.g.p;
         const CArr3 r_eci_arr{ r_eci.x(), r_eci.y(), r_eci.z() };
         const CArr3 r_ecef_arr = Coord::ECIToECEF(r_eci_arr, theta_gst);
         snap.gePosition_m = Vec3d(r_ecef_arr[0], r_ecef_arr[1], r_ecef_arr[2]);
 
-    // ── 3. Geodetic ───────────────────────────────────────────────────────
+        // ── 3. Geodetic ───────────────────────────────────────────────────────
         double lat_rad{}, lon_rad{}, alt_m{};
         Coord::ECEFToGeodeticWGS84(r_ecef_arr, lat_rad, lon_rad, alt_m);
         snap.latitude_rad = lat_rad;
         snap.longitude_rad = lon_rad;
         snap.altitudeMsl_m = alt_m;
 
-    // ── 4. Gravity magnitude ──────────────────────────────────────────────
+        // ── 4. Gravity magnitude ──────────────────────────────────────────────
         constexpr double kUnitMass = 1.0;
         const auto grav_wrench = gravity(s.g, kUnitMass);
         const Vec3d a_body = grav_wrench.f.template tail<3>();
         snap.localGravity_m_s2 = (s.g.R * a_body).norm();
 
-    // ── 5. Atmosphere ─────────────────────────────────────────────────────
-    // On a non-standard day the aero policy carries the offsets; use them so
-    // the reported pressure and density are the ones the forces used.
+        // ── 5. Atmosphere ─────────────────────────────────────────────────────
+        // On a non-standard day the aero policy carries the offsets; use them so
+        // the reported pressure and density are the ones the forces used.
         Env::AtmosphereOffsets atmOffsets{};
         if constexpr (requires { aero.atmosphereOffsets(); }) {
             atmOffsets = aero.atmosphereOffsets();
@@ -99,7 +99,7 @@ namespace Aetherion::Simulation {
         snap.ambientPressure_Pa = atm.p;
         snap.ambientTemperature_K = atm.T;
 
-    // ── 6. NED velocity ───────────────────────────────────────────────────
+        // ── 6. NED velocity ───────────────────────────────────────────────────
         const Vec3d v_B = s.nu_B.tail<3>();
         const Vec3d v_eci_v = s.g.R * v_B;
         const CArr3 v_eci_arr{ v_eci_v.x(), v_eci_v.y(), v_eci_v.z() };
@@ -115,7 +115,7 @@ namespace Aetherion::Simulation {
         snap.feVelocity_m_s = Vec3d(v_ned_arr[0], v_ned_arr[1], v_ned_arr[2]);
         snap.altitudeRateWrtMsl_m_s = -v_ned_arr[2];
 
-    // ── 7. Euler angles (ZYX, body → NED) ────────────────────────────────
+        // ── 7. Euler angles (ZYX, body → NED) ────────────────────────────────
         const Coord::Mat3<double> R_IN_arr =
             Coord::NEDToInertialRotationMatrix(lat_rad, lon_rad, theta_gst);
         Eigen::Matrix3d R_IN;
@@ -128,14 +128,14 @@ namespace Aetherion::Simulation {
         snap.eulerAngle_rad_Yaw = std::atan2(R_NB(1, 0), R_NB(0, 0));
         snap.eulerAngle_rad_Roll = std::atan2(R_NB(2, 1), R_NB(2, 2));
 
-    // ── 8. Body angular rates ─────────────────────────────────────────────
+        // ── 8. Body angular rates ─────────────────────────────────────────────
         snap.bodyAngularRateWrtEi_rad_s_Roll = s.nu_B(0);
         snap.bodyAngularRateWrtEi_rad_s_Pitch = s.nu_B(1);
         snap.bodyAngularRateWrtEi_rad_s_Yaw = s.nu_B(2);
 
-    // ── 9. Air data ───────────────────────────────────────────────────────
-    // Air-relative: subtract the policy's steady wind (ECEF → NED) when set.
-    // Calm air leaves the ground-relative value untouched, bit for bit.
+        // ── 9. Air data ───────────────────────────────────────────────────────
+        // Air-relative: subtract the policy's steady wind (ECEF → NED) when set.
+        // Calm air leaves the ground-relative value untouched, bit for bit.
         Vec3d v_air_ned = snap.feVelocity_m_s;
         if constexpr (requires { aero.windECEF(); }) {
             const Eigen::Vector3d& w_ecef = aero.windECEF();
@@ -150,17 +150,17 @@ namespace Aetherion::Simulation {
         snap.mach = tas / atm.a;
         snap.dynamicPressure_Pa = 0.5 * atm.rho * tas * tas;
 
-    // ── 10. Aerodynamic wrench ────────────────────────────────────────────
-    // Wrench layout: [moment(0:2); force(3:5)]
+        // ── 10. Aerodynamic wrench ────────────────────────────────────────────
+        // Wrench layout: [moment(0:2); force(3:5)]
         using SE3d = ODE::RKMK::Lie::SE3<double>;
         const SE3d g(s.g.R, s.g.p);
         const auto wrench = aero(g, s.nu_B, s.m, t);
 
         snap.aero_bodyMoment_Nm_L = wrench.f(0);
-    // Report pitch moment about the aerodynamic reference centre (25% MAC)
-    // so that it matches the NASA DML-model output convention.
-    // The wrench already carries M_CG = M_AC + xcg_from_ac * Fz for the EOM;
-    // here we undo the transfer term to recover M_AC for reporting.
+        // Report pitch moment about the aerodynamic reference centre (25% MAC)
+        // so that it matches the NASA DML-model output convention.
+        // The wrench already carries M_CG = M_AC + xcg_from_ac * Fz for the EOM;
+        // here we undo the transfer term to recover M_AC for reporting.
         if constexpr (requires { aero.xcgFromAcM(); })
             snap.aero_bodyMoment_Nm_M = wrench.f(1) - aero.xcgFromAcM() * wrench.f(5);
         else
@@ -173,9 +173,9 @@ namespace Aetherion::Simulation {
         return snap;
     }
 
-/// @brief Convenience overload for dragless (zero-aero) scenarios.
-///
-/// Equivalent to calling the two-policy form with ``ZeroAeroPolicy``.
+    /// @brief Convenience overload for dragless (zero-aero) scenarios.
+    ///
+    /// Equivalent to calling the two-policy form with ``ZeroAeroPolicy``.
     template <FlightDynamics::GravityPolicy GravityPol>
     [[nodiscard]]
     Snapshot2 MakeSnapshot2(

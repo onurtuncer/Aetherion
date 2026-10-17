@@ -4,3 +4,6 @@
 
 # style: format the C++ sources with the new .clang-format
 d45bff1db15b411c49cca7708106873b45144da3
+
+# style: re-indent comments with the corrected .clang-format
+18677f02d1dcbd62c7dbc426e9a788e416941126

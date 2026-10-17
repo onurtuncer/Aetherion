@@ -19,19 +19,19 @@
 
 namespace Aetherion::Spatial {
 
-/// @brief Spatial inertia of a rigid body.
-///
-/// Stores mass, rotational inertia about the centre of mass, and CoM offset,
-/// and caches the assembled 6×6 spatial inertia matrix @f$\mathbf{M}@f$
-/// (built once via the parallel-axis theorem).
-///
-/// Layout of @c M (Featherstone):
-/// @f[
-///   \mathbf{M} = \begin{bmatrix} I_\mathrm{shifted} & m\,[c]_\times \\
+    /// @brief Spatial inertia of a rigid body.
+    ///
+    /// Stores mass, rotational inertia about the centre of mass, and CoM offset,
+    /// and caches the assembled 6×6 spatial inertia matrix @f$\mathbf{M}@f$
+    /// (built once via the parallel-axis theorem).
+    ///
+    /// Layout of @c M (Featherstone):
+    /// @f[
+    ///   \mathbf{M} = \begin{bmatrix} I_\mathrm{shifted} & m\,[c]_\times \\
 ///                                -m\,[c]_\times & m\,I_3 \end{bmatrix}
-/// @f]
-///
-/// @tparam Scalar Numeric type (e.g. @c double or @c CppAD::AD\<double\>).
+    /// @f]
+    ///
+    /// @tparam Scalar Numeric type (e.g. @c double or @c CppAD::AD\<double\>).
     template <typename Scalar>
     struct Inertia
     {
@@ -39,11 +39,11 @@ namespace Aetherion::Spatial {
         using Vec3 = Eigen::Matrix<Scalar, 3, 1>;
         using Mat6 = Eigen::Matrix<Scalar, 6, 6>;
 
-        Scalar mass;   ///< Vehicle mass [kg].
+        Scalar mass; ///< Vehicle mass [kg].
         Mat3 I_com;  ///< Rotational inertia about CoM, expressed in body frame [kg·m²].
         Vec3 c;      ///< Position of CoM w.r.t. body-frame origin, in body frame [m].
 
-        Mat6 M;      ///< Cached 6×6 spatial inertia matrix (rebuilt by @c build()).
+        Mat6 M; ///< Cached 6×6 spatial inertia matrix (rebuilt by @c build()).
 
         /// @brief Construct and cache the 6×6 spatial inertia.
         /// @param m    Mass [kg].

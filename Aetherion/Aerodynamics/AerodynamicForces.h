@@ -44,14 +44,14 @@
 
 namespace Aetherion::Aerodynamics {
 
-/// @brief Direction-cosine matrix (DCM) rotating from wind axes to body axes: @f$ C_{b/w} @f$.
-///
-/// Constructed as @f$ C_{b/w} = R_y(\alpha) \cdot R_z(\beta) @f$, consistent with the
-/// angle-of-attack and sideslip definitions in AerodynamicAngles.h.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
-/// @param alpha_rad Angle of attack [rad].
-/// @param beta_rad Sideslip angle [rad].
-/// @return 3×3 DCM @f$ C_{b/w} @f$ such that @f$ v_\text{body} = C_{b/w}\, v_\text{wind} @f$.
+    /// @brief Direction-cosine matrix (DCM) rotating from wind axes to body axes: @f$ C_{b/w} @f$.
+    ///
+    /// Constructed as @f$ C_{b/w} = R_y(\alpha) \cdot R_z(\beta) @f$, consistent with the
+    /// angle-of-attack and sideslip definitions in AerodynamicAngles.h.
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @param alpha_rad Angle of attack [rad].
+    /// @param beta_rad Sideslip angle [rad].
+    /// @return 3×3 DCM @f$ C_{b/w} @f$ such that @f$ v_\text{body} = C_{b/w}\, v_\text{wind} @f$.
     template <class Scalar>
     inline Mat3<Scalar> WindToBodyDCM(const Scalar& alpha_rad, const Scalar& beta_rad)
     {
@@ -65,23 +65,23 @@ namespace Aetherion::Aerodynamics {
             { { sa * cb, -sa * sb, ca } } } };
     }
 
-// --- Forces from wind-axis coefficients (CL, CD, CY) --------------------------
+    // --- Forces from wind-axis coefficients (CL, CD, CY) --------------------------
 
-/// @brief Aerodynamic force in body axes computed from wind-axis coefficients, given pre-computed alpha/beta.
-///
-/// Computes the dynamic pressure @f$ q = \tfrac{1}{2}\rho V^2 @f$, forms the wind-axis force
-/// vector @f$ F_w = [-q S\,C_D,\; q S\,C_Y,\; -q S\,C_L] @f$, then rotates it to body axes
-/// via WindToBodyDCM().
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
-/// @param alpha_rad Angle of attack [rad].
-/// @param beta_rad Sideslip angle [rad].
-/// @param density_kg_m3 Air density [kg/m³].
-/// @param speed_m_s Airspeed magnitude [m/s].
-/// @param S_ref_m2 Aerodynamic reference area [m²].
-/// @param CL Lift coefficient (dimensionless).
-/// @param CD Drag coefficient (dimensionless).
-/// @param CY Side-force coefficient (dimensionless).
-/// @return Aerodynamic force vector expressed in body axes [N].
+    /// @brief Aerodynamic force in body axes computed from wind-axis coefficients, given pre-computed alpha/beta.
+    ///
+    /// Computes the dynamic pressure @f$ q = \tfrac{1}{2}\rho V^2 @f$, forms the wind-axis force
+    /// vector @f$ F_w = [-q S\,C_D,\; q S\,C_Y,\; -q S\,C_L] @f$, then rotates it to body axes
+    /// via WindToBodyDCM().
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @param alpha_rad Angle of attack [rad].
+    /// @param beta_rad Sideslip angle [rad].
+    /// @param density_kg_m3 Air density [kg/m³].
+    /// @param speed_m_s Airspeed magnitude [m/s].
+    /// @param S_ref_m2 Aerodynamic reference area [m²].
+    /// @param CL Lift coefficient (dimensionless).
+    /// @param CD Drag coefficient (dimensionless).
+    /// @param CY Side-force coefficient (dimensionless).
+    /// @return Aerodynamic force vector expressed in body axes [N].
     template <class Scalar>
     inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY_AlphaBeta(
         const Scalar& alpha_rad,
@@ -105,19 +105,19 @@ namespace Aetherion::Aerodynamics {
         return MatVecMul(C_b_w, F_w);
     }
 
-/// @brief Aerodynamic force in body axes computed from wind-axis coefficients, inferring alpha/beta from the velocity vector.
-///
-/// Calls AnglesFromVelocityBody() to derive alpha, beta, and speed from @p v_body_m_s, then
-/// delegates to AerodynamicForceBodyFromCLCDCY_AlphaBeta().
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
-/// @param v_body_m_s Air-relative velocity vector in body axes [m/s].
-/// @param density_kg_m3 Air density [kg/m³].
-/// @param S_ref_m2 Aerodynamic reference area [m²].
-/// @param CL Lift coefficient (dimensionless).
-/// @param CD Drag coefficient (dimensionless).
-/// @param CY Side-force coefficient (dimensionless).
-/// @param eps Smoothing parameter for angle and speed computations; default 1e-12.
-/// @return Aerodynamic force vector expressed in body axes [N].
+    /// @brief Aerodynamic force in body axes computed from wind-axis coefficients, inferring alpha/beta from the velocity vector.
+    ///
+    /// Calls AnglesFromVelocityBody() to derive alpha, beta, and speed from @p v_body_m_s, then
+    /// delegates to AerodynamicForceBodyFromCLCDCY_AlphaBeta().
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @param v_body_m_s Air-relative velocity vector in body axes [m/s].
+    /// @param density_kg_m3 Air density [kg/m³].
+    /// @param S_ref_m2 Aerodynamic reference area [m²].
+    /// @param CL Lift coefficient (dimensionless).
+    /// @param CD Drag coefficient (dimensionless).
+    /// @param CY Side-force coefficient (dimensionless).
+    /// @param eps Smoothing parameter for angle and speed computations; default 1e-12.
+    /// @return Aerodynamic force vector expressed in body axes [N].
     template <class Scalar>
     inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY(
         const Vec3<Scalar>& v_body_m_s,
@@ -133,20 +133,20 @@ namespace Aetherion::Aerodynamics {
             ang.alpha_rad, ang.beta_rad, density_kg_m3, ang.speed_m_s, S_ref_m2, CL, CD, CY);
     }
 
-// --- Forces from body-axis coefficients (Cx, Cy, Cz) --------------------------
+    // --- Forces from body-axis coefficients (Cx, Cy, Cz) --------------------------
 
-/// @brief Aerodynamic force in body axes computed directly from body-axis force coefficients.
-///
-/// Computes @f$ F_b = q\,S\,[C_x,\,C_y,\,C_z]^\top @f$ where @f$ q = \tfrac{1}{2}\rho V^2 @f$.
-/// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
-/// @param v_body_m_s Air-relative velocity vector in body axes [m/s]; used to compute airspeed.
-/// @param density_kg_m3 Air density [kg/m³].
-/// @param S_ref_m2 Aerodynamic reference area [m²].
-/// @param Cx Body-axis x force coefficient (dimensionless).
-/// @param Cy Body-axis y force coefficient (dimensionless).
-/// @param Cz Body-axis z force coefficient (dimensionless).
-/// @param eps Smoothing parameter for speed computation; default 1e-12.
-/// @return Aerodynamic force vector expressed in body axes [N].
+    /// @brief Aerodynamic force in body axes computed directly from body-axis force coefficients.
+    ///
+    /// Computes @f$ F_b = q\,S\,[C_x,\,C_y,\,C_z]^\top @f$ where @f$ q = \tfrac{1}{2}\rho V^2 @f$.
+    /// @tparam Scalar Numeric scalar type (e.g. double, CppAD::AD\<double\>).
+    /// @param v_body_m_s Air-relative velocity vector in body axes [m/s]; used to compute airspeed.
+    /// @param density_kg_m3 Air density [kg/m³].
+    /// @param S_ref_m2 Aerodynamic reference area [m²].
+    /// @param Cx Body-axis x force coefficient (dimensionless).
+    /// @param Cy Body-axis y force coefficient (dimensionless).
+    /// @param Cz Body-axis z force coefficient (dimensionless).
+    /// @param eps Smoothing parameter for speed computation; default 1e-12.
+    /// @return Aerodynamic force vector expressed in body axes [N].
     template <class Scalar>
     inline Vec3<Scalar> AerodynamicForceBodyFromCxyz(
         const Vec3<Scalar>& v_body_m_s,

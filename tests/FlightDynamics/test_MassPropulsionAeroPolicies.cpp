@@ -63,7 +63,7 @@ TEST_CASE("ConstantMassPolicy: mdot is zero with AD<double>", "[FlightDynamics][
 
 TEST_CASE("LinearBurnPolicy: mdot returns configured rate", "[FlightDynamics][mass][burn]")
 {
-    const double rate = -2.5;  // kg/s
+    const double rate = -2.5; // kg/s
     Aetherion::FlightDynamics::LinearBurnPolicy p{ rate };
 
     for (double t : { 0.0, 1.0, 50.0 })
@@ -94,7 +94,7 @@ TEST_CASE("ZeroPropulsionPolicy: returns zero wrench for any state", "[FlightDyn
 
 TEST_CASE("ConstantThrustPolicy: force along body z-axis equals configured thrust", "[FlightDynamics][propulsion][constant]")
 {
-    const double F = 5000.0;  // N
+    const double F = 5000.0; // N
     Aetherion::FlightDynamics::ConstantThrustPolicy p{ F };
     SE3d g(Mat3d::Identity(), Vec3d(0.0, 0.0, 0.0));
     Vec6d nu = Vec6d::Zero();
@@ -200,13 +200,13 @@ TEST_CASE("DragOnlyAeroPolicy: zero drag when body co-rotates with Earth (equato
     const double r = WGS84::kSemiMajorAxis_m + alt_m;
 
     const Mat3d R = Mat3d::Identity();
-    const Vec3d r_ECI(r, 0.0, 0.0);   // equator, prime meridian
-    const Vec3d v_surf = surfaceVelocityBody(R, r_ECI);  // ≈ [0, +465.1, 0] m/s
+    const Vec3d r_ECI(r, 0.0, 0.0);                     // equator, prime meridian
+    const Vec3d v_surf = surfaceVelocityBody(R, r_ECI); // ≈ [0, +465.1, 0] m/s
 
     SE3d g(R, r_ECI);
     Vec6d nu;
-    nu << 0.0, 0.0, 0.0,              // angular rates (zero)
-        v_surf.x(), v_surf.y(), v_surf.z();  // body velocity = surface velocity
+    nu << 0.0, 0.0, 0.0,                    // angular rates (zero)
+        v_surf.x(), v_surf.y(), v_surf.z(); // body velocity = surface velocity
 
     Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.47, 0.018241465 };
     auto w = p(g, nu, 14.59, 0.0);
@@ -235,7 +235,7 @@ TEST_CASE("DragOnlyAeroPolicy: nonzero drag for body with 3-D atmosphere-relativ
     const Vec3d r_ECI(r, 0.0, 0.0);
     const Vec3d v_surf = surfaceVelocityBody(R, r_ECI);
 
-    const Vec3d dv(20.0, -15.0, -10.0);   // atmosphere-relative airspeed (body frame)
+    const Vec3d dv(20.0, -15.0, -10.0); // atmosphere-relative airspeed (body frame)
 
     SE3d g(R, r_ECI);
     Vec6d nu;
@@ -295,7 +295,7 @@ TEST_CASE("DragOnlyAeroPolicy: drag opposes atmosphere-relative velocity directi
     const double r = WGS84::kSemiMajorAxis_m + alt_m;
 
     const Mat3d R = Mat3d::Identity();
-    const Vec3d r_ECI(0.0, r, 0.0);   // body on +y axis (equator, 90° lon)
+    const Vec3d r_ECI(0.0, r, 0.0); // body on +y axis (equator, 90° lon)
     const Vec3d v_surf = surfaceVelocityBody(R, r_ECI);
 
     SE3d g(R, r_ECI);
@@ -306,7 +306,7 @@ TEST_CASE("DragOnlyAeroPolicy: drag opposes atmosphere-relative velocity directi
     Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.47, 0.018241465 };
     auto w = p(g, nu, 14.59, 0.0);
 
-    CHECK(w.f(3) < 0.0);  // drag opposes +x motion
+    CHECK(w.f(3) < 0.0); // drag opposes +x motion
     CHECK_THAT(w.f(4), WithinAbs(0.0, 1e-8));
     CHECK_THAT(w.f(5), WithinAbs(0.0, 1e-8));
 }
@@ -394,8 +394,8 @@ TEST_CASE("BrickDampingAeroPolicy: zero velocity gives zero wrench",
 
     SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     Vec6d nu;
-    nu << 0.1, 0.2, 0.3,                          // body angular rates
-        v_surf.x(), v_surf.y(), v_surf.z();      // co-rotating = zero airspeed
+    nu << 0.1, 0.2, 0.3,                    // body angular rates
+        v_surf.x(), v_surf.y(), v_surf.z(); // co-rotating = zero airspeed
 
     Aetherion::FlightDynamics::BrickDampingAeroPolicy p{
         0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0
@@ -414,7 +414,7 @@ TEST_CASE("BrickDampingAeroPolicy: moments oppose angular rates",
     using namespace Aetherion::Environment;
     const double r = WGS84::kSemiMajorAxis_m + 9144.0;
     const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
-    const double V_airspeed = 50.0;   // add downward airspeed to activate moments
+    const double V_airspeed = 50.0; // add downward airspeed to activate moments
 
     SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     Vec6d nu;
@@ -442,8 +442,8 @@ TEST_CASE("BrickDampingAeroPolicy: roll moment formula matches expected value",
     // L = ¼ ρ |V| S b² Clp p
     using namespace Aetherion::Environment;
     constexpr double alt_m = 9144.0;
-    constexpr double Vair = 100.0;   // m/s airspeed
-    constexpr double p_rad = 0.5;     // rad/s roll rate
+    constexpr double Vair = 100.0; // m/s airspeed
+    constexpr double p_rad = 0.5;  // rad/s roll rate
     const double r = WGS84::kSemiMajorAxis_m + alt_m;
     const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
 
@@ -571,7 +571,7 @@ TEST_CASE("SteadyWindDragPolicy: co-rotating sphere with east wind has nonzero T
 
     SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     Vec6d nu;
-    nu << 0, 0, 0, v_surf.x(), v_surf.y(), v_surf.z();  // co-rotating
+    nu << 0, 0, 0, v_surf.x(), v_surf.y(), v_surf.z(); // co-rotating
 
     // East wind = 6.096 m/s; at lat=0, lon=0, ECEF East = +y_ECEF
     constexpr double v_wind = 6.096;
@@ -644,7 +644,7 @@ TEST_CASE("SteadyWindDragPolicy: evaluates with AD<double>",
 
     SE3AD g(Mat3AD::Identity(), rECI);
     Vec6AD nu;
-    nu << AD(0), AD(0), AD(0), v_surf(0), v_surf(1), v_surf(2);  // co-rotating
+    nu << AD(0), AD(0), AD(0), v_surf(0), v_surf(1), v_surf(2); // co-rotating
 
     Aetherion::FlightDynamics::SteadyWindDragPolicy wp{ 0.1, 0.018241, 0.0, 6.096, 0.0 };
     auto w = wp(g, nu, AD(14.59), AD(0.0));
@@ -685,7 +685,7 @@ TEST_CASE("Drag policies: density at 36 deg latitude is that of the geodetic hei
     const Vec3d r_ECI = eciAt(36.0, 0.0, h_m);
     const Mat3d R = Mat3d::Identity();
     const Vec3d v_surf = surfaceVelocityBody(R, r_ECI);
-    const Vec3d dv(30.0, 0.0, 0.0);          // atmosphere-relative airspeed, body x
+    const Vec3d dv(30.0, 0.0, 0.0); // atmosphere-relative airspeed, body x
 
     SE3d g(R, r_ECI);
     Vec6d nu;
@@ -696,7 +696,7 @@ TEST_CASE("Drag policies: density at 36 deg latitude is that of the geodetic hei
     // sea-level density gives -0.5 * 1.225 * CD * S * 30^2 = -4.73 N here.
     const double rho = US1976Atmosphere(h_m).rho;
     const double F_exp = -0.5 * rho * CD * S * dv.norm() * dv.x();
-    CHECK(rho < 0.92);   // guard: the expected value is not the sea-level one
+    CHECK(rho < 0.92); // guard: the expected value is not the sea-level one
 
     SECTION("DragOnlyAeroPolicy")
     {

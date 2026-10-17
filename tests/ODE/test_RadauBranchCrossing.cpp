@@ -79,9 +79,9 @@ TEST_CASE("RadauIIA product stepper: a step across a branch of the field is solv
 
     INFO("residual " << res.residual_norm << ", x1 = " << res.x1(6) << ", iters " << res.iters);
     REQUIRE(res.converged);
-    CHECK(res.residual_norm < 1e-9);          // was 0.28 with the frozen tape
-    CHECK(res.x1(6) == Approx(1.3).margin(0.05));  // collocation across a jump: close, not exact
-    CHECK(res.x1(6) > 1.2);                   // the frozen tape gave 1.2, the slope-1 answer
+    CHECK(res.residual_norm < 1e-9);              // was 0.28 with the frozen tape
+    CHECK(res.x1(6) == Approx(1.3).margin(0.05)); // collocation across a jump: close, not exact
+    CHECK(res.x1(6) > 1.2);                       // the frozen tape gave 1.2, the slope-1 answer
 }
 
 TEST_CASE("RadauIIA product stepper: a step that stays on one branch is unchanged",
@@ -97,7 +97,7 @@ TEST_CASE("RadauIIA product stepper: a step that stays on one branch is unchange
     opt.abs_tol = 1e-12;
     opt.rel_tol = 1e-12;
 
-    const auto res = stepper.step(0.0, g0, x0, 0.05, opt);   // reaches 1.05, below the switch
+    const auto res = stepper.step(0.0, g0, x0, 0.05, opt); // reaches 1.05, below the switch
     REQUIRE(res.converged);
     CHECK(res.residual_norm < 1e-12);
     CHECK(res.x1(6) == Approx(1.05).margin(1e-12));

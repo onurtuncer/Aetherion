@@ -49,7 +49,7 @@ namespace Aetherion::FlightDynamics {
         {
             Spatial::Wrench<S> w{};
             w.f.setZero();
-            w.f(5) = S(thrust_N);  // F_z in body frame
+            w.f(5) = S(thrust_N); // F_z in body frame
             return w;
         }
     };
@@ -78,7 +78,7 @@ namespace Aetherion::FlightDynamics {
         {
             Spatial::Wrench<S> w{};
             w.f.setZero();
-            w.f(3) = S(thrust_N);  // Fx body (+x = nose / thrust axis)
+            w.f(3) = S(thrust_N); // Fx body (+x = nose / thrust axis)
             return w;
         }
     };

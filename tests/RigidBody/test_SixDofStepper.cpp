@@ -278,7 +278,7 @@ TEST_CASE("SixDoFStepper -- symmetric torque-free body conserves rotational KE",
 
     // Pure spin -- no translation, no gravity, no external forces.
     StateD s = rest_state();
-    s.g = ODE::RKMK::Lie::SE3<double>::Identity();  // origin, no gravity
+    s.g = ODE::RKMK::Lie::SE3<double>::Identity(); // origin, no gravity
     s.nu_B << 1.0, 0.5, 0.25, 0.0, 0.0, 0.0;
 
     double ke0 = ke(s);

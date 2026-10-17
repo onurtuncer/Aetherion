@@ -31,12 +31,12 @@
 
 namespace Aetherion::Examples::TumblingBrickWithDamping {
 
-/// @brief Concrete Application for NASA TM-2015-218675 Atmospheric Scenario 3.
-///
-/// Tumbling US standard face brick (8×4×2.25 in) under J₂ gravity with
-/// aerodynamic drag (CD=0.01) and rotary damping (Clp=Cmq=Cnr=−1).
-///
-/// Reference: NASA TM-2015-218675, Section B.1.3 / Tables 4 & 5.
+    /// @brief Concrete Application for NASA TM-2015-218675 Atmospheric Scenario 3.
+    ///
+    /// Tumbling US standard face brick (8×4×2.25 in) under J₂ gravity with
+    /// aerodynamic drag (CD=0.01) and rotary damping (Clp=Cmq=Cnr=−1).
+    ///
+    /// Reference: NASA TM-2015-218675, Section B.1.3 / Tables 4 & 5.
     class TumblingBrickWithDampingApplication : public Simulation::Application
     {
     public:

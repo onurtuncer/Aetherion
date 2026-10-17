@@ -51,18 +51,18 @@
 
 // ── NASA Check-Case 12 initial conditions ─────────────────────────────────────
 namespace {
-    constexpr double kLat_deg = 36.01917;   // Kitty Hawk, NC
+    constexpr double kLat_deg = 36.01917; // Kitty Hawk, NC
     constexpr double kLon_deg = -75.67444;
-    constexpr double kAlt_ft = 30013.0;    // supersonic altitude
-    constexpr double kAlt_m = kAlt_ft * 0.3048;   // 9 147.5624 m
+    constexpr double kAlt_ft = 30013.0;         // supersonic altitude
+    constexpr double kAlt_m = kAlt_ft * 0.3048; // 9 147.5624 m
 
-    constexpr double kHeading_deg = 45.0;       // NE (same as Case 11)
-    constexpr double kRoll_deg = 0.0;          // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
+    constexpr double kHeading_deg = 45.0; // NE (same as Case 11)
+    constexpr double kRoll_deg = 0.0;     // wings-level, as NASA sims 04/05 (sim 02 starts at −0.172°)
 
     // NE velocity components in ft/s: v_N = v_E = 1414.2 ft/s
     // → TAS = √(vN² + vE²) = 1414.2 × √2 ≈ 1999.967 ft/s ≈ Mach 2.01 at 30 013 ft
     constexpr double kVelocity_fps = 1414.200033;
-    constexpr double kVelocity_mps = kVelocity_fps * 0.3048;   // ≈ 430.906 m/s
+    constexpr double kVelocity_mps = kVelocity_fps * 0.3048; // ≈ 430.906 m/s
 
     // True airspeed: 2000 ft/s ≈ 1184.96 KTAS
     // Using the exact NASA initial condition: TAS = vN × √2
@@ -79,7 +79,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
 
     using Sim = F16SteadyFlight::F16SteadyFlightSimulator;
 
-// ── logStartupBanner ──────────────────────────────────────────────────────────
+    // ── logStartupBanner ──────────────────────────────────────────────────────────
 
     void F16SupersonicTrimApplication::logStartupBanner() const
     {
@@ -94,20 +94,20 @@ namespace Aetherion::Examples::F16SupersonicTrim {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── writeCsvHeader ────────────────────────────────────────────────────────────
+    // ── writeCsvHeader ────────────────────────────────────────────────────────────
 
     void F16SupersonicTrimApplication::writeCsvHeader(std::ofstream& csv) const
     {
         Simulation::Snapshot2Traits::write_header(csv);
     }
 
-// ── prepareSimulation ─────────────────────────────────────────────────────────
+    // ── prepareSimulation ─────────────────────────────────────────────────────────
 
     void F16SupersonicTrimApplication::prepareSimulation() const
     {
         const auto& simCfg = getConfig();
 
-    // ── 1. Load inertia ───────────────────────────────────────────────────────
+        // ── 1. Load inertia ───────────────────────────────────────────────────────
         const std::string inertiaPath = F16_INERTIA_FILE;
         if (inertiaPath.empty())
             throw std::runtime_error("F16_INERTIA_FILE not configured.");
@@ -117,7 +117,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
         AE_CORE_INFO("  Ixx={:.1f}  Iyy={:.1f}  Izz={:.1f}  Ixz={:.1f}  [kg·m²]",
             ip.Ixx, ip.Iyy, ip.Izz, ip.Ixz);
 
-    // ── 2. Load aero and prop models ──────────────────────────────────────────
+        // ── 2. Load aero and prop models ──────────────────────────────────────────
         const std::string aeroPath = F16_AERO_FILE;
         const std::string propPath = F16_PROP_FILE;
         if (aeroPath.empty() || propPath.empty())
@@ -127,19 +127,19 @@ namespace Aetherion::Examples::F16SupersonicTrim {
         AE_CORE_INFO("Loading prop model from '{}'", propPath);
         auto prop_model = std::make_shared<const Serialization::DAVEMLPropModel>(propPath);
 
-    // ── 3. Trim solver ────────────────────────────────────────────────────────
-    // Apparent weight at the trim point: J2 attraction — the same gravity
-    // J2GravityPolicy applies during integration — less the centripetal relief of
-    // level flight over the rotating Earth.  Trimming against the static weight
-    // would leave the vehicle with excess lift on the first step.
+        // ── 3. Trim solver ────────────────────────────────────────────────────────
+        // Apparent weight at the trim point: J2 attraction — the same gravity
+        // J2GravityPolicy applies during integration — less the centripetal relief of
+        // level flight over the rotating Earth.  Trimming against the static weight
+        // would leave the vehicle with excess lift on the first step.
         const double weight_lbf = FlightDynamics::LevelFlightTrimWeight_lbf(
             ip.mass_kg, kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps);
         FlightDynamics::TrimInputs tin{};
         tin.vt_fps = kTAS_fps;
         tin.alt_ft = kAlt_ft;
         tin.weight_lbf = weight_lbf;
-    // Aero damping at the rate F16AeroPolicy will actually see — the transport
-    // rate.  Pitch attitude is not known yet and q does not depend on it.
+        // Aero damping at the rate F16AeroPolicy will actually see — the transport
+        // rate.  Pitch attitude is not known yet and q does not depend on it.
         tin.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, 0.0, kRoll_deg);
 
@@ -158,7 +158,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
         AE_CORE_INFO("  pwr   = {:.4f} %%", trim.pwr_pct);
         AE_CORE_INFO("  |r|   = {:.3e} lbf", trim.residual_norm);
 
-    // ── Propulsive wrench at trim ─────────────────────────────────────────────
+        // ── Propulsive wrench at trim ─────────────────────────────────────────────
         {
             const double a_fps = Environment::US1976Atmosphere(kAlt_m).a / FlightDynamics::TrimSolver::kFt_m;
             const double mach = kTAS_fps / a_fps;
@@ -178,7 +178,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
             AE_CORE_INFO("  Mx = {:.4f} N·m,  Mz = {:.4f} N·m", po.mx_Nm, po.mz_Nm);
         }
 
-    // ── 4. Build initial state ────────────────────────────────────────────────
+        // ── 4. Build initial state ────────────────────────────────────────────────
         RigidBody::Config cfg{};
         cfg.pose.lat_deg = kLat_deg;
         cfg.pose.lon_deg = kLon_deg;
@@ -189,8 +189,8 @@ namespace Aetherion::Examples::F16SupersonicTrim {
         cfg.velocityNED.north_mps = kVelocity_mps;
         cfg.velocityNED.east_mps = kVelocity_mps;
         cfg.velocityNED.down_mps = 0.0;
-    // Attitude held fixed against the local-level frame, which tips forward at the
-    // transport rate as the vehicle moves over the curved Earth.
+        // Attitude held fixed against the local-level frame, which tips forward at the
+        // transport rate as the vehicle moves over the curved Earth.
         cfg.bodyRates = FlightDynamics::LevelFlightBodyRates(
             kLat_deg, kAlt_m, kVelocity_mps, kVelocity_mps, kHeading_deg, trim.alpha_deg, kRoll_deg);
         cfg.inertialParameters = ip;
@@ -204,7 +204,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
             kXcgFromAC_m);
     }
 
-// ── writeInitialSnapshot ──────────────────────────────────────────────────────
+    // ── writeInitialSnapshot ──────────────────────────────────────────────────────
 
     void F16SupersonicTrimApplication::writeInitialSnapshot(std::ofstream& csv) const
     {
@@ -214,7 +214,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
             s2.time, s2.altitudeMsl_m, s2.trueAirspeed_m_s, s2.mach);
     }
 
-// ── stepAndRecord ─────────────────────────────────────────────────────────────
+    // ── stepAndRecord ─────────────────────────────────────────────────────────────
 
     auto F16SupersonicTrimApplication::stepAndRecord(
         std::ofstream& csv, double h, bool doWrite) const -> StepObservation
@@ -239,7 +239,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
         };
     }
 
-// ── logFinalSummary ───────────────────────────────────────────────────────────
+    // ── logFinalSummary ───────────────────────────────────────────────────────────
 
     void F16SupersonicTrimApplication::logFinalSummary() const
     {
@@ -262,7 +262,7 @@ namespace Aetherion::Examples::F16SupersonicTrim {
         AE_CORE_INFO("=======================================================");
     }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
+    // ── Private helpers ───────────────────────────────────────────────────────────
 
     double F16SupersonicTrimApplication::computeInitialERA(double t0) noexcept
     {

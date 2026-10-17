@@ -66,7 +66,7 @@ public:
         stringOut_ = stringIn_;
 
         // Optional logging
-       // debugLog(fmi2OK, "FeedThrough::do_step called");
+        // debugLog(fmi2OK, "FeedThrough::do_step called");
 
         return true;
     }

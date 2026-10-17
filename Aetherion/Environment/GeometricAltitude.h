@@ -51,22 +51,22 @@
 
 namespace Aetherion::Environment {
 
-/// @brief Geometric altitude above the WGS-84 ellipsoid [m], given ECI position.
-///
-/// Subtracts the exact geocentric radius of the ellipsoid surface beneath the
-/// vehicle.  Agrees with the geodetic height to better than 0.1 m anywhere
-/// below 15 km — see the file header.
-///
-/// @tparam S  Scalar type (@c double or @c CppAD::AD\<double\>).
-/// @param  r_eci  ECI position vector [m].
-/// @return        Geometric altitude above the WGS-84 ellipsoid [m].
-///                Negative values indicate a position below the surface
-///                (physically impossible in flight; the atmosphere model clamps).
+    /// @brief Geometric altitude above the WGS-84 ellipsoid [m], given ECI position.
+    ///
+    /// Subtracts the exact geocentric radius of the ellipsoid surface beneath the
+    /// vehicle.  Agrees with the geodetic height to better than 0.1 m anywhere
+    /// below 15 km — see the file header.
+    ///
+    /// @tparam S  Scalar type (@c double or @c CppAD::AD\<double\>).
+    /// @param  r_eci  ECI position vector [m].
+    /// @return        Geometric altitude above the WGS-84 ellipsoid [m].
+    ///                Negative values indicate a position below the surface
+    ///                (physically impossible in flight; the atmosphere model clamps).
     template <class S>
     inline S GeometricAltitude_m(const Eigen::Matrix<S, 3, 1>& r_eci)
     {
         const S r = r_eci.norm();
-        const S sin_gc = r_eci(2) / r;                         // sin(geocentric lat)
+        const S sin_gc = r_eci(2) / r; // sin(geocentric lat)
         const S cos2_gc = S(1.0) - sin_gc * sin_gc;
         const S r_surface = S(WGS84::kSemiMajorAxis_m * (1.0 - WGS84::kFlattening)) / detail::SquareRoot(S(1.0) - S(WGS84::kEccentricitySq) * cos2_gc);
         return r - r_surface;

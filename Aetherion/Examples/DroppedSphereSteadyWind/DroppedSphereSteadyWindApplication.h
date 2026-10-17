@@ -25,11 +25,11 @@
 
 namespace Aetherion::Examples::DroppedSphereSteadyWind {
 
-/// @brief Application for NASA TM-2015-218675 Atmospheric Scenario 7.
-///
-/// Sphere (CD=0.1) dropped from 9144 m in a constant 20 ft/s eastward wind
-/// under J₂ gravity.  The wind creates horizontal drift and an initial
-/// non-zero TAS even before the sphere starts falling.
+    /// @brief Application for NASA TM-2015-218675 Atmospheric Scenario 7.
+    ///
+    /// Sphere (CD=0.1) dropped from 9144 m in a constant 20 ft/s eastward wind
+    /// under J₂ gravity.  The wind creates horizontal drift and an initial
+    /// non-zero TAS even before the sphere starts falling.
     class DroppedSphereSteadyWindApplication : public Simulation::Application
     {
     public:

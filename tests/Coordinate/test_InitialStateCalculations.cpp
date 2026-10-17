@@ -79,7 +79,7 @@ TEST_CASE("MakeLaunchStateECI - equator straight up, zero roll", "[coordinate][l
     const double lat = 0.0;
     const double lon = 0.0;
     const double h = 0.0;
-    const double theta = 0.0;  // Earth angle
+    const double theta = 0.0; // Earth angle
 
     const double az = 0.0;
     const double zen = 0.0;
@@ -139,9 +139,9 @@ TEST_CASE("MakeLaunchStateECI - CppAD derivatives w.r.t altitude", "[coordinate]
 {
     using AD = CppAD::AD<double>;
 
-    const double lat0 = 0.3;      // some latitude
-    const double lon0 = 1.0;      // some longitude
-    const double h0 = 1000.0;   // 1 km
+    const double lat0 = 0.3;  // some latitude
+    const double lon0 = 1.0;  // some longitude
+    const double h0 = 1000.0; // 1 km
     const double az0 = 0.5;
     const double zen0 = 0.4;
     const double roll0 = 0.1;
@@ -205,7 +205,7 @@ TEST_CASE("MakeLaunchStateECI - CppAD derivatives of dir0_eci w.r.t azimuth, zen
     const double lon0 = -1.1;
     const double h0 = 1500.0;
     const double az0 = 0.7;
-    const double zen0 = 0.3;   // not 0 or pi/2, avoid degeneracy
+    const double zen0 = 0.3; // not 0 or pi/2, avoid degeneracy
     const double roll0 = 0.2;
     const double theta0 = 0.5;
 

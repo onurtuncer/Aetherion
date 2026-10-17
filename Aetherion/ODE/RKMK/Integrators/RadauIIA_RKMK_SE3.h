@@ -46,7 +46,7 @@
 
 #include <Aetherion/ODE/RKMK/Core/Tableau.h>
 #include <Aetherion/ODE/RKMK/Core/StagePack.h>
-#include <Aetherion/ODE/RKMK/Core/Newton.h>           // NewtonSolve<N>, FixedCppADResidualJacobian<N,...>
+#include <Aetherion/ODE/RKMK/Core/Newton.h> // NewtonSolve<N>, FixedCppADResidualJacobian<N,...>
 #include <Aetherion/ODE/RKMK/Core/NewtonOptions.h>
 #include <Aetherion/ODE/RKMK/Core/StageResidualRadauIIASE3.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
@@ -70,35 +70,35 @@ namespace Aetherion::ODE::RKMK::Integrators {
 
         // Compile-time dimension of the stacked Newton system: one xi in R^6
         // per stage, all coupled through the implicit Butcher tableau.
-        static constexpr int XDim = 6 * Stages;  // = 18
+        static constexpr int XDim = 6 * Stages; // = 18
 
         using Tableau = Aetherion::ODE::RKMK::Core::ButcherTableau<Scalar, Stages>;
         using SE3d = Aetherion::ODE::RKMK::Lie::SE3<Scalar>;
         using Vec6d = detail::Vec6<Scalar>;
-        using VecX = Eigen::Matrix<double, XDim, 1>;     // full stage vector, stack-resident
-        using MatX = Eigen::Matrix<double, XDim, XDim>;  // Jacobian, stack-resident
+        using VecX = Eigen::Matrix<double, XDim, 1>;    // full stage vector, stack-resident
+        using MatX = Eigen::Matrix<double, XDim, XDim>; // Jacobian, stack-resident
 
-          // NOTE: SE(3) as a single Lie group, not a product manifold.
-          //
-          // Although SE(3) is diffeomorphic to SO(3) x R^3 as a smooth manifold,
-          // this integrator treats it as a single Lie group throughout. Concretely:
-          //
-          //   - There is one se(3)-valued stage vector xi_i in R^6 per stage,
-          //     with no splitting between the rotational (omega) and translational (v)
-          //     components.
-          //   - The update g1 = g0 * Exp(sum_i b_i * xi_i) uses the single SE(3)
-          //     exponential map, which couples rotation and translation in the
-          //     screw-motion sense.
-          //
-          // A product-manifold integrator would instead maintain separate stage
-          // packs for SO(3) and R^3, apply independent exponential maps to each,
-          // and could use different methods (or step sizes) per factor. That is
-          // not done here: every degree of freedom advances under the same Radau
-          // IIA tableau and the same group operation.
+        // NOTE: SE(3) as a single Lie group, not a product manifold.
+        //
+        // Although SE(3) is diffeomorphic to SO(3) x R^3 as a smooth manifold,
+        // this integrator treats it as a single Lie group throughout. Concretely:
+        //
+        //   - There is one se(3)-valued stage vector xi_i in R^6 per stage,
+        //     with no splitting between the rotational (omega) and translational (v)
+        //     components.
+        //   - The update g1 = g0 * Exp(sum_i b_i * xi_i) uses the single SE(3)
+        //     exponential map, which couples rotation and translation in the
+        //     screw-motion sense.
+        //
+        // A product-manifold integrator would instead maintain separate stage
+        // packs for SO(3) and R^3, apply independent exponential maps to each,
+        // and could use different methods (or step sizes) per factor. That is
+        // not done here: every degree of freedom advances under the same Radau
+        // IIA tableau and the same group operation.
         struct StepResult final
         {
             SE3d g1;
-            VecX stage_xi{ VecX::Zero() };  // fixed-size: no heap allocation
+            VecX stage_xi{ VecX::Zero() }; // fixed-size: no heap allocation
             bool converged{ false };
             int iters{ 0 };
             double residual_norm{ 0.0 };
@@ -139,7 +139,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
             const auto newton_res = Core::NewtonSolve<XDim>(eval, x, opt);
 
             StepResult out;
-            out.stage_xi = x;   // fixed-size copy, no heap
+            out.stage_xi = x; // fixed-size copy, no heap
 
             if constexpr (requires { newton_res.converged; }) out.converged = newton_res.converged;
             if constexpr (requires { newton_res.iters; }) out.iters = newton_res.iters;

@@ -39,8 +39,8 @@
 
 namespace Aetherion::Estimation::Replay {
 
-/// ZYX Euler angles (yaw about z, then pitch about y, then roll about x),
-/// body -> NED: R_NB = Rz(yaw) Ry(pitch) Rx(roll).
+    /// ZYX Euler angles (yaw about z, then pitch about y, then roll about x),
+    /// body -> NED: R_NB = Rz(yaw) Ry(pitch) Rx(roll).
     [[nodiscard]] inline Eigen::Matrix3d rotationNedFromBody(double yaw, double pitch, double roll)
     {
         using Eigen::AngleAxisd;
@@ -50,7 +50,7 @@ namespace Aetherion::Estimation::Replay {
             .toRotationMatrix();
     }
 
-/// Rotation NED(lat, lon) -> ECEF, columns N, E, D (Coordinate::NEDToECEF as a matrix).
+    /// Rotation NED(lat, lon) -> ECEF, columns N, E, D (Coordinate::NEDToECEF as a matrix).
     [[nodiscard]] inline Eigen::Matrix3d rotationEcefFromNed(double lat, double lon)
     {
         const double sLat = std::sin(lat), cLat = std::cos(lat), sLon = std::sin(lon), cLon = std::cos(lon);
@@ -61,7 +61,7 @@ namespace Aetherion::Estimation::Replay {
         return R;
     }
 
-/// Rotation ECEF -> ECI at Earth rotation angle era: R_3(-era).
+    /// Rotation ECEF -> ECI at Earth rotation angle era: R_3(-era).
     [[nodiscard]] inline Eigen::Matrix3d rotationEciFromEcef(double era)
     {
         const double c = std::cos(era), s = std::sin(era);
@@ -72,17 +72,17 @@ namespace Aetherion::Estimation::Replay {
 
     struct GeodeticTruth
     {
-        double t = 0.0;  ///< simulation time [s]
+        double t = 0.0; ///< simulation time [s]
         double lat_rad = 0.0;
         double lon_rad = 0.0;
-        double alt_m = 0.0;                              ///< ellipsoidal
-        Eigen::Vector3d vNed = Eigen::Vector3d::Zero();  ///< Earth-relative [m/s]
+        double alt_m = 0.0;                             ///< ellipsoidal
+        Eigen::Vector3d vNed = Eigen::Vector3d::Zero(); ///< Earth-relative [m/s]
         double yaw_rad = 0.0, pitch_rad = 0.0, roll_rad = 0.0;
     };
 
-/// The navigation core of the truth in LCI; the bias members are left at
-/// zero (the sensor FMUs do not publish their realised biases yet, Hemerion
-/// step 3).
+    /// The navigation core of the truth in LCI; the bias members are left at
+    /// zero (the sensor FMUs do not publish their realised biases yet, Hemerion
+    /// step 3).
     [[nodiscard]] inline EstimationState<double> truthToState(const GeodeticTruth& g, const LciFrame<double>& frame)
     {
         const double era = frame.earthRotationAngle(g.t);
@@ -97,9 +97,9 @@ namespace Aetherion::Estimation::Replay {
         return x;
     }
 
-/// Attitude of an LCI state as ZYX Euler angles body -> local NED at the
-/// state's own position and time: what "heading and yaw covariance are
-/// reported by rotating into the current local NED" means in practice.
+    /// Attitude of an LCI state as ZYX Euler angles body -> local NED at the
+    /// state's own position and time: what "heading and yaw covariance are
+    /// reported by rotating into the current local NED" means in practice.
     [[nodiscard]] inline Eigen::Vector3d eulerNedFromState(const EstimationState<double>& x,
         double t,
         const LciFrame<double>& frame)
@@ -107,8 +107,8 @@ namespace Aetherion::Estimation::Replay {
         const double era = frame.earthRotationAngle(t);
         const Eigen::Vector3d r_W = frame.toEci(x.X.p);
         const Eigen::Vector3d r_E = rotationEciFromEcef(era).transpose() * r_W;
-  // Geodetic lat/lon of the point: Bowring, one iteration is plenty for the
-  // NED axes (they are insensitive to the height).
+        // Geodetic lat/lon of the point: Bowring, one iteration is plenty for the
+        // NED axes (they are insensitive to the height).
         const double a = Environment::WGS84::kSemiMajorAxis_m, e2 = Environment::WGS84::kEccentricitySq;
         const double lon = std::atan2(r_E[1], r_E[0]);
         const double pxy = std::hypot(r_E[0], r_E[1]);
@@ -121,9 +121,9 @@ namespace Aetherion::Estimation::Replay {
         }
         const Eigen::Matrix3d R_NB =
             rotationEcefFromNed(lat, lon).transpose() * rotationEciFromEcef(era).transpose() * frame.R_WL * x.X.R;
-  // ZYX from R_NB: yaw = atan2(R21, R11), pitch = -asin(R31), roll = atan2(R32, R33).
+        // ZYX from R_NB: yaw = atan2(R21, R11), pitch = -asin(R31), roll = atan2(R32, R33).
         return { std::atan2(R_NB(1, 0), R_NB(0, 0)), -std::asin(std::clamp(R_NB(2, 0), -1.0, 1.0)),
             std::atan2(R_NB(2, 1), R_NB(2, 2)) };
     }
 
-}  // namespace Aetherion::Estimation::Replay
+} // namespace Aetherion::Estimation::Replay

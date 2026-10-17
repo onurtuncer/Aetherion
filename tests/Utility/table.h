@@ -8,7 +8,7 @@
 
 #pragma once
 
-#include "string_utils.h"  // normalize_name
+#include "string_utils.h" // normalize_name
 
 #include <cstddef>
 #include <stdexcept>
