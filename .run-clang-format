@@ -1,3 +1,11 @@
 #!/bin/bash
-find . -type d \( -name out -o -name vendor -o -name .venv -o -name _deps \) -prune \
-  -o -type f -regex '.*\.\(cpp\|hpp\|cc\|cxx\|h\|hxx\)' -exec clang-format-18 -style=file -i {} \;
+# Format every C++ source in place with the repository's .clang-format.
+# CLANG_FORMAT selects the binary (default clang-format-18, the version CI uses).
+# Fails if clang-format fails on any file -- a config it cannot read used to make every file error out, change nothing,
+# and let the Clang-Format check pass on the empty diff.
+set -euo pipefail
+CLANG_FORMAT="${CLANG_FORMAT:-clang-format-18}"
+"$CLANG_FORMAT" --version
+find . -type d \( -name out -o -name build -o -name vendor -o -name .venv -o -name _deps \) -prune \
+  -o -type f -regex '.*\.\(cpp\|hpp\|cc\|cxx\|h\|hxx\)' -print0 \
+  | xargs -0 "$CLANG_FORMAT" -style=file -i

@@ -1,68 +1,70 @@
 ---
-BasedOnStyle: Google
-AccessModifierOffset: -2
-AlignEscapedNewlinesLeft: false
-AlignTrailingComments: true
-AlignAfterOpenBracket: Align
-AllowAllParametersOfDeclarationOnNextLine: false
-AllowShortFunctionsOnASingleLine: true
-AllowShortIfStatementsOnASingleLine: false
-AllowShortLoopsOnASingleLine: false
-AlwaysBreakBeforeMultilineStrings: false
-AlwaysBreakTemplateDeclarations: true
-BinPackArguments: false
-BinPackParameters: false
-BreakBeforeBinaryOperators: false
-BreakBeforeTernaryOperators: false
-BreakConstructorInitializersBeforeComma: true
-ColumnLimit: 120
-ConstructorInitializerAllOnOneLineOrOnePerLine: true
-ConstructorInitializerIndentWidth: 2
-ContinuationIndentWidth: 4
-Cpp11BracedListStyle: false
-DerivePointerBinding: false
-ExperimentalAutoDetectBinPacking: false
-IndentCaseLabels: true
-IndentFunctionDeclarationAfterType: false
-IndentWidth: 2
-MaxEmptyLinesToKeep: 1
-NamespaceIndentation: None
-ObjCSpaceBeforeProtocolList: true
-PenaltyBreakBeforeFirstCallParameter: 19
-PenaltyBreakComment: 60
-PenaltyBreakFirstLessLess: 1000
-PenaltyBreakString: 1
-PenaltyExcessCharacter: 1000
-PenaltyReturnTypeOnItsOwnLine: 90
-PointerBindsToType: true
-SortIncludes: false
-SpaceAfterControlStatementKeyword: true
-SpaceAfterCStyleCast: false
-SpaceBeforeAssignmentOperators: true
-SpaceInEmptyParentheses: false
-SpacesBeforeTrailingComments: 2
-SpacesInAngles: false
-SpacesInCStyleCastParentheses: false
-SpacesInParentheses: false
-Standard: Auto
-TabWidth: 2
+# Aetherion C++ layout, enforced by the Clang-Format workflow (clang-format 18, .run-clang-format).
+#
+# Chosen to describe the code as it was written rather than impose a new style: 4-space indentation, `T* p`, function
+# bodies on their own brace line, `if (`. The existing line breaks are kept (ColumnLimit 0: clang-format does not re-flow
+# hand-wrapped statements), and so are hand-aligned trailing comments; includes and using-declarations are never
+# reordered and comments never reflowed. Keep lines within 120 columns by hand.
+BasedOnStyle: LLVM
+Language: Cpp
+Standard: c++20
+
+IndentWidth: 4
+TabWidth: 4
 UseTab: Never
+ContinuationIndentWidth: 4
+ColumnLimit: 0
+AccessModifierOffset: -4
+NamespaceIndentation: All
+IndentCaseLabels: true
+IndentPPDirectives: None
 
-# Configure each individual brace in BraceWrapping
+PointerAlignment: Left
+DerivePointerAlignment: false
+SpaceBeforeParens: ControlStatements
+Cpp11BracedListStyle: false
+AlignAfterOpenBracket: DontAlign
+AlignConsecutiveAssignments:
+  Enabled: false
+AlignConsecutiveDeclarations:
+  Enabled: false
+AlignTrailingComments:
+  Kind: Leave
+SpacesBeforeTrailingComments: 1
+
+SortIncludes: Never
+SortUsingDeclarations: Never
+ReflowComments: false
+FixNamespaceComments: false
+MaxEmptyLinesToKeep: 2
+KeepEmptyLinesAtTheStartOfBlocks: true
+
+AllowShortFunctionsOnASingleLine: All
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Always
+AllowShortLambdasOnASingleLine: All
+
+AlwaysBreakTemplateDeclarations: Yes
+PackConstructorInitializers: Never
+BreakConstructorInitializers: BeforeComma
+
 BreakBeforeBraces: Custom
-
-# Control of individual brace wrapping cases
 BraceWrapping:
-    AfterCaseLabel : 'true'
-    AfterClass: 'true'
-    AfterControlStatement: 'true'
-    AfterEnum : 'true'
-    AfterFunction : 'true'
-    AfterNamespace : 'true'
-    AfterStruct : 'true'
-    AfterUnion : 'true'
-    BeforeCatch : 'true'
-    BeforeElse : 'true'
-    IndentBraces : 'false'
-
-...
+  AfterCaseLabel: false
+  AfterClass: true
+  AfterStruct: true
+  AfterUnion: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: false
+  AfterExternBlock: false
+  AfterControlStatement: MultiLine
+  BeforeCatch: false
+  BeforeElse: false
+  BeforeLambdaBody: false
+  BeforeWhile: false
+  IndentBraces: false
+  SplitEmptyFunction: false
+  SplitEmptyRecord: false
+  SplitEmptyNamespace: false
