@@ -100,7 +100,7 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_CXX_COMPILER": "g++",
-        "CMAKE_CXX_FLAGS": "-march=native -ffloat-store"
+        "CMAKE_CXX_FLAGS": "-ffloat-store"
       },
       "environment": {
         "CXXFLAGS": ""
