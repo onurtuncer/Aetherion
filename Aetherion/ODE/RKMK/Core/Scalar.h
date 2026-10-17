@@ -18,68 +18,94 @@ namespace Aetherion::ODE::RKMK::Core {
 
     // -------------------- CppAD scalar detection --------------------
 
-    template<class T>
-    struct is_cppad_ad : std::false_type {};
+    template <class T>
+    struct is_cppad_ad : std::false_type
+    {};
 
-    template<>
-    struct is_cppad_ad<CppAD::AD<double>> : std::true_type {};
+    template <>
+    struct is_cppad_ad<CppAD::AD<double>> : std::true_type
+    {};
 
-    template<class T>
+    template <class T>
     inline constexpr bool is_cppad_ad_v = is_cppad_ad<std::decay_t<T>>::value;
 
     // -------------------- AD-friendly elementary functions --------------------
     // (Use CppAD versions for AD, std for plain doubles.)
 
-    template<class S>
-    [[nodiscard]] inline S sin_s(const S& x) {
-        if constexpr (is_cppad_ad_v<S>) return CppAD::sin(x);
-        else return std::sin(x);
+    template <class S>
+    [[nodiscard]] inline S sin_s(const S& x)
+    {
+        if constexpr (is_cppad_ad_v<S>)
+            return CppAD::sin(x);
+        else
+            return std::sin(x);
     }
 
-    template<class S>
-    [[nodiscard]] inline S cos_s(const S& x) {
-        if constexpr (is_cppad_ad_v<S>) return CppAD::cos(x);
-        else return std::cos(x);
+    template <class S>
+    [[nodiscard]] inline S cos_s(const S& x)
+    {
+        if constexpr (is_cppad_ad_v<S>)
+            return CppAD::cos(x);
+        else
+            return std::cos(x);
     }
 
-    template<class S>
-    [[nodiscard]] inline S sqrt_s(const S& x) {
-        if constexpr (is_cppad_ad_v<S>) return CppAD::sqrt(x);
-        else return std::sqrt(x);
+    template <class S>
+    [[nodiscard]] inline S sqrt_s(const S& x)
+    {
+        if constexpr (is_cppad_ad_v<S>)
+            return CppAD::sqrt(x);
+        else
+            return std::sqrt(x);
     }
 
-    template<class S>
-    [[nodiscard]] inline S abs_s(const S& x) {
-        if constexpr (is_cppad_ad_v<S>) return CppAD::abs(x);
-        else return std::abs(x);
+    template <class S>
+    [[nodiscard]] inline S abs_s(const S& x)
+    {
+        if constexpr (is_cppad_ad_v<S>)
+            return CppAD::abs(x);
+        else
+            return std::abs(x);
     }
 
     // -------------------- AD-friendly conditional expression --------------------
     // For AD, use CondExp (keeps graph differentiable piecewise).
     // For double, normal branch is fine.
 
-    template<class S>
-    [[nodiscard]] inline S condexp_lt(const S& lhs, const S& rhs, const S& t, const S& f) {
-        if constexpr (is_cppad_ad_v<S>) return CppAD::CondExpLt(lhs, rhs, t, f);
-        else return (lhs < rhs) ? t : f;
+    template <class S>
+    [[nodiscard]] inline S condexp_lt(const S& lhs, const S& rhs, const S& t, const S& f)
+    {
+        if constexpr (is_cppad_ad_v<S>)
+            return CppAD::CondExpLt(lhs, rhs, t, f);
+        else
+            return (lhs < rhs) ? t : f;
     }
 
-    template<class S>
-    [[nodiscard]] inline S condexp_le(const S& lhs, const S& rhs, const S& t, const S& f) {
-        if constexpr (is_cppad_ad_v<S>) return CppAD::CondExpLe(lhs, rhs, t, f);
-        else return (lhs <= rhs) ? t : f;
+    template <class S>
+    [[nodiscard]] inline S condexp_le(const S& lhs, const S& rhs, const S& t, const S& f)
+    {
+        if constexpr (is_cppad_ad_v<S>)
+            return CppAD::CondExpLe(lhs, rhs, t, f);
+        else
+            return (lhs <= rhs) ? t : f;
     }
 
-    template<class S>
-    [[nodiscard]] inline S condexp_gt(const S& lhs, const S& rhs, const S& t, const S& f) {
-        if constexpr (is_cppad_ad_v<S>) return CppAD::CondExpGt(lhs, rhs, t, f);
-        else return (lhs > rhs) ? t : f;
+    template <class S>
+    [[nodiscard]] inline S condexp_gt(const S& lhs, const S& rhs, const S& t, const S& f)
+    {
+        if constexpr (is_cppad_ad_v<S>)
+            return CppAD::CondExpGt(lhs, rhs, t, f);
+        else
+            return (lhs > rhs) ? t : f;
     }
 
-    template<class S>
-    [[nodiscard]] inline S condexp_ge(const S& lhs, const S& rhs, const S& t, const S& f) {
-        if constexpr (is_cppad_ad_v<S>) return CppAD::CondExpGe(lhs, rhs, t, f);
-        else return (lhs >= rhs) ? t : f;
+    template <class S>
+    [[nodiscard]] inline S condexp_ge(const S& lhs, const S& rhs, const S& t, const S& f)
+    {
+        if constexpr (is_cppad_ad_v<S>)
+            return CppAD::CondExpGe(lhs, rhs, t, f);
+        else
+            return (lhs >= rhs) ? t : f;
     }
 
     // -------------------- Small-angle safe SO(3) coefficients --------------------
@@ -96,8 +122,9 @@ namespace Aetherion::ODE::RKMK::Core {
     //
     // Note: eps2 is chosen in double-space; for AD it becomes a constant threshold.
     //
-    template<class S>
-    inline void so3_ABC(const S& theta2, S& A, S& B, S& C) {
+    template <class S>
+    inline void so3_ABC(const S& theta2, S& A, S& B, S& C)
+    {
         // Switch earlier to avoid catastrophic cancellation in (1 - cos(theta))/theta2
         // theta2 < 1e-8  <=> theta < 1e-4  -> series is excellent there.
         const S eps2 = S(1e-8);
@@ -119,7 +146,7 @@ namespace Aetherion::ODE::RKMK::Core {
         const S theta = sqrt_s(theta2_for_sqrt);
 
         // Further protect the explicit denominator divisions in the trig branch.
-        const S theta_safe  = condexp_lt(theta2, eps2, S(1), theta);
+        const S theta_safe = condexp_lt(theta2, eps2, S(1), theta);
         const S theta2_safe = condexp_lt(theta2, eps2, S(1), theta2);
 
         const S A_trig = sin_s(theta) / theta_safe;

@@ -18,7 +18,7 @@
 
 namespace {
 
-    template<typename S>
+    template <typename S>
     using Vec3 = Eigen::Matrix<S, 3, 1>;
 
 }

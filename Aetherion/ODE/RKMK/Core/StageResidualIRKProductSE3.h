@@ -37,8 +37,9 @@
 
 namespace Aetherion::ODE::RKMK::Core {
 
-    template<int Stages, int EuclidDim, class XiField, class FField, class Tableau>
-    class StageResidualIRK_ProductSE3 final {
+    template <int Stages, int EuclidDim, class XiField, class FField, class Tableau>
+    class StageResidualIRK_ProductSE3 final
+    {
     public:
         static_assert(Stages > 0, "Stages must be > 0");
         static_assert(EuclidDim > 0, "EuclidDim must be > 0");
@@ -48,18 +49,19 @@ namespace Aetherion::ODE::RKMK::Core {
         static constexpr int TotalDim = Stages * BlockDim;
 
         StageResidualIRK_ProductSE3(
-            Eigen::Quaterniond       q0,
-            Eigen::Vector3d          p0,
+            Eigen::Quaterniond q0,
+            Eigen::Vector3d p0,
             Eigen::Matrix<double, Eigen::Dynamic, 1> x0,  // R^EuclidDim initial Eucl. state
-            double                   t0,
-            double                   h,
-            Tableau                  tableau,
-            XiField                  xi_field,
-            FField                   f_field)
+            double t0,
+            double h,
+            Tableau tableau,
+            XiField xi_field,
+            FField f_field)
             : q0_(std::move(q0))
             , p0_(std::move(p0))
             , x0_(std::move(x0))
-            , t0_(t0), h_(h)
+            , t0_(t0)
+            , h_(h)
             , tableau_(std::move(tableau))
             , xi_field_(std::move(xi_field))
             , f_field_(std::move(f_field))
@@ -75,9 +77,9 @@ namespace Aetherion::ODE::RKMK::Core {
         // x is stacked as:
         //   [ xi_0(6), u_0(EuclidDim), xi_1(6), u_1(EuclidDim), ... ]
         // ---------------------------------------------------------------------
-        template<class S>
+        template <class S>
         [[nodiscard]] Eigen::Matrix<S, Eigen::Dynamic, 1>
-            operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const
+        operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const
         {
             using Vec6 = Eigen::Matrix<S, 6, 1>;
             using VecE = Eigen::Matrix<S, EuclidDim, 1>;
@@ -88,14 +90,15 @@ namespace Aetherion::ODE::RKMK::Core {
             r.setZero();
 
             const auto g0 = detail::make_se3_from_qp<S>(q0_, p0_);
-            const VecE  x0_S = x0_.template cast<S>();
+            const VecE x0_S = x0_.template cast<S>();
             const S t0s = static_cast<S>(t0_);
             const S hs = static_cast<S>(h_);
 
             // Precompute all Eta_i and Phi_i (inner product over stages)
-            Eigen::Matrix<S, 6, Stages>          Eta_all;
-            Eigen::Matrix<S, EuclidDim, Stages>  Phi_all;
-            Eta_all.setZero(); Phi_all.setZero();
+            Eigen::Matrix<S, 6, Stages> Eta_all;
+            Eigen::Matrix<S, EuclidDim, Stages> Phi_all;
+            Eta_all.setZero();
+            Phi_all.setZero();
 
             for (int i = 0; i < Stages; ++i) {
                 const int base_i = i * BlockDim;
@@ -110,7 +113,8 @@ namespace Aetherion::ODE::RKMK::Core {
                     Phi_all.col(i).noalias() +=
                         aij * x.template segment<EuclidDim>(base_j + XiDim);
                 }
-                (void)xi_i; (void)u_i;  // used below stage-by-stage
+                (void)xi_i;
+                (void)u_i;  // used below stage-by-stage
             }
 
             for (int i = 0; i < Stages; ++i) {
@@ -169,12 +173,12 @@ namespace Aetherion::ODE::RKMK::Core {
 
     private:
         Eigen::Quaterniond q0_;
-        Eigen::Vector3d    p0_;
+        Eigen::Vector3d p0_;
         Eigen::Matrix<double, Eigen::Dynamic, 1> x0_;
-        double  t0_{ 0.0 }, h_{ 0.0 };
-        Tableau  tableau_;
-        XiField  xi_field_;
-        FField   f_field_;
+        double t0_{ 0.0 }, h_{ 0.0 };
+        Tableau tableau_;
+        XiField xi_field_;
+        FField f_field_;
     };
 
 } // namespace Aetherion::ODE::RKMK::Core

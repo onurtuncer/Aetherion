@@ -49,36 +49,37 @@ namespace Aetherion::Examples::F16SteadyFlight {
 ///
 /// F-16 at 335.15 KTAS, 10 013 ft, heading 45°, Kitty Hawk NC.
 /// Inertia, aerodynamics, and propulsion are all loaded from DAVE-ML files.
-class F16SteadyFlightApplication : public Simulation::Application
-{
-public:
-    explicit F16SteadyFlightApplication(int argc, char** argv)
-        : Application(argc, argv) {}
+    class F16SteadyFlightApplication : public Simulation::Application
+    {
+    public:
+        explicit F16SteadyFlightApplication(int argc, char** argv)
+            : Application(argc, argv)
+        {}
 
-protected:
-    void logStartupBanner()                                                const override;
-    void writeCsvHeader(std::ofstream& csv)                                const override;
-    void prepareSimulation()                                               const override;
-    void writeInitialSnapshot(std::ofstream& csv)                          const override;
-    StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
-    void logFinalSummary()                                                 const override;
+    protected:
+        void logStartupBanner() const override;
+        void writeCsvHeader(std::ofstream& csv) const override;
+        void prepareSimulation() const override;
+        void writeInitialSnapshot(std::ofstream& csv) const override;
+        StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
+        void logFinalSummary() const override;
 
-private:
-    [[nodiscard]] static double computeInitialERA(double t0) noexcept;
+    private:
+        [[nodiscard]] static double computeInitialERA(double t0) noexcept;
 
-    [[nodiscard]] static RigidBody::StateD
+        [[nodiscard]] static RigidBody::StateD
         buildInitialState(const RigidBody::Config& cfg, double theta0);
 
-    [[nodiscard]] static std::unique_ptr<F16SteadyFlightSimulator>
+        [[nodiscard]] static std::unique_ptr<F16SteadyFlightSimulator>
         constructSimulator(const RigidBody::InertialParameters& ip,
-                           const FlightDynamics::TrimPoint&     trim,
-                           const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aero,
-                           const std::shared_ptr<const Serialization::DAVEMLPropModel>& prop,
-                           const RigidBody::StateD& x0,
-                           double theta0,
-                           double xcg_from_ac_m = 0.0);
+            const FlightDynamics::TrimPoint& trim,
+            const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aero,
+            const std::shared_ptr<const Serialization::DAVEMLPropModel>& prop,
+            const RigidBody::StateD& x0,
+            double theta0,
+            double xcg_from_ac_m = 0.0);
 
-    mutable std::unique_ptr<F16SteadyFlightSimulator> m_Simulator;
-};
+        mutable std::unique_ptr<F16SteadyFlightSimulator> m_Simulator;
+    };
 
 } // namespace Aetherion::Examples::F16SteadyFlight

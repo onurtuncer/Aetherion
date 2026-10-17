@@ -16,7 +16,8 @@
 
 namespace NasaCsv {
 
-    inline std::string trim(std::string s) {
+    inline std::string trim(std::string s)
+    {
         auto is_ws = [](unsigned char c) { return std::isspace(c) != 0; };
         s.erase(s.begin(),
             std::find_if(s.begin(), s.end(), [&](char c) { return !is_ws((unsigned char)c); }));
@@ -26,7 +27,8 @@ namespace NasaCsv {
         return s;
     }
 
-    inline bool starts_with(std::string_view s, std::string_view prefix) {
+    inline bool starts_with(std::string_view s, std::string_view prefix)
+    {
         return s.size() >= prefix.size() && s.substr(0, prefix.size()) == prefix;
     }
 
@@ -37,7 +39,8 @@ namespace NasaCsv {
     ///   3. Lowercase.
     ///   4. Replace spaces, '/', '\', '-' with '_'.
     ///   5. Collapse consecutive underscores; strip leading/trailing underscores.
-    inline std::string normalize_name(std::string s) {
+    inline std::string normalize_name(std::string s)
+    {
         s = trim(std::move(s));
 
         auto strip_bracketed_tail = [&](char open, char close) {
@@ -61,16 +64,22 @@ namespace NasaCsv {
         out.reserve(s.size());
         bool prev_us = false;
         for (char c : s) {
-            if (c == '_') { if (!prev_us) out.push_back(c); prev_us = true; }
-            else          { out.push_back(c);               prev_us = false; }
+            if (c == '_') {
+                if (!prev_us) out.push_back(c);
+                prev_us = true;
+            } else {
+                out.push_back(c);
+                prev_us = false;
+            }
         }
         while (!out.empty() && out.front() == '_') out.erase(out.begin());
-        while (!out.empty() && out.back()  == '_') out.pop_back();
+        while (!out.empty() && out.back() == '_') out.pop_back();
         return out;
     }
 
     /// Simple comma splitter — correct for purely numeric CSVs (no quoted commas).
-    inline std::vector<std::string> split_csv_line(std::string_view line) {
+    inline std::vector<std::string> split_csv_line(std::string_view line)
+    {
         std::vector<std::string> out;
         std::string cur;
         cur.reserve(line.size());

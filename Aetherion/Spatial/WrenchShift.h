@@ -24,7 +24,7 @@ namespace Aetherion::Spatial {
 /// @param f_at_P       Wrench applied at point P.
 /// @param r_P_minus_Q  Vector @f$(P - Q)@f$ [m], expressed in wrench frame.
 /// @return             Equivalent wrench at point Q.
-    template<class Scalar>
+    template <class Scalar>
     inline Wrench<Scalar> ShiftWrenchToNewPoint(const Wrench<Scalar>& f_at_P,
         const Eigen::Matrix<Scalar, 3, 1>& r_P_minus_Q)
     {

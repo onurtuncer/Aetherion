@@ -11,7 +11,8 @@
 
 using namespace fmu4cpp;
 
-class DraglessSphere : public fmu_base {
+class DraglessSphere : public fmu_base
+{
 public:
     // Let the macro handle constructor signature + base-class wiring
     FMU4CPP_CTOR(DraglessSphere)
@@ -85,15 +86,15 @@ public:
 
 private:
     // Inputs
-    int         integerIn_{};
-    double      realIn_{};
-    bool        booleanIn_{};
+    int integerIn_{};
+    double realIn_{};
+    bool booleanIn_{};
     std::string stringIn_;
 
     // Outputs
-    int         integerOut_{};
-    double      realOut_{};
-    bool        booleanOut_{};
+    int integerOut_{};
+    double realOut_{};
+    bool booleanOut_{};
     std::string stringOut_;
 };
 

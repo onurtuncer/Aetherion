@@ -52,78 +52,80 @@
 namespace Aetherion::FlightDynamics {
 
 /// @brief Propulsion policy for the F-16, driven by a DAVE-ML prop model.
-class F16PropPolicy
-{
-public:
+    class F16PropPolicy
+    {
+    public:
     //TODO [Onur]: Move this constant to a more general unit conversion header.
-    static constexpr double kFt_m = 0.3048;
+        static constexpr double kFt_m = 0.3048;
 
-    double pwr_pct    { 0.0 };  ///< Throttle [0–100 %]
+        double pwr_pct{ 0.0 };  ///< Throttle [0–100 %]
 
     // ── Construction ──────────────────────────────────────────────────────────
 
-    explicit F16PropPolicy(std::shared_ptr<const Serialization::DAVEMLPropModel> model,
-                           double throttle   = 0.0)
-        : m_model(std::move(model)), pwr_pct(throttle) {}
+        explicit F16PropPolicy(std::shared_ptr<const Serialization::DAVEMLPropModel> model,
+            double throttle = 0.0)
+            : m_model(std::move(model))
+            , pwr_pct(throttle)
+        {}
 
     // ── Environment (must match the aero policy's) ────────────────────────────
 
-    void setWindECEF(const Eigen::Vector3d& v_wind_ecef) noexcept { m_windECEF = v_wind_ecef; }
-    [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return m_windECEF; }
+        void setWindECEF(const Eigen::Vector3d& v_wind_ecef) noexcept { m_windECEF = v_wind_ecef; }
+        [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return m_windECEF; }
 
-    void setGust(const Environment::GustState& g) noexcept { m_gust = g; }
-    [[nodiscard]] const Environment::GustState& gust() const noexcept { return m_gust; }
+        void setGust(const Environment::GustState& g) noexcept { m_gust = g; }
+        [[nodiscard]] const Environment::GustState& gust() const noexcept { return m_gust; }
 
-    void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
-    [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
+        void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
+        [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
 
     // ── PropulsionPolicy interface ────────────────────────────────────────────
 
-    template<class S>
-    Spatial::Wrench<S>
-    operator()(const ODE::RKMK::Lie::SE3<S>& g,
-               const Eigen::Matrix<S, 6, 1>& nu_B,
-               S /*mass*/, S t) const
-    {
-        using Environment::detail::SquareRoot;
+        template <class S>
+        Spatial::Wrench<S>
+        operator()(const ODE::RKMK::Lie::SE3<S>& g,
+            const Eigen::Matrix<S, 6, 1>& nu_B,
+            S /*mass*/, S t) const
+        {
+            using Environment::detail::SquareRoot;
 
         // ── Atmosphere-relative TAS ───────────────────────────────────────────
-        const Eigen::Matrix<S, 3, 1> v_rel = AirRelativeVelocity_B(g, nu_B, t, m_windECEF, m_gust);
-        const S vt_mps = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
+            const Eigen::Matrix<S, 3, 1> v_rel = AirRelativeVelocity_B(g, nu_B, t, m_windECEF, m_gust);
+            const S vt_mps = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
 
         // ── Geometric altitude (ft) and Mach ─────────────────────────────────
-        const S alt_m  = Environment::GeometricAltitude_m(g.p);
-        const S alt_ft = alt_m / S(kFt_m);
-        const S a_mps  = Environment::US1976Atmosphere(alt_m, m_atm).a;
-        const S mach   = vt_mps / a_mps;
+            const S alt_m = Environment::GeometricAltitude_m(g.p);
+            const S alt_ft = alt_m / S(kFt_m);
+            const S a_mps = Environment::US1976Atmosphere(alt_m, m_atm).a;
+            const S mach = vt_mps / a_mps;
 
         // ── Evaluate propulsion model ─────────────────────────────────────────
-        Serialization::DAVEMLPropModel::Inputs<S> in{};
-        in.pwr_pct = S(pwr_pct);
-        in.alt_ft  = alt_ft;
-        in.mach    = mach;
-        const auto out = m_model->evaluate<S>(in);
+            Serialization::DAVEMLPropModel::Inputs<S> in{};
+            in.pwr_pct = S(pwr_pct);
+            in.alt_ft = alt_ft;
+            in.mach = mach;
+            const auto out = m_model->evaluate<S>(in);
 
         // ── Build wrench [Mx, My, Mz, Fx, Fy, Fz] (N, N·m) ──────────────────
         // TEM = 0 in the DAVE-ML propulsion file (simplified Stevens & Lewis model).
-        Spatial::Wrench<S> wrench{};
-        wrench.f.setZero();
-        wrench.f(0) = out.mx_Nm;   // rolling  moment [N·m]
-        wrench.f(1) = out.my_Nm;   // pitching moment [N·m]
-        wrench.f(2) = out.mz_Nm;                          // yawing   moment [N·m]
-        wrench.f(3) = out.fx_N;                           // body X thrust   [N]
-        wrench.f(4) = out.fy_N;                           // body Y thrust   [N]
-        wrench.f(5) = out.fz_N;                           // body Z thrust   [N]
-        return wrench;
-    }
+            Spatial::Wrench<S> wrench{};
+            wrench.f.setZero();
+            wrench.f(0) = out.mx_Nm;   // rolling  moment [N·m]
+            wrench.f(1) = out.my_Nm;   // pitching moment [N·m]
+            wrench.f(2) = out.mz_Nm;                          // yawing   moment [N·m]
+            wrench.f(3) = out.fx_N;                           // body X thrust   [N]
+            wrench.f(4) = out.fy_N;                           // body Y thrust   [N]
+            wrench.f(5) = out.fz_N;                           // body Z thrust   [N]
+            return wrench;
+        }
 
-private:
-    std::shared_ptr<const Serialization::DAVEMLPropModel> m_model;
-    Eigen::Vector3d                m_windECEF{ Eigen::Vector3d::Zero() }; ///< Steady wind, ECEF [m/s]
-    Environment::GustState         m_gust{};                              ///< Gust, body axes
-    Environment::AtmosphereOffsets m_atm{};                               ///< ISA + dT, dP_sl
-};
+    private:
+        std::shared_ptr<const Serialization::DAVEMLPropModel> m_model;
+        Eigen::Vector3d m_windECEF{ Eigen::Vector3d::Zero() }; ///< Steady wind, ECEF [m/s]
+        Environment::GustState m_gust{};                              ///< Gust, body axes
+        Environment::AtmosphereOffsets m_atm{};                               ///< ISA + dT, dP_sl
+    };
 
-static_assert(PropulsionPolicy<F16PropPolicy>);
+    static_assert(PropulsionPolicy<F16PropPolicy>);
 
 } // namespace Aetherion::FlightDynamics

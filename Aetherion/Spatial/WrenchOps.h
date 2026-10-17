@@ -16,7 +16,7 @@ namespace Aetherion::Spatial {
 /// @brief Construct a zero-initialised @c Wrench.
 /// @tparam Scalar Numeric type.
 /// @return Wrench with all six components set to zero.
-    template<class Scalar>
+    template <class Scalar>
     inline Wrench<Scalar> ZeroWrench()
     {
         Wrench<Scalar> w{};
@@ -27,7 +27,7 @@ namespace Aetherion::Spatial {
 /// @brief Accumulate a wrench in-place: @c acc += @c w.
 /// @param acc  Accumulator wrench (modified in-place).
 /// @param w    Wrench to add.
-    template<class Scalar>
+    template <class Scalar>
     inline void AddInPlace(Wrench<Scalar>& acc, const Wrench<Scalar>& w)
     {
         acc.f += w.f;

@@ -33,15 +33,16 @@ namespace Aetherion::RigidBody {
 /// stepped by the Euclidean ODE solver; @c g is stepped on the manifold.
 ///
 /// @tparam S Scalar type (@c double or @c CppAD::AD\<double\>).
-    template<class S>
-    struct State {
+    template <class S>
+    struct State
+    {
         using Scalar = S;
         using SE3Type = ODE::RKMK::Lie::SE3<S>;
         using Vec6 = Eigen::Matrix<S, 6, 1>;
 
         SE3Type g{};              ///< Pose in SE(3): attitude (rotation) + ECI position.
-        Vec6    nu_B{ Vec6::Zero() }; ///< Body twist @f$[\omega_B;\, v_B]@f$ [rad/s | m/s].
-        S       m{ S(0) };        ///< Vehicle mass [kg].
+        Vec6 nu_B{ Vec6::Zero() }; ///< Body twist @f$[\omega_B;\, v_B]@f$ [rad/s | m/s].
+        S m{ S(0) };        ///< Vehicle mass [kg].
     };
 
     using StateD = State<double>;

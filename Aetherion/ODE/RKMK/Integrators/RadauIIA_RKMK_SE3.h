@@ -55,14 +55,15 @@
 namespace Aetherion::ODE::RKMK::Integrators {
 
     namespace detail {
-        template<class S>
+        template <class S>
         using Vec6 = Eigen::Matrix<S, 6, 1>;
     } // namespace detail
 
     namespace Lie = Aetherion::ODE::RKMK::Lie;
 
-    template<class VectorField>
-    class RadauIIA_RKMK_SE3 final {
+    template <class VectorField>
+    class RadauIIA_RKMK_SE3 final
+    {
     public:
         using Scalar = double;
         static constexpr int Stages = 3;
@@ -94,28 +95,31 @@ namespace Aetherion::ODE::RKMK::Integrators {
           // and could use different methods (or step sizes) per factor. That is
           // not done here: every degree of freedom advances under the same Radau
           // IIA tableau and the same group operation.
-        struct StepResult final {
-            SE3d   g1;
-            VecX   stage_xi{ VecX::Zero() };  // fixed-size: no heap allocation
-            bool   converged{ false };
-            int    iters{ 0 };
+        struct StepResult final
+        {
+            SE3d g1;
+            VecX stage_xi{ VecX::Zero() };  // fixed-size: no heap allocation
+            bool converged{ false };
+            int iters{ 0 };
             double residual_norm{ 0.0 };
         };
 
         explicit RadauIIA_RKMK_SE3(VectorField f)
             : f_(std::move(f))
-            , tableau_(Tableau::radau_iia_3stage_order5()) {
+            , tableau_(Tableau::radau_iia_3stage_order5())
+        {
         }
 
         StepResult step(double t0, const SE3d& g0, double h,
-            const Aetherion::ODE::RKMK::Core::NewtonOptions& opt) const {
+            const Aetherion::ODE::RKMK::Core::NewtonOptions& opt) const
+        {
             namespace Core = Aetherion::ODE::RKMK::Core;
 
             using Lie::detail::extract_q_double;
             using Lie::detail::extract_p_double;
 
             const Eigen::Quaterniond q0 = extract_q_double(g0);
-            const Eigen::Vector3d    p0 = extract_p_double(g0);
+            const Eigen::Vector3d p0 = extract_p_double(g0);
 
             using Residual = Core::StageResidualIRK_SE3<Stages, VectorField, Tableau>;
             Residual residual(q0, p0, t0, h, tableau_, f_);
@@ -138,14 +142,14 @@ namespace Aetherion::ODE::RKMK::Integrators {
             out.stage_xi = x;   // fixed-size copy, no heap
 
             if constexpr (requires { newton_res.converged; }) out.converged = newton_res.converged;
-            if constexpr (requires { newton_res.iters; })     out.iters = newton_res.iters;
+            if constexpr (requires { newton_res.iters; }) out.iters = newton_res.iters;
 
             // Residual of the function itself (no tape) at the found x; the
             // step is accepted on it, with the solver's own tolerance.
             {
                 Residual residual_chk(q0, p0, t0, h, tableau_, f_);
                 out.residual_norm =
-                    residual_chk.template operator() < double > (x).norm();
+                    residual_chk.template operator()<double>(x).norm();
                 const double thresh = opt.abs_tol + opt.rel_tol * newton_res.r0_norm;
                 if (out.converged && !(out.residual_norm <= 10.0 * thresh))
                     out.converged = false;
@@ -162,7 +166,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
 
     private:
         VectorField f_;
-        Tableau     tableau_;
+        Tableau tableau_;
     };
 
 } // namespace Aetherion::ODE::RKMK::Integrators
@@ -527,7 +531,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
 //        using SE3d = Aetherion::ODE::RKMK::Lie::SE3<Scalar>;
 //        using Vec6d = detail::Vec6<Scalar>;
 //
-//      
+//
 //        // NOTE: SE(3) as a single Lie group, not a product manifold.
 //        //
 //        // Although SE(3) is diffeomorphic to SO(3) x R^3 as a smooth manifold,

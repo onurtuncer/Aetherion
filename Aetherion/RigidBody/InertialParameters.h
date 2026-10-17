@@ -10,7 +10,7 @@
 
 #include <Eigen/Dense>
 
-namespace Aetherion::RigidBody{
+namespace Aetherion::RigidBody {
 
 /// @brief Physical inertial properties of a rigid vehicle.
 ///
@@ -65,9 +65,9 @@ namespace Aetherion::RigidBody{
     [[nodiscard]] inline Eigen::Matrix3d inertiaTensor(const InertialParameters& ip)
     {
         Eigen::Matrix3d I;
-        I <<  ip.Ixx, -ip.Ixy, -ip.Ixz,
-             -ip.Ixy,  ip.Iyy, -ip.Iyz,
-             -ip.Ixz, -ip.Iyz,  ip.Izz;
+        I << ip.Ixx, -ip.Ixy, -ip.Ixz,
+            -ip.Ixy, ip.Iyy, -ip.Iyz,
+            -ip.Ixz, -ip.Iyz, ip.Izz;
         return I;
     }
 

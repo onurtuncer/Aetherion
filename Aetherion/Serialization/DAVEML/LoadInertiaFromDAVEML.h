@@ -46,8 +46,8 @@ namespace Aetherion::Serialization {
 /// @return         InertialParameters populated in SI units.
 /// @throws std::runtime_error  if the file cannot be read or a required
 ///                             varID evaluation fails.
-RigidBody::InertialParameters LoadInertiaFromDAVEML(
-    const std::string& path,
-    const std::unordered_map<std::string, double>& inputs = {});
+    RigidBody::InertialParameters LoadInertiaFromDAVEML(
+        const std::string& path,
+        const std::unordered_map<std::string, double>& inputs = {});
 
 } // namespace Aetherion::Serialization

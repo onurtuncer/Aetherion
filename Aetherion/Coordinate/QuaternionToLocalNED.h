@@ -24,7 +24,8 @@ namespace Aetherion::Coordinate {
 /// - NED is right-handed: x = North, y = East, z = Down.
 /// - Body: x forward, y right, z down.
     template <class Scalar>
-    struct LocalOrientationNED {
+    struct LocalOrientationNED
+    {
         Scalar azimuth; ///< Angle from North toward East in the horizontal plane [rad, −π … π].
         Scalar zenith;  ///< Angle from local Up (0) toward body forward (π) [rad, 0 … π].
         Scalar roll;    ///< Rotation about body forward axis @f$x_B@f$ [rad].
@@ -43,8 +44,8 @@ namespace Aetherion::Coordinate {
 /// @return                    @c LocalOrientationNED with azimuth, zenith, roll in radians.
     template <class Scalar>
     inline LocalOrientationNED<Scalar>
-        QuaternionToAzZenRollNED(const Quat<Scalar>& q_body_to_inertial,
-            const Quat<Scalar>& q_ned_to_inertial)
+    QuaternionToAzZenRollNED(const Quat<Scalar>& q_body_to_inertial,
+        const Quat<Scalar>& q_ned_to_inertial)
     {
         using detail::QuaternionToRotationMatrix;
         using detail::ArcTangent2;

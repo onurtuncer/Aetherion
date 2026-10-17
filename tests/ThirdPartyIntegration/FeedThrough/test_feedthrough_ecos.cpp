@@ -29,21 +29,20 @@
 #include <memory>
 #include <numbers>
 
-namespace
-{
-constexpr const char* kInstance = "feedthrough";
-constexpr double      kStepSize = 0.1;
+namespace {
+    constexpr const char* kInstance = "feedthrough";
+    constexpr double kStepSize = 0.1;
 
-std::unique_ptr<ecos::simulation> boot()
-{
-    ecos::simulation_structure ss;
-    ss.add_model(kInstance, std::filesystem::path(FEEDTHROUGH_FMU_PATH));
+    std::unique_ptr<ecos::simulation> boot()
+    {
+        ecos::simulation_structure ss;
+        ss.add_model(kInstance, std::filesystem::path(FEEDTHROUGH_FMU_PATH));
 
-    auto sim = ss.load(std::make_unique<ecos::fixed_step_algorithm>(kStepSize));
-    REQUIRE(sim != nullptr);
-    sim->init();
-    return sim;
-}
+        auto sim = ss.load(std::make_unique<ecos::fixed_step_algorithm>(kStepSize));
+        REQUIRE(sim != nullptr);
+        sim->init();
+        return sim;
+    }
 } // namespace
 
 // ---------------------------------------------------------------------------

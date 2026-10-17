@@ -12,14 +12,15 @@
 
 namespace Aetherion::Simulation {
 
-    void Config::print() const {
+    void Config::print() const
+    {
         std::cout << "Configuration:\n"
-            << "  timeStep       = " << timeStep << "\n"
-            << "  startTime      = " << startTime << "\n"
-            << "  endTime        = " << endTime << "\n"
-            << "  writeInterval  = " << writeInterval << "\n"
-            << "  inputFileName  = " << inputFileName << "\n"
-            << "  outputFileName = " << outputFileName << "\n";
+                  << "  timeStep       = " << timeStep << "\n"
+                  << "  startTime      = " << startTime << "\n"
+                  << "  endTime        = " << endTime << "\n"
+                  << "  writeInterval  = " << writeInterval << "\n"
+                  << "  inputFileName  = " << inputFileName << "\n"
+                  << "  outputFileName = " << outputFileName << "\n";
     }
 
 } // namespace Aetherion::Simulation

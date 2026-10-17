@@ -16,7 +16,7 @@
 namespace {
 
 // Minimal valid JSON that satisfies from_json(j, RigidBody::Config)
-const std::string kValidJson = R"({
+    const std::string kValidJson = R"({
     "pose": {
         "lat_deg": 41.1, "lon_deg": 29.0, "alt_m": 100.0,
         "azimuth_deg": 90.0, "zenith_deg": 5.0, "roll_deg": 0.0
@@ -78,11 +78,11 @@ TEST_CASE("LoadConfigFromString: valid JSON returns populated config",
 {
     auto cfg = Aetherion::Serialization::LoadConfigFromString(kValidJson);
 
-    CHECK(cfg.pose.lat_deg       == Catch::Approx(41.1));
-    CHECK(cfg.pose.lon_deg       == Catch::Approx(29.0));
-    CHECK(cfg.pose.alt_m         == Catch::Approx(100.0));
+    CHECK(cfg.pose.lat_deg == Catch::Approx(41.1));
+    CHECK(cfg.pose.lon_deg == Catch::Approx(29.0));
+    CHECK(cfg.pose.alt_m == Catch::Approx(100.0));
     CHECK(cfg.inertialParameters.mass_kg == Catch::Approx(10.0));
-    CHECK(cfg.inertialParameters.Ixx     == Catch::Approx(0.1));
+    CHECK(cfg.inertialParameters.Ixx == Catch::Approx(0.1));
 }
 
 TEST_CASE("LoadConfigFromString: schema mismatch throws runtime_error",

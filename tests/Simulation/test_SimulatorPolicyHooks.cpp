@@ -26,73 +26,76 @@ using Examples::DraglessSphere::DraglessSphereVF;
 
 namespace {
 
-RigidBody::InertialParameters makeIP()
-{
-    RigidBody::InertialParameters ip;
-    ip.mass_kg = 1.0;
-    ip.Ixx = 1.0; ip.Iyy = 1.0; ip.Izz = 1.0;
-    return ip;
-}
+    RigidBody::InertialParameters makeIP()
+    {
+        RigidBody::InertialParameters ip;
+        ip.mass_kg = 1.0;
+        ip.Ixx = 1.0;
+        ip.Iyy = 1.0;
+        ip.Izz = 1.0;
+        return ip;
+    }
 
 // 1 km above the equator at longitude 0 (ECI == ECEF at theta_gst = 0),
 // body axes aligned with ECI, moving 100 m/s along ECI +Y (east).
-RigidBody::StateD lowState()
-{
-    RigidBody::StateD s;
-    s.g.R = Eigen::Matrix3d::Identity();
-    s.g.q = Eigen::Quaterniond::Identity();
-    s.g.p = Eigen::Vector3d(Environment::WGS84::kSemiMajorAxis_m + 1000.0, 0.0, 0.0);
-    s.nu_B.setZero();
-    s.nu_B(4) = 100.0;
-    s.m = 1.0;
-    return s;
-}
+    RigidBody::StateD lowState()
+    {
+        RigidBody::StateD s;
+        s.g.R = Eigen::Matrix3d::Identity();
+        s.g.q = Eigen::Quaterniond::Identity();
+        s.g.p = Eigen::Vector3d(Environment::WGS84::kSemiMajorAxis_m + 1000.0, 0.0, 0.0);
+        s.nu_B.setZero();
+        s.nu_B(4) = 100.0;
+        s.m = 1.0;
+        return s;
+    }
 
 /// Zero-wrench aero policy exposing the optional hooks MakeSnapshot2 looks for.
-struct WindyDayAeroPolicy {
-    Eigen::Vector3d wind{ Eigen::Vector3d::Zero() };
-    Environment::AtmosphereOffsets atm{};
-
-    template<class S>
-    Spatial::Wrench<S> operator()(const ODE::RKMK::Lie::SE3<S>&, const Eigen::Matrix<S, 6, 1>&, S, S) const
+    struct WindyDayAeroPolicy
     {
-        Spatial::Wrench<S> w{};
-        w.f.setZero();
-        return w;
-    }
-    [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return wind; }
-    [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return atm; }
-};
+        Eigen::Vector3d wind{ Eigen::Vector3d::Zero() };
+        Environment::AtmosphereOffsets atm{};
 
-static_assert(FlightDynamics::AeroPolicy<WindyDayAeroPolicy>);
+        template <class S>
+        Spatial::Wrench<S> operator()(const ODE::RKMK::Lie::SE3<S>&, const Eigen::Matrix<S, 6, 1>&, S, S) const
+        {
+            Spatial::Wrench<S> w{};
+            w.f.setZero();
+            return w;
+        }
+        [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return wind; }
+        [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return atm; }
+    };
+
+    static_assert(FlightDynamics::AeroPolicy<WindyDayAeroPolicy>);
 
 /// Simulator built from a pre-made vector field, with a hook that edits it in place.
-class PrebuiltFieldSimulator
-    : public Simulation::ISimulator<DraglessSphereVF, Simulation::Snapshot1>
-{
-public:
-    PrebuiltFieldSimulator(DraglessSphereVF vf, RigidBody::StateD s0)
-        : ISimulator(std::move(vf), std::move(s0))
+    class PrebuiltFieldSimulator
+        : public Simulation::ISimulator<DraglessSphereVF, Simulation::Snapshot1>
     {
-        validate();  // the base's default check accepts anything
-    }
+    public:
+        PrebuiltFieldSimulator(DraglessSphereVF vf, RigidBody::StateD s0)
+            : ISimulator(std::move(vf), std::move(s0))
+        {
+            validate();  // the base's default check accepts anything
+        }
 
-    void scaleInertia(double k) { mutableVectorField().M *= k; }
+        void scaleInertia(double k) { mutableVectorField().M *= k; }
 
-    [[nodiscard]] Simulation::Snapshot1 snapshot() const noexcept override
-    {
-        return Simulation::MakeSnapshot1(time(), state(), 0.0, vectorField().gravity);
-    }
-};
+        [[nodiscard]] Simulation::Snapshot1 snapshot() const noexcept override
+        {
+            return Simulation::MakeSnapshot1(time(), state(), 0.0, vectorField().gravity);
+        }
+    };
 
 } // namespace
 
 TEST_CASE("ISimulator: constructed from a pre-built VectorField", "[ISimulator]")
 {
     DraglessSphereVF vf(makeIP(),
-                        FlightDynamics::J2GravityPolicy{},
-                        FlightDynamics::ZeroAeroPolicy{},
-                        FlightDynamics::ZeroPropulsionPolicy{});
+        FlightDynamics::J2GravityPolicy{},
+        FlightDynamics::ZeroAeroPolicy{},
+        FlightDynamics::ZeroPropulsionPolicy{});
     REQUIRE(vf.M(3, 3) == Catch::Approx(1.0));
 
     PrebuiltFieldSimulator sim(vf, lowState());
@@ -115,7 +118,7 @@ TEST_CASE("MakeSnapshot2: calm air and a standard day match the zero aero policy
 {
     const auto s = lowState();
     FlightDynamics::J2GravityPolicy gravity{};
-    const auto ref  = Simulation::MakeSnapshot2(0.0, s, 0.0, gravity, FlightDynamics::ZeroAeroPolicy{});
+    const auto ref = Simulation::MakeSnapshot2(0.0, s, 0.0, gravity, FlightDynamics::ZeroAeroPolicy{});
     const auto calm = Simulation::MakeSnapshot2(0.0, s, 0.0, gravity, WindyDayAeroPolicy{});
     REQUIRE(calm.trueAirspeed_m_s == ref.trueAirspeed_m_s);
     REQUIRE(calm.ambientTemperature_K == ref.ambientTemperature_K);

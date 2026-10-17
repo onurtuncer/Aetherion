@@ -53,9 +53,9 @@ namespace Aetherion::Simulation {
     template <FlightDynamics::GravityPolicy GravityPol>
     [[nodiscard]]
     Snapshot1 MakeSnapshot1(
-        double                       t,
+        double t,
         const RigidBody::StateD& s,
-        double                       theta_gst,
+        double theta_gst,
         const GravityPol& gravity)
     {
         namespace Coord = Aetherion::Coordinate;
@@ -133,8 +133,7 @@ namespace Aetherion::Simulation {
         const Vec3d r_ecef_vec(r_ecef_arr[0], r_ecef_arr[1], r_ecef_arr[2]);
         constexpr double kOmegaE = Aetherion::Environment::WGS84::kRotationRate_rad_s;
         const Vec3d omega_E(0.0, 0.0, kOmegaE);
-        const Vec3d v_ecef_vec = Vec3d(v_ecef_rot_arr[0], v_ecef_rot_arr[1], v_ecef_rot_arr[2])
-                                 - omega_E.cross(r_ecef_vec);
+        const Vec3d v_ecef_vec = Vec3d(v_ecef_rot_arr[0], v_ecef_rot_arr[1], v_ecef_rot_arr[2]) - omega_E.cross(r_ecef_vec);
 
         const CArr3 v_ecef_arr = { v_ecef_vec.x(), v_ecef_vec.y(), v_ecef_vec.z() };
         const CArr3 v_ned_arr = Coord::ECEFToNED(v_ecef_arr, lat_rad, lon_rad);
@@ -190,14 +189,14 @@ namespace Aetherion::Simulation {
     // All other fields are identical to the single-policy form.
     // ─────────────────────────────────────────────────────────────────────────
     template <FlightDynamics::GravityPolicy GravityPol,
-              FlightDynamics::AeroPolicy    AeroPol>
+        FlightDynamics::AeroPolicy AeroPol>
     [[nodiscard]]
     Snapshot1 MakeSnapshot1(
-        double                       t,
-        const RigidBody::StateD&     s,
-        double                       theta_gst,
-        const GravityPol&            gravity,
-        const AeroPol&               aero)
+        double t,
+        const RigidBody::StateD& s,
+        double theta_gst,
+        const GravityPol& gravity,
+        const AeroPol& aero)
     {
         // Delegate all kinematic/atmospheric fields to the single-policy form.
         Snapshot1 snap = MakeSnapshot1(t, s, theta_gst, gravity);
@@ -210,27 +209,27 @@ namespace Aetherion::Simulation {
         // number bit-identical when the environment is the default.
         namespace Env = Aetherion::Environment;
         double a_sound = snap.speedOfSound_m_s;
-        double rho     = snap.airDensity_kg_m3;
-        bool   airDataDirty = false;
+        double rho = snap.airDensity_kg_m3;
+        bool airDataDirty = false;
         if constexpr (requires { aero.atmosphereOffsets(); }) {
             if (!aero.atmosphereOffsets().isStandard()) {
                 const auto atm = Env::US1976Atmosphere(snap.altitudeMsl_m, aero.atmosphereOffsets());
                 snap.ambientTemperature_K = atm.T;
-                snap.ambientPressure_Pa   = atm.p;
-                snap.airDensity_kg_m3     = atm.rho;
-                snap.speedOfSound_m_s     = atm.a;
+                snap.ambientPressure_Pa = atm.p;
+                snap.airDensity_kg_m3 = atm.rho;
+                snap.speedOfSound_m_s = atm.a;
                 a_sound = atm.a;
-                rho     = atm.rho;
+                rho = atm.rho;
                 airDataDirty = true;
             }
         }
         if constexpr (requires { aero.windECEF(); aero.gust(); }) {
             namespace Coord = Aetherion::Coordinate;
             const Eigen::Vector3d& w_ecef = aero.windECEF();
-            const Eigen::Vector3d  gust_B = aero.gust().linear();
+            const Eigen::Vector3d gust_B = aero.gust().linear();
             if (w_ecef.squaredNorm() > 0.0 || gust_B.squaredNorm() > 0.0) {
                 const Coord::Vec3<double> w_ecef_arr = { w_ecef.x(), w_ecef.y(), w_ecef.z() };
-                const Coord::Vec3<double> w_ned_arr  =
+                const Coord::Vec3<double> w_ned_arr =
                     Coord::ECEFToNED(w_ecef_arr, snap.latitude_rad, snap.longitude_rad);
                 // Gust is in body axes: rotate to NED through R_NB = R_IN^T R_IB.
                 const Coord::Mat3<double> R_IN_arr =
@@ -248,7 +247,7 @@ namespace Aetherion::Simulation {
         }
         if (airDataDirty) {
             const double tas = snap.trueAirspeed_m_s;
-            snap.mach               = tas / a_sound;
+            snap.mach = tas / a_sound;
             snap.dynamicPressure_Pa = 0.5 * rho * tas * tas;
         }
 
@@ -268,12 +267,11 @@ namespace Aetherion::Simulation {
         else
             snap.aero_bodyMoment_Nm_M = wrench.f(1);
         snap.aero_bodyMoment_Nm_N = wrench.f(2);
-        snap.aero_bodyForce_N_X   = wrench.f(3);
-        snap.aero_bodyForce_N_Y   = wrench.f(4);
-        snap.aero_bodyForce_N_Z   = wrench.f(5);
+        snap.aero_bodyForce_N_X = wrench.f(3);
+        snap.aero_bodyForce_N_Y = wrench.f(4);
+        snap.aero_bodyForce_N_Z = wrench.f(5);
 
         return snap;
     }
 
 } // namespace Aetherion::Simulation
-

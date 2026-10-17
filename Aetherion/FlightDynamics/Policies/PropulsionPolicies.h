@@ -17,12 +17,13 @@ namespace Aetherion::FlightDynamics {
     /// @brief Propulsion policy that returns a zero wrench (coasting / unpowered phase).
     ///
     /// Satisfies @c PropulsionPolicy.  The compiler eliminates the zero addition.
-    struct ZeroPropulsionPolicy {
-        template<class S>
+    struct ZeroPropulsionPolicy
+    {
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>&,
-                const Eigen::Matrix<S, 6, 1>&,
-                S, S) const
+        operator()(const ODE::RKMK::Lie::SE3<S>&,
+            const Eigen::Matrix<S, 6, 1>&,
+            S, S) const
         {
             Spatial::Wrench<S> w{};
             w.f.setZero();
@@ -36,14 +37,15 @@ namespace Aetherion::FlightDynamics {
     ///
     /// Sets @f$F_z = \text{thrust\_N}@f$ in the body frame; all other
     /// wrench components are zero.  Satisfies @c PropulsionPolicy.
-    struct ConstantThrustPolicy {
+    struct ConstantThrustPolicy
+    {
         double thrust_N{ 0.0 }; ///< Axial thrust magnitude [N] (positive = thrust along +z body axis).
 
-        template<class S>
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>&,
-                const Eigen::Matrix<S, 6, 1>&,
-                S, S) const
+        operator()(const ODE::RKMK::Lie::SE3<S>&,
+            const Eigen::Matrix<S, 6, 1>&,
+            S, S) const
         {
             Spatial::Wrench<S> w{};
             w.f.setZero();
@@ -64,14 +66,15 @@ namespace Aetherion::FlightDynamics {
     /// simulators can update it between integration steps (zero-order hold).
     ///
     /// Satisfies @c PropulsionPolicy.
-    struct AxialThrustPolicy {
+    struct AxialThrustPolicy
+    {
         double thrust_N{ 0.0 }; ///< Thrust magnitude [N] (positive = forward along body +x).
 
-        template<class S>
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>&,
-                const Eigen::Matrix<S, 6, 1>&,
-                S, S) const
+        operator()(const ODE::RKMK::Lie::SE3<S>&,
+            const Eigen::Matrix<S, 6, 1>&,
+            S, S) const
         {
             Spatial::Wrench<S> w{};
             w.f.setZero();

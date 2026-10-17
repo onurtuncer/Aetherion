@@ -21,4 +21,3 @@ namespace Aetherion::Serialization::Json {
     void to_json(nlohmann::json& j, const RigidBody::InertialParameters& ip);
 
 } // namespace Aetherion::Serialization
-

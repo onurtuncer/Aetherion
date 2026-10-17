@@ -62,64 +62,64 @@ namespace Aetherion::Examples::DraglessSphere {
 /// `mutable` unique_ptr so the `const` hook contract of the base class is respected.
 ///
 /// Reference: NASA TM-2015-218675, Section B.1.1 / Table 25.
-class DraglessSphereApplication : public Simulation::Application
-{
-public:
+    class DraglessSphereApplication : public Simulation::Application
+    {
+    public:
     /// @brief Constructs the application and forwards command-line arguments to Application for parsing.
     ///
     /// The simulator is not created here; it is allocated lazily by prepareSimulation().
     /// @param argc Argument count from main().
     /// @param argv Argument vector from main().
-    explicit DraglessSphereApplication(int argc, char** argv)
-        : Application(argc, argv)
-    {
-    }
+        explicit DraglessSphereApplication(int argc, char** argv)
+            : Application(argc, argv)
+        {
+        }
 
-protected:
+    protected:
     // ── Hook overrides ────────────────────────────────────────────────────────
 
     /// @brief Prints the NASA TM-2015-218675 validation-case startup banner via the core logger.
-    void logStartupBanner() const override;
+        void logStartupBanner() const override;
 
     /// @brief Runs steps 1–4: deserialise JSON config → compute initial ERA → build StateD → allocate simulator.
     ///
     /// After this call `m_Simulator` is non-null and ready to integrate.
-    void prepareSimulation() const override;
+        void prepareSimulation() const override;
 
     /// @brief Writes the t = startTime snapshot row to @p csv and emits the initial INFO log line.
     /// @param csv Open output CSV stream positioned after the column-header row.
-    void writeInitialSnapshot(std::ofstream& csv) const override;
+        void writeInitialSnapshot(std::ofstream& csv) const override;
 
     /// @brief Advances the simulator by one step @p h and, if @p doWrite is true, writes a CSV row.
     /// @param csv Open output CSV stream.
     /// @param h Integration step size [s].
     /// @param doWrite `true` on write-interval boundaries; `false` for intermediate steps.
     /// @return StepObservation containing time, altitude, speed, latitude, longitude, and Newton convergence info.
-    StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
+        StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
 
     /// @brief Emits the final INFO summary block (end time, final altitude, convergence statistics).
-    void logFinalSummary() const override;
+        void logFinalSummary() const override;
 
-private:
+    private:
     // ── Per-step helpers (one function per numbered run-loop step) ────────────
 
     /// @brief Step 1 — deserialises the RigidBody::Config from the input JSON file.
     /// @return Fully populated RigidBody::Config.
     /// @throws std::runtime_error if the file cannot be opened or parsed.
-    [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
+        [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
 
     /// @brief Step 2 — computes the initial Earth Rotation Angle (ERA) from simulation start time.
     ///
     /// Uses a linear approximation: @f$ \theta_0 = \omega_E \cdot t_0 @f$.
     /// @param t0 Simulation start time [s].
     /// @return Initial ERA @f$ \theta_0 @f$ [rad].
-    [[nodiscard]] static double computeInitialERA(double t0) noexcept;
+        [[nodiscard]] static double computeInitialERA(double t0) noexcept;
 
     /// @brief Step 3 — builds the flat SE(3) state vector from the RigidBody::Config and initial ERA.
     /// @param rb_cfg Deserialised rigid-body configuration.
     /// @param theta0 Initial Earth Rotation Angle [rad] from computeInitialERA().
     /// @return Initial StateD (double-precision flat state vector).
-    [[nodiscard]] static RigidBody::StateD
+        [[nodiscard]] static RigidBody::StateD
         buildInitialState(const RigidBody::Config& rb_cfg, double theta0);
 
     /// @brief Step 4 — allocates and configures the DraglessSphereSimulator.
@@ -127,15 +127,15 @@ private:
     /// @param x0 Initial state vector.
     /// @param theta0 Initial Earth Rotation Angle [rad].
     /// @return Heap-allocated DraglessSphereSimulator ready to integrate.
-    [[nodiscard]] static std::unique_ptr<DraglessSphereSimulator>
+        [[nodiscard]] static std::unique_ptr<DraglessSphereSimulator>
         constructSimulator(const RigidBody::InertialParameters& ip,
             const RigidBody::StateD& x0,
-            double                   theta0);
+            double theta0);
 
     // ── Mutable simulation state (lazy-initialised in prepareSimulation) ──────
     // `mutable` because run() and all hooks are const (run() is const in
     // the base class contract). This is the only shared mutable state.
-    mutable std::unique_ptr<DraglessSphereSimulator> m_Simulator;
-};
+        mutable std::unique_ptr<DraglessSphereSimulator> m_Simulator;
+    };
 
 } // namespace Aetherion::Examples::DraglessSphere

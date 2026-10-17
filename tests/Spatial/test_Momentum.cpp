@@ -18,16 +18,16 @@
 
 namespace {
 
-    template<typename S>
+    template <typename S>
     using Vec3 = Eigen::Matrix<S, 3, 1>;
 
-    template<typename S>
+    template <typename S>
     using Mat3 = Eigen::Matrix<S, 3, 3>;
 
-    template<typename S>
+    template <typename S>
     using Mat6 = Eigen::Matrix<S, 6, 6>;
 
-    template<typename S>
+    template <typename S>
     inline Aetherion::Spatial::Twist<S> MakeTwist(const Vec3<S>& w, const Vec3<S>& v)
     {
         Aetherion::Spatial::Twist<S> out{};

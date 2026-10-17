@@ -22,8 +22,9 @@ namespace NasaCsv {
     /// Returns std::nullopt for empty strings, "nan", and "null" tokens.
     /// Prefers std::from_chars (no locale, no allocation) when available;
     /// falls back to std::stod on older standard libraries.
-    inline std::optional<double> parse_double(std::string_view s) {
-        std::string str{ trim(std::string{s}) };
+    inline std::optional<double> parse_double(std::string_view s)
+    {
+        std::string str{ trim(std::string{ s }) };
         if (str.empty()) return std::nullopt;
 
         auto lower = str;
@@ -34,7 +35,7 @@ namespace NasaCsv {
 #if defined(__cpp_lib_to_chars) && __cpp_lib_to_chars >= 201611L
         double value{};
         const char* first = str.data();
-        const char* last  = str.data() + str.size();
+        const char* last = str.data() + str.size();
         auto res = std::from_chars(first, last, value, std::chars_format::general);
         if (res.ec == std::errc{} && res.ptr == last) return value;
         // fall through to stod on partial parse

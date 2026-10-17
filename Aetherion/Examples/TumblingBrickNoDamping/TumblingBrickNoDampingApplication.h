@@ -56,32 +56,32 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
 /// zero aerodynamic forces, reproducing the torque-free tumbling reference trajectory.
 ///
 /// Reference: NASA TM-2015-218675, Section B.1.2 / Table 26.
-class TumblingBrickNoDampingApplication : public Simulation::Application
-{
-public:
-    explicit TumblingBrickNoDampingApplication(int argc, char** argv)
-        : Application(argc, argv)
+    class TumblingBrickNoDampingApplication : public Simulation::Application
     {
-    }
+    public:
+        explicit TumblingBrickNoDampingApplication(int argc, char** argv)
+            : Application(argc, argv)
+        {
+        }
 
-protected:
-    void logStartupBanner()                                              const override;
-    void prepareSimulation()                                             const override;
-    void writeInitialSnapshot(std::ofstream& csv)                        const override;
-    StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
-    void logFinalSummary()                                               const override;
+    protected:
+        void logStartupBanner() const override;
+        void prepareSimulation() const override;
+        void writeInitialSnapshot(std::ofstream& csv) const override;
+        StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
+        void logFinalSummary() const override;
 
-private:
-    [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
-    [[nodiscard]] static double     computeInitialERA(double t0) noexcept;
-    [[nodiscard]] static RigidBody::StateD
+    private:
+        [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
+        [[nodiscard]] static double computeInitialERA(double t0) noexcept;
+        [[nodiscard]] static RigidBody::StateD
         buildInitialState(const RigidBody::Config& rb_cfg, double theta0);
-    [[nodiscard]] static std::unique_ptr<TumblingBrickNoDampingSimulator>
+        [[nodiscard]] static std::unique_ptr<TumblingBrickNoDampingSimulator>
         constructSimulator(const RigidBody::InertialParameters& ip,
-                           const RigidBody::StateD&             x0,
-                           double                               theta0);
+            const RigidBody::StateD& x0,
+            double theta0);
 
-    mutable std::unique_ptr<TumblingBrickNoDampingSimulator> m_Simulator;
-};
+        mutable std::unique_ptr<TumblingBrickNoDampingSimulator> m_Simulator;
+    };
 
 } // namespace Aetherion::Examples::TumblingBrickNoDamping

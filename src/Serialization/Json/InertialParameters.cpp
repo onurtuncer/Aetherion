@@ -13,8 +13,9 @@ namespace Aetherion::Serialization::Json {
 
     void from_json(const nlohmann::json& j, RigidBody::InertialParameters& ip)
     {
-        try { ip.mass_kg = j.at("mass_kg").get<double>(); }
-        catch (const std::exception& e) {
+        try {
+            ip.mass_kg = j.at("mass_kg").get<double>();
+        } catch (const std::exception& e) {
             throw std::runtime_error(std::string("inertialParameters.mass_kg: ") + e.what());
         }
 
@@ -26,8 +27,7 @@ namespace Aetherion::Serialization::Json {
             ip.Ixy = I.at("Ixy").get<double>();
             ip.Iyz = I.at("Iyz").get<double>();
             ip.Ixz = I.at("Ixz").get<double>();
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             throw std::runtime_error(std::string("inertialParameters.inertia_kgm2: ") + e.what());
         }
 
@@ -36,8 +36,7 @@ namespace Aetherion::Serialization::Json {
             ip.xbar_m = r.at("x").get<double>();
             ip.ybar_m = r.at("y").get<double>();
             ip.zbar_m = r.at("z").get<double>();
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             throw std::runtime_error(std::string("inertialParameters.body_origin_wrt_cog_m: ") + e.what());
         }
     }
@@ -45,20 +44,16 @@ namespace Aetherion::Serialization::Json {
     void to_json(nlohmann::json& j, const RigidBody::InertialParameters& ip)
     {
         j = {
-            {"mass_kg", ip.mass_kg},
-            {"inertia_kgm2", {
-                {"Ixx", ip.Ixx},
-                {"Iyy", ip.Iyy},
-                {"Izz", ip.Izz},
-                {"Ixy", ip.Ixy},
-                {"Iyz", ip.Iyz},
-                {"Ixz", ip.Ixz}
-            }},
-            {"body_origin_wrt_cog_m", {
-                {"x", ip.xbar_m},
-                {"y", ip.ybar_m},
-                {"z", ip.zbar_m}
-            }}
+            { "mass_kg", ip.mass_kg },
+            { "inertia_kgm2", { { "Ixx", ip.Ixx },
+                                  { "Iyy", ip.Iyy },
+                                  { "Izz", ip.Izz },
+                                  { "Ixy", ip.Ixy },
+                                  { "Iyz", ip.Iyz },
+                                  { "Ixz", ip.Ixz } } },
+            { "body_origin_wrt_cog_m", { { "x", ip.xbar_m },
+                                           { "y", ip.ybar_m },
+                                           { "z", ip.zbar_m } } }
         };
     }
 

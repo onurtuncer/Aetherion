@@ -23,7 +23,8 @@
 
 namespace Aetherion::FlightDynamics::Serialization::Json {
 
-    class ConfigError final : public std::runtime_error {
+    class ConfigError final : public std::runtime_error
+    {
     public:
         using std::runtime_error::runtime_error;
     };

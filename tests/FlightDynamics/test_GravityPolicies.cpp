@@ -27,7 +27,7 @@
 
 namespace {
 
-    using SE3d  = Aetherion::ODE::RKMK::Lie::SE3<double>;
+    using SE3d = Aetherion::ODE::RKMK::Lie::SE3<double>;
     using Mat3d = Eigen::Matrix3d;
     using Vec3d = Eigen::Vector3d;
 
@@ -49,19 +49,22 @@ TEST_CASE("ZeroGravityPolicy: returns zero wrench for any pose or mass",
     using namespace Aetherion::FlightDynamics;
     ZeroGravityPolicy p;
 
-    SECTION("identity pose, unit mass") {
+    SECTION("identity pose, unit mass")
+    {
         auto w = p(SE3d::Identity(), 1.0);
         CHECK(w.f.isZero());
     }
 
-    SECTION("non-trivial position, large mass") {
+    SECTION("non-trivial position, large mass")
+    {
         SE3d g(Mat3d::Identity(), Vec3d(kRe, 0.0, 0.0));
         auto w = p(g, 5000.0);
         CHECK(w.f.isZero());
     }
 
-    SECTION("AD<double> evaluation gives all zeros") {
-        using AD    = CppAD::AD<double>;
+    SECTION("AD<double> evaluation gives all zeros")
+    {
+        using AD = CppAD::AD<double>;
         using SE3ad = Aetherion::ODE::RKMK::Lie::SE3<AD>;
 
         SE3ad g_ad(Mat3d::Identity().cast<AD>(), Vec3d(kRe, 0.0, 0.0).cast<AD>());
@@ -95,8 +98,8 @@ TEST_CASE("CentralGravityPolicy: force and moment at equator with identity rotat
 
     // With identity rotation body frame == ECI; force points along -x
     CHECK_THAT(w.f(3), WithinAbs(-kGSurf * mass, 1e-6));
-    CHECK_THAT(w.f(4), WithinAbs(0.0,            1e-12));
-    CHECK_THAT(w.f(5), WithinAbs(0.0,            1e-12));
+    CHECK_THAT(w.f(4), WithinAbs(0.0, 1e-12));
+    CHECK_THAT(w.f(5), WithinAbs(0.0, 1e-12));
 }
 
 TEST_CASE("CentralGravityPolicy: force is proportional to mass",
@@ -108,7 +111,7 @@ TEST_CASE("CentralGravityPolicy: force is proportional to mass",
     CentralGravityPolicy p;
     SE3d g(Mat3d::Identity(), Vec3d(kRe, 0.0, 0.0));
 
-    for (double mass : {1.0, 10.0, 500.0}) {
+    for (double mass : { 1.0, 10.0, 500.0 }) {
         auto w = p(g, mass);
         CHECK_THAT(w.f(3), WithinAbs(-kGSurf * mass, 1e-3));
         CHECK_THAT(w.f(4), WithinAbs(0.0, 1e-6));
@@ -133,16 +136,16 @@ TEST_CASE("CentralGravityPolicy: force rotates correctly into body frame",
 
     Mat3d R;
     R << 0, -1, 0,
-         1,  0, 0,
-         0,  0, 1;
+        1, 0, 0,
+        0, 0, 1;
 
     const double mass = 1.0;
     SE3d g(R, Vec3d(kRe, 0.0, 0.0));
     auto w = CentralGravityPolicy{}(g, mass);
 
-    CHECK_THAT(w.f(3), WithinAbs(0.0,           1e-6));
+    CHECK_THAT(w.f(3), WithinAbs(0.0, 1e-6));
     CHECK_THAT(w.f(4), WithinAbs(kGSurf * mass, 1e-6));
-    CHECK_THAT(w.f(5), WithinAbs(0.0,           1e-12));
+    CHECK_THAT(w.f(5), WithinAbs(0.0, 1e-12));
 }
 
 TEST_CASE("CentralGravityPolicy: custom mu is applied",
@@ -153,7 +156,7 @@ TEST_CASE("CentralGravityPolicy: custom mu is applied",
 
     const double mu_custom = 2.0e14;
     CentralGravityPolicy p{ mu_custom };
-    const double mass    = 1.0;
+    const double mass = 1.0;
     const double g_custom = mu_custom / (kRe * kRe);
 
     SE3d g(Mat3d::Identity(), Vec3d(kRe, 0.0, 0.0));
@@ -167,7 +170,7 @@ TEST_CASE("CentralGravityPolicy: AD<double> evaluation matches double result",
 {
     using namespace Aetherion::FlightDynamics;
     using Catch::Matchers::WithinAbs;
-    using AD    = CppAD::AD<double>;
+    using AD = CppAD::AD<double>;
     using SE3ad = Aetherion::ODE::RKMK::Lie::SE3<AD>;
 
     const double mass = 2.0;
@@ -192,14 +195,14 @@ TEST_CASE("J2GravityPolicy: equatorial J2 perturbation increases radial force ma
     using namespace Aetherion::FlightDynamics;
 
     CentralGravityPolicy central;
-    J2GravityPolicy      j2pol;
+    J2GravityPolicy j2pol;
     const double mass = 1.0;
 
     SE3d g(Mat3d::Identity(), Vec3d(kRe, 0.0, 0.0));
-    auto w_c  = central(g, mass);
+    auto w_c = central(g, mass);
     auto w_j2 = j2pol(g, mass);
 
-    REQUIRE(w_c.f(3)  < 0.0);
+    REQUIRE(w_c.f(3) < 0.0);
     REQUIRE(w_j2.f(3) < 0.0);
     CHECK(std::abs(w_j2.f(3)) > std::abs(w_c.f(3)));
 
@@ -217,14 +220,14 @@ TEST_CASE("J2GravityPolicy: polar J2 perturbation reduces radial force magnitude
     using namespace Aetherion::FlightDynamics;
 
     CentralGravityPolicy central;
-    J2GravityPolicy      j2pol;
+    J2GravityPolicy j2pol;
     const double mass = 1.0;
 
     SE3d g(Mat3d::Identity(), Vec3d(0.0, 0.0, kRe));
-    auto w_c  = central(g, mass);
+    auto w_c = central(g, mass);
     auto w_j2 = j2pol(g, mass);
 
-    REQUIRE(w_c.f(5)  < 0.0);
+    REQUIRE(w_c.f(5) < 0.0);
     REQUIRE(w_j2.f(5) < 0.0);
     CHECK(std::abs(w_j2.f(5)) < std::abs(w_c.f(5)));
 }
@@ -237,7 +240,7 @@ TEST_CASE("J2GravityPolicy: zero moment regardless of position",
 
     J2GravityPolicy p;
 
-    for (const auto& pos : {Vec3d(kRe, 0, 0), Vec3d(0, kRe, 0), Vec3d(0, 0, kRe)}) {
+    for (const auto& pos : { Vec3d(kRe, 0, 0), Vec3d(0, kRe, 0), Vec3d(0, 0, kRe) }) {
         SE3d g(Mat3d::Identity(), pos);
         auto w = p(g, 1.0);
         CHECK_THAT(w.f(0), WithinAbs(0.0, 1e-12));
@@ -251,7 +254,7 @@ TEST_CASE("J2GravityPolicy: AD<double> evaluation matches double result",
 {
     using namespace Aetherion::FlightDynamics;
     using Catch::Matchers::WithinAbs;
-    using AD    = CppAD::AD<double>;
+    using AD = CppAD::AD<double>;
     using SE3ad = Aetherion::ODE::RKMK::Lie::SE3<AD>;
 
     const double mass = 1.0;

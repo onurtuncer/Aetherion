@@ -10,7 +10,7 @@
 #include <catch2/catch_approx.hpp>
 #include <cppad/cppad.hpp>
 
-#include <Aetherion/Environment/Atmosphere.h>  
+#include <Aetherion/Environment/Atmosphere.h>
 
 using Catch::Approx;
 using namespace Aetherion;
@@ -91,8 +91,7 @@ TEST_CASE("US1976Atmosphere - CppAD derivatives vs finite differences", "[US1976
     auto fd = central_difference(
         [](double h) { return Environment::US1976Atmosphere(h); },
         h0,
-        dh
-    );
+        dh);
 
     const double dTdh_fd = fd.T;
     const double dpdh_fd = fd.p;
@@ -144,8 +143,7 @@ TEST_CASE("US1976Atmosphere - CppAD works in an isothermal layer", "[US1976][Cpp
     auto fd = central_difference(
         [](double h) { return Environment::US1976Atmosphere(h); },
         h0,
-        dh
-    );
+        dh);
 
     const double dTdh_fd = fd.T;
     const double dpdh_fd = fd.p;

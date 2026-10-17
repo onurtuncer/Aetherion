@@ -38,9 +38,9 @@ TEST_CASE("BodyRates JSON round-trip", "[serialization][RigidBody]")
     SECTION("from_json deserialises all fields correctly")
     {
         const nlohmann::json j = {
-            {"roll_rad_s",  0.4},
-            {"pitch_rad_s", 0.5},
-            {"yaw_rad_s",   0.6}
+            { "roll_rad_s", 0.4 },
+            { "pitch_rad_s", 0.5 },
+            { "yaw_rad_s", 0.6 }
         };
 
         RigidBody::BodyRates rot{};
@@ -81,7 +81,7 @@ TEST_CASE("BodyRates JSON round-trip", "[serialization][RigidBody]")
     SECTION("from_json throws on missing key")
     {
         const nlohmann::json j = {
-            {"roll_rad_s", 0.1}
+            { "roll_rad_s", 0.1 }
             // pitch_rad_s and yaw_rad_s deliberately omitted
         };
 
@@ -91,4 +91,3 @@ TEST_CASE("BodyRates JSON round-trip", "[serialization][RigidBody]")
             ContainsSubstring("pitch_rad_s"));
     }
 }
-

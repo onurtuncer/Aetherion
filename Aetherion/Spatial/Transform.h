@@ -36,13 +36,13 @@
 
 namespace Aetherion::Spatial {
 
-    template<typename Scalar>
+    template <typename Scalar>
     using Mat3 = Eigen::Matrix<Scalar, 3, 3>;
 
-    template<typename Scalar>
+    template <typename Scalar>
     using Vec3 = Eigen::Matrix<Scalar, 3, 1>;
 
-    template<typename Scalar>
+    template <typename Scalar>
     using Mat6 = Eigen::Matrix<Scalar, 6, 6>;
 
     /// @brief Build the 6×6 spatial motion transform matrix.
@@ -54,7 +54,7 @@ namespace Aetherion::Spatial {
     /// @param R  Rotation matrix from A to B (3×3).
     /// @param r  Translation from A-origin to B-origin, expressed in B (3×1) [m].
     /// @return   6×6 spatial motion transform.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Mat6<Scalar> MotionTransformMatrix(
         const Mat3<Scalar>& R,
         const Vec3<Scalar>& r)
@@ -80,7 +80,7 @@ namespace Aetherion::Spatial {
     /// @param R  Rotation matrix from A to B (3×3).
     /// @param r  Translation from A-origin to B-origin, expressed in B (3×1) [m].
     /// @return   6×6 spatial force transform.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Mat6<Scalar> ForceTransformMatrix(
         const Mat3<Scalar>& R,
         const Vec3<Scalar>& r)
@@ -102,7 +102,7 @@ namespace Aetherion::Spatial {
     /// @param r    Translation from source to target origin (in target frame) [m].
     /// @param v_A  Input twist in source frame A.
     /// @return     Equivalent twist in target frame B.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Twist<Scalar> TransformMotion(
         const Mat3<Scalar>& R,
         const Vec3<Scalar>& r,
@@ -118,7 +118,7 @@ namespace Aetherion::Spatial {
     /// @param r    Translation from source to target origin (in target frame) [m].
     /// @param f_A  Input wrench in source frame A.
     /// @return     Equivalent wrench in target frame B.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Wrench<Scalar> TransformForce(
         const Mat3<Scalar>& R,
         const Vec3<Scalar>& r,

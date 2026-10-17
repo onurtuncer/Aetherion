@@ -27,22 +27,23 @@
 
 namespace Aetherion::Examples::TwoStageRocket {
 
-class TwoStageRocketApplication : public Simulation::Application
-{
-public:
-    explicit TwoStageRocketApplication(int argc, char** argv)
-        : Application(argc, argv) {}
+    class TwoStageRocketApplication : public Simulation::Application
+    {
+    public:
+        explicit TwoStageRocketApplication(int argc, char** argv)
+            : Application(argc, argv)
+        {}
 
-protected:
-    void logStartupBanner()                                                const override;
-    void writeCsvHeader(std::ofstream& csv)                                const override;
-    void prepareSimulation()                                               const override;
-    void writeInitialSnapshot(std::ofstream& csv)                          const override;
-    StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
-    void logFinalSummary()                                                 const override;
+    protected:
+        void logStartupBanner() const override;
+        void writeCsvHeader(std::ofstream& csv) const override;
+        void prepareSimulation() const override;
+        void writeInitialSnapshot(std::ofstream& csv) const override;
+        StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
+        void logFinalSummary() const override;
 
-private:
-    mutable std::unique_ptr<TwoStageRocketSimulator<>> m_Simulator;
-};
+    private:
+        mutable std::unique_ptr<TwoStageRocketSimulator<>> m_Simulator;
+    };
 
 } // namespace Aetherion::Examples::TwoStageRocket

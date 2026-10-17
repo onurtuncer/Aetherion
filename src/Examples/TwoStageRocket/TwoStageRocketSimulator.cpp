@@ -16,6 +16,6 @@
 
 namespace Aetherion::Examples::TwoStageRocket {
 
-template class TwoStageRocketSimulator<>;
+    template class TwoStageRocketSimulator<>;
 
 } // namespace Aetherion::Examples::TwoStageRocket

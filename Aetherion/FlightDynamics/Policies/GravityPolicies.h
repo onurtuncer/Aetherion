@@ -20,10 +20,11 @@ namespace Aetherion::FlightDynamics {
     ///
     /// Useful for unit tests and zero-gravity environments.
     /// The compiler optimises the zero addition away entirely.
-    struct ZeroGravityPolicy {
-        template<class S>
+    struct ZeroGravityPolicy
+    {
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>&, S) const
+        operator()(const ODE::RKMK::Lie::SE3<S>&, S) const
         {
             Spatial::Wrench<S> w{};
             w.f.setZero();
@@ -40,12 +41,13 @@ namespace Aetherion::FlightDynamics {
     /// @f$R^\top@f$ from the SE(3) pose.  The wrench is the one at the centre
     /// of mass, where the force acts, so its moment is zero;
     /// @c RigidBody::VectorField moves it to the body origin.
-    struct CentralGravityPolicy {
+    struct CentralGravityPolicy
+    {
         double mu{ Environment::WGS84::kGM_m3_s2 }; ///< Gravitational parameter @f$\mu@f$ [m³/s²].
 
-        template<class S>
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>& g, S mass) const
+        operator()(const ODE::RKMK::Lie::SE3<S>& g, S mass) const
         {
             const Environment::Vec3<S> r{ g.p(0), g.p(1), g.p(2) };
             const auto g_arr = Environment::CentralGravity(r, S(mu));
@@ -55,8 +57,8 @@ namespace Aetherion::FlightDynamics {
             w.f.template tail<3>() =
                 g.R.transpose().template cast<S>() *
                 Eigen::Matrix<S, 3, 1>{ g_arr[0] * mass,
-                g_arr[1] * mass,
-                g_arr[2] * mass };
+                    g_arr[1] * mass,
+                    g_arr[2] * mass };
             return w;
         }
     };
@@ -70,14 +72,15 @@ namespace Aetherion::FlightDynamics {
     /// trajectories (nodal regression, perigee precession).  As for
     /// @c CentralGravityPolicy the wrench is at the centre of mass, moment zero.
     /// All default values are sourced from @c WGS84.h.
-    struct J2GravityPolicy {
+    struct J2GravityPolicy
+    {
         double mu{ Environment::WGS84::kGM_m3_s2 };      ///< Gravitational parameter @f$\mu@f$ [m³/s²].
         double Re{ Environment::WGS84::kSemiMajorAxis_m }; ///< Earth equatorial radius [m].
         double J2{ Environment::WGS84::kJ2 };              ///< J₂ zonal harmonic coefficient [-].
 
-        template<class S>
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>& g, S mass) const
+        operator()(const ODE::RKMK::Lie::SE3<S>& g, S mass) const
         {
             const Environment::Vec3<S> r{ g.p(0), g.p(1), g.p(2) };
             const auto g_arr = Environment::J2(r, S(mu), S(Re), S(J2));
@@ -87,8 +90,8 @@ namespace Aetherion::FlightDynamics {
             w.f.template tail<3>() =
                 g.R.transpose().template cast<S>() *
                 Eigen::Matrix<S, 3, 1>{ g_arr[0] * mass,
-                g_arr[1] * mass,
-                g_arr[2] * mass };
+                    g_arr[1] * mass,
+                    g_arr[2] * mass };
             return w;
         }
     };

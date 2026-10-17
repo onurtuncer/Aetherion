@@ -27,7 +27,9 @@ static RigidBody::InertialParameters makeIP()
 {
     RigidBody::InertialParameters ip;
     ip.mass_kg = 1.0;
-    ip.Ixx = 1.0; ip.Iyy = 1.0; ip.Izz = 1.0;
+    ip.Ixx = 1.0;
+    ip.Iyy = 1.0;
+    ip.Izz = 1.0;
     return ip;
 }
 
@@ -303,7 +305,7 @@ TEST_CASE("MakeSnapshot1 (aero overload): kinematic/atmospheric fields match the
     FlightDynamics::ZeroAeroPolicy aero{};
 
     auto snapSingle = Simulation::MakeSnapshot1(3.0, s, 0.1, gravity);
-    auto snapAero    = Simulation::MakeSnapshot1(3.0, s, 0.1, gravity, aero);
+    auto snapAero = Simulation::MakeSnapshot1(3.0, s, 0.1, gravity, aero);
 
     REQUIRE(snapAero.time == Catch::Approx(snapSingle.time));
     REQUIRE(snapAero.altitudeMsl_m == Catch::Approx(snapSingle.altitudeMsl_m).epsilon(1e-12));

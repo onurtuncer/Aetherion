@@ -62,107 +62,107 @@ namespace Aetherion::Examples::TwoStageRocket {
 ///
 /// All quantities in SI (N, N·m). Dynamic pressure uses US 1976 density at
 /// geocentric altitude.
-class RocketAeroPolicy
-{
-public:
+    class RocketAeroPolicy
+    {
+    public:
     // Reference geometry (from twostage_aero.dml constants)
-    static constexpr double kSref_m2  = 7.0;  ///< Reference area [m²].
-    static constexpr double kCbar_m   = 3.0;  ///< Longitudinal reference length [m].
-    static constexpr double kBspan_m  = 3.0;  ///< Lateral reference length [m].
+        static constexpr double kSref_m2 = 7.0;  ///< Reference area [m²].
+        static constexpr double kCbar_m = 3.0;  ///< Longitudinal reference length [m].
+        static constexpr double kBspan_m = 3.0;  ///< Lateral reference length [m].
 
     // ── Construction ──────────────────────────────────────────────────────────
 
-    RocketAeroPolicy() = default;
+        RocketAeroPolicy() = default;
 
-    explicit RocketAeroPolicy(
-        const std::shared_ptr<const Serialization::DAVEMLAeroModel>& model)
-        : m_model(model)
-    {}
+        explicit RocketAeroPolicy(
+            const std::shared_ptr<const Serialization::DAVEMLAeroModel>& model)
+            : m_model(model)
+        {}
 
     // ── Environment (optional; defaults to calm air on a standard day) ────────
 
     /// @brief Steady wind as an ECEF vector [m/s] (see ConstantECEFWind::from_ned).
-    void setWindECEF(const Eigen::Vector3d& v_wind_ecef) noexcept { m_windECEF = v_wind_ecef; }
-    [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return m_windECEF; }
+        void setWindECEF(const Eigen::Vector3d& v_wind_ecef) noexcept { m_windECEF = v_wind_ecef; }
+        [[nodiscard]] const Eigen::Vector3d& windECEF() const noexcept { return m_windECEF; }
 
     /// @brief ISA + dT and sea-level pressure offset for the density.
-    void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
-    [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
+        void setAtmosphereOffsets(const Environment::AtmosphereOffsets& o) noexcept { m_atm = o; }
+        [[nodiscard]] const Environment::AtmosphereOffsets& atmosphereOffsets() const noexcept { return m_atm; }
 
     // ── AeroPolicy interface ──────────────────────────────────────────────────
 
-    template<class S>
-    Spatial::Wrench<S>
-    operator()(const ODE::RKMK::Lie::SE3<S>& g,
-               const Eigen::Matrix<S, 6, 1>& nu_B,
-               S /*mass*/, S t) const
-    {
-        using Environment::detail::SquareRoot;
-        using Environment::detail::ArcTangent;
-        using Environment::detail::ArcSine;
-        using Environment::detail::Sine;
-        using Environment::detail::Cosine;
+        template <class S>
+        Spatial::Wrench<S>
+        operator()(const ODE::RKMK::Lie::SE3<S>& g,
+            const Eigen::Matrix<S, 6, 1>& nu_B,
+            S /*mass*/, S t) const
+        {
+            using Environment::detail::SquareRoot;
+            using Environment::detail::ArcTangent;
+            using Environment::detail::ArcSine;
+            using Environment::detail::Sine;
+            using Environment::detail::Cosine;
 
-        constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
-        constexpr double kPi     = std::numbers::pi;
+            constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
+            constexpr double kPi = std::numbers::pi;
 
         // ── Atmosphere-relative velocity in body frame ────────────────────────
         // Earth-surface velocity and the steady wind, through the shared helper
         // (FlightDynamics/Policies/AirRelative.h); no gust on the rocket.
-        (void)kOmegaE;
-        const Environment::GustState noGust{};
-        const Eigen::Matrix<S, 3, 1> v_rel =
-            FlightDynamics::AirRelativeVelocity_B(g, nu_B, t, m_windECEF, noGust);
+            (void)kOmegaE;
+            const Environment::GustState noGust{};
+            const Eigen::Matrix<S, 3, 1> v_rel =
+                FlightDynamics::AirRelativeVelocity_B(g, nu_B, t, m_windECEF, noGust);
 
-        const S& u  = v_rel(0);
-        const S& v  = v_rel(1);
-        const S& w  = v_rel(2);
-        const S vt  = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
+            const S& u = v_rel(0);
+            const S& v = v_rel(1);
+            const S& w = v_rel(2);
+            const S vt = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
 
         // ── Aerodynamic angles [deg] ──────────────────────────────────────────
-        const S alpha_deg = ArcTangent(w / (u + S(1.0e-12)))
-                          * S(180.0 / kPi);
-        const S beta_deg  = ArcSine(v / vt)
-                          * S(180.0 / kPi);
+            const S alpha_deg = ArcTangent(w / (u + S(1.0e-12))) * S(180.0 / kPi);
+            const S beta_deg = ArcSine(v / vt) * S(180.0 / kPi);
 
         // ── Geometric altitude above WGS-84 ellipsoid ────────────────────────
         // Approximate: use geocentric latitude to get the ellipsoid surface
         // radius at the current position, then subtract from the ECI radius.
         // Correct at all latitudes (equatorial approx.: r - a gives ~21 km
         // error at the poles which would badly misplace the atmosphere layer).
-        constexpr double a   = Environment::WGS84::kSemiMajorAxis_m;
-        constexpr double b   = a * (1.0 - Environment::WGS84::kFlattening);
-        constexpr double a2  = a * a;
-        constexpr double b2  = b * b;
-        const S r        = SquareRoot(g.p.squaredNorm() + S(1.0e-30));
-        const S sin_gc   = g.p(2) / r;                   // sin(geocentric lat)
-        const S cos2_gc  = S(1) - sin_gc * sin_gc;       // cos²(geocentric lat)
+            constexpr double a = Environment::WGS84::kSemiMajorAxis_m;
+            constexpr double b = a * (1.0 - Environment::WGS84::kFlattening);
+            constexpr double a2 = a * a;
+            constexpr double b2 = b * b;
+            const S r = SquareRoot(g.p.squaredNorm() + S(1.0e-30));
+            const S sin_gc = g.p(2) / r;                   // sin(geocentric lat)
+            const S cos2_gc = S(1) - sin_gc * sin_gc;       // cos²(geocentric lat)
         // Ellipsoid surface radius: r_s = a·b / sqrt(b²cos²φ + a²sin²φ)
-        const S r_surf   = SquareRoot(S(a2 * b2) /
-            (S(b2) * cos2_gc + S(a2) * sin_gc * sin_gc + S(1.0e-30)));
-        const S alt      = r - r_surf;
-        const S rho      = Environment::US1976Atmosphere(alt, m_atm).rho;
-        const S qbar = S(0.5) * rho * vt * vt;
-        const S qS   = qbar * S(kSref_m2);
+            const S r_surf = SquareRoot(S(a2 * b2) /
+                                        (S(b2) * cos2_gc + S(a2) * sin_gc * sin_gc + S(1.0e-30)));
+            const S alt = r - r_surf;
+            const S rho = Environment::US1976Atmosphere(alt, m_atm).rho;
+            const S qbar = S(0.5) * rho * vt * vt;
+            const S qS = qbar * S(kSref_m2);
 
         // ── Evaluate DAVE-ML aero tables ──────────────────────────────────────
-        if (!m_model) { return Spatial::Wrench<S>{}; }
+            if (!m_model) {
+                return Spatial::Wrench<S>{};
+            }
 
-        std::unordered_map<std::string, S> vars;
-        vars["alpha"] = alpha_deg;
-        vars["beta"]  = beta_deg;
-        const auto c = m_model->evaluateRaw<S>(std::move(vars));
+            std::unordered_map<std::string, S> vars;
+            vars["alpha"] = alpha_deg;
+            vars["beta"] = beta_deg;
+            const auto c = m_model->evaluateRaw<S>(std::move(vars));
 
-        auto get = [&](const char* id) -> S {
-            const auto it = c.find(id);
-            return (it != c.end()) ? it->second : S(0);
-        };
+            auto get = [&](const char* id) -> S {
+                const auto it = c.find(id);
+                return (it != c.end()) ? it->second : S(0);
+            };
 
-        const S CL = get("totalCoefficientOfLift");
-        const S CD = get("totalCoefficientOfDrag");
-        const S CY = get("aeroBodyForceCoefficient_Y");
-        const S Cm = get("aeroBodyMomentCoefficient_Pitch");
-        const S Cn = get("aeroBodyMomentCoefficient_Yaw");
+            const S CL = get("totalCoefficientOfLift");
+            const S CD = get("totalCoefficientOfDrag");
+            const S CY = get("aeroBodyForceCoefficient_Y");
+            const S Cm = get("aeroBodyMomentCoefficient_Pitch");
+            const S Cn = get("aeroBodyMomentCoefficient_Yaw");
 
         // ── Wind-to-body force transform: R_BW = Ry(alpha) * Rz(beta) ─────────
         // F_wind = [−CD, CY, −CL]^T × qS
@@ -170,33 +170,33 @@ public:
         //   Fx = (−CD·ca·cb − CY·ca·sb + CL·sa) × qS
         //   Fy = (−CD·sb    + CY·cb            ) × qS
         //   Fz = (−CD·sa·cb − CY·sa·sb − CL·ca ) × qS
-        const S alpha_rad = alpha_deg * S(kPi / 180.0);
-        const S beta_rad  = beta_deg  * S(kPi / 180.0);
-        const S sa = Sine(alpha_rad),  ca = Cosine(alpha_rad);
-        const S sb = Sine(beta_rad),   cb = Cosine(beta_rad);
+            const S alpha_rad = alpha_deg * S(kPi / 180.0);
+            const S beta_rad = beta_deg * S(kPi / 180.0);
+            const S sa = Sine(alpha_rad), ca = Cosine(alpha_rad);
+            const S sb = Sine(beta_rad), cb = Cosine(beta_rad);
 
-        const S Fx = (-CD*ca*cb - CY*ca*sb + CL*sa) * qS;
-        const S Fy = (-CD*sb    + CY*cb            ) * qS;
-        const S Fz = (-CD*sa*cb - CY*sa*sb - CL*ca ) * qS;
+            const S Fx = (-CD * ca * cb - CY * ca * sb + CL * sa) * qS;
+            const S Fy = (-CD * sb + CY * cb) * qS;
+            const S Fz = (-CD * sa * cb - CY * sa * sb - CL * ca) * qS;
 
         // ── Assemble wrench [Mx, My, Mz, Fx, Fy, Fz] ─────────────────────────
-        Spatial::Wrench<S> wrench{};
-        wrench.f.setZero();
-        wrench.f(0) = S(0);                          // Mx = 0 (axisymmetric body)
-        wrench.f(1) = Cm * qS * S(kCbar_m);          // My = Cm × qS × c̄
-        wrench.f(2) = Cn * qS * S(kBspan_m);         // Mz = Cn × qS × b
-        wrench.f(3) = Fx;
-        wrench.f(4) = Fy;
-        wrench.f(5) = Fz;
-        return wrench;
-    }
+            Spatial::Wrench<S> wrench{};
+            wrench.f.setZero();
+            wrench.f(0) = S(0);                          // Mx = 0 (axisymmetric body)
+            wrench.f(1) = Cm * qS * S(kCbar_m);          // My = Cm × qS × c̄
+            wrench.f(2) = Cn * qS * S(kBspan_m);         // Mz = Cn × qS × b
+            wrench.f(3) = Fx;
+            wrench.f(4) = Fy;
+            wrench.f(5) = Fz;
+            return wrench;
+        }
 
-private:
-    std::shared_ptr<const Serialization::DAVEMLAeroModel> m_model;
-    Eigen::Vector3d                m_windECEF{ Eigen::Vector3d::Zero() }; ///< Steady wind, ECEF [m/s]
-    Environment::AtmosphereOffsets m_atm{};                               ///< ISA + dT, dP_sl
-};
+    private:
+        std::shared_ptr<const Serialization::DAVEMLAeroModel> m_model;
+        Eigen::Vector3d m_windECEF{ Eigen::Vector3d::Zero() }; ///< Steady wind, ECEF [m/s]
+        Environment::AtmosphereOffsets m_atm{};                               ///< ISA + dT, dP_sl
+    };
 
-static_assert(FlightDynamics::AeroPolicy<RocketAeroPolicy>);
+    static_assert(FlightDynamics::AeroPolicy<RocketAeroPolicy>);
 
 } // namespace Aetherion::Examples::TwoStageRocket

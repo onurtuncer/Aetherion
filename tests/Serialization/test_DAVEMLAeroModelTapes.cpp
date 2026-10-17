@@ -39,14 +39,14 @@ using namespace Aetherion::Serialization;
 using Catch::Matchers::WithinAbs;
 
 #ifndef DAVEML_AERO_FILE
-#  define DAVEML_AERO_FILE ""
+#define DAVEML_AERO_FILE ""
 #endif
 
 namespace {
 
-using AD = CppAD::AD<double>;
+    using AD = CppAD::AD<double>;
 
-const char* const kPiecewiseDML = R"(<?xml version="1.0" encoding="UTF-8"?>
+    const char* const kPiecewiseDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 <DAVEfunc>
   <variableDef varID="x" units="nd" initialValue="1.0"><isInput/></variableDef>
   <variableDef varID="y" units="nd">
@@ -64,7 +64,7 @@ const char* const kPiecewiseDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 // first segment, slope 3 on the second. extrapolate="neither" with min 0 and
 // max 2, as the F-16 deck's tables, so outside [0, 2] the input is held at
 // the edge.
-const char* const kTableDML = R"(<?xml version="1.0" encoding="UTF-8"?>
+    const char* const kTableDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 <DAVEfunc>
   <variableDef varID="x" units="nd" initialValue="0.5"><isInput/></variableDef>
   <variableDef varID="y" units="nd"><isOutput/></variableDef>
@@ -83,35 +83,35 @@ const char* const kTableDML = R"(<?xml version="1.0" encoding="UTF-8"?>
   </function>
 </DAVEfunc>)";
 
-std::string writeDML(const char* name, const char* text)
-{
-    const std::string path = std::string("_ae_tapes_") + name + ".dml";
-    std::ofstream(path) << text;
-    return path;
-}
+    std::string writeDML(const char* name, const char* text)
+    {
+        const std::string path = std::string("_ae_tapes_") + name + ".dml";
+        std::ofstream(path) << text;
+        return path;
+    }
 
 /// Tape y(x) of a single-input, single-output raw model at x0, with change
 /// tracking on (an ADFun has it off by default).
-CppAD::ADFun<double> tapeRaw(DAVEMLAeroModel& m, double x0)
-{
-    std::vector<AD> ax{ AD(x0) };
-    CppAD::Independent(ax);
-    const auto out = m.evaluateRaw<AD>({ { "x", ax[0] } });
-    std::vector<AD> ay{ out.at("y") };
-    CppAD::ADFun<double> f(ax, ay);
-    f.compare_change_count(1);
-    return f;
-}
+    CppAD::ADFun<double> tapeRaw(DAVEMLAeroModel& m, double x0)
+    {
+        std::vector<AD> ax{ AD(x0) };
+        CppAD::Independent(ax);
+        const auto out = m.evaluateRaw<AD>({ { "x", ax[0] } });
+        std::vector<AD> ay{ out.at("y") };
+        CppAD::ADFun<double> f(ax, ay);
+        f.compare_change_count(1);
+        return f;
+    }
 
-double direct(DAVEMLAeroModel& m, double x)
-{
-    return m.evaluateRaw<double>({ { "x", x } }).at("y");
-}
+    double direct(DAVEMLAeroModel& m, double x)
+    {
+        return m.evaluateRaw<double>({ { "x", x } }).at("y");
+    }
 
 } // namespace
 
 TEST_CASE("DAVEMLAeroModel tape: a piecewise branch is recorded and its change is reported",
-          "[daveml_aero][cppad][regression]")
+    "[daveml_aero][cppad][regression]")
 {
     DAVEMLAeroModel m(writeDML("piecewise", kPiecewiseDML));
     auto f = tapeRaw(m, +1.0);
@@ -133,7 +133,7 @@ TEST_CASE("DAVEMLAeroModel tape: a piecewise branch is recorded and its change i
 }
 
 TEST_CASE("DAVEMLAeroModel tape: a table segment is recorded and its change is reported",
-          "[daveml_aero][cppad][regression]")
+    "[daveml_aero][cppad][regression]")
 {
     DAVEMLAeroModel m(writeDML("table", kTableDML));
     auto f = tapeRaw(m, 0.5);
@@ -173,7 +173,7 @@ TEST_CASE("DAVEMLAeroModel tape: a table segment is recorded and its change is r
 }
 
 TEST_CASE("DAVEMLAeroModel tape: the F-16 Cz tape reports leaving its alpha segment",
-          "[daveml_aero][cppad][regression]")
+    "[daveml_aero][cppad][regression]")
 {
     const std::string file = DAVEML_AERO_FILE;
     if (file.empty()) return;
@@ -190,7 +190,9 @@ TEST_CASE("DAVEMLAeroModel tape: the F-16 Cz tape reports leaving its alpha segm
     };
     auto directCz = [&](double alpha) {
         DAVEMLAeroModel::Inputs<double> in;
-        in.vt_fps = 300.0; in.alpha_deg = alpha; in.beta_deg = 0.0;
+        in.vt_fps = 300.0;
+        in.alpha_deg = alpha;
+        in.beta_deg = 0.0;
         in.p_rps = in.q_rps = in.r_rps = 0.0;
         in.el_deg = in.ail_deg = in.rdr_deg = 0.0;
         return m.evaluate(in).cz;

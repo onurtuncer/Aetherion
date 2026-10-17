@@ -33,7 +33,7 @@
 #include <Aetherion/Coordinate/LocalToInertial.h>
 
 namespace {
-    using SE3d  = Aetherion::ODE::RKMK::Lie::SE3<double>;
+    using SE3d = Aetherion::ODE::RKMK::Lie::SE3<double>;
     using Vec6d = Eigen::Matrix<double, 6, 1>;
     using Mat3d = Eigen::Matrix3d;
     using Vec3d = Eigen::Vector3d;
@@ -48,10 +48,10 @@ TEST_CASE("ConstantMassPolicy: mdot is always zero", "[FlightDynamics][mass][con
 {
     Aetherion::FlightDynamics::ConstantMassPolicy p;
 
-    for (double t    : {0.0, 1.0, 100.0})
-    for (double mass : {1.0, 500.0, 5000.0}) {
-        CHECK_THAT(p.mdot(t, mass), WithinAbs(0.0, 1e-15));
-    }
+    for (double t : { 0.0, 1.0, 100.0 })
+        for (double mass : { 1.0, 500.0, 5000.0 }) {
+            CHECK_THAT(p.mdot(t, mass), WithinAbs(0.0, 1e-15));
+        }
 }
 
 TEST_CASE("ConstantMassPolicy: mdot is zero with AD<double>", "[FlightDynamics][mass][constant][AD]")
@@ -66,10 +66,10 @@ TEST_CASE("LinearBurnPolicy: mdot returns configured rate", "[FlightDynamics][ma
     const double rate = -2.5;  // kg/s
     Aetherion::FlightDynamics::LinearBurnPolicy p{ rate };
 
-    for (double t    : {0.0, 1.0, 50.0})
-    for (double mass : {100.0, 500.0}) {
-        CHECK_THAT(p.mdot(t, mass), WithinAbs(rate, 1e-15));
-    }
+    for (double t : { 0.0, 1.0, 50.0 })
+        for (double mass : { 100.0, 500.0 }) {
+            CHECK_THAT(p.mdot(t, mass), WithinAbs(rate, 1e-15));
+        }
 }
 
 TEST_CASE("LinearBurnPolicy: zero rate behaves like constant mass", "[FlightDynamics][mass][burn]")
@@ -108,7 +108,7 @@ TEST_CASE("ConstantThrustPolicy: force along body z-axis equals configured thrus
     // Force along +z (index 5)
     CHECK_THAT(w.f(3), WithinAbs(0.0, 1e-12));
     CHECK_THAT(w.f(4), WithinAbs(0.0, 1e-12));
-    CHECK_THAT(w.f(5), WithinAbs(F,   1e-12));
+    CHECK_THAT(w.f(5), WithinAbs(F, 1e-12));
 }
 
 TEST_CASE("ConstantThrustPolicy: zero thrust gives zero wrench", "[FlightDynamics][propulsion][constant]")
@@ -128,7 +128,7 @@ TEST_CASE("ConstantThrustPolicy: thrust is independent of state and time", "[Fli
     Vec6d nu;
     nu << 0.1, 0.2, 0.3, 1.0, 2.0, 3.0;
 
-    for (double t : {0.0, 5.0, 100.0}) {
+    for (double t : { 0.0, 5.0, 100.0 }) {
         SE3d g(Mat3d::Identity(), Vec3d(0.0, 0.0, 7e6));
         auto w = p(g, nu, 1.0, t);
         CHECK_THAT(w.f(5), WithinAbs(F, 1e-12));
@@ -156,8 +156,8 @@ TEST_CASE("ZeroAeroPolicy: zero wrench with non-trivial velocity and pose", "[Fl
 
     Mat3d R;
     R << 0.0, -1.0, 0.0,
-         1.0,  0.0, 0.0,
-         0.0,  0.0, 1.0;
+        1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0;
 
     SE3d g(R, Vec3d(1e6, 2e6, 3e6));
     Vec6d nu;
@@ -206,9 +206,9 @@ TEST_CASE("DragOnlyAeroPolicy: zero drag when body co-rotates with Earth (equato
     SE3d g(R, r_ECI);
     Vec6d nu;
     nu << 0.0, 0.0, 0.0,              // angular rates (zero)
-          v_surf.x(), v_surf.y(), v_surf.z();  // body velocity = surface velocity
+        v_surf.x(), v_surf.y(), v_surf.z();  // body velocity = surface velocity
 
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{0.47, 0.018241465};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.47, 0.018241465 };
     auto w = p(g, nu, 14.59, 0.0);
 
     // All moment and force components must be zero (moments are always zero for
@@ -240,16 +240,16 @@ TEST_CASE("DragOnlyAeroPolicy: nonzero drag for body with 3-D atmosphere-relativ
     SE3d g(R, r_ECI);
     Vec6d nu;
     nu << 0.0, 0.0, 0.0,
-          v_surf.x() + dv.x(), v_surf.y() + dv.y(), v_surf.z() + dv.z();
+        v_surf.x() + dv.x(), v_surf.y() + dv.y(), v_surf.z() + dv.z();
 
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{0.47, 0.018241465};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.47, 0.018241465 };
     auto w = p(g, nu, 14.59, 0.0);
 
     // F = -½ ρ CD S |v_rel| v_rel, component-wise expected values
-    const double rho    = US1976Atmosphere(alt_m).rho;
-    const double v_mag  = dv.norm();
-    const double k      = 0.5 * rho * 0.47 * 0.018241465 * v_mag;
-    const Vec3d  F_exp  = -k * dv;
+    const double rho = US1976Atmosphere(alt_m).rho;
+    const double v_mag = dv.norm();
+    const double k = 0.5 * rho * 0.47 * 0.018241465 * v_mag;
+    const Vec3d F_exp = -k * dv;
 
     CHECK_THAT(w.f(3), WithinAbs(F_exp.x(), std::abs(F_exp.x()) * 1e-9 + 1e-15));
     CHECK_THAT(w.f(4), WithinAbs(F_exp.y(), std::abs(F_exp.y()) * 1e-9 + 1e-15));
@@ -269,7 +269,7 @@ TEST_CASE("DragOnlyAeroPolicy: drag magnitude scales with airspeed squared (quad
     const Vec3d r_ECI(r, 0.0, 0.0);
     const Vec3d v_surf = surfaceVelocityBody(R, r_ECI);
 
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{0.47, 0.018241465};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.47, 0.018241465 };
 
     auto makeNu = [&](double dv) {
         Vec6d nu;
@@ -303,7 +303,7 @@ TEST_CASE("DragOnlyAeroPolicy: drag opposes atmosphere-relative velocity directi
     // Add +200 m/s in x beyond the surface velocity in x
     nu << 0, 0, 0, v_surf.x() + 200.0, v_surf.y(), v_surf.z();
 
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{0.47, 0.018241465};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.47, 0.018241465 };
     auto w = p(g, nu, 14.59, 0.0);
 
     CHECK(w.f(3) < 0.0);  // drag opposes +x motion
@@ -320,7 +320,7 @@ TEST_CASE("DragOnlyAeroPolicy: moments are always zero (pure drag, no moment)",
     Vec6d nu;
     nu << 0.1, 0.2, 0.3, 200.0, 50.0, -30.0;
 
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{0.47, 0.018241465};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.47, 0.018241465 };
     auto w = p(g, nu, 14.59, 0.0);
 
     CHECK_THAT(w.f(0), WithinAbs(0.0, 1e-15));
@@ -337,7 +337,7 @@ TEST_CASE("DragOnlyAeroPolicy: zero CD gives zero drag regardless of velocity",
     Vec6d nu;
     nu << 0, 0, 0, 500.0, 200.0, -100.0;
 
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{0.0, 0.018241465};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.0, 0.018241465 };
     auto w = p(g, nu, 14.59, 0.0);
     CHECK(w.f.isZero());
 }
@@ -345,8 +345,8 @@ TEST_CASE("DragOnlyAeroPolicy: zero CD gives zero drag regardless of velocity",
 TEST_CASE("DragOnlyAeroPolicy: evaluates with AD<double> scalars",
     "[FlightDynamics][aero][dragonly][AD]")
 {
-    using AD  = CppAD::AD<double>;
-    using SE3AD  = Aetherion::ODE::RKMK::Lie::SE3<AD>;
+    using AD = CppAD::AD<double>;
+    using SE3AD = Aetherion::ODE::RKMK::Lie::SE3<AD>;
     using Vec6AD = Eigen::Matrix<AD, 6, 1>;
     using Mat3AD = Eigen::Matrix<AD, 3, 3>;
     using Vec3AD = Eigen::Matrix<AD, 3, 1>;
@@ -364,7 +364,7 @@ TEST_CASE("DragOnlyAeroPolicy: evaluates with AD<double> scalars",
     Vec6AD nu;
     nu << AD(0), AD(0), AD(0), v_surf(0) + AD(50.0), v_surf(1), v_surf(2);
 
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{0.47, 0.018241465};
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy p{ 0.47, 0.018241465 };
     auto w = p(g, nu, AD(14.59), AD(0.0));
 
     // x and z force components must be zero (airspeed purely in x beyond surface)
@@ -390,15 +390,16 @@ TEST_CASE("BrickDampingAeroPolicy: zero velocity gives zero wrench",
 {
     using namespace Aetherion::Environment;
     const double r = WGS84::kSemiMajorAxis_m + 9144.0;
-    const Vec3d  v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
 
     SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     Vec6d nu;
     nu << 0.1, 0.2, 0.3,                          // body angular rates
-          v_surf.x(), v_surf.y(), v_surf.z();      // co-rotating = zero airspeed
+        v_surf.x(), v_surf.y(), v_surf.z();      // co-rotating = zero airspeed
 
     Aetherion::FlightDynamics::BrickDampingAeroPolicy p{
-        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0};
+        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0
+    };
     auto w = p(g, nu, 2.268, 0.0);
 
     // Zero airspeed → no drag, no damping moments (all scale with |V|)
@@ -412,16 +413,17 @@ TEST_CASE("BrickDampingAeroPolicy: moments oppose angular rates",
     // Body co-rotating + extra roll rate p = +0.5 rad/s → roll moment must be negative
     using namespace Aetherion::Environment;
     const double r = WGS84::kSemiMajorAxis_m + 9144.0;
-    const Vec3d  v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     const double V_airspeed = 50.0;   // add downward airspeed to activate moments
 
     SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     Vec6d nu;
     nu << 0.5, 0.3, -0.2,
-          v_surf.x(), v_surf.y(), v_surf.z() + (-V_airspeed); // downward
+        v_surf.x(), v_surf.y(), v_surf.z() + (-V_airspeed); // downward
 
     Aetherion::FlightDynamics::BrickDampingAeroPolicy p{
-        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0};
+        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0
+    };
     auto w = p(g, nu, 2.268, 0.0);
 
     // Clp = -1 → roll moment opposes positive p → L < 0
@@ -440,21 +442,21 @@ TEST_CASE("BrickDampingAeroPolicy: roll moment formula matches expected value",
     // L = ¼ ρ |V| S b² Clp p
     using namespace Aetherion::Environment;
     constexpr double alt_m = 9144.0;
-    constexpr double Vair  = 100.0;   // m/s airspeed
+    constexpr double Vair = 100.0;   // m/s airspeed
     constexpr double p_rad = 0.5;     // rad/s roll rate
-    const double     r     = WGS84::kSemiMajorAxis_m + alt_m;
-    const Vec3d      v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    const double r = WGS84::kSemiMajorAxis_m + alt_m;
+    const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
 
     SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     Vec6d nu;
     nu << p_rad, 0.0, 0.0,
-          v_surf.x(), v_surf.y(), v_surf.z() + (-Vair);
+        v_surf.x(), v_surf.y(), v_surf.z() + (-Vair);
 
-    constexpr double CD=0.01, S=0.020645, b=0.1016, cbar=0.2032, Clp=-1.0, Cmq=-1.0, Cnr=-1.0;
-    Aetherion::FlightDynamics::BrickDampingAeroPolicy pol{CD, S, b, cbar, Clp, Cmq, Cnr};
+    constexpr double CD = 0.01, S = 0.020645, b = 0.1016, cbar = 0.2032, Clp = -1.0, Cmq = -1.0, Cnr = -1.0;
+    Aetherion::FlightDynamics::BrickDampingAeroPolicy pol{ CD, S, b, cbar, Clp, Cmq, Cnr };
     auto w = pol(g, nu, 2.268, 0.0);
 
-    const double rho     = US1976Atmosphere(alt_m).rho;
+    const double rho = US1976Atmosphere(alt_m).rho;
     const double L_expected = 0.25 * rho * Vair * S * b * b * Clp * p_rad;
 
     CHECK_THAT(w.f(0), WithinAbs(L_expected, std::abs(L_expected) * 1e-9 + 1e-15));
@@ -469,16 +471,16 @@ TEST_CASE("BrickDampingAeroPolicy: drag part matches DragOnlyAeroPolicy",
     // With zero angular rates, the drag force should equal DragOnlyAeroPolicy
     using namespace Aetherion::Environment;
     const double r = WGS84::kSemiMajorAxis_m + 9144.0;
-    const Vec3d  v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
-    const Vec3d  dv(20.0, -15.0, -10.0);
+    const Vec3d v_surf = surfaceVelocityBody(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
+    const Vec3d dv(20.0, -15.0, -10.0);
 
     SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     Vec6d nu;
     nu << 0.0, 0.0, 0.0,
-          v_surf.x() + dv.x(), v_surf.y() + dv.y(), v_surf.z() + dv.z();
+        v_surf.x() + dv.x(), v_surf.y() + dv.y(), v_surf.z() + dv.z();
 
-    Aetherion::FlightDynamics::BrickDampingAeroPolicy   bd{0.01, 0.020645, 0.1016, 0.2032, 0.0, 0.0, 0.0};
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy       donly{0.01, 0.020645};
+    Aetherion::FlightDynamics::BrickDampingAeroPolicy bd{ 0.01, 0.020645, 0.1016, 0.2032, 0.0, 0.0, 0.0 };
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy donly{ 0.01, 0.020645 };
 
     auto wb = bd(g, nu, 2.268, 0.0);
     auto wd = donly(g, nu, 2.268, 0.0);
@@ -493,8 +495,8 @@ TEST_CASE("BrickDampingAeroPolicy: drag part matches DragOnlyAeroPolicy",
 TEST_CASE("BrickDampingAeroPolicy: evaluates with AD<double>",
     "[FlightDynamics][aero][brickdamping][AD]")
 {
-    using AD   = CppAD::AD<double>;
-    using SE3AD  = Aetherion::ODE::RKMK::Lie::SE3<AD>;
+    using AD = CppAD::AD<double>;
+    using SE3AD = Aetherion::ODE::RKMK::Lie::SE3<AD>;
     using Vec6AD = Eigen::Matrix<AD, 6, 1>;
     using Mat3AD = Eigen::Matrix<AD, 3, 3>;
     using Vec3AD = Eigen::Matrix<AD, 3, 1>;
@@ -509,10 +511,11 @@ TEST_CASE("BrickDampingAeroPolicy: evaluates with AD<double>",
     SE3AD g(Mat3AD::Identity(), rECI);
     Vec6AD nu;
     nu << AD(0.5), AD(0.3), AD(-0.2),
-          v_surf(0) + AD(20.0), v_surf(1), v_surf(2) + AD(-50.0);
+        v_surf(0) + AD(20.0), v_surf(1), v_surf(2) + AD(-50.0);
 
     Aetherion::FlightDynamics::BrickDampingAeroPolicy pol{
-        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0};
+        0.01, 0.020645, 0.1016, 0.2032, -1.0, -1.0, -1.0
+    };
     auto w = pol(g, nu, AD(2.268), AD(0.0));
 
     // roll moment must oppose positive p
@@ -543,16 +546,16 @@ TEST_CASE("SteadyWindDragPolicy: zero wind matches DragOnlyAeroPolicy",
 
     SE3d g(Mat3d::Identity(), Vec3d(r, 0.0, 0.0));
     Vec6d nu;
-    nu << 0, 0, 0, v_surf.x()+dv.x(), v_surf.y()+dv.y(), v_surf.z()+dv.z();
+    nu << 0, 0, 0, v_surf.x() + dv.x(), v_surf.y() + dv.y(), v_surf.z() + dv.z();
 
-    Aetherion::FlightDynamics::SteadyWindDragPolicy  wp{0.1, 0.018241, 0,0,0};
-    Aetherion::FlightDynamics::DragOnlyAeroPolicy    dp{0.1, 0.018241};
+    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{ 0.1, 0.018241, 0, 0, 0 };
+    Aetherion::FlightDynamics::DragOnlyAeroPolicy dp{ 0.1, 0.018241 };
 
     auto ww = wp(g, nu, 14.59, 0.0);
     auto wd = dp(g, nu, 14.59, 0.0);
 
     for (int i = 3; i < 6; ++i)
-        CHECK_THAT(ww.f(i), WithinAbs(wd.f(i), std::abs(wd.f(i))*1e-12 + 1e-20));
+        CHECK_THAT(ww.f(i), WithinAbs(wd.f(i), std::abs(wd.f(i)) * 1e-12 + 1e-20));
 }
 
 TEST_CASE("SteadyWindDragPolicy: co-rotating sphere with east wind has nonzero TAS at t=0",
@@ -572,7 +575,7 @@ TEST_CASE("SteadyWindDragPolicy: co-rotating sphere with east wind has nonzero T
 
     // East wind = 6.096 m/s; at lat=0, lon=0, ECEF East = +y_ECEF
     constexpr double v_wind = 6.096;
-    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{0.1, 0.018241, 0.0, v_wind, 0.0};
+    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{ 0.1, 0.018241, 0.0, v_wind, 0.0 };
     auto w = wp(g, nu, 14.59, 0.0);
 
     // All moments zero
@@ -610,13 +613,13 @@ TEST_CASE("SteadyWindDragPolicy: ERA rotation applied correctly at nonzero t",
     nu << 0, 0, 0, v_surf.x(), v_surf.y(), v_surf.z();
 
     constexpr double v_wind = 6.096;
-    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{0.1, 0.018241, 0.0, v_wind, 0.0};
+    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{ 0.1, 0.018241, 0.0, v_wind, 0.0 };
 
     const double rho = US1976Atmosphere(9144.0).rho;
     const double F_expected = 0.5 * rho * 0.1 * 0.018241 * v_wind * v_wind;
 
     // Force magnitude must equal F_expected regardless of t (rotation is isometric)
-    for (double t : {0.0, 5.0, 15.0, 30.0}) {
+    for (double t : { 0.0, 5.0, 15.0, 30.0 }) {
         auto w = wp(g, nu, 14.59, t);
         const double F_mag = w.f.tail<3>().norm();
         CHECK_THAT(F_mag, WithinAbs(F_expected, F_expected * 1e-9));
@@ -626,7 +629,7 @@ TEST_CASE("SteadyWindDragPolicy: ERA rotation applied correctly at nonzero t",
 TEST_CASE("SteadyWindDragPolicy: evaluates with AD<double>",
     "[FlightDynamics][aero][wind][AD]")
 {
-    using AD    = CppAD::AD<double>;
+    using AD = CppAD::AD<double>;
     using SE3AD = Aetherion::ODE::RKMK::Lie::SE3<AD>;
     using Vec6AD = Eigen::Matrix<AD, 6, 1>;
     using Mat3AD = Eigen::Matrix<AD, 3, 3>;
@@ -643,7 +646,7 @@ TEST_CASE("SteadyWindDragPolicy: evaluates with AD<double>",
     Vec6AD nu;
     nu << AD(0), AD(0), AD(0), v_surf(0), v_surf(1), v_surf(2);  // co-rotating
 
-    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{0.1, 0.018241, 0.0, 6.096, 0.0};
+    Aetherion::FlightDynamics::SteadyWindDragPolicy wp{ 0.1, 0.018241, 0.0, 6.096, 0.0 };
     auto w = wp(g, nu, AD(14.59), AD(0.0));
 
     // East-wind force: +y_body component must be positive

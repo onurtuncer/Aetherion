@@ -20,14 +20,13 @@ namespace Aetherion::Examples::DroppedSphereSteadyWind {
 /// @brief Six-DoF vector field for the NASA Atmos-07 sphere-in-steady-wind case.
 ///
 /// J2 gravity + wind-aware drag (SteadyWindDragPolicy) + no thrust + constant mass.
-using DroppedSphereSteadyWindVF = RigidBody::VectorField<
-    FlightDynamics::J2GravityPolicy,
-    FlightDynamics::SteadyWindDragPolicy,
-    FlightDynamics::ZeroPropulsionPolicy,
-    FlightDynamics::ConstantMassPolicy
->;
+    using DroppedSphereSteadyWindVF = RigidBody::VectorField<
+        FlightDynamics::J2GravityPolicy,
+        FlightDynamics::SteadyWindDragPolicy,
+        FlightDynamics::ZeroPropulsionPolicy,
+        FlightDynamics::ConstantMassPolicy>;
 
-using DroppedSphereSteadyWindStepper =
-    RigidBody::SixDoFStepper<DroppedSphereSteadyWindVF>;
+    using DroppedSphereSteadyWindStepper =
+        RigidBody::SixDoFStepper<DroppedSphereSteadyWindVF>;
 
 } // namespace Aetherion::Examples::DroppedSphereSteadyWind

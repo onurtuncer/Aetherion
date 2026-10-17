@@ -92,9 +92,15 @@ namespace {
     {
         InertialParameters ip;
         ip.mass_kg = 1.0;
-        ip.Ixx = 0.4; ip.Iyy = 0.4; ip.Izz = 0.4;
-        ip.Ixy = 0.0; ip.Iyz = 0.0; ip.Ixz = 0.0;
-        ip.xbar_m = 0.0; ip.ybar_m = 0.0; ip.zbar_m = 0.0;
+        ip.Ixx = 0.4;
+        ip.Iyy = 0.4;
+        ip.Izz = 0.4;
+        ip.Ixy = 0.0;
+        ip.Iyz = 0.0;
+        ip.Ixz = 0.0;
+        ip.xbar_m = 0.0;
+        ip.ybar_m = 0.0;
+        ip.zbar_m = 0.0;
         return ip;
     }
 
@@ -105,9 +111,15 @@ namespace {
     {
         InertialParameters ip;
         ip.mass_kg = 1.0;
-        ip.Ixx = 0.10; ip.Iyy = 0.25; ip.Izz = 0.32;
-        ip.Ixy = 0.0;  ip.Iyz = 0.0;  ip.Ixz = 0.0;
-        ip.xbar_m = 0.0; ip.ybar_m = 0.0; ip.zbar_m = 0.0;
+        ip.Ixx = 0.10;
+        ip.Iyy = 0.25;
+        ip.Izz = 0.32;
+        ip.Ixy = 0.0;
+        ip.Iyz = 0.0;
+        ip.Ixz = 0.0;
+        ip.xbar_m = 0.0;
+        ip.ybar_m = 0.0;
+        ip.zbar_m = 0.0;
         return ip;
     }
 
@@ -116,7 +128,7 @@ namespace {
         StateD s;
         s.g = Lie::SE3<double>::Identity();
         s.nu_B << 1.0, 0.5, 0.25,
-                  0.0, 0.0, 0.0;
+            0.0, 0.0, 0.0;
         s.m = 1.0;
         return s;
     }
@@ -127,8 +139,8 @@ namespace {
     {
         StateD s;
         s.g = Lie::SE3<double>::Identity();
-        s.nu_B <<  1.0,  2.0,  0.5,
-                  50.0,  5.0, -3.0;
+        s.nu_B << 1.0, 2.0, 0.5,
+            50.0, 5.0, -3.0;
         s.m = 1.0;
         return s;
     }
@@ -136,26 +148,24 @@ namespace {
     // Exact rotation at time T for constant omega: R(T) = Exp_SO3(omega0 * T).
     Eigen::Matrix3d exact_rotation(const Eigen::Vector3d& omega0, double T)
     {
-        const Eigen::Vector3d phi   = omega0 * T;
-        const double          theta = phi.norm();
+        const Eigen::Vector3d phi = omega0 * T;
+        const double theta = phi.norm();
         if (theta < 1e-12) return Eigen::Matrix3d::Identity();
 
         Eigen::Matrix3d A;
-        A <<  0.0,    -phi(2),  phi(1),
-              phi(2),  0.0,    -phi(0),
-             -phi(1),  phi(0),  0.0;
+        A << 0.0, -phi(2), phi(1),
+            phi(2), 0.0, -phi(0),
+            -phi(1), phi(0), 0.0;
 
-        return Eigen::Matrix3d::Identity()
-             + (std::sin(theta) / theta) * A
-             + ((1.0 - std::cos(theta)) / (theta * theta)) * A * A;
+        return Eigen::Matrix3d::Identity() + (std::sin(theta) / theta) * A + ((1.0 - std::cos(theta)) / (theta * theta)) * A * A;
     }
 
     // Integrate over [0, T] with fixed step h; return the final state.
-    template<class Stepper>
+    template <class Stepper>
     StateD integrate(Stepper& stepper, const StateD& s0, double T, double h)
     {
         const int N = static_cast<int>(std::llround(T / h));
-        StateD    s = s0;
+        StateD s = s0;
         for (int i = 0; i < N; ++i) {
             auto res = stepper.step(static_cast<double>(i) * h, s, h);
             REQUIRE(res.converged);
@@ -172,11 +182,11 @@ namespace {
     // Mean log-log slope over consecutive step-size pairs, ignoring pairs where
     // either error has bottomed out on the round-off floor.
     double mean_order(const std::vector<double>& h,
-                      const std::vector<double>& e,
-                      double                     floor_val = 1e-13)
+        const std::vector<double>& e,
+        double floor_val = 1e-13)
     {
         double sum = 0.0;
-        int    n   = 0;
+        int n = 0;
         for (std::size_t i = 0; i + 1 < h.size(); ++i) {
             if (e[i] > floor_val && e[i + 1] > floor_val) {
                 sum += empirical_order(h[i], e[i], h[i + 1], e[i + 1]);
@@ -188,20 +198,21 @@ namespace {
 
     // Convergence-study configuration, shared by the order tests and the CSV
     // writer so that the published figure and the assertions cannot drift apart.
-    constexpr double            kT     = 2.0;      // integration horizon [s]
-    constexpr double            kHRef  = 2.5e-4;   // reference step size  [s]
-    const std::array<double, 5> kHVec  { 0.2, 0.1, 0.05, 0.025, 0.0125 };
+    constexpr double kT = 2.0;      // integration horizon [s]
+    constexpr double kHRef = 2.5e-4;   // reference step size  [s]
+    const std::array<double, 5> kHVec{ 0.2, 0.1, 0.05, 0.025, 0.0125 };
 
     Core::NewtonOptions tight_newton()
     {
         Core::NewtonOptions opt;
-        opt.abs_tol   = 1e-13;
-        opt.rel_tol   = 1e-13;
+        opt.abs_tol = 1e-13;
+        opt.rel_tol = 1e-13;
         opt.max_iters = 50;
         return opt;
     }
 
-    struct ErrorSeries {
+    struct ErrorSeries
+    {
         std::vector<double> rot;
         std::vector<double> pos;
     };
@@ -216,7 +227,7 @@ namespace {
         return ref;
     }
 
-    template<class Stepper>
+    template <class Stepper>
     ErrorSeries error_series(Stepper& stepper, const StateD& ref)
     {
         ErrorSeries out;
@@ -236,19 +247,19 @@ namespace {
 TEST_CASE("RKMK on SE(3) is exact for a constant body twist (symmetric sphere)",
     "[convergence][exactness][sphere]")
 {
-    constexpr double      T = 1.0;
+    constexpr double T = 1.0;
     const Eigen::Vector3d omega0{ 1.0, 0.5, 0.25 };
     const Eigen::Matrix3d R_exact = exact_rotation(omega0, T);
 
     RadauStepper radau{ symmetric_sphere(), tight_newton() };
-    RK4Stepper   rk4  { symmetric_sphere() };
+    RK4Stepper rk4{ symmetric_sphere() };
 
     for (double h : { 0.5, 0.25, 0.1, 0.05, 0.025, 0.01 }) {
         const StateD s_radau = integrate(radau, sphere_initial_state(), T, h);
-        const StateD s_rk4   = integrate(rk4,   sphere_initial_state(), T, h);
+        const StateD s_rk4 = integrate(rk4, sphere_initial_state(), T, h);
 
         const double e_radau = (s_radau.g.R - R_exact).norm();
-        const double e_rk4   = (s_rk4.g.R   - R_exact).norm();
+        const double e_rk4 = (s_rk4.g.R - R_exact).norm();
 
         INFO("h = " << h << "  e_radau = " << e_radau << "  e_rk4 = " << e_rk4);
 
@@ -256,7 +267,7 @@ TEST_CASE("RKMK on SE(3) is exact for a constant body twist (symmetric sphere)",
         // regardless of step size.  This is the defining property of a
         // Lie-group integrator, not a statement about classical order.
         REQUIRE(e_radau < 1e-13);
-        REQUIRE(e_rk4   < 1e-13);
+        REQUIRE(e_rk4 < 1e-13);
     }
 }
 
@@ -271,15 +282,15 @@ TEST_CASE("RKMK on SE(3) is exact for a constant body twist (symmetric sphere)",
 TEST_CASE("Convergence reference is method-independent",
     "[convergence][reference]")
 {
-    RK4Stepper   rk4{ asymmetric_body() };
+    RK4Stepper rk4{ asymmetric_body() };
     const StateD ref_rk4 = integrate(rk4, asymmetric_initial_state(), kT, kHRef);
-    const StateD& ref    = asymmetric_reference();
+    const StateD& ref = asymmetric_reference();
 
     const double d_rot = (ref_rk4.g.R - ref.g.R).norm();
     const double d_pos = (ref_rk4.g.p - ref.g.p).norm();
 
     INFO("Radau vs RK4 at h_ref = " << kHRef
-         << ":  d_rot = " << d_rot << "  d_pos = " << d_pos);
+                                    << ":  d_rot = " << d_rot << "  d_pos = " << d_pos);
 
     // At h_ref the two independent integrators must agree far below the
     // smallest error appearing in the convergence study (~1e-9, see below).
@@ -353,14 +364,14 @@ TEST_CASE("Convergence order: write CSV for paper figure",
     WARN("=== Convergence data (h, rot_radau5, pos_radau5, rot_rk4, pos_rk4) ===");
     for (std::size_t i = 0; i < kHVec.size(); ++i)
         WARN("  " << kHVec[i]
-             << "  " << e_radau.rot[i] << "  " << e_radau.pos[i]
-             << "  " << e_rk4.rot[i]   << "  " << e_rk4.pos[i]);
+                  << "  " << e_radau.rot[i] << "  " << e_radau.pos[i]
+                  << "  " << e_rk4.rot[i] << "  " << e_rk4.pos[i]);
 
     const std::vector<double> h(kHVec.begin(), kHVec.end());
     WARN("mean order Radau: rot = " << mean_order(h, e_radau.rot)
-         << ", pos = " << mean_order(h, e_radau.pos));
+                                    << ", pos = " << mean_order(h, e_radau.pos));
     WARN("mean order RK4  : rot = " << mean_order(h, e_rk4.rot)
-         << ", pos = " << mean_order(h, e_rk4.pos));
+                                    << ", pos = " << mean_order(h, e_rk4.pos));
 
 #ifdef AETHERION_PAPER_DATA_DIR
     const std::string csv_path =
@@ -373,11 +384,11 @@ TEST_CASE("Convergence order: write CSV for paper figure",
         ofs.precision(8);
         for (std::size_t i = 0; i < kHVec.size(); ++i)
             ofs << kHVec[i] << "," << e_radau.rot[i] << "," << e_radau.pos[i]
-                            << "," << e_rk4.rot[i]   << "," << e_rk4.pos[i] << "\n";
+                << "," << e_rk4.rot[i] << "," << e_rk4.pos[i] << "\n";
         WARN("CSV written to: " << csv_path);
     } else {
         WARN("Could not write CSV to: " << csv_path
-             << " -- ensure AETHERION_PAPER_DATA_DIR exists.");
+                                        << " -- ensure AETHERION_PAPER_DATA_DIR exists.");
     }
 #else
     WARN("AETHERION_PAPER_DATA_DIR not defined -- no CSV written.");

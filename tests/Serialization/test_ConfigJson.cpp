@@ -19,7 +19,7 @@ namespace RigidBody = Aetherion::RigidBody;
 
 TEST_CASE("RigidBodyConfig: JSON round-trip preserves all fields", "[json][rigidbody][config]")
 {
-   RigidBody::Config in{};
+    RigidBody::Config in{};
 
     // --- InitialPoseWGS84_NED ---
     in.pose.lat_deg = 41.1055;

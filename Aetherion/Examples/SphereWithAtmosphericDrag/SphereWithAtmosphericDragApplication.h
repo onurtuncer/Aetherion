@@ -58,37 +58,37 @@ namespace Aetherion::Examples::SphereWithAtmosphericDrag {
 /// trajectory.
 ///
 /// Reference: NASA TM-2015-218675, Section B.1.6 / Table 30.
-class SphereWithAtmosphericDragApplication : public Simulation::Application
-{
-public:
-    explicit SphereWithAtmosphericDragApplication(int argc, char** argv)
-        : Application(argc, argv)
+    class SphereWithAtmosphericDragApplication : public Simulation::Application
     {
-    }
+    public:
+        explicit SphereWithAtmosphericDragApplication(int argc, char** argv)
+            : Application(argc, argv)
+        {
+        }
 
-protected:
-    void logStartupBanner()                                     const override;
-    void prepareSimulation()                                    const override;
-    void writeInitialSnapshot(std::ofstream& csv)               const override;
-    StepObservation stepAndRecord(std::ofstream& csv,
-                                  double h, bool doWrite)       const override;
-    void logFinalSummary()                                      const override;
+    protected:
+        void logStartupBanner() const override;
+        void prepareSimulation() const override;
+        void writeInitialSnapshot(std::ofstream& csv) const override;
+        StepObservation stepAndRecord(std::ofstream& csv,
+            double h, bool doWrite) const override;
+        void logFinalSummary() const override;
 
-private:
-    [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
+    private:
+        [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
 
-    [[nodiscard]] static double computeInitialERA(double t0) noexcept;
+        [[nodiscard]] static double computeInitialERA(double t0) noexcept;
 
-    [[nodiscard]] static RigidBody::StateD
+        [[nodiscard]] static RigidBody::StateD
         buildInitialState(const RigidBody::Config& rb_cfg, double theta0);
 
-    [[nodiscard]] static std::unique_ptr<SphereWithAtmosphericDragSimulator>
-        constructSimulator(const RigidBody::InertialParameters&    ip,
-                           const RigidBody::AerodynamicParameters& aero,
-                           const RigidBody::StateD&                x0,
-                           double                                  theta0);
+        [[nodiscard]] static std::unique_ptr<SphereWithAtmosphericDragSimulator>
+        constructSimulator(const RigidBody::InertialParameters& ip,
+            const RigidBody::AerodynamicParameters& aero,
+            const RigidBody::StateD& x0,
+            double theta0);
 
-    mutable std::unique_ptr<SphereWithAtmosphericDragSimulator> m_Simulator;
-};
+        mutable std::unique_ptr<SphereWithAtmosphericDragSimulator> m_Simulator;
+    };
 
 } // namespace Aetherion::Examples::SphereWithAtmosphericDrag

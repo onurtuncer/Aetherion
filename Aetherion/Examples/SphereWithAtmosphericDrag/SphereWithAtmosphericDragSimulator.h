@@ -41,17 +41,17 @@ namespace Aetherion::Examples::SphereWithAtmosphericDrag {
         static constexpr double kOmegaEarth_rad_s = 7.2921150e-5;
 
         explicit SphereWithAtmosphericDragSimulator(
-            const RigidBody::InertialParameters&    ip,
+            const RigidBody::InertialParameters& ip,
             const RigidBody::AerodynamicParameters& aero_params,
-            RigidBody::StateD                       initialState,
-            double                                  theta0_rad = 0.0,
-            ODE::RKMK::Core::NewtonOptions          opt = {})
+            RigidBody::StateD initialState,
+            double theta0_rad = 0.0,
+            ODE::RKMK::Core::NewtonOptions opt = {})
             : ISimulator<SphereWithAtmosphericDragVF, Simulation::Snapshot1>(
-                SphereWithAtmosphericDragVF(
-                    ip,
-                    FlightDynamics::J2GravityPolicy{},
-                    FlightDynamics::DragOnlyAeroPolicy(aero_params.CD, aero_params.S)),
-                std::move(initialState), opt)
+                  SphereWithAtmosphericDragVF(
+                      ip,
+                      FlightDynamics::J2GravityPolicy{},
+                      FlightDynamics::DragOnlyAeroPolicy(aero_params.CD, aero_params.S)),
+                  std::move(initialState), opt)
             , m_Theta0(theta0_rad)
         {
         }

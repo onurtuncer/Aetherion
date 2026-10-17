@@ -16,5 +16,5 @@ static constexpr double kNasaToleranceSpeed_mps = 0.01;   // [m/s]
 [[nodiscard]] bool within_nasa_tolerances() const noexcept
 {
     return radius_error_m() < kNasaTolerancePosition_m &&
-        speed_error_mps() < kNasaToleranceSpeed_mps;
+           speed_error_mps() < kNasaToleranceSpeed_mps;
 }

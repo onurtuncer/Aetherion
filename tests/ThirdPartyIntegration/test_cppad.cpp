@@ -12,7 +12,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cppad/cppad.hpp>
 
-TEST_CASE("CppAD: derivative of x^2 at x = 3", "[cppad]") {
+TEST_CASE("CppAD: derivative of x^2 at x = 3", "[cppad]")
+{
     using CppAD::AD;
 
     // Independent variable vector: x (size 1)
@@ -46,5 +47,3 @@ TEST_CASE("CppAD: derivative of x^2 at x = 3", "[cppad]") {
     const double tol = 1e-10;
     REQUIRE(std::fabs(dy[0] - expected) < tol);
 }
-
-

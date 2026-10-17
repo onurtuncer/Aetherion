@@ -17,7 +17,7 @@
 namespace {
     using Scalar = double;
     using namespace Aetherion::Spatial;
-    using Vec3d  = Eigen::Vector3d;
+    using Vec3d = Eigen::Vector3d;
     using Catch::Matchers::WithinAbs;
 }
 
@@ -112,14 +112,14 @@ TEST_CASE("ShiftWrenchToNewPoint: moment = M_P + r x F", "[spatial][WrenchShift]
     // Expected moment at Q: (0,0,0) + (1,0,0)×(0,0,10) = (0,-10, 0)
     Wrench<Scalar> f{};
     f.f << 0.0, 0.0, 0.0,   // moment at P
-           0.0, 0.0, 10.0;  // force
+        0.0, 0.0, 10.0;  // force
 
     Vec3d r(1.0, 0.0, 0.0);
     auto shifted = ShiftWrenchToNewPoint(f, r);
 
-    CHECK_THAT(shifted.f(0), WithinAbs( 0.0, 1e-12));
+    CHECK_THAT(shifted.f(0), WithinAbs(0.0, 1e-12));
     CHECK_THAT(shifted.f(1), WithinAbs(-10.0, 1e-12));
-    CHECK_THAT(shifted.f(2), WithinAbs( 0.0, 1e-12));
+    CHECK_THAT(shifted.f(2), WithinAbs(0.0, 1e-12));
 }
 
 TEST_CASE("ShiftWrenchToNewPoint: existing moment is preserved in shift", "[spatial][WrenchShift]")
@@ -129,14 +129,14 @@ TEST_CASE("ShiftWrenchToNewPoint: existing moment is preserved in shift", "[spat
     // moment at Q = (1,0,0) + (10,0,0) = (11, 0, 0)
     Wrench<Scalar> f{};
     f.f << 1.0, 0.0, 0.0,   // moment at P
-           0.0, 0.0, 10.0;  // force
+        0.0, 0.0, 10.0;  // force
 
     Vec3d r(0.0, 1.0, 0.0);
     auto shifted = ShiftWrenchToNewPoint(f, r);
 
     CHECK_THAT(shifted.f(0), WithinAbs(11.0, 1e-12));
-    CHECK_THAT(shifted.f(1), WithinAbs( 0.0, 1e-12));
-    CHECK_THAT(shifted.f(2), WithinAbs( 0.0, 1e-12));
+    CHECK_THAT(shifted.f(1), WithinAbs(0.0, 1e-12));
+    CHECK_THAT(shifted.f(2), WithinAbs(0.0, 1e-12));
 }
 
 TEST_CASE("ShiftWrenchToNewPoint: pure moment (no force) is unaffected by shift", "[spatial][WrenchShift]")
@@ -144,7 +144,7 @@ TEST_CASE("ShiftWrenchToNewPoint: pure moment (no force) is unaffected by shift"
     // When F = 0, r × F = 0, so moment does not change
     Wrench<Scalar> f{};
     f.f << 1.0, 2.0, 3.0,   // moment
-           0.0, 0.0, 0.0;   // zero force
+        0.0, 0.0, 0.0;   // zero force
 
     Vec3d r(5.0, -3.0, 2.0);
     auto shifted = ShiftWrenchToNewPoint(f, r);

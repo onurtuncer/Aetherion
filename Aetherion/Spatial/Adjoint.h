@@ -45,9 +45,9 @@ namespace Aetherion::Spatial {
     ///
     /// @param xi  Input twist @f$[\omega;\,v]@f$.
     /// @return    6×6 motion adjoint matrix.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 6>
-        ad(const Twist<Scalar>& xi)
+    ad(const Twist<Scalar>& xi)
     {
         using Mat3 = Eigen::Matrix<Scalar, 3, 3>;
         using Vec3 = Eigen::Matrix<Scalar, 3, 1>;
@@ -75,9 +75,9 @@ namespace Aetherion::Spatial {
     ///
     /// @param xi  Input twist @f$[\omega;\,v]@f$.
     /// @return    6×6 force adjoint matrix.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 6>
-        ad_star(const Twist<Scalar>& xi)
+    ad_star(const Twist<Scalar>& xi)
     {
         return -ad(xi).transpose();
     }
@@ -92,11 +92,11 @@ namespace Aetherion::Spatial {
     /// @param xi  Input twist @f$[\omega;\,v]@f$.
     /// @param y   6-vector to multiply (e.g. spatial momentum @f$[h_\omega;\,h_v]@f$).
     /// @return    6-vector result.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 1>
-        ad_star_times(
-            const Twist<Scalar>& xi,
-            const Eigen::Matrix<Scalar, 6, 1>& y)
+    ad_star_times(
+        const Twist<Scalar>& xi,
+        const Eigen::Matrix<Scalar, 6, 1>& y)
     {
         using Vec3 = Eigen::Matrix<Scalar, 3, 1>;
 

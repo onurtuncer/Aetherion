@@ -38,39 +38,40 @@
 
 namespace Aetherion::Examples::CircleEquatorDateLine {
 
-class CircleEquatorDateLineApplication : public Simulation::Application
-{
-public:
-    explicit CircleEquatorDateLineApplication(int argc, char** argv)
-        : Application(argc, argv) {}
+    class CircleEquatorDateLineApplication : public Simulation::Application
+    {
+    public:
+        explicit CircleEquatorDateLineApplication(int argc, char** argv)
+            : Application(argc, argv)
+        {}
 
-protected:
-    void logStartupBanner()                                                const override;
-    void writeCsvHeader(std::ofstream& csv)                                const override;
-    void prepareSimulation()                                               const override;
-    void writeInitialSnapshot(std::ofstream& csv)                          const override;
-    StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
-    void logFinalSummary()                                                 const override;
+    protected:
+        void logStartupBanner() const override;
+        void writeCsvHeader(std::ofstream& csv) const override;
+        void prepareSimulation() const override;
+        void writeInitialSnapshot(std::ofstream& csv) const override;
+        StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
+        void logFinalSummary() const override;
 
-private:
-    [[nodiscard]] static double computeInitialERA(double t0) noexcept;
+    private:
+        [[nodiscard]] static double computeInitialERA(double t0) noexcept;
 
-    [[nodiscard]] static RigidBody::StateD
+        [[nodiscard]] static RigidBody::StateD
         buildInitialState(const RigidBody::Config& cfg, double theta0);
 
-    [[nodiscard]] static std::unique_ptr<F16AltitudeChange::F16AltitudeChangeSimulator>
+        [[nodiscard]] static std::unique_ptr<F16AltitudeChange::F16AltitudeChangeSimulator>
         constructSimulator(
-            const RigidBody::InertialParameters&                      ip,
-            const FlightDynamics::TrimPoint&                          trim,
-            const std::shared_ptr<const Serialization::DAVEMLAeroModel>&     aero,
-            const std::shared_ptr<const Serialization::DAVEMLPropModel>&     prop,
-            const std::shared_ptr<const Serialization::DAVEMLControlModel>&  ctrl,
+            const RigidBody::InertialParameters& ip,
+            const FlightDynamics::TrimPoint& trim,
+            const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aero,
+            const std::shared_ptr<const Serialization::DAVEMLPropModel>& prop,
+            const std::shared_ptr<const Serialization::DAVEMLControlModel>& ctrl,
             const RigidBody::StateD& x0,
             double theta0,
             const F16AltitudeChange::F16AltitudeChangeSimulator::AutopilotCmds& cmds,
             double xcg_from_ac_m = 0.0);
 
-    mutable std::unique_ptr<F16AltitudeChange::F16AltitudeChangeSimulator> m_Simulator;
-};
+        mutable std::unique_ptr<F16AltitudeChange::F16AltitudeChangeSimulator> m_Simulator;
+    };
 
 } // namespace Aetherion::Examples::CircleEquatorDateLine

@@ -49,8 +49,8 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
         const auto& cfg = getConfig();
 
         const RigidBody::Config rb_cfg = loadVehicleConfig();
-        const double            theta0 = computeInitialERA(cfg.startTime);
-        const RigidBody::StateD x0     = buildInitialState(rb_cfg, theta0);
+        const double theta0 = computeInitialERA(cfg.startTime);
+        const RigidBody::StateD x0 = buildInitialState(rb_cfg, theta0);
 
         constexpr double kToDeg = 180.0 / std::numbers::pi;
         AE_CORE_INFO("Initial ECI position  = [{:.3f}, {:.3f}, {:.3f}] m",
@@ -76,15 +76,15 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
             snap.time,
             snap.altitudeMsl_m,
             snap.feVelocity_m_s.norm(),
-            snap.bodyAngularRateWrtEi_rad_s_Roll  * kToDeg,
+            snap.bodyAngularRateWrtEi_rad_s_Roll * kToDeg,
             snap.bodyAngularRateWrtEi_rad_s_Pitch * kToDeg,
-            snap.bodyAngularRateWrtEi_rad_s_Yaw   * kToDeg);
+            snap.bodyAngularRateWrtEi_rad_s_Yaw * kToDeg);
     }
 
     auto TumblingBrickNoDampingApplication::stepAndRecord(
         std::ofstream& csv, double h, bool doWrite) const -> StepObservation
     {
-        const auto res  = m_Simulator->step(h);
+        const auto res = m_Simulator->step(h);
         const auto snap = m_Simulator->snapshot();
         if (doWrite)
             Simulation::Snapshot1_WriteCsvRow(csv, snap);
@@ -94,18 +94,18 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
                       "ω=[{:.4f},{:.4f},{:.4f}] deg/s",
             snap.time, snap.altitudeMsl_m,
             snap.feVelocity_m_s.norm(),
-            snap.bodyAngularRateWrtEi_rad_s_Roll  * kToDeg,
+            snap.bodyAngularRateWrtEi_rad_s_Roll * kToDeg,
             snap.bodyAngularRateWrtEi_rad_s_Pitch * kToDeg,
-            snap.bodyAngularRateWrtEi_rad_s_Yaw   * kToDeg);
+            snap.bodyAngularRateWrtEi_rad_s_Yaw * kToDeg);
 
         return StepObservation{
-            .time_s        = snap.time,
-            .altitude_m    = snap.altitudeMsl_m,
-            .speed_mps     = snap.feVelocity_m_s.norm(),
-            .latitude_rad  = snap.latitude_rad,
+            .time_s = snap.time,
+            .altitude_m = snap.altitudeMsl_m,
+            .speed_mps = snap.feVelocity_m_s.norm(),
+            .latitude_rad = snap.latitude_rad,
             .longitude_rad = snap.longitude_rad,
-            .converged     = res.converged,
-            .residual      = res.residual_norm,
+            .converged = res.converged,
+            .residual = res.residual_norm,
         };
     }
 
@@ -116,15 +116,15 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
 
         AE_CORE_INFO("=======================================================");
         AE_CORE_INFO("Simulation complete.");
-        AE_CORE_INFO("  Final time      : {:.6f} s",  snap.time);
-        AE_CORE_INFO("  Final altitude  : {:.4f} m",  snap.altitudeMsl_m);
+        AE_CORE_INFO("  Final time      : {:.6f} s", snap.time);
+        AE_CORE_INFO("  Final altitude  : {:.4f} m", snap.altitudeMsl_m);
         AE_CORE_INFO("  Final |v_NED|   : {:.6f} m/s", snap.feVelocity_m_s.norm());
-        AE_CORE_INFO("  Final latitude  : {:.8f} deg", snap.latitude_rad  * kToDeg);
+        AE_CORE_INFO("  Final latitude  : {:.8f} deg", snap.latitude_rad * kToDeg);
         AE_CORE_INFO("  Final longitude : {:.8f} deg", snap.longitude_rad * kToDeg);
         AE_CORE_INFO("  Final ω (ECI)   : [{:.6f}, {:.6f}, {:.6f}] deg/s",
-            snap.bodyAngularRateWrtEi_rad_s_Roll  * kToDeg,
+            snap.bodyAngularRateWrtEi_rad_s_Roll * kToDeg,
             snap.bodyAngularRateWrtEi_rad_s_Pitch * kToDeg,
-            snap.bodyAngularRateWrtEi_rad_s_Yaw   * kToDeg);
+            snap.bodyAngularRateWrtEi_rad_s_Yaw * kToDeg);
         AE_CORE_INFO("  Final q (body→ECI) : [{:.6f}, {:.6f}, {:.6f}, {:.6f}]",
             snap.q_body_to_eci.w(), snap.q_body_to_eci.x(),
             snap.q_body_to_eci.y(), snap.q_body_to_eci.z());
@@ -194,8 +194,7 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
         state.g.q = q.normalized();
         state.g.R = state.g.q.toRotationMatrix();
 
-        state.nu_B <<
-            x0[Layout::IDX_W], x0[Layout::IDX_W + 1], x0[Layout::IDX_W + 2],
+        state.nu_B << x0[Layout::IDX_W], x0[Layout::IDX_W + 1], x0[Layout::IDX_W + 2],
             x0[Layout::IDX_V], x0[Layout::IDX_V + 1], x0[Layout::IDX_V + 2];
 
         state.m = x0[Layout::IDX_M];
@@ -203,10 +202,10 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
     }
 
     std::unique_ptr<TumblingBrickNoDampingSimulator>
-        TumblingBrickNoDampingApplication::constructSimulator(
-            const RigidBody::InertialParameters& ip,
-            const RigidBody::StateD&             x0,
-            double                               theta0)
+    TumblingBrickNoDampingApplication::constructSimulator(
+        const RigidBody::InertialParameters& ip,
+        const RigidBody::StateD& x0,
+        double theta0)
     {
         AE_CORE_INFO("Constructing TumblingBrickNoDampingSimulator "
                      "(J2 gravity, zero aero, Ixx={:.6f} Iyy={:.6f} Izz={:.6f} kg·m²)...",

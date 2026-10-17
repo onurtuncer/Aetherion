@@ -48,9 +48,9 @@ namespace Aetherion::Coordinate {
         const Scalar s = Sine(theta_rad);
 
         return Vec3<Scalar>{
-            c* v_eci[0] + s * v_eci[1],
-                -s * v_eci[0] + c * v_eci[1],
-                v_eci[2]
+            c * v_eci[0] + s * v_eci[1],
+            -s * v_eci[0] + c * v_eci[1],
+            v_eci[2]
         };
     }
 
@@ -91,12 +91,12 @@ namespace Aetherion::Coordinate {
         const Vec3<Scalar> N{
             -sLat * cLon,
             -sLat * sLon,
-             cLat
+            cLat
         };
         const Vec3<Scalar> E{
             -sLon,
-             cLon,
-             Scalar(0)
+            cLon,
+            Scalar(0)
         };
         // D = -U (Down)
         const Vec3<Scalar> D{
@@ -226,7 +226,8 @@ namespace Aetherion::Coordinate {
     // -------------------------------------------------------------------------
 
     template <class Scalar>
-    struct LocalStateNED {
+    struct LocalStateNED
+    {
         Scalar lat_rad{};
         Scalar lon_rad{};
         Scalar h_m{};
@@ -259,12 +260,12 @@ namespace Aetherion::Coordinate {
         const Vec3<Scalar> N_ecef{
             -sLat * cLon,
             -sLat * sLon,
-             cLat
+            cLat
         };
         const Vec3<Scalar> E_ecef{
             -sLon,
-             cLon,
-             Scalar(0)
+            cLon,
+            Scalar(0)
         };
         const Vec3<Scalar> D_ecef{
             -cLat * cLon,

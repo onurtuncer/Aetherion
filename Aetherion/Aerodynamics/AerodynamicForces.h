@@ -52,20 +52,18 @@ namespace Aetherion::Aerodynamics {
 /// @param alpha_rad Angle of attack [rad].
 /// @param beta_rad Sideslip angle [rad].
 /// @return 3×3 DCM @f$ C_{b/w} @f$ such that @f$ v_\text{body} = C_{b/w}\, v_\text{wind} @f$.
-template <class Scalar>
-inline Mat3<Scalar> WindToBodyDCM(const Scalar& alpha_rad, const Scalar& beta_rad)
-{
-    const Scalar ca = CppAD::cos(alpha_rad);
-    const Scalar sa = CppAD::sin(alpha_rad);
-    const Scalar cb = CppAD::cos(beta_rad);
-    const Scalar sb = CppAD::sin(beta_rad);
+    template <class Scalar>
+    inline Mat3<Scalar> WindToBodyDCM(const Scalar& alpha_rad, const Scalar& beta_rad)
+    {
+        const Scalar ca = CppAD::cos(alpha_rad);
+        const Scalar sa = CppAD::sin(alpha_rad);
+        const Scalar cb = CppAD::cos(beta_rad);
+        const Scalar sb = CppAD::sin(beta_rad);
 
-    return Mat3<Scalar>{{
-        {{ ca* cb, -ca * sb, -sa }},
-        { { sb,       cb,       Scalar(0) } },
-        { { sa * cb, -sa * sb,  ca } }
-        }};
-}
+        return Mat3<Scalar>{ { { { ca * cb, -ca * sb, -sa } },
+            { { sb, cb, Scalar(0) } },
+            { { sa * cb, -sa * sb, ca } } } };
+    }
 
 // --- Forces from wind-axis coefficients (CL, CD, CY) --------------------------
 
@@ -84,28 +82,28 @@ inline Mat3<Scalar> WindToBodyDCM(const Scalar& alpha_rad, const Scalar& beta_ra
 /// @param CD Drag coefficient (dimensionless).
 /// @param CY Side-force coefficient (dimensionless).
 /// @return Aerodynamic force vector expressed in body axes [N].
-template <class Scalar>
-inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY_AlphaBeta(
-    const Scalar& alpha_rad,
-    const Scalar& beta_rad,
-    const Scalar& density_kg_m3,
-    const Scalar& speed_m_s,
-    const Scalar& S_ref_m2,
-    const Scalar& CL,
-    const Scalar& CD,
-    const Scalar& CY)
-{
-    const Scalar q = DynamicPressure(density_kg_m3, speed_m_s);
+    template <class Scalar>
+    inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY_AlphaBeta(
+        const Scalar& alpha_rad,
+        const Scalar& beta_rad,
+        const Scalar& density_kg_m3,
+        const Scalar& speed_m_s,
+        const Scalar& S_ref_m2,
+        const Scalar& CL,
+        const Scalar& CD,
+        const Scalar& CY)
+    {
+        const Scalar q = DynamicPressure(density_kg_m3, speed_m_s);
 
-    const Scalar D = q * S_ref_m2 * CD;
-    const Scalar L = q * S_ref_m2 * CL;
-    const Scalar Y = q * S_ref_m2 * CY;
+        const Scalar D = q * S_ref_m2 * CD;
+        const Scalar L = q * S_ref_m2 * CL;
+        const Scalar Y = q * S_ref_m2 * CY;
 
-    const Vec3<Scalar> F_w{ -D, Y, -L };
+        const Vec3<Scalar> F_w{ -D, Y, -L };
 
-    const Mat3<Scalar> C_b_w = WindToBodyDCM(alpha_rad, beta_rad);
-    return MatVecMul(C_b_w, F_w);
-}
+        const Mat3<Scalar> C_b_w = WindToBodyDCM(alpha_rad, beta_rad);
+        return MatVecMul(C_b_w, F_w);
+    }
 
 /// @brief Aerodynamic force in body axes computed from wind-axis coefficients, inferring alpha/beta from the velocity vector.
 ///
@@ -120,20 +118,20 @@ inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY_AlphaBeta(
 /// @param CY Side-force coefficient (dimensionless).
 /// @param eps Smoothing parameter for angle and speed computations; default 1e-12.
 /// @return Aerodynamic force vector expressed in body axes [N].
-template <class Scalar>
-inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY(
-    const Vec3<Scalar>& v_body_m_s,
-    const Scalar& density_kg_m3,
-    const Scalar& S_ref_m2,
-    const Scalar& CL,
-    const Scalar& CD,
-    const Scalar& CY,
-    const Scalar& eps = Scalar(1e-12))
-{
-    const auto ang = AnglesFromVelocityBody(v_body_m_s, eps);
-    return AerodynamicForceBodyFromCLCDCY_AlphaBeta(
-        ang.alpha_rad, ang.beta_rad, density_kg_m3, ang.speed_m_s, S_ref_m2, CL, CD, CY);
-}
+    template <class Scalar>
+    inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY(
+        const Vec3<Scalar>& v_body_m_s,
+        const Scalar& density_kg_m3,
+        const Scalar& S_ref_m2,
+        const Scalar& CL,
+        const Scalar& CD,
+        const Scalar& CY,
+        const Scalar& eps = Scalar(1e-12))
+    {
+        const auto ang = AnglesFromVelocityBody(v_body_m_s, eps);
+        return AerodynamicForceBodyFromCLCDCY_AlphaBeta(
+            ang.alpha_rad, ang.beta_rad, density_kg_m3, ang.speed_m_s, S_ref_m2, CL, CD, CY);
+    }
 
 // --- Forces from body-axis coefficients (Cx, Cy, Cz) --------------------------
 
@@ -149,24 +147,24 @@ inline Vec3<Scalar> AerodynamicForceBodyFromCLCDCY(
 /// @param Cz Body-axis z force coefficient (dimensionless).
 /// @param eps Smoothing parameter for speed computation; default 1e-12.
 /// @return Aerodynamic force vector expressed in body axes [N].
-template <class Scalar>
-inline Vec3<Scalar> AerodynamicForceBodyFromCxyz(
-    const Vec3<Scalar>& v_body_m_s,
-    const Scalar& density_kg_m3,
-    const Scalar& S_ref_m2,
-    const Scalar& Cx,
-    const Scalar& Cy,
-    const Scalar& Cz,
-    const Scalar& eps = Scalar(1e-12))
-{
-    const Scalar V = SpeedFromVelocity(v_body_m_s, eps);
-    const Scalar q = DynamicPressure(density_kg_m3, V);
+    template <class Scalar>
+    inline Vec3<Scalar> AerodynamicForceBodyFromCxyz(
+        const Vec3<Scalar>& v_body_m_s,
+        const Scalar& density_kg_m3,
+        const Scalar& S_ref_m2,
+        const Scalar& Cx,
+        const Scalar& Cy,
+        const Scalar& Cz,
+        const Scalar& eps = Scalar(1e-12))
+    {
+        const Scalar V = SpeedFromVelocity(v_body_m_s, eps);
+        const Scalar q = DynamicPressure(density_kg_m3, V);
 
-    return Vec3<Scalar>{
-        q* S_ref_m2* Cx,
-            q* S_ref_m2* Cy,
-            q* S_ref_m2* Cz
-    };
-}
+        return Vec3<Scalar>{
+            q * S_ref_m2 * Cx,
+            q * S_ref_m2 * Cy,
+            q * S_ref_m2 * Cz
+        };
+    }
 
 } // namespace Aetherion::Aerodynamics

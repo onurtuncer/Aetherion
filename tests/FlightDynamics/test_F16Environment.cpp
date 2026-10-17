@@ -56,29 +56,30 @@ using Catch::Matchers::WithinAbs;
 using Catch::Matchers::WithinRel;
 
 #ifndef DAVEML_F16_AERO_FILE
-#  define DAVEML_F16_AERO_FILE ""
+#define DAVEML_F16_AERO_FILE ""
 #endif
 #ifndef DAVEML_F16_PROP_FILE
-#  define DAVEML_F16_PROP_FILE ""
+#define DAVEML_F16_PROP_FILE ""
 #endif
 static const std::string kAeroFile = DAVEML_F16_AERO_FILE;
 static const std::string kPropFile = DAVEML_F16_PROP_FILE;
 
 namespace {
 
-    constexpr double kFt_m       = TrimSolver::kFt_m;
-    constexpr double kDeg        = std::numbers::pi / 180.0;
-    constexpr double kLat_deg    = 36.01917, kLon_deg = -75.67444, kHeading_deg = 45.0;
-    constexpr double kAlt_ft     = 10013.0;
-    constexpr double kV_fps      = 400.0;           // per axis: vt = 565.685 ft/s
-    constexpr double kMass_kg    = 9298.6439;
-    constexpr double kXcg_ft     = 1.132;
-    constexpr double kOmegaE     = Environment::WGS84::kRotationRate_rad_s;
+    constexpr double kFt_m = TrimSolver::kFt_m;
+    constexpr double kDeg = std::numbers::pi / 180.0;
+    constexpr double kLat_deg = 36.01917, kLon_deg = -75.67444, kHeading_deg = 45.0;
+    constexpr double kAlt_ft = 10013.0;
+    constexpr double kV_fps = 400.0;           // per axis: vt = 565.685 ft/s
+    constexpr double kMass_kg = 9298.6439;
+    constexpr double kXcg_ft = 1.132;
+    constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
 
-    using SE3d  = ODE::RKMK::Lie::SE3<double>;
+    using SE3d = ODE::RKMK::Lie::SE3<double>;
     using Vec6d = Eigen::Matrix<double, 6, 1>;
 
-    struct Scene {
+    struct Scene
+    {
         std::shared_ptr<const DAVEMLAeroModel> aero;
         std::shared_ptr<const DAVEMLPropModel> prop;
         TrimPoint trim;
@@ -95,10 +96,10 @@ namespace {
 
         const double alt_m = kAlt_ft * kFt_m, v = kV_fps * kFt_m;
         TrimInputs in{};
-        in.vt_fps     = std::hypot(kV_fps, kV_fps);
-        in.alt_ft     = kAlt_ft;
+        in.vt_fps = std::hypot(kV_fps, kV_fps);
+        in.alt_ft = kAlt_ft;
         in.weight_lbf = LevelFlightTrimWeight_lbf(kMass_kg, kLat_deg, alt_m, v, v);
-        in.bodyRates  = LevelFlightBodyRates(kLat_deg, alt_m, v, v, kHeading_deg, 0.0, 0.0);
+        in.bodyRates = LevelFlightBodyRates(kLat_deg, alt_m, v, v, kHeading_deg, 0.0, 0.0);
         s.trim = solver.solve(in);
         REQUIRE(s.trim.converged);
         s.rates = LevelFlightBodyRates(kLat_deg, alt_m, v, v, kHeading_deg, s.trim.alpha_deg, 0.0);
@@ -110,16 +111,16 @@ namespace {
     RigidBody::StateD makeState(const Scene& s, double vN, double vE, double vD, double theta)
     {
         RigidBody::Config cfg{};
-        cfg.pose.lat_deg          = kLat_deg;
-        cfg.pose.lon_deg          = kLon_deg;
-        cfg.pose.alt_m            = kAlt_ft * kFt_m;
-        cfg.pose.azimuth_deg      = kHeading_deg;
-        cfg.pose.zenith_deg       = 90.0 - s.trim.alpha_deg;
-        cfg.pose.roll_deg         = 0.0;
+        cfg.pose.lat_deg = kLat_deg;
+        cfg.pose.lon_deg = kLon_deg;
+        cfg.pose.alt_m = kAlt_ft * kFt_m;
+        cfg.pose.azimuth_deg = kHeading_deg;
+        cfg.pose.zenith_deg = 90.0 - s.trim.alpha_deg;
+        cfg.pose.roll_deg = 0.0;
         cfg.velocityNED.north_mps = vN;
-        cfg.velocityNED.east_mps  = vE;
-        cfg.velocityNED.down_mps  = vD;
-        cfg.bodyRates             = s.rates;
+        cfg.velocityNED.east_mps = vE;
+        cfg.velocityNED.down_mps = vD;
+        cfg.bodyRates = s.rates;
         cfg.inertialParameters.mass_kg = kMass_kg;
 
         const auto x0 = RigidBody::BuildInitialStateVector(cfg, theta);
@@ -130,7 +131,7 @@ namespace {
         st.g.q = q.normalized();
         st.g.R = st.g.q.toRotationMatrix();
         st.nu_B << x0[L::IDX_W], x0[L::IDX_W + 1], x0[L::IDX_W + 2],
-                   x0[L::IDX_V], x0[L::IDX_V + 1], x0[L::IDX_V + 2];
+            x0[L::IDX_V], x0[L::IDX_V + 1], x0[L::IDX_V + 2];
         st.m = kMass_kg;
         return st;
     }
@@ -180,10 +181,13 @@ TEST_CASE("F16Environment: steady wind shifts the ground velocity and nothing el
 
     // Headwind, crosswind and a vertical component; at t = 0 and at a large
     // Earth rotation angle, so the ECEF -> ECI(t) step is exercised.
-    struct W { double n, e, d; };
+    struct W
+    {
+        double n, e, d;
+    };
     const std::array<W, 3> winds{ { W{ .n = -7.0711, .e = -7.0711, .d = 0.0 },
-                                    W{ .n =  7.0711, .e = -7.0711, .d = 0.0 },
-                                    W{ .n =  3.0,    .e = -4.0,    .d = 1.5 } } };
+        W{ .n = 7.0711, .e = -7.0711, .d = 0.0 },
+        W{ .n = 3.0, .e = -4.0, .d = 1.5 } } };
     const std::array<double, 3> thetas{ { 0.0, 0.3, 2.9 } };
 
     for (const auto& w : winds) {
@@ -193,7 +197,7 @@ TEST_CASE("F16Environment: steady wind shifts the ground velocity and nothing el
             // Calm reference at the air velocity.
             const auto stCalm = makeState(s, v, v, 0.0, theta);
             F16AeroPolicy calm = makePolicy(s);
-            const auto wCalm  = calm(pose(stCalm), stCalm.nu_B, kMass_kg, t);
+            const auto wCalm = calm(pose(stCalm), stCalm.nu_B, kMass_kg, t);
             const auto vrCalm = calm.airRelativeVelocity_B<double>(pose(stCalm), stCalm.nu_B, t);
 
             // Windy: ground velocity = air velocity + wind, policy told the wind.
@@ -202,7 +206,7 @@ TEST_CASE("F16Environment: steady wind shifts the ground velocity and nothing el
             const auto wecef = Environment::ConstantECEFWind::from_ned(
                 w.n, w.e, w.d, kLat_deg * kDeg, kLon_deg * kDeg);
             windy.setWindECEF(Eigen::Vector3d(wecef.vx, wecef.vy, wecef.vz));
-            const auto wWind  = windy(pose(stWind), stWind.nu_B, kMass_kg, t);
+            const auto wWind = windy(pose(stWind), stWind.nu_B, kMass_kg, t);
             const auto vrWind = windy.airRelativeVelocity_B<double>(pose(stWind), stWind.nu_B, t);
 
             INFO("wind NED = (" << w.n << ", " << w.e << ", " << w.d << "), theta = " << theta);
@@ -227,14 +231,18 @@ TEST_CASE("F16Environment: a linear gust is the opposite shift of the body veloc
     const auto st = makeState(s, v, v, 0.0, 0.0);
 
     Environment::GustState g{};
-    g.u_mps = 4.0; g.v_mps = -2.5; g.w_mps = 3.0;
+    g.u_mps = 4.0;
+    g.v_mps = -2.5;
+    g.w_mps = 3.0;
 
     F16AeroPolicy gusty = makePolicy(s);
     gusty.setGust(g);
     const auto wG = gusty(pose(st), st.nu_B, kMass_kg, 0.0);
 
     RigidBody::StateD shifted = st;
-    shifted.nu_B(3) -= g.u_mps; shifted.nu_B(4) -= g.v_mps; shifted.nu_B(5) -= g.w_mps;
+    shifted.nu_B(3) -= g.u_mps;
+    shifted.nu_B(4) -= g.v_mps;
+    shifted.nu_B(5) -= g.w_mps;
     F16AeroPolicy calm = makePolicy(s);
     const auto wS = calm(pose(shifted), shifted.nu_B, kMass_kg, 0.0);
 
@@ -256,12 +264,14 @@ TEST_CASE("F16Environment: rotational gusts have the physical sign", "[f16env][g
     // p_air > 0: the air rotates about +x, i.e. the downward gust grows toward
     // the right wing, which loses lift.  The aircraft must roll right (+Mx).
     {
-        Environment::GustState g{}; g.p_rad_s = 0.05;
+        Environment::GustState g{};
+        g.p_rad_s = 0.05;
         pol.setGust(g);
         const auto w = pol(pose(st), st.nu_B, kMass_kg, 0.0);
         CHECK(w.f(0) - w0.f(0) > 100.0);
         // and it equals the aircraft rolling at -p_air relative to the air
-        RigidBody::StateD r = st; r.nu_B(0) -= 0.05;
+        RigidBody::StateD r = st;
+        r.nu_B(0) -= 0.05;
         F16AeroPolicy calm = makePolicy(s);
         const auto wr = calm(pose(r), r.nu_B, kMass_kg, 0.0);
         CHECK_THAT(w.f(0), WithinRel(wr.f(0), 1e-10));
@@ -269,14 +279,16 @@ TEST_CASE("F16Environment: rotational gusts have the physical sign", "[f16env][g
     // q_air > 0: the air rotates nose-up; relative to it the aircraft pitches
     // nose-down and pitch damping answers with a nose-up moment (+My).
     {
-        Environment::GustState g{}; g.q_rad_s = 0.05;
+        Environment::GustState g{};
+        g.q_rad_s = 0.05;
         pol.setGust(g);
         const auto w = pol(pose(st), st.nu_B, kMass_kg, 0.0);
         CHECK(w.f(1) - w0.f(1) > 100.0);
     }
     // r_air > 0: likewise a +Mz answer.
     {
-        Environment::GustState g{}; g.r_rad_s = 0.05;
+        Environment::GustState g{};
+        g.r_rad_s = 0.05;
         pol.setGust(g);
         const auto w = pol(pose(st), st.nu_B, kMass_kg, 0.0);
         CHECK(w.f(2) - w0.f(2) > 100.0);
@@ -311,7 +323,7 @@ TEST_CASE("F16Environment: a hot day trims at a higher alpha", "[f16env][atm]")
     const Scene stdDay = makeScene();
     const Scene hotDay = makeScene(Environment::AtmosphereOffsets{ .deltaT_K = 20.0, .deltaP_sl_Pa = 0.0 });
     INFO("standard: alpha=" << stdDay.trim.alpha_deg << " pwr=" << stdDay.trim.pwr_pct
-         << "  hot: alpha=" << hotDay.trim.alpha_deg << " pwr=" << hotDay.trim.pwr_pct);
+                            << "  hot: alpha=" << hotDay.trim.alpha_deg << " pwr=" << hotDay.trim.pwr_pct);
     CHECK(hotDay.trim.alpha_deg > stdDay.trim.alpha_deg + 0.05);
     // The throttle is not monotonic in dT: the engine deck is indexed on Mach,
     // which drops on a hot day, and the required thrust moves with both the
@@ -335,7 +347,9 @@ TEST_CASE("F16Environment: the snapshot reports the air data the forces used", "
     const auto wecef = Environment::ConstantECEFWind::from_ned(wn, we, wd, kLat_deg * kDeg, kLon_deg * kDeg);
     pol.setWindECEF(Eigen::Vector3d(wecef.vx, wecef.vy, wecef.vz));
     pol.setAtmosphereOffsets(atm);
-    Environment::GustState g{}; g.u_mps = 1.5; g.w_mps = -2.0;
+    Environment::GustState g{};
+    g.u_mps = 1.5;
+    g.w_mps = -2.0;
     pol.setGust(g);
 
     const auto snap = Simulation::MakeSnapshot1(t, st, theta, J2GravityPolicy{}, pol);
@@ -343,11 +357,11 @@ TEST_CASE("F16Environment: the snapshot reports the air data the forces used", "
     CHECK_THAT(snap.trueAirspeed_m_s, WithinRel(v_rel.norm(), 1e-9));
 
     const auto a = Environment::US1976Atmosphere(snap.altitudeMsl_m, atm);
-    CHECK_THAT(snap.ambientPressure_Pa,   WithinRel(a.p,   1e-12));
-    CHECK_THAT(snap.ambientTemperature_K, WithinRel(a.T,   1e-12));
-    CHECK_THAT(snap.airDensity_kg_m3,     WithinRel(a.rho, 1e-12));
-    CHECK_THAT(snap.mach,                 WithinRel(v_rel.norm() / a.a, 1e-9));
-    CHECK_THAT(snap.dynamicPressure_Pa,   WithinRel(0.5 * a.rho * v_rel.squaredNorm(), 1e-9));
+    CHECK_THAT(snap.ambientPressure_Pa, WithinRel(a.p, 1e-12));
+    CHECK_THAT(snap.ambientTemperature_K, WithinRel(a.T, 1e-12));
+    CHECK_THAT(snap.airDensity_kg_m3, WithinRel(a.rho, 1e-12));
+    CHECK_THAT(snap.mach, WithinRel(v_rel.norm() / a.a, 1e-9));
+    CHECK_THAT(snap.dynamicPressure_Pa, WithinRel(0.5 * a.rho * v_rel.squaredNorm(), 1e-9));
 
     // Ground speed is what the NED velocity still reports.
     CHECK_THAT(snap.feVelocity_m_s.norm(), WithinRel(std::sqrt(((v + wn) * (v + wn)) + ((v + we) * (v + we)) + (wd * wd)), 1e-6));
@@ -383,13 +397,13 @@ TEST_CASE("F16Environment: the engine flies in the same air as the airframe", "[
     hotProp.setAtmosphereOffsets(hot);
     const auto Th = hotProp(pose(stCalm), stCalm.nu_B, kMass_kg, t);
     const double alt_m = Environment::GeometricAltitude_m(stCalm.g.p);
-    const double vt    = calm.windECEF().isZero()
-        ? AirRelativeVelocity_B(pose(stCalm), stCalm.nu_B, t, Eigen::Vector3d::Zero(), Environment::GustState{}).norm()
-        : 0.0;
+    const double vt = calm.windECEF().isZero()
+                          ? AirRelativeVelocity_B(pose(stCalm), stCalm.nu_B, t, Eigen::Vector3d::Zero(), Environment::GustState{}).norm()
+                          : 0.0;
     Serialization::DAVEMLPropModel::Inputs<double> in{};
     in.pwr_pct = s.trim.pwr_pct;
-    in.alt_ft  = alt_m / kFt_m;
-    in.mach    = vt / Environment::US1976Atmosphere(alt_m, hot).a;
+    in.alt_ft = alt_m / kFt_m;
+    in.mach = vt / Environment::US1976Atmosphere(alt_m, hot).a;
     const auto direct = s.prop->evaluate<double>(in);
     CHECK_THAT(Th.f(3), WithinRel(direct.fx_N, 1e-12));
     CHECK(std::abs(Th.f(3) - T0.f(3)) > 1.0);
@@ -408,7 +422,10 @@ TEST_CASE("F16Environment: evaluates with CppAD::AD<double> in wind, gust and of
     const auto wecef = Environment::ConstantECEFWind::from_ned(5.0, -3.0, 0.0, kLat_deg * kDeg, kLon_deg * kDeg);
     pol.setWindECEF(Eigen::Vector3d(wecef.vx, wecef.vy, wecef.vz));
     pol.setAtmosphereOffsets(Environment::AtmosphereOffsets{ .deltaT_K = -10.0, .deltaP_sl_Pa = 400.0 });
-    Environment::GustState g{}; g.v_mps = 2.0; g.p_rad_s = 0.01; g.q_rad_s = -0.02;
+    Environment::GustState g{};
+    g.v_mps = 2.0;
+    g.p_rad_s = 0.01;
+    g.q_rad_s = -0.02;
     pol.setGust(g);
 
     const auto wd = pol(pose(st), st.nu_B, kMass_kg, t);

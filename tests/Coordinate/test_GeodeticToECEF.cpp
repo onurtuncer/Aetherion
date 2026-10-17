@@ -61,5 +61,3 @@ TEST_CASE("GeodeticToECEF - north pole", "[coordinate][geodetic]")
     REQUIRE(r[1] == Approx(0.0).margin(1e-6));
     REQUIRE(r[2] == Approx(b).margin(1e-3));
 }
-
-

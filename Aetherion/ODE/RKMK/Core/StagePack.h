@@ -32,8 +32,9 @@
 
 namespace Aetherion::ODE::RKMK::Core {
 
-    template<class ScalarT, int Stages, int EuclidDim = Eigen::Dynamic>
-    struct StagePack final {
+    template <class ScalarT, int Stages, int EuclidDim = Eigen::Dynamic>
+    struct StagePack final
+    {
         static_assert(Stages > 0, "StagePack: Stages must be > 0");
 
         using Scalar = ScalarT;
@@ -54,22 +55,27 @@ namespace Aetherion::ODE::RKMK::Core {
 
         // If EuclidDim is dynamic, you must pass m at runtime.
         constexpr StagePack()
-            requires (EuclidDim != Eigen::Dynamic)
-        : euclid_dim_(EuclidDim) {
+            requires(EuclidDim != Eigen::Dynamic)
+            : euclid_dim_(EuclidDim)
+        {
         }
 
         explicit constexpr StagePack(int euclid_dim)
-            requires (EuclidDim == Eigen::Dynamic)
-        : euclid_dim_(euclid_dim) {
+            requires(EuclidDim == Eigen::Dynamic)
+            : euclid_dim_(euclid_dim)
+        {
             assert(euclid_dim_ >= 0);
         }
 
         [[nodiscard]] constexpr int stages() const noexcept { return kStages; }
         [[nodiscard]] constexpr int lie_dim() const noexcept { return kLieDim; }
 
-        [[nodiscard]] constexpr int euclid_dim() const noexcept {
-            if constexpr (EuclidDim == Eigen::Dynamic) return euclid_dim_;
-            else return EuclidDim;
+        [[nodiscard]] constexpr int euclid_dim() const noexcept
+        {
+            if constexpr (EuclidDim == Eigen::Dynamic)
+                return euclid_dim_;
+            else
+                return EuclidDim;
         }
 
         [[nodiscard]] constexpr int stage_dim() const noexcept { return kLieDim + euclid_dim(); }
@@ -80,26 +86,26 @@ namespace Aetherion::ODE::RKMK::Core {
         // For fixed sizes, these return fixed-size objects.
         // For dynamic, they resize to total_dim().
         // ---------------------------------------------------------------------
-        [[nodiscard]] Vector make_vector() const {
+        [[nodiscard]] Vector make_vector() const
+        {
             if constexpr (kTotalDimCT == Eigen::Dynamic) {
                 Vector v(total_dim());
                 v.setZero();
                 return v;
-            }
-            else {
+            } else {
                 Vector v;
                 v.setZero();
                 return v;
             }
         }
 
-        [[nodiscard]] Matrix make_matrix() const {
+        [[nodiscard]] Matrix make_matrix() const
+        {
             if constexpr (kTotalDimCT == Eigen::Dynamic) {
                 Matrix M(total_dim(), total_dim());
                 M.setZero();
                 return M;
-            }
-            else {
+            } else {
                 Matrix M;
                 M.setZero();
                 return M;
@@ -109,59 +115,68 @@ namespace Aetherion::ODE::RKMK::Core {
         // ---------------------------------------------------------------------
         // Offsets
         // ---------------------------------------------------------------------
-        [[nodiscard]] constexpr int stage_offset(int i) const noexcept {
+        [[nodiscard]] constexpr int stage_offset(int i) const noexcept
+        {
             return i * stage_dim();
         }
 
-        [[nodiscard]] constexpr int xi_offset(int i) const noexcept {
+        [[nodiscard]] constexpr int xi_offset(int i) const noexcept
+        {
             return stage_offset(i);
         }
 
-        [[nodiscard]] constexpr int u_offset(int i) const noexcept {
+        [[nodiscard]] constexpr int u_offset(int i) const noexcept
+        {
             return stage_offset(i) + kLieDim;
         }
 
         // ---------------------------------------------------------------------
         // Vector access (x or r): xi_i (6) and u_i (m)
         // ---------------------------------------------------------------------
-        template<class Derived>
-        [[nodiscard]] auto xi(Eigen::MatrixBase<Derived>& x, int i) const {
+        template <class Derived>
+        [[nodiscard]] auto xi(Eigen::MatrixBase<Derived>& x, int i) const
+        {
             check_vector_(x.derived());
             check_stage_(i);
             return x.derived().segment(xi_offset(i), kLieDim);
         }
 
-        template<class Derived>
-        [[nodiscard]] auto xi(const Eigen::MatrixBase<Derived>& x, int i) const {
+        template <class Derived>
+        [[nodiscard]] auto xi(const Eigen::MatrixBase<Derived>& x, int i) const
+        {
             check_vector_(x.derived());
             check_stage_(i);
             return x.derived().segment(xi_offset(i), kLieDim);
         }
 
-        template<class Derived>
-        [[nodiscard]] auto u(Eigen::MatrixBase<Derived>& x, int i) const {
+        template <class Derived>
+        [[nodiscard]] auto u(Eigen::MatrixBase<Derived>& x, int i) const
+        {
             check_vector_(x.derived());
             check_stage_(i);
             return x.derived().segment(u_offset(i), euclid_dim());
         }
 
-        template<class Derived>
-        [[nodiscard]] auto u(const Eigen::MatrixBase<Derived>& x, int i) const {
+        template <class Derived>
+        [[nodiscard]] auto u(const Eigen::MatrixBase<Derived>& x, int i) const
+        {
             check_vector_(x.derived());
             check_stage_(i);
             return x.derived().segment(u_offset(i), euclid_dim());
         }
 
         // Stage block [xi_i; u_i] (size stage_dim)
-        template<class Derived>
-        [[nodiscard]] auto stage(Eigen::MatrixBase<Derived>& x, int i) const {
+        template <class Derived>
+        [[nodiscard]] auto stage(Eigen::MatrixBase<Derived>& x, int i) const
+        {
             check_vector_(x.derived());
             check_stage_(i);
             return x.derived().segment(stage_offset(i), stage_dim());
         }
 
-        template<class Derived>
-        [[nodiscard]] auto stage(const Eigen::MatrixBase<Derived>& x, int i) const {
+        template <class Derived>
+        [[nodiscard]] auto stage(const Eigen::MatrixBase<Derived>& x, int i) const
+        {
             check_vector_(x.derived());
             check_stage_(i);
             return x.derived().segment(stage_offset(i), stage_dim());
@@ -173,16 +188,18 @@ namespace Aetherion::ODE::RKMK::Core {
         // J is assumed to be sized (total_dim x total_dim) with the same stacking
         // as the vector. These helpers return Eigen::Block views.
         // ---------------------------------------------------------------------
-        template<class Derived>
-        [[nodiscard]] auto stage_block(Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto stage_block(Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
             return J.derived().block(stage_offset(i), stage_offset(j), stage_dim(), stage_dim());
         }
 
-        template<class Derived>
-        [[nodiscard]] auto stage_block(const Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto stage_block(const Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
@@ -190,16 +207,18 @@ namespace Aetherion::ODE::RKMK::Core {
         }
 
         // xi-xi block: 6x6
-        template<class Derived>
-        [[nodiscard]] auto J_xi_xi(Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto J_xi_xi(Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
             return J.derived().block(xi_offset(i), xi_offset(j), kLieDim, kLieDim);
         }
 
-        template<class Derived>
-        [[nodiscard]] auto J_xi_xi(const Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto J_xi_xi(const Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
@@ -207,16 +226,18 @@ namespace Aetherion::ODE::RKMK::Core {
         }
 
         // xi-u block: 6xm
-        template<class Derived>
-        [[nodiscard]] auto J_xi_u(Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto J_xi_u(Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
             return J.derived().block(xi_offset(i), u_offset(j), kLieDim, euclid_dim());
         }
 
-        template<class Derived>
-        [[nodiscard]] auto J_xi_u(const Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto J_xi_u(const Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
@@ -224,16 +245,18 @@ namespace Aetherion::ODE::RKMK::Core {
         }
 
         // u-xi block: mx6
-        template<class Derived>
-        [[nodiscard]] auto J_u_xi(Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto J_u_xi(Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
             return J.derived().block(u_offset(i), xi_offset(j), euclid_dim(), kLieDim);
         }
 
-        template<class Derived>
-        [[nodiscard]] auto J_u_xi(const Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto J_u_xi(const Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
@@ -241,16 +264,18 @@ namespace Aetherion::ODE::RKMK::Core {
         }
 
         // u-u block: mxm
-        template<class Derived>
-        [[nodiscard]] auto J_u_u(Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto J_u_u(Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
             return J.derived().block(u_offset(i), u_offset(j), euclid_dim(), euclid_dim());
         }
 
-        template<class Derived>
-        [[nodiscard]] auto J_u_u(const Eigen::MatrixBase<Derived>& J, int i, int j) const {
+        template <class Derived>
+        [[nodiscard]] auto J_u_u(const Eigen::MatrixBase<Derived>& J, int i, int j) const
+        {
             check_square_(J.derived());
             check_stage_(i);
             check_stage_(j);
@@ -260,18 +285,21 @@ namespace Aetherion::ODE::RKMK::Core {
     private:
         int euclid_dim_{ 0 };
 
-        void check_stage_(int i) const noexcept {
+        void check_stage_(int i) const noexcept
+        {
             assert(i >= 0 && i < kStages);
         }
 
-        template<class Derived>
-        void check_vector_(const Eigen::MatrixBase<Derived>& x) const noexcept {
+        template <class Derived>
+        void check_vector_(const Eigen::MatrixBase<Derived>& x) const noexcept
+        {
             assert(x.cols() == 1);
             assert(x.rows() == total_dim());
         }
 
-        template<class Derived>
-        void check_square_(const Eigen::MatrixBase<Derived>& J) const noexcept {
+        template <class Derived>
+        void check_square_(const Eigen::MatrixBase<Derived>& J) const noexcept
+        {
             assert(J.rows() == total_dim() && J.cols() == total_dim());
         }
     };

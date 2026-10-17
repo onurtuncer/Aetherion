@@ -25,15 +25,17 @@ namespace {
     // -----------------------------
     // Minimal value-semantics Lie group (no Eigen storage -> AD-friendly)
     // -----------------------------
-    template<class S>
-    struct MockGroup {
+    template <class S>
+    struct MockGroup
+    {
         using Scalar = S;
         using Tangent = std::array<S, 6>;
 
         // store a 4x4 matrix in row-major
         std::array<S, 16> T{};
 
-        static MockGroup Identity() {
+        static MockGroup Identity()
+        {
             MockGroup g;
             g.T.fill(S(0));
             g.T[0] = S(1);
@@ -43,7 +45,8 @@ namespace {
             return g;
         }
 
-        friend MockGroup operator*(const MockGroup& a, const MockGroup& b) {
+        friend MockGroup operator*(const MockGroup& a, const MockGroup& b)
+        {
             MockGroup c;
             c.T.fill(S(0));
             for (int r = 0; r < 4; ++r) {
@@ -67,11 +70,13 @@ namespace {
     // -----------------------------
     // Dynamics fields on G x R^3
     // -----------------------------
-    struct XiGood {
-        template<class S>
+    struct XiGood
+    {
+        template <class S>
         auto operator()(S /*t*/,
             const MockGroup<S>& /*g*/,
-            const Eigen::Matrix<S, 3, 1>& x) const -> typename MockGroup<S>::Tangent {
+            const Eigen::Matrix<S, 3, 1>& x) const -> typename MockGroup<S>::Tangent
+        {
             typename MockGroup<S>::Tangent xi{};
             xi[0] = x(0);
             xi[1] = x(1);
@@ -83,32 +88,39 @@ namespace {
         }
     };
 
-    struct FGood {
-        template<class S>
+    struct FGood
+    {
+        template <class S>
         auto operator()(S /*t*/,
             const MockGroup<S>& /*g*/,
-            const Eigen::Matrix<S, 3, 1>& x) const -> Eigen::Matrix<S, 3, 1> {
+            const Eigen::Matrix<S, 3, 1>& x) const -> Eigen::Matrix<S, 3, 1>
+        {
             return x;
         }
     };
 
     // Bad Xi: wrong return type
-    struct XiBadReturn {
-        template<class S>
-        auto operator()(S, const MockGroup<S>&, const Eigen::Matrix<S, 3, 1>&) const -> int {
+    struct XiBadReturn
+    {
+        template <class S>
+        auto operator()(S, const MockGroup<S>&, const Eigen::Matrix<S, 3, 1>&) const -> int
+        {
             return 0;
         }
     };
 
     // Bad f: wrong return vector shape
-    struct FBadReturn {
-        template<class S>
-        auto operator()(S, const MockGroup<S>&, const Eigen::Matrix<S, 3, 1>&) const -> Eigen::Matrix<S, 4, 1> {
+    struct FBadReturn
+    {
+        template <class S>
+        auto operator()(S, const MockGroup<S>&, const Eigen::Matrix<S, 3, 1>&) const -> Eigen::Matrix<S, 4, 1>
+        {
             return Eigen::Matrix<S, 4, 1>::Zero();
         }
     };
 
-    struct NonCopyable {
+    struct NonCopyable
+    {
         NonCopyable() = default;
         ~NonCopyable() = default;
         NonCopyable(const NonCopyable&) = delete;
@@ -117,11 +129,13 @@ namespace {
         NonCopyable& operator=(NonCopyable&&) = default;
     };
 
-    struct NoOpsScalar {}; // should fail ScalarLike/ADCompatibleScalar
+    struct NoOpsScalar
+    {}; // should fail ScalarLike/ADCompatibleScalar
 
 } // namespace
 
-TEST_CASE("Concepts: basic scalar concepts", "[concepts][scalar]") {
+TEST_CASE("Concepts: basic scalar concepts", "[concepts][scalar]")
+{
     STATIC_REQUIRE(Core::ScalarLike<double>);
     STATIC_REQUIRE(Core::ADCompatibleScalar<double>);
     STATIC_REQUIRE(Core::ADCompatibleScalar<CppAD::AD<double>>);
@@ -130,14 +144,16 @@ TEST_CASE("Concepts: basic scalar concepts", "[concepts][scalar]") {
     STATIC_REQUIRE_FALSE(Core::ADCompatibleScalar<NoOpsScalar>);
 }
 
-TEST_CASE("Concepts: ValueSemantics", "[concepts][value]") {
+TEST_CASE("Concepts: ValueSemantics", "[concepts][value]")
+{
     STATIC_REQUIRE(Core::ValueSemantics<int>);
     STATIC_REQUIRE(Core::ValueSemantics<MockGroup<double>>);
 
     STATIC_REQUIRE_FALSE(Core::ValueSemantics<NonCopyable>);
 }
 
-TEST_CASE("Concepts: EigenVectorLike", "[concepts][eigen]") {
+TEST_CASE("Concepts: EigenVectorLike", "[concepts][eigen]")
+{
     STATIC_REQUIRE(Core::EigenVectorLike<Eigen::Vector3d>);
     STATIC_REQUIRE(Core::EigenVectorLike<Eigen::VectorXd>);
 
@@ -145,12 +161,14 @@ TEST_CASE("Concepts: EigenVectorLike", "[concepts][eigen]") {
     STATIC_REQUIRE_FALSE(Core::EigenVectorLike<Eigen::Matrix<double, 3, 4>>);
 }
 
-TEST_CASE("Concepts: LieGroup and LieGroupTemplate", "[concepts][lie]") {
+TEST_CASE("Concepts: LieGroup and LieGroupTemplate", "[concepts][lie]")
+{
     STATIC_REQUIRE(Core::LieGroup<MockGroup<double>>);
     STATIC_REQUIRE(Core::LieGroupTemplate<MockGroup, double>);
 }
 
-TEST_CASE("Concepts: XiField / EuclidField / ProductDynamics", "[concepts][fields]") {
+TEST_CASE("Concepts: XiField / EuclidField / ProductDynamics", "[concepts][fields]")
+{
     using G = MockGroup<double>;
     using X = Eigen::Vector3d;
 
@@ -164,7 +182,8 @@ TEST_CASE("Concepts: XiField / EuclidField / ProductDynamics", "[concepts][field
     STATIC_REQUIRE_FALSE(Core::ProductDynamics<XiGood, FBadReturn, G, X>);
 }
 
-TEST_CASE("Concepts: fields reject non-vector Euclidean state X", "[concepts][fields][negative]") {
+TEST_CASE("Concepts: fields reject non-vector Euclidean state X", "[concepts][fields][negative]")
+{
     using G = MockGroup<double>;
     using Xb = Eigen::Matrix3d; // not a vector
 

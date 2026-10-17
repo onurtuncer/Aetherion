@@ -24,7 +24,7 @@ using Catch::Matchers::WithinAbs;
 // AV Rule 30 deviation (#define for constants): CMake-injected path constant via
 // target_compile_definitions; see CODING_STANDARDS.md, Pre-Processing Directives.
 #ifndef DAVEML_PROP_FILE
-#  define DAVEML_PROP_FILE ""
+#define DAVEML_PROP_FILE ""
 #endif
 static const std::string kPropFile = DAVEML_PROP_FILE;
 
@@ -45,8 +45,8 @@ TEST_CASE("DAVEMLPropModel: idle power, sea level, Mach 0", "[daveml_prop][smoke
 
     auto out = m.evaluate(DAVEMLPropModel::Inputs<double>{ 0.0, 0.0, 0.0 });
     CHECK_THAT(out.fx_N / kLbf_N, WithinAbs(1060.0, 0.01));
-    CHECK_THAT(out.fy_N,          WithinAbs(0.0, 1e-6));
-    CHECK_THAT(out.fz_N,          WithinAbs(0.0, 1e-6));
+    CHECK_THAT(out.fy_N, WithinAbs(0.0, 1e-6));
+    CHECK_THAT(out.fz_N, WithinAbs(0.0, 1e-6));
 }
 
 // ── Check-case: MIL power (50%), sea level, Mach 0 ────────────────────────
@@ -140,10 +140,10 @@ TEST_CASE("DAVEMLPropModel: thrust increases with throttle", "[daveml_prop][smok
     if (kPropFile.empty()) return;
     DAVEMLPropModel m(kPropFile);
 
-    auto idle = m.evaluate(DAVEMLPropModel::Inputs<double>{   0.0, 10000.0, 0.4 });
-    auto mil  = m.evaluate(DAVEMLPropModel::Inputs<double>{  50.0, 10000.0, 0.4 });
+    auto idle = m.evaluate(DAVEMLPropModel::Inputs<double>{ 0.0, 10000.0, 0.4 });
+    auto mil = m.evaluate(DAVEMLPropModel::Inputs<double>{ 50.0, 10000.0, 0.4 });
     auto maxi = m.evaluate(DAVEMLPropModel::Inputs<double>{ 100.0, 10000.0, 0.4 });
 
     CHECK(idle.fx_N < mil.fx_N);
-    CHECK(mil.fx_N  < maxi.fx_N);
+    CHECK(mil.fx_N < maxi.fx_N);
 }

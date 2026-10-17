@@ -6,7 +6,7 @@
 // License-Filename: LICENSE
 // ------------------------------------------------------------------------------
 
-#pragma once 
+#pragma once
 
 namespace Aetherion::Spatial {
 
@@ -18,13 +18,14 @@ namespace Aetherion::Spatial {
 /// @tparam S  Scalar type.
 /// @param  v  Input 3-vector.
 /// @return    3×3 skew-symmetric matrix.
-	template<class S> Eigen::Matrix<S, 3, 3> skew(const Eigen::Matrix<S, 3, 1>& v) {
-		Eigen::Matrix<S, 3, 3> M;
-		M << 0, -v(2), v(1),
-			v(2), 0, -v(0),
-			-v(1), v(0), 0;
-		return M;
-	}
+    template <class S>
+    Eigen::Matrix<S, 3, 3> skew(const Eigen::Matrix<S, 3, 1>& v)
+    {
+        Eigen::Matrix<S, 3, 3> M;
+        M << 0, -v(2), v(1),
+            v(2), 0, -v(0),
+            -v(1), v(0), 0;
+        return M;
+    }
 
 } // namespace Aetherion::Spatial
-

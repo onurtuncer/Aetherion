@@ -27,8 +27,8 @@ namespace Aetherion::Coordinate {
         const Scalar y = r_ecef[1];
         const Scalar z = r_ecef[2];
 
-        const Scalar a  = Scalar(Environment::WGS84::kSemiMajorAxis_m);
-        const Scalar f  = Scalar(Environment::WGS84::kFlattening);
+        const Scalar a = Scalar(Environment::WGS84::kSemiMajorAxis_m);
+        const Scalar f = Scalar(Environment::WGS84::kFlattening);
         const Scalar e2 = Scalar(Environment::WGS84::kEccentricitySq);
 
         const Scalar one = Scalar(1);

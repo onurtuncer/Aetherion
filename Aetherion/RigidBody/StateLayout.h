@@ -8,8 +8,7 @@
 
 #pragma once
 
-namespace Aetherion::RigidBody
-{
+namespace Aetherion::RigidBody {
 /// @brief Flat index layout for a serialised 14-element state vector.
 ///
 /// Used when the full state is packed into a contiguous @f$\mathbb{R}^{14}@f$
@@ -21,13 +20,14 @@ namespace Aetherion::RigidBody
 /// | 7–9     | Body angular velocity @f$\boldsymbol\omega_B@f$ [rad/s] |
 /// | 10–12   | Body linear velocity @f$v_B@f$ [m/s] |
 /// | 13      | Vehicle mass @f$m@f$ [kg] |
-	struct StateLayout {
-		static constexpr int IDX_P = 0;  ///< Start index of ECI position (3 elements).
-		static constexpr int IDX_Q = 3;  ///< Start index of quaternion attitude (4 elements).
-		static constexpr int IDX_W = 7;  ///< Start index of body angular velocity (3 elements).
-		static constexpr int IDX_V = 10; ///< Start index of body linear velocity (3 elements).
-		static constexpr int IDX_M = 13; ///< Index of vehicle mass (1 element).
-		static constexpr int N = 14;     ///< Total number of state elements.
-	};
+    struct StateLayout
+    {
+        static constexpr int IDX_P = 0;  ///< Start index of ECI position (3 elements).
+        static constexpr int IDX_Q = 3;  ///< Start index of quaternion attitude (4 elements).
+        static constexpr int IDX_W = 7;  ///< Start index of body angular velocity (3 elements).
+        static constexpr int IDX_V = 10; ///< Start index of body linear velocity (3 elements).
+        static constexpr int IDX_M = 13; ///< Index of vehicle mass (1 element).
+        static constexpr int N = 14;     ///< Total number of state elements.
+    };
 
 } // namespace Aetherion::RigidBody

@@ -39,7 +39,8 @@ namespace {
 
     // --- KinematicsField doubles ---
 
-    struct GoodKinematics {
+    struct GoodKinematics
+    {
         Eigen::Matrix<double, 6, 1> operator()(
             const double&,
             const SE3d&,
@@ -50,7 +51,8 @@ namespace {
     };
 
     // Returns wrong dimension -- must fail KinematicsFieldOnSE3.
-    struct BadKinematics_WrongDim {
+    struct BadKinematics_WrongDim
+    {
         Eigen::Matrix<double, 3, 1> operator()(
             const double&,
             const SE3d&,
@@ -61,7 +63,8 @@ namespace {
     };
 
     // Non-const operator() -- must fail KinematicsFieldOnSE3.
-    struct BadKinematics_NonConst {
+    struct BadKinematics_NonConst
+    {
         Eigen::Matrix<double, 6, 1> operator()(
             const double&,
             const SE3d&,
@@ -73,7 +76,8 @@ namespace {
 
     // --- VectorField doubles ---
 
-    struct GoodVectorField {
+    struct GoodVectorField
+    {
         Eigen::Matrix<double, 7, 1> operator()(
             const double&,
             const SE3d&,
@@ -84,7 +88,8 @@ namespace {
     };
 
     // Correct signature but N=6 -- must fail VectorFieldOnProductSE3<VF,7>.
-    struct BadVectorField_WrongN {
+    struct BadVectorField_WrongN
+    {
         Eigen::Matrix<double, 6, 1> operator()(
             const double&,
             const SE3d&,
@@ -96,13 +101,15 @@ namespace {
 
     // --- StepResult / Integrator doubles ---
 
-    struct GoodStepResult {
-        SE3d                      g1;
+    struct GoodStepResult
+    {
+        SE3d g1;
         Eigen::Matrix<double, 7, 1> x1;
-        bool                      converged;
+        bool converged;
     };
 
-    struct GoodIntegrator {
+    struct GoodIntegrator
+    {
         using VecE = Eigen::Matrix<double, 7, 1>;
         using StepResult = GoodStepResult;
 
@@ -118,12 +125,14 @@ namespace {
     };
 
     // StepResult missing 'converged' -- must fail RKMKIntegratorOnProductSE3.
-    struct BadStepResult_NoConverged {
-        SE3d                      g1;
+    struct BadStepResult_NoConverged
+    {
+        SE3d g1;
         Eigen::Matrix<double, 7, 1> x1;
     };
 
-    struct BadIntegrator_NoConverged {
+    struct BadIntegrator_NoConverged
+    {
         using VecE = Eigen::Matrix<double, 7, 1>;
         using StepResult = BadStepResult_NoConverged;
 
@@ -139,7 +148,8 @@ namespace {
     };
 
     // VecE wrong compile-time dimension -- must fail RKMKIntegratorOnProductSE3<I,7>.
-    struct BadIntegrator_WrongDim {
+    struct BadIntegrator_WrongDim
+    {
         using VecE = Eigen::Matrix<double, 6, 1>;   // 6 != 7
         using StepResult = GoodStepResult;
 
@@ -155,7 +165,8 @@ namespace {
     };
 
     // Does not satisfy ConstructibleFromInertialParameters -- no matching ctor.
-    struct NoBareCtorVF {
+    struct NoBareCtorVF
+    {
         Eigen::Matrix<double, 7, 1> operator()(
             const double&,
             const SE3d&,
@@ -169,7 +180,8 @@ namespace {
 
     // Satisfies both RKMKIntegratorOnProductSE3<I,7> and
     // constructible_from<I, KFd, CVFd>.  Models a drop-in replacement integrator.
-    struct GoodIntegratorFor {
+    struct GoodIntegratorFor
+    {
         using VecE = Eigen::Matrix<double, 7, 1>;
         using StepResult = GoodStepResult;
 
@@ -278,14 +290,14 @@ TEST_CASE("IntegratorFor - negative: wrong Euclidean dimension", "[concepts][int
 // SixDoFStepper: default IntegratorPolicy matches RadauIIA
 // ------------------------------------------------------------------------------
 TEST_CASE("SixDoFStepper: default Integrator alias is RadauIIA_RKMK_ProductSE3",
-          "[concepts][stepper]")
+    "[concepts][stepper]")
 {
     using DefaultStepper = RigidBody::SixDoFStepper<CVFd>;
     STATIC_REQUIRE(std::is_same_v<DefaultStepper::Integrator, Itgd>);
 }
 
 TEST_CASE("SixDoFStepper: custom IntegratorPolicy is accepted when it satisfies IntegratorFor",
-          "[concepts][stepper]")
+    "[concepts][stepper]")
 {
     using CustomStepper = RigidBody::SixDoFStepper<CVFd, 7, GoodIntegratorFor>;
     STATIC_REQUIRE(std::is_same_v<CustomStepper::Integrator, GoodIntegratorFor>);

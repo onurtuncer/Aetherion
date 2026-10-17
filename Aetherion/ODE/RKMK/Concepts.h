@@ -23,15 +23,16 @@ namespace Aetherion::ODE::RKMK {
     // KF must be callable as: kf(t, g, xi) -> Matrix<Scalar, 6, 1>
     // where xi is the body-frame twist in R^6.
     // ------------------------------------------------------------------------------
-    template<typename KF, typename Scalar = double>
+    template <typename KF, typename Scalar = double>
     concept KinematicsFieldOnSE3 = requires(
-        const KF & kf,
-        const Scalar & t,
-        const Lie::SE3<Scalar>&g,
-        const Eigen::Matrix<Scalar, 6, 1>&xi)
-    {
+        const KF& kf,
+        const Scalar& t,
+        const Lie::SE3<Scalar>& g,
+        const Eigen::Matrix<Scalar, 6, 1>& xi) {
         // same_as (not convertible_to) so wrong-dimension returns fail here.
-        { kf(t, g, xi) } -> std::same_as<Eigen::Matrix<Scalar, 6, 1>>;
+        {
+            kf(t, g, xi)
+        } -> std::same_as<Eigen::Matrix<Scalar, 6, 1>>;
     };
 
     // ------------------------------------------------------------------------------
@@ -39,14 +40,15 @@ namespace Aetherion::ODE::RKMK {
     //
     // VF must be callable as: vf(t, g, x) -> Matrix<Scalar, N, 1>
     // ------------------------------------------------------------------------------
-    template<typename VF, int N, typename Scalar = double>
+    template <typename VF, int N, typename Scalar = double>
     concept VectorFieldOnProductSE3 = requires(
-        const VF & vf,
-        const Scalar & t,
-        const Lie::SE3<Scalar>&g,
-        const Eigen::Matrix<Scalar, N, 1>&x)
-    {
-        { vf(t, g, x) } -> std::same_as<Eigen::Matrix<Scalar, N, 1>>;
+        const VF& vf,
+        const Scalar& t,
+        const Lie::SE3<Scalar>& g,
+        const Eigen::Matrix<Scalar, N, 1>& x) {
+        {
+            vf(t, g, x)
+        } -> std::same_as<Eigen::Matrix<Scalar, N, 1>>;
     };
 
     // ------------------------------------------------------------------------------
@@ -57,37 +59,46 @@ namespace Aetherion::ODE::RKMK {
     //   typename VecE        -- Eigen::Matrix<Scalar, N, 1>
     //   step(t0, g0, x0, h, opt) -> StepResult
     // ------------------------------------------------------------------------------
-    template<typename I, int N, typename Scalar = double>
+    template <typename I, int N, typename Scalar = double>
     concept RKMKIntegratorOnProductSE3 = requires(
-        const I & integrator,
-        const Scalar & t0,
-        const Lie::SE3<Scalar>&g0,
-        const typename I::VecE & x0,
-        const Scalar & h,
-        const Core::NewtonOptions & opt)
-    {
+        const I& integrator,
+        const Scalar& t0,
+        const Lie::SE3<Scalar>& g0,
+        const typename I::VecE& x0,
+        const Scalar& h,
+        const Core::NewtonOptions& opt) {
         typename I::StepResult;
         typename I::VecE;
 
-            requires (I::VecE::RowsAtCompileTime == N);
+        requires(I::VecE::RowsAtCompileTime == N);
 
-        { integrator.step(t0, g0, x0, h, opt) } -> std::same_as<typename I::StepResult>;
+        {
+            integrator.step(t0, g0, x0, h, opt)
+        } -> std::same_as<typename I::StepResult>;
 
-            requires requires(typename I::StepResult r) {
-                { r.g1 }        -> std::convertible_to<Lie::SE3<Scalar>>;
-                { r.x1 }        -> std::convertible_to<typename I::VecE>;
-                { r.converged } -> std::convertible_to<bool>;
+        requires requires(typename I::StepResult r) {
+            {
+                r.g1
+            } -> std::convertible_to<Lie::SE3<Scalar>>;
+            {
+                r.x1
+            } -> std::convertible_to<typename I::VecE>;
+            {
+                r.converged
+            } -> std::convertible_to<bool>;
         };
     };
 
     // ------------------------------------------------------------------------------
     // ConstructibleFromInertialParameters<VF>
     // ------------------------------------------------------------------------------
-    template<typename VF>
+    template <typename VF>
     concept ConstructibleFromInertialParameters =
-        requires(const RigidBody::InertialParameters & ip) {
-            { VF(ip) } -> std::same_as<VF>;
-    };
+        requires(const RigidBody::InertialParameters& ip) {
+            {
+                VF(ip)
+            } -> std::same_as<VF>;
+        };
 
     // ------------------------------------------------------------------------------
     // IntegratorFor<I, XiField, FField, N, Scalar>
@@ -101,7 +112,7 @@ namespace Aetherion::ODE::RKMK {
     // RKMK4 for non-stiff phases, or a Gauss-Legendre variant) to be dropped into
     // SixDoFStepper / ISimulator without any changes to those classes.
     // ------------------------------------------------------------------------------
-    template<typename I, typename XiField, typename FField, int N, typename Scalar = double>
+    template <typename I, typename XiField, typename FField, int N, typename Scalar = double>
     concept IntegratorFor =
         RKMKIntegratorOnProductSE3<I, N, Scalar> &&
         std::constructible_from<I, XiField, FField>;

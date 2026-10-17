@@ -38,12 +38,14 @@ using Aetherion::Coordinate::InvertLaunchStateToLocalNED;
 // Helpers
 // -----------------------------------------------------------------------------
 
-static double Norm(const Vec3<double>& v) {
+static double Norm(const Vec3<double>& v)
+{
     return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
 
 // Wrap longitude difference into [-pi, pi] for comparison
-static double LonDiff(double lon_rec, double lon_ref) {
+static double LonDiff(double lon_rec, double lon_ref)
+{
     const double two_pi = 2.0 * std::numbers::pi;
     return std::remainder(lon_rec - lon_ref, two_pi);
 }
@@ -128,9 +130,8 @@ TEST_CASE("LaunchStateECI <-> LocalStateNED random round-trip",
 
         const double delta_dir = Norm(Vec3<double>{
             dir_ned_rec[0] - dir_ned_ref[0],
-                dir_ned_rec[1] - dir_ned_ref[1],
-                dir_ned_rec[2] - dir_ned_ref[2]
-        });
+            dir_ned_rec[1] - dir_ned_ref[1],
+            dir_ned_rec[2] - dir_ned_ref[2] });
         CHECK(delta_dir == Approx(0.0).margin(1e-7));
 
         // Orientation consistency: body +x from q_LB matches dir_ned
@@ -150,4 +151,3 @@ TEST_CASE("LaunchStateECI <-> LocalStateNED random round-trip",
         CHECK(ex_ned[2] == Approx(dir_ned_rec[2]).margin(1e-7));
     }
 }
-

@@ -52,9 +52,9 @@ TEST_CASE("SO3::Exp_R: 90-degree rotation around z", "[SO3][Exp_R]")
     Mat3d R = SO3::Exp_R(w);
 
     Mat3d expected;
-    expected <<  0.0, -1.0, 0.0,
-                 1.0,  0.0, 0.0,
-                 0.0,  0.0, 1.0;
+    expected << 0.0, -1.0, 0.0,
+        1.0, 0.0, 0.0,
+        0.0, 0.0, 1.0;
 
     CHECK(R.isApprox(expected, 1e-12));
 }
@@ -65,9 +65,9 @@ TEST_CASE("SO3::Exp_R: 180-degree rotation around x", "[SO3][Exp_R]")
     Mat3d R = SO3::Exp_R(w);
 
     Mat3d expected;
-    expected << 1.0,  0.0,  0.0,
-                0.0, -1.0,  0.0,
-                0.0,  0.0, -1.0;
+    expected << 1.0, 0.0, 0.0,
+        0.0, -1.0, 0.0,
+        0.0, 0.0, -1.0;
 
     CHECK(R.isApprox(expected, 1e-12));
 }
@@ -75,13 +75,13 @@ TEST_CASE("SO3::Exp_R: 180-degree rotation around x", "[SO3][Exp_R]")
 TEST_CASE("SO3::Exp_R: output is a valid rotation matrix for various angles", "[SO3][Exp_R]")
 {
     const std::vector<Vec3d> cases = {
-        Vec3d(0.3,  0.0,  0.0),
-        Vec3d(0.0,  0.5,  0.0),
-        Vec3d(0.0,  0.0,  0.7),
-        Vec3d(0.1,  0.2,  0.3),
+        Vec3d(0.3, 0.0, 0.0),
+        Vec3d(0.0, 0.5, 0.0),
+        Vec3d(0.0, 0.0, 0.7),
+        Vec3d(0.1, 0.2, 0.3),
         Vec3d(-0.5, 0.4, -0.1),
-        Vec3d(kPi,  0.0,  0.0),
-        Vec3d(0.0,  kPi,  0.0),
+        Vec3d(kPi, 0.0, 0.0),
+        Vec3d(0.0, kPi, 0.0),
     };
     for (const auto& w : cases) {
         CAPTURE(w.transpose());
@@ -107,9 +107,9 @@ TEST_CASE("SO3::Exp_R: composition property Exp(w1)*Exp(w2) is SO(3)", "[SO3][Ex
 
 TEST_CASE("SO3::Exp_R: inverse is transpose (Exp(-w) = Exp(w)^T)", "[SO3][Exp_R]")
 {
-    Vec3d w( 0.2, -0.3,  0.5);
-    Vec3d wn(-0.2,  0.3, -0.5);
-    Mat3d R  = SO3::Exp_R(w);
+    Vec3d w(0.2, -0.3, 0.5);
+    Vec3d wn(-0.2, 0.3, -0.5);
+    Mat3d R = SO3::Exp_R(w);
     Mat3d Ri = SO3::Exp_R(wn);
     CHECK(R.isApprox(Ri.transpose(), 1e-12));
 }
@@ -135,8 +135,8 @@ TEST_CASE("SO3::LeftJacobian: small angle is approximately identity", "[SO3][Lef
 TEST_CASE("SO3::LeftJacobian: non-singular for general rotation vector", "[SO3][LeftJacobian]")
 {
     const std::vector<Vec3d> cases = {
-        Vec3d(0.3,  0.0,  0.0),
-        Vec3d(0.1,  0.2,  0.3),
+        Vec3d(0.3, 0.0, 0.0),
+        Vec3d(0.1, 0.2, 0.3),
         Vec3d(-0.5, 0.4, -0.1),
     };
     for (const auto& w : cases) {
@@ -148,8 +148,8 @@ TEST_CASE("SO3::LeftJacobian: non-singular for general rotation vector", "[SO3][
 
 TEST_CASE("SO3::LeftJacobian: J(-w) = J(w)^T (adjoint symmetry)", "[SO3][LeftJacobian]")
 {
-    Vec3d w( 0.2, -0.3,  0.5);
-    Vec3d wn(-0.2,  0.3, -0.5);
+    Vec3d w(0.2, -0.3, 0.5);
+    Vec3d wn(-0.2, 0.3, -0.5);
     Mat3d J_pos = SO3::LeftJacobian(w);
     Mat3d J_neg = SO3::LeftJacobian(wn);
     CHECK(J_neg.isApprox(J_pos.transpose(), 1e-12));
@@ -162,7 +162,8 @@ TEST_CASE("SO3::LeftJacobian: J(-w) = J(w)^T (adjoint symmetry)", "[SO3][LeftJac
 namespace {
     const std::vector<Vec3d> kAxes = {
         Vec3d(1, 0, 0), Vec3d(0, 1, 0), Vec3d(0, 0, 1),
-        Vec3d(1, 2, 3).normalized(), Vec3d(-1, 0.3, 0.2).normalized(), Vec3d(0.1, -0.9, 0.4).normalized() };
+        Vec3d(1, 2, 3).normalized(), Vec3d(-1, 0.3, 0.2).normalized(), Vec3d(0.1, -0.9, 0.4).normalized()
+    };
 }
 
 TEST_CASE("SO3::Log_R: inverts Exp_R for generic angles", "[SO3][Log_R]")

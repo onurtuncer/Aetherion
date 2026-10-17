@@ -21,13 +21,13 @@
 
 namespace {
 
-    template<typename S>
+    template <typename S>
     using Vec3 = Eigen::Matrix<S, 3, 1>;
 
-    template<typename S>
+    template <typename S>
     using Mat3 = Eigen::Matrix<S, 3, 3>;
 
-    template<typename S>
+    template <typename S>
     inline Aetherion::Spatial::Twist<S> MakeTwist(const Vec3<S>& w, const Vec3<S>& v)
     {
         Aetherion::Spatial::Twist<S> out{};
@@ -36,7 +36,7 @@ namespace {
         return out;
     }
 
-    template<typename S>
+    template <typename S>
     inline Aetherion::Spatial::Wrench<S> MakeWrench(const Vec3<S>& M, const Vec3<S>& F)
     {
         Aetherion::Spatial::Wrench<S> out{};

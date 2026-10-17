@@ -29,8 +29,12 @@ static std::vector<std::string> split_csv(const std::string& line)
     std::string tok;
     for (char c : line)
     {
-        if (c == ',') { out.push_back(tok); tok.clear(); }
-        else { tok += c; }
+        if (c == ',') {
+            out.push_back(tok);
+            tok.clear();
+        } else {
+            tok += c;
+        }
     }
     out.push_back(tok);
     return out;
@@ -62,9 +66,9 @@ static Snapshot1 make_sentinel()
 {
     Snapshot1 s;
     s.time = 1.0;
-    s.gePosition_m = { 2.0,  3.0,  4.0 };
-    s.feVelocity_m_s = { 5.0,  6.0,  7.0 };
-    s.v_eci = { 8.0,  9.0, 10.0 };
+    s.gePosition_m = { 2.0, 3.0, 4.0 };
+    s.feVelocity_m_s = { 5.0, 6.0, 7.0 };
+    s.v_eci = { 8.0, 9.0, 10.0 };
     s.altitudeMsl_m = 11.0;
     s.longitude_rad = 12.0;
     s.latitude_rad = 13.0;
@@ -308,7 +312,7 @@ TEST_CASE("Row: negative values round-trip correctly", "[row][values]")
         auto it = std::find(header.begin(), header.end(), name);
         REQUIRE(it != header.end());
         return std::stod(row[std::distance(header.begin(), it)]);
-        };
+    };
 
     REQUIRE(col("time") == Catch::Approx(s.time).epsilon(1e-14));
     REQUIRE(col("altitudeMsl_m") == Catch::Approx(s.altitudeMsl_m).epsilon(1e-14));
@@ -331,7 +335,7 @@ TEST_CASE("Row: large exponent values survive scientific notation round-trip", "
         auto it = std::find(header.begin(), header.end(), name);
         REQUIRE(it != header.end());
         return std::stod(row[std::distance(header.begin(), it)]);
-        };
+    };
 
     REQUIRE(col("gePosition_m_X") == Catch::Approx(6.371e6).epsilon(1e-14));
     REQUIRE(col("gePosition_m_Y") == Catch::Approx(-6.371e6).epsilon(1e-14));

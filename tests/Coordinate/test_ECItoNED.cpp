@@ -82,5 +82,3 @@ TEST_CASE("ECIToNED - equator, east direction", "[coordinate][inverse][NED]")
     REQUIRE(v_ned[1] == Approx(1.0).margin(1e-14)); // E
     REQUIRE(v_ned[2] == Approx(0.0).margin(1e-14)); // D
 }
-
-

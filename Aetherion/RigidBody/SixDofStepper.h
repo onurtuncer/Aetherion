@@ -79,14 +79,13 @@ namespace Aetherion::RigidBody {
 /// if (res.converged)
 ///     state = SixDoFStepper<VF>::unpack(res);
 /// @endcode
-    template<class VectorField,
-             int EuclidDim = RigidBody6DoFEuclidDim,
-             class IntegratorPolicy = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
-                 KinematicsXiField, VectorField, EuclidDim>>
-        requires
-            ODE::RKMK::KinematicsFieldOnSE3<KinematicsXiField, double> &&
-            ODE::RKMK::VectorFieldOnProductSE3<VectorField, EuclidDim, double> &&
-            ODE::RKMK::IntegratorFor<IntegratorPolicy, KinematicsXiField, VectorField, EuclidDim>
+    template <class VectorField,
+        int EuclidDim = RigidBody6DoFEuclidDim,
+        class IntegratorPolicy = ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
+            KinematicsXiField, VectorField, EuclidDim>>
+        requires ODE::RKMK::KinematicsFieldOnSE3<KinematicsXiField, double> &&
+                 ODE::RKMK::VectorFieldOnProductSE3<VectorField, EuclidDim, double> &&
+                 ODE::RKMK::IntegratorFor<IntegratorPolicy, KinematicsXiField, VectorField, EuclidDim>
     class SixDoFStepper
     {
     public:
@@ -101,10 +100,10 @@ namespace Aetherion::RigidBody {
         static constexpr int kTwistDim = 6;
 
         using KinematicsField = KinematicsXiField;
-        using SE3d            = ODE::RKMK::Lie::SE3<double>;
-        using VecE            = Eigen::Matrix<double, EuclidDim, 1>;
-        using Integrator      = IntegratorPolicy;
-        using StepResult      = typename Integrator::StepResult;
+        using SE3d = ODE::RKMK::Lie::SE3<double>;
+        using VecE = Eigen::Matrix<double, EuclidDim, 1>;
+        using Integrator = IntegratorPolicy;
+        using StepResult = typename Integrator::StepResult;
 
         // ------------------------------------------------------------------
         // Constructors
@@ -114,7 +113,7 @@ namespace Aetherion::RigidBody {
         /// @param vf   Vector-field instance (moved in).
         /// @param opt  Newton solver options (tolerance, max iterations).
         explicit SixDoFStepper(
-            VectorField                    vf,
+            VectorField vf,
             ODE::RKMK::Core::NewtonOptions opt = {})
             : vf_(std::move(vf))
             , integrator_(KinematicsField{}, vf_)
@@ -132,7 +131,7 @@ namespace Aetherion::RigidBody {
             const InertialParameters& ip,
             ODE::RKMK::Core::NewtonOptions opt = {})
             requires ODE::RKMK::ConstructibleFromInertialParameters<VectorField>
-        : vf_(ip)
+            : vf_(ip)
             , integrator_(KinematicsField{}, vf_)
             , opt_(opt)
         {
@@ -216,7 +215,7 @@ namespace Aetherion::RigidBody {
         // gravity policy and other sub-policies without duplicating constants.
         // ------------------------------------------------------------------
         [[nodiscard]] const VectorField& vectorField() const noexcept { return vf_; }
-        [[nodiscard]] VectorField& vectorField()       noexcept { return vf_; }
+        [[nodiscard]] VectorField& vectorField() noexcept { return vf_; }
 
         // ------------------------------------------------------------------
         // Newton options -- readable and writable for per-phase tuning
@@ -236,8 +235,8 @@ namespace Aetherion::RigidBody {
         // vf_ is stored here (not only inside integrator_) so that
         // vectorField() can return a stable reference without requiring an
         // accessor on the deeper integrator internals.
-        VectorField                    vf_;
-        Integrator                     integrator_;
+        VectorField vf_;
+        Integrator integrator_;
         ODE::RKMK::Core::NewtonOptions opt_;
     };
 
