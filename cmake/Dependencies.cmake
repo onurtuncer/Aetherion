@@ -66,5 +66,15 @@ if(AETHERION_BUILD_TESTS)
   set(ECOS_BUILD_CLI OFF CACHE BOOL "" FORCE)
   set(ECOS_BUILD_CLIB OFF CACHE BOOL "" FORCE)
   set(ECOS_WITH_PROXYFMU OFF CACHE BOOL "" FORCE)
-  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/ecos" EXCLUDE_FROM_ALL)
+  set(_aetherion_ecos_bin "${CMAKE_CURRENT_BINARY_DIR}/vendor/ecos")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/vendor/ecos" "${_aetherion_ecos_bin}" EXCLUDE_FROM_ALL)
+  # ecos downloads subprocess.h from the master branch of its repository at configure time, so what the tests compile
+  # could change without any change here (second pre-DOI audit). Replace it with the file at a fixed commit, checked by
+  # hash; with the hash matching, file(DOWNLOAD) leaves an identical file alone.
+  file(
+    DOWNLOAD
+    "https://raw.githubusercontent.com/Ecos-platform/subprocess.h/b49c56e9fe214488493021017bf3954b91c7c1f5/subprocess.h"
+    "${_aetherion_ecos_bin}/thirdparty/subprocess/subprocess.h"
+    EXPECTED_HASH SHA256=0bf208a408ba2c7e63739d62a0a492a13f90b0113214776835c855629ef90043
+    TLS_VERIFY ON)
 endif()
