@@ -3013,16 +3013,24 @@ Trim Result
      - −1.528°
      - n/a (not tabulated in CSV)
    * - Throttle (trim)
-     - 56.89 %
+     - 91.06 %
      - n/a
    * - Thrust (trim)
-     - 54 083 N  (12 158 lbf)
+     - 54 084 N  (12 159 lbf)
      - n/a
    * - Speed of sound
      - 303.11 m/s  (994.44 ft/s)
      - 994.79 ft/s
 
 The trim solution agrees with NASA simulations 04 and 05 within 0.0001°.
+
+The engine tables in ``F16_prop.dml`` stop at Mach 1.0, with
+``extrapolate="neither"``: at Mach 2.01 the thrust is that of Mach 1.0 at the
+same altitude and throttle.  The thrust needed is the same either way (it
+balances the drag), so α, δ\ :sub:`e` and the trajectory barely move, but the
+throttle that delivers it does: 91.06 %.  Before release 0.18.0 the tables were
+extrapolated linearly to Mach 2 and the trim throttle came out at 56.89 %, on
+thrust the deck does not define.
 
 Step-Size Convergence
 ^^^^^^^^^^^^^^^^^^^^^
@@ -3041,19 +3049,19 @@ integrator converges to the same trajectory for all tested step sizes:
      - Mach
      - pitch [°]
    * - **0.10**
-     - **30 012.3**
-     - **−0.7** ✓
-     - **2.010434**
+     - **30 012.4**
+     - **−0.6** ✓
+     - **2.010439**
      - **−0.742**
    * - 0.05
-     - 30 012.3
-     - −0.7 ✓
-     - 2.010434
+     - 30 012.4
+     - −0.6 ✓
+     - 2.010439
      - −0.742
    * - 0.02
-     - 30 012.3
-     - −0.7 ✓
-     - 2.010434
+     - 30 012.4
+     - −0.6 ✓
+     - 2.010439
      - −0.742
 
 dt = 0.1 s is recommended for Case 12 (10× faster than the closed-loop cases,
@@ -3081,16 +3089,16 @@ Validation Results at t = 200 s
      - Aetherion
      - NASA sim 02
    * - Altitude
-     - 30 012.3 ft (9 147.8 m)
+     - 30 012.4 ft (9 147.8 m)
      - 30 256.9 ft (9 222.1 m)
    * - Δ altitude
-     - −0.7 ft
+     - −0.6 ft
      - +243.9 ft
    * - TAS
      - 609.59 m/s  (1 185.0 KTAS)
      - 610.28 m/s  (1 186.3 KTAS)
    * - Mach
-     - 2.010434
+     - 2.010439
      - 2.014849
    * - Pitch θ
      - −0.742°
@@ -3106,7 +3114,7 @@ Validation Results at t = 200 s
 
    Simulation 02 is the only NASA reference that runs to 200 s, and it is not
    in trim: it climbs 244 ft, peaking 459 ft high on the way.  Aetherion holds
-   the trim altitude to 0.7 ft over the same 200 s, as NASA simulations 04 and
+   the trim altitude to 0.6 ft over the same 200 s, as NASA simulations 04 and
    05 do over their 180 s (0.9 ft and 0.1 ft).  Up to release 0.14.1 Aetherion
    climbed 505 ft here; see :ref:`trim_rotating_earth`.  Against simulation 05 at
    t = 180 s: yaw 46.143° vs 46.172°, roll −0.165° vs −0.149°, pitch
@@ -3386,9 +3394,13 @@ Validation results at t = 20 s (dt = 0.02 s)
      - −0.10°
 
 Peak errors against simulation 05 over the 20 s: altitude ±0.11 m, pitch
-±0.63°, roll ±0.004°.  The pitch peak is confined to the first half
+±0.73°, roll ±0.004°.  The pitch peak is confined to the first half
 second after the step, where the two zero-order-hold controllers sample the
-command at different instants.  The final state (t = 20 s) agrees to within
+command at different instants.  For 0.2 s of that the longitudinal command
+is saturated and the control law asks for 25° of elevator; the aero tables
+end at 24° with ``extrapolate="neither"``, so the aerodynamics are taken at
+24° (before release 0.18.0 the tables were extrapolated to 25°, and the peak
+was 0.63°).  The final state (t = 20 s) agrees to within
 **0.3 ft altitude** and **0.001°** in both pitch and roll.
 
 Validation figures
