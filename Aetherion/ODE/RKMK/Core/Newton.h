@@ -44,6 +44,7 @@
 //
 #pragma once
 
+#include <algorithm>
 #include <utility>
 #include <stdexcept>
 #include <vector>
@@ -184,6 +185,40 @@ namespace Aetherion::ODE::RKMK::Core {
             return res;
         }
 
+        // Zero-order Forward of a tape kept across calls, re-recorded at xd when
+        // a comparison on it went the other way there.
+        //
+        // The kept tape may be stale at xd: its arithmetic is that of the region
+        // it was recorded in, which need not be defined at xd (sqrt(-x) recorded
+        // for x < 0, asked about x > 0). Evaluated with CppAD's NaN check on --
+        // the default without NDEBUG -- the stale branch aborted the run before
+        // compare_change_number() could say the tape was stale, so the recovery
+        // never ran (second pre-DOI audit, N08). The first pass therefore runs
+        // with the check off. If a comparison changed, the result is discarded
+        // and the fresh tape is evaluated with the check as configured; if none
+        // changed, the tape is valid at xd and a non-finite value is the
+        // function's own -- it is evaluated again with the check on, so CppAD
+        // reports it exactly as before.
+        template <class BuildTape>
+        inline std::vector<double> forward_or_retape(CppAD::ADFun<double>& tape,
+            const std::vector<double>& xd,
+            BuildTape&& build,
+            int& retapes)
+        {
+            const bool check = tape.check_for_nan();
+            tape.check_for_nan(false);
+            std::vector<double> yd = tape.Forward(0, xd);
+            tape.check_for_nan(check);
+            if (tape.compare_change_number() > 0) {
+                tape = std::forward<BuildTape>(build)(xd);
+                ++retapes;
+                return tape.Forward(0, xd);
+            }
+            if (check && !std::all_of(yd.begin(), yd.end(), [](double v) { return std::isfinite(v); }))
+                yd = tape.Forward(0, xd);
+            return yd;
+        }
+
     } // namespace detail
 
     // =========================================================================
@@ -249,7 +284,10 @@ namespace Aetherion::ODE::RKMK::Core {
         // other way through compare_change_number(); the tape is then
         // re-recorded at x. Without this the Newton iteration converged on the
         // residual of the region the tape was recorded in, not on the
-        // residual of the function (pre-DOI audit finding F01).
+        // residual of the function (pre-DOI audit finding F01). The stale tape
+        // is evaluated without CppAD's NaN check, so arithmetic that is invalid
+        // only in the old region cannot stop the re-recording (N08; see
+        // detail::forward_or_retape).
         void operator()(const VecN& x, VecN& r, MatN& J) const
         {
             const std::vector<double> xd = to_std_(x);
@@ -257,12 +295,8 @@ namespace Aetherion::ODE::RKMK::Core {
                 tape_ = build_tape_(xd);
                 taped_ = true;
             }
-            std::vector<double> yd = tape_.Forward(0, xd);
-            if (tape_.compare_change_number() > 0) {
-                tape_ = build_tape_(xd);
-                yd = tape_.Forward(0, xd);
-                ++retapes_;
-            }
+            const std::vector<double> yd = detail::forward_or_retape(
+                tape_, xd, [this](const std::vector<double>& at) { return build_tape_(at); }, retapes_);
             for (int i = 0; i < N; ++i) r(i) = yd[(std::size_t)i];
             const std::vector<double> jd = tape_.Jacobian(xd);
             for (int rr = 0; rr < N; ++rr)
@@ -392,12 +426,8 @@ namespace Aetherion::ODE::RKMK::Core {
                 tape_ = build_tape_(xd);
                 taped_ = true;
             }
-            std::vector<double> yd = tape_.Forward(0, xd);
-            if (tape_.compare_change_number() > 0) {
-                tape_ = build_tape_(xd);
-                yd = tape_.Forward(0, xd);
-                ++retapes_;
-            }
+            const std::vector<double> yd = detail::forward_or_retape(
+                tape_, xd, [this](const std::vector<double>& at) { return build_tape_(at); }, retapes_);
             r.resize(n_);
             for (int i = 0; i < n_; ++i) r(i) = yd[(std::size_t)i];
             const std::vector<double> jd = tape_.Jacobian(xd);
