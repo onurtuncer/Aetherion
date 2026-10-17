@@ -29,7 +29,8 @@ AlignConsecutiveAssignments:
 AlignConsecutiveDeclarations:
   Enabled: false
 AlignTrailingComments:
-  Kind: Leave
+  Kind: Always
+  OverEmptyLines: 0
 SpacesBeforeTrailingComments: 1
 
 SortIncludes: Never
