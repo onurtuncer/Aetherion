@@ -146,18 +146,31 @@ if(AETHERION_INSTALL)
                                   $<INSTALL_INTERFACE:include>)
   set_target_properties(aetherion_fmu4cpp_fmi2 PROPERTIES EXPORT_NAME fmu4cpp_fmi2)
 
+  add_library(aetherion_fmu4cpp_fmi3 STATIC)
+  target_sources(aetherion_fmu4cpp_fmi3 PRIVATE $<TARGET_OBJECTS:fmu4cpp_fmi3>)
+  target_compile_definitions(aetherion_fmu4cpp_fmi3 PUBLIC FMI3)
+  target_include_directories(
+    aetherion_fmu4cpp_fmi3 PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/vendor/fmu4cpp/export/include>
+                                  $<INSTALL_INTERFACE:include>)
+  set_target_properties(aetherion_fmu4cpp_fmi3 PROPERTIES EXPORT_NAME fmu4cpp_fmi3)
+
+  # descriptionGenerator tool (needed by generateFMU()). fmu4cpp is added EXCLUDE_FROM_ALL, so without an FMU in the
+  # build nothing built it and `cmake --install` failed on the missing executable. It is exported as
+  # Aetherion::descriptionGenerator so that generateFMU() in a consumer of the installation can run it (second pre-DOI
+  # audit, N05: it was called by bare name).
+  set_target_properties(descriptionGenerator PROPERTIES EXCLUDE_FROM_ALL OFF)
+
   # ── Library targets ──────────────────────────────────────────────────────────
   install(
-    TARGETS Aetherion aetherion_fmu4cpp_base aetherion_fmu4cpp_fmi2
+    TARGETS Aetherion
+            aetherion_fmu4cpp_base
+            aetherion_fmu4cpp_fmi2
+            aetherion_fmu4cpp_fmi3
+            descriptionGenerator
     EXPORT AetherionTargets
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-
-  # descriptionGenerator tool (needed by generateFMU() at SWIL build time). fmu4cpp is added EXCLUDE_FROM_ALL, so
-  # without an FMU in the build nothing built it and `cmake --install` failed on the missing executable.
-  set_target_properties(descriptionGenerator PROPERTIES EXCLUDE_FROM_ALL OFF)
-  install(TARGETS descriptionGenerator RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
   # ── Headers ────────────────────────────────────────────────────────────────── Aetherion public headers →
   # include/Aetherion/

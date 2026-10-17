@@ -85,8 +85,18 @@ jobs:
       - name: Relocate the installation
         run: mv "${{ runner.temp }}/aetherion-install" "${{ runner.temp }}/aetherion-moved"
 
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.x'
+
+      - name: Install FMPy
+        run: python -m pip install fmpy
+
+      # Also builds ConsumerAtmosphere.fmu with generateFMU() from the installation alone, then loads and steps it
+      # under FMPy (second pre-DOI audit, N05).
       - name: Build and run the consumer against the moved installation
         run: |
           cmake -S tests/InstallConsumer -B "${{ runner.temp }}/consumer" -DCMAKE_BUILD_TYPE=Release                 -DCMAKE_PREFIX_PATH="${{ runner.temp }}/aetherion-moved"
           cmake --build "${{ runner.temp }}/consumer"
           "${{ runner.temp }}/consumer/aetherion_consumer"
+          python tests/InstallConsumer/check_fmu.py "${{ runner.temp }}/consumer/models/fmi2/ConsumerAtmosphere.fmu"
