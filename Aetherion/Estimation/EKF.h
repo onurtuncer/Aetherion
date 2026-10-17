@@ -46,6 +46,8 @@
 
 #pragma once
 
+#include <algorithm>
+
 #include <Eigen/Cholesky>
 #include <Eigen/Dense>
 
@@ -64,7 +66,7 @@ namespace Aetherion::Estimation {
     struct UpdateResult
     {
         bool applied = false;  ///< false: the configuration does not carry this measurement, or it was rejected; nothing changed
-        bool rejected = false; ///< true: innovation or covariance not finite, or S not positive definite; nothing changed
+        bool rejected = false; ///< true: innovation or R not finite, R not symmetric positive semi-definite, or S not positive definite; nothing changed
         int dim = 0;           ///< measurement dimension
         S nis = S(0);          ///< normalised innovation squared, z^T S^-1 z (chi^2 with `dim` dof if consistent)
     };
@@ -198,6 +200,24 @@ namespace Aetherion::Estimation {
             {
                 r.rejected = true;
                 return r;
+            }
+            // R must be a covariance: symmetric and positive semi-definite. A
+            // negative one can still leave S positive and pass the check below,
+            // and then drives P negative: R = -0.5 I on P = I gave a posterior
+            // position variance of -1 (second pre-DOI audit). Refuse it too.
+            {
+                const S scale = std::max(S(1), R.cwiseAbs().maxCoeff());
+                if ((R - R.transpose()).cwiseAbs().maxCoeff() > S(1e-9) * scale)
+                {
+                    r.rejected = true;
+                    return r;
+                }
+                const auto ldltR = R.ldlt();
+                if (ldltR.info() != Eigen::Success || !ldltR.isPositive())
+                {
+                    r.rejected = true;
+                    return r;
+                }
             }
 
             const int n = cfg_.dimension();

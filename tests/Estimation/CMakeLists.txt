@@ -13,6 +13,7 @@ add_executable(
   test_ProcessModel.cpp
   test_Replay.cpp
   test_ReplayEdgeCases.cpp
+  test_ReplayInputValidation.cpp
   test_ReplayRobustness.cpp)
 
 target_link_libraries(test_estimation PRIVATE Aetherion Catch2::Catch2WithMain)
