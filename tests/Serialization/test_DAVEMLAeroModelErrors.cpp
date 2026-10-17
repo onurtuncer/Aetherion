@@ -25,6 +25,7 @@
 #include <filesystem>
 #include <fstream>
 #include <string>
+#include <system_error>
 #include <tuple>
 #include <unordered_map>
 #include <vector>
@@ -38,17 +39,22 @@ namespace {
 using AD = CppAD::AD<double>;
 
 /// Writes `body` wrapped in a DAVEfunc element to a temp file named after
-/// `tag`, loads it, and removes the file again.
+/// `tag`, loads it, and removes the file again, also when loading throws.
 DAVEMLAeroModel loadDML(const std::string& tag, const std::string& body)
 {
-    const auto path = std::filesystem::temp_directory_path() / ("_ae_test_daveml_" + tag + ".dml");
+    struct TempFile {
+        std::filesystem::path path;
+        ~TempFile()
+        {
+            std::error_code ec;
+            std::filesystem::remove(path, ec);
+        }
+    } file{ std::filesystem::temp_directory_path() / ("_ae_test_daveml_" + tag + ".dml") };
     {
-        std::ofstream f(path);
+        std::ofstream f(file.path);
         f << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DAVEfunc>\n" << body << "\n</DAVEfunc>\n";
     }
-    DAVEMLAeroModel m(path.string());
-    std::filesystem::remove(path);
-    return m;
+    return DAVEMLAeroModel(file.path.string());
 }
 
 // cx follows alpha but is limited to [-1, 2]; cm is limited above only.
@@ -162,7 +168,9 @@ TEST_CASE("DAVEMLAeroModel: unsupported MathML is reported", "[daveml_aero][math
 
 TEST_CASE("DAVEMLAeroModel: a table referencing an undefined breakpoint set", "[daveml_aero][negative]")
 {
-    const auto m = loadDML("bad_bp", R"(
+    // Rejected when the file is loaded, not at the first evaluation (second
+    // pre-DOI audit, finding N04: a table is checked against its breakpoints).
+    REQUIRE_THROWS_WITH(loadDML("bad_bp", R"(
   <variableDef varID="alpha" units="deg" initialValue="0"><isInput/></variableDef>
   <variableDef varID="cz" units="nd"/>
   <function name="cz_fn">
@@ -174,8 +182,6 @@ TEST_CASE("DAVEMLAeroModel: a table referencing an undefined breakpoint set", "[
         <dataTable>1, 2, 3</dataTable>
       </griddedTableDef>
     </functionDefn>
-  </function>)");
-
-    REQUIRE_THROWS_WITH(m.evaluateRaw(std::unordered_map<std::string, double>{ { "alpha", 1.0 } }),
-                        ContainsSubstring("breakpoint 'nowhere' not found"));
+  </function>)"),
+                        ContainsSubstring("breakpoint 'nowhere', which is not defined"));
 }
