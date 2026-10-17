@@ -47,10 +47,10 @@ std::string fmu_base::make_description() const {
     if (m.defaultExperiment) {
         ss << "\t<DefaultExperiment ";
 
-        ss << "startTime=\"" << m.defaultExperiment->startTime << "\"";
-        if (m.defaultExperiment->stopTime) ss << " stopTime=\"" << *m.defaultExperiment->stopTime << "\"";
-        if (m.defaultExperiment->stepSize) ss << " stepSize=\"" << *m.defaultExperiment->stepSize << "\"";
-        if (m.defaultExperiment->tolerance) ss << " tolerance=\"" << *m.defaultExperiment->tolerance << "\"";
+        ss << "startTime=\"" << real_to_xml(m.defaultExperiment->startTime) << "\"";
+        if (m.defaultExperiment->stopTime) ss << " stopTime=\"" << real_to_xml(*m.defaultExperiment->stopTime) << "\"";
+        if (m.defaultExperiment->stepSize) ss << " stepSize=\"" << real_to_xml(*m.defaultExperiment->stepSize) << "\"";
+        if (m.defaultExperiment->tolerance) ss << " tolerance=\"" << real_to_xml(*m.defaultExperiment->tolerance) << "\"";
 
         ss << "/>\n\n";
     }
@@ -112,12 +112,12 @@ std::string fmu_base::make_description() const {
 
             ss << "\t\t\t<Real";
             if (requires_start(*v)) {
-                ss << " start=\"" << r->get() << "\"";
+                ss << " start=\"" << real_to_xml(r->get()) << "\"";
             }
             const auto min = r->getMin();
             const auto max = r->getMax();
             if (min && max) {
-                ss << " min=\"" << *min << "\" max=\"" << *max << "\"";
+                ss << " min=\"" << real_to_xml(*min) << "\" max=\"" << real_to_xml(*max) << "\"";
             }
             if (const auto unit = r->getUnit()) {
                 ss << " unit=\"" << *unit << "\"";

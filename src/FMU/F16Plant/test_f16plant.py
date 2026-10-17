@@ -30,6 +30,11 @@ Tests
    the configured ones, and the run must match one started at 0 s (second
    pre-DOI audit, finding N07: the start time was counted twice).
 
+5. Start values in the model description
+   Every Real with a start attribute must read back from a freshly
+   instantiated FMU as exactly that value.  The description used to print
+   six significant digits (lat0_deg 36.01917 -> "36.0192").
+
 Usage
 ─────
   pip install fmpy numpy
@@ -419,6 +424,39 @@ def test_nonzero_start(fmu_path: pathlib.Path, dt: float, t_start: float = 100.0
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Test 5 — Start values in the model description
+# ─────────────────────────────────────────────────────────────────────────────
+def test_description_start_values(fmu_path: pathlib.Path):
+    print(f"\n{'─'*60}")
+    print("Test 5: Model-description start values equal the FMU's own")
+    print(f"{'─'*60}")
+
+    unzipdir = tempfile.mkdtemp(prefix="f16plant_md_")
+    try:
+        extract(str(fmu_path), unzipdir)
+        md = read_model_description(str(fmu_path))
+        reals = [v for v in md.modelVariables if v.type == "Real" and v.start is not None]
+        slave = FMU2Slave(guid=md.guid, unzipDirectory=unzipdir,
+                          modelIdentifier=md.coSimulation.modelIdentifier, instanceName="F16Plant_md")
+        slave.instantiate()
+        slave.setupExperiment(startTime=0.0)
+        slave.enterInitializationMode()
+        actual = slave.getReal([v.valueReference for v in reals])
+        slave.terminate()
+        slave.freeInstance()
+
+        bad = [(v.name, v.start, a) for v, a in zip(reals, actual) if float(v.start) != a]
+        for name, s, a in bad[:10]:
+            print(f"  {name:24s} description start=\"{s}\"  FMU value {a!r}")
+        print(f"  {len(reals)} Real start values checked, {len(bad)} differ")
+        ok = not bad and len(reals) > 0
+        print(f"\n  {'PASS' if ok else 'FAIL'}")
+        return ok
+    finally:
+        shutil.rmtree(unzipdir, ignore_errors=True)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
@@ -475,6 +513,7 @@ def main():
     )
     results.append(test_turbulent_restore(fmu_path, dt=args.dt))
     results.append(test_nonzero_start(fmu_path, dt=args.dt))
+    results.append(test_description_start_values(fmu_path))
 
     print(f"\n{'═'*60}")
     passed = sum(results)
