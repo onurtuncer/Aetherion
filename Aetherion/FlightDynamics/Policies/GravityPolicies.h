@@ -37,7 +37,9 @@ namespace Aetherion::FlightDynamics {
     ///
     /// Computes @f$\mathbf{F} = m\,\mathbf{g}@f$ using the inverse-square law,
     /// then rotates the inertial-frame force into the body frame via
-    /// @f$R^\top@f$ from the SE(3) pose.  Moment component is zero (force at CoG).
+    /// @f$R^\top@f$ from the SE(3) pose.  The wrench is the one at the centre
+    /// of mass, where the force acts, so its moment is zero;
+    /// @c RigidBody::VectorField moves it to the body origin.
     struct CentralGravityPolicy {
         double mu{ Environment::WGS84::kGM_m3_s2 }; ///< Gravitational parameter @f$\mu@f$ [m³/s²].
 
@@ -65,7 +67,8 @@ namespace Aetherion::FlightDynamics {
     ///
     /// Extends @c CentralGravityPolicy with the first zonal harmonic @f$J_2@f$,
     /// which accounts for Earth's equatorial bulge.  Significant for LEO
-    /// trajectories (nodal regression, perigee precession).
+    /// trajectories (nodal regression, perigee precession).  As for
+    /// @c CentralGravityPolicy the wrench is at the centre of mass, moment zero.
     /// All default values are sourced from @c WGS84.h.
     struct J2GravityPolicy {
         double mu{ Environment::WGS84::kGM_m3_s2 };      ///< Gravitational parameter @f$\mu@f$ [m³/s²].

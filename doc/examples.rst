@@ -4878,7 +4878,7 @@ The simulation composes four physics policies into a single ``VectorField``:
 .. code-block:: cpp
 
    using TwoStageRocketVF = RigidBody::VectorField<
-       RocketGravityPolicy,              // J₂ gravity + CG–MRC moment transfer
+       FlightDynamics::J2GravityPolicy,  // J₂ gravity at the CG; VectorField moves it to the MRC
        RocketAeroPolicy,                 // DAVE-ML CL/CD/CY/Cm/Cn, wind-to-body
        FlightDynamics::AxialThrustPolicy,// body +x thrust from propulsion DML
        FlightDynamics::LinearBurnPolicy  // variable mdot, updated each step (ZOH)
@@ -5459,9 +5459,13 @@ the body :math:`x`-axis):
    M_y &= -x_{CG}\,F_z^B \\
    M_z &= +x_{CG}\,F_y^B
 
-``RocketGravityPolicy`` implements these corrections directly and updates
-:math:`x_{CG}` (stored as ``xcg_m`` = DXCG) at the start of every
-integration step.
+The gravity policy, ``FlightDynamics::J2GravityPolicy``, returns the wrench
+at the CG — force only.  ``RigidBody::VectorField`` moves it to the MRC and
+adds exactly this moment, with :math:`\mathbf{r}_{CG}^B` taken from the
+inertial parameters the simulator refreshes (DXCG) at the start of every
+integration step.  The rocket once carried this transfer in a gravity policy
+of its own; it now applies to every vehicle whose centre of mass is off the
+body origin.
 
 .. _atmos17_spatial_inertia:
 
@@ -5614,7 +5618,8 @@ integrator.  The sequence for each time step of size :math:`h` is:
 2. **Inertia rebuild** — evaluate ``twostage_inertia.dml`` to obtain current
    :math:`m`, :math:`I_{xx}`, :math:`I_{yy}`, :math:`I_{zz}`, and DXCG.
    Rebuild the 6×6 spatial inertia matrix :math:`\mathbf{M}` and its inverse.
-   Update ``RocketGravityPolicy::xcg_m`` for the gravity moment correction.
+   The same DXCG sets the moment ``VectorField`` adds when it moves the
+   gravity wrench from the CG to the MRC.
 
 3. **Integration** — advance the 13-component ODE state
    :math:`(\mathbf{q},\,\mathbf{p},\,\boldsymbol{\nu}_B,\,m)` by one step

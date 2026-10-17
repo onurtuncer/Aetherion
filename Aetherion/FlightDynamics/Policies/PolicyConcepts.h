@@ -56,7 +56,12 @@ namespace Aetherion::FlightDynamics {
     ///   Spatial::Wrench<S> operator()(const SE3<S>& g, S mass) const;
     /// @endcode
     /// The returned wrench must be in the **body frame** with storage convention
-    /// @f$[M;\,F]@f$ (moment first, force last).
+    /// @f$[M;\,F]@f$ (moment first, force last), and is the wrench **at the
+    /// centre of mass**, where gravity acts: force @f$m\,\mathbf{g}@f$ and no
+    /// moment (a gravity-gradient torque about the centre of mass, if the model
+    /// has one).  @c RigidBody::VectorField moves it to the body origin, about
+    /// which the equations of motion are written; a policy must not add that
+    /// transfer itself.
     template<class P>
     concept GravityPolicy =
         detail::GravityPolicyFor<P, double>&&
@@ -71,6 +76,9 @@ namespace Aetherion::FlightDynamics {
     ///                                  const Eigen::Matrix<S,6,1>& nu_B,
     ///                                  S mass, S t) const;
     /// @endcode
+    /// The returned wrench is in the body frame, @f$[M;\,F]@f$, and is **about
+    /// the body origin** -- the vehicle model's moment reference centre; it is
+    /// summed into the equations of motion as it is.
     template<class P>
     concept AeroPolicy =
         detail::AeroPolicyFor<P, double>&&
@@ -84,6 +92,7 @@ namespace Aetherion::FlightDynamics {
     ///                                  const Eigen::Matrix<S,6,1>& nu_B,
     ///                                  S mass, S t) const;
     /// @endcode
+    /// The wrench is about the body origin, as for @c AeroPolicy.
     template<class P>
     concept PropulsionPolicy = AeroPolicy<P>;
 
