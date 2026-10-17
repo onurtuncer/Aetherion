@@ -30,13 +30,13 @@ namespace NasaCsv {
     /// @throws std::runtime_error on I/O failure, column-count mismatch, or non-numeric values.
     inline Table read_numeric_csv(
         const std::string& path,
-        bool  has_header   = true,
-        char  comment_char = '#'
-    ) {
+        bool has_header = true,
+        char comment_char = '#')
+    {
         std::ifstream f(path);
         if (!f) throw std::runtime_error("Cannot open CSV: " + path);
 
-        std::vector<std::string>         header;
+        std::vector<std::string> header;
         std::vector<std::vector<double>> cols;
         bool header_done = false;
 
@@ -79,7 +79,7 @@ namespace NasaCsv {
 
         Table tbl;
         tbl.header = std::move(header);
-        tbl.cols   = std::move(cols);
+        tbl.cols = std::move(cols);
         for (std::size_t i = 0; i < tbl.header.size(); ++i)
             tbl.col_index[tbl.header[i]] = i;
         return tbl;
@@ -95,9 +95,9 @@ namespace NasaCsv {
     ///         which would otherwise cause a silent data-loss bug.
     inline TableNorm read_numeric_csv_normalized(
         const std::string& path,
-        bool has_header   = true,
-        char comment_char = '#'
-    ) {
+        bool has_header = true,
+        char comment_char = '#')
+    {
         TableNorm tn;
         tn.raw = read_numeric_csv(path, has_header, comment_char);
 

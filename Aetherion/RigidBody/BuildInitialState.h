@@ -95,20 +95,20 @@ namespace Aetherion::RigidBody {
     // @return              Eigen column vector of length 14
     // =========================================================================
     inline Eigen::Matrix<double, StateLayout::N, 1>
-        BuildInitialStateVector(
-            const Config& cfg,
-            const double  theta_era_rad)
+    BuildInitialStateVector(
+        const Config& cfg,
+        const double theta_era_rad)
     {
         using namespace Coordinate;
         constexpr double deg2rad = std::numbers::pi / 180.0;
 
         // ── Convert pose angles from degrees to radians ───────────────────────
-        const double lat_rad  = cfg.pose.lat_deg     * deg2rad;
-        const double lon_rad  = cfg.pose.lon_deg     * deg2rad;
-        const double h_m      = cfg.pose.alt_m;
-        const double az_rad   = cfg.pose.azimuth_deg * deg2rad;
-        const double zen_rad  = cfg.pose.zenith_deg  * deg2rad;
-        const double roll_rad = cfg.pose.roll_deg    * deg2rad;
+        const double lat_rad = cfg.pose.lat_deg * deg2rad;
+        const double lon_rad = cfg.pose.lon_deg * deg2rad;
+        const double h_m = cfg.pose.alt_m;
+        const double az_rad = cfg.pose.azimuth_deg * deg2rad;
+        const double zen_rad = cfg.pose.zenith_deg * deg2rad;
+        const double roll_rad = cfg.pose.roll_deg * deg2rad;
 
         // ── 1) ECI position: geodetic → ECEF → ECI ───────────────────────────
         //

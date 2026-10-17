@@ -17,7 +17,7 @@
 #include <limits>
 #include <type_traits>
 
-#include <Aetherion/Spatial/Skew.h>   
+#include <Aetherion/Spatial/Skew.h>
 
 #ifdef max
 #undef max
@@ -29,7 +29,8 @@
 namespace {
 
     template <typename Scalar>
-    constexpr Scalar abs_tol_for_linear_algebra(int scale = 200) {
+    constexpr Scalar abs_tol_for_linear_algebra(int scale = 200)
+    {
         static_assert(std::is_floating_point_v<Scalar>,
             "abs_tol_for_linear_algebra expects a floating-point Scalar.");
         const Scalar eps = std::numeric_limits<Scalar>::epsilon();
@@ -39,7 +40,8 @@ namespace {
     }
 
     template <typename Scalar>
-    constexpr Scalar rel_tol_for_linear_algebra(int scale = 50) {
+    constexpr Scalar rel_tol_for_linear_algebra(int scale = 50)
+    {
         static_assert(std::is_floating_point_v<Scalar>,
             "rel_tol_for_linear_algebra expects a floating-point Scalar.");
         return Scalar(scale) * std::numeric_limits<Scalar>::epsilon();
@@ -49,7 +51,8 @@ namespace {
     void require_matrix_near_relabs(const Eigen::MatrixBase<DerivedA>& A,
         const Eigen::MatrixBase<DerivedB>& B,
         typename DerivedA::Scalar abs_tol,
-        typename DerivedA::Scalar rel_tol) {
+        typename DerivedA::Scalar rel_tol)
+    {
         using Scalar = typename DerivedA::Scalar;
         REQUIRE(A.rows() == B.rows());
         REQUIRE(A.cols() == B.cols());

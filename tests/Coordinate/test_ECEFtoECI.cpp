@@ -29,8 +29,9 @@ using Aetherion::Coordinate::ECEFToECI;
 namespace {
     constexpr auto pi = std::numbers::pi_v<double>;
 
-    constexpr Vec3<double> make_vec(double x, double y, double z) {
-        return Vec3<double>{x, y, z};
+    constexpr Vec3<double> make_vec(double x, double y, double z)
+    {
+        return Vec3<double>{ x, y, z };
     }
 }
 
@@ -42,8 +43,8 @@ TEST_CASE("ECI/ECEF - theta = 0 gives identity", "[eci-ecef]")
     constexpr auto theta = 0.0;
 
     constexpr auto v_eci = make_vec(1.0, 2.0, -3.0);
-    const auto     v_ecef = ECIToECEF(v_eci, theta);
-    const auto     v_eci_back = ECEFToECI(v_ecef, theta);
+    const auto v_ecef = ECIToECEF(v_eci, theta);
+    const auto v_eci_back = ECEFToECI(v_ecef, theta);
 
     REQUIRE(v_ecef[0] == Catch::Approx(v_eci[0]).margin(1e-14));
     REQUIRE(v_ecef[1] == Catch::Approx(v_eci[1]).margin(1e-14));
@@ -79,7 +80,7 @@ TEST_CASE("ECI/ECEF - axes rotation at 90 degrees", "[eci-ecef]")
     SECTION("x axis")
     {
         constexpr auto x_eci = make_vec(1.0, 0.0, 0.0);
-        const auto     x_ecef = ECIToECEF(x_eci, theta);
+        const auto x_ecef = ECIToECEF(x_eci, theta);
 
         // Expected: [cosθ, -sinθ, 0] = [0, -1, 0] at 90°
         REQUIRE(x_ecef[0] == Catch::Approx(c).margin(1e-14));
@@ -96,7 +97,7 @@ TEST_CASE("ECI/ECEF - axes rotation at 90 degrees", "[eci-ecef]")
     SECTION("y axis")
     {
         constexpr auto y_eci = make_vec(0.0, 1.0, 0.0);
-        const auto     y_ecef = ECIToECEF(y_eci, theta);
+        const auto y_ecef = ECIToECEF(y_eci, theta);
 
         // Expected: [sinθ, cosθ, 0] = [1, 0, 0] at 90°
         REQUIRE(y_ecef[0] == Catch::Approx(s).margin(1e-14));
@@ -113,7 +114,7 @@ TEST_CASE("ECI/ECEF - axes rotation at 90 degrees", "[eci-ecef]")
     SECTION("z axis")
     {
         constexpr auto z_eci = make_vec(0.0, 0.0, 1.0);
-        const auto     z_ecef = ECIToECEF(z_eci, theta);
+        const auto z_ecef = ECIToECEF(z_eci, theta);
 
         REQUIRE(z_ecef[0] == Catch::Approx(0.0).margin(1e-14));
         REQUIRE(z_ecef[1] == Catch::Approx(0.0).margin(1e-14));

@@ -45,22 +45,22 @@ using Catch::Matchers::WithinAbs;
 // AV Rule 30 deviation (#define for constants): see CODING_STANDARDS.md,
 // Pre-Processing Directives.
 #ifndef DAVEML_F16_AERO_FILE
-#  define DAVEML_F16_AERO_FILE ""
+#define DAVEML_F16_AERO_FILE ""
 #endif
 #ifndef DAVEML_F16_PROP_FILE
-#  define DAVEML_F16_PROP_FILE ""
+#define DAVEML_F16_PROP_FILE ""
 #endif
 static const std::string kAeroFile = DAVEML_F16_AERO_FILE;
 static const std::string kPropFile = DAVEML_F16_PROP_FILE;
 
 // ── Scenario-11 flight condition (English units) ──────────────────────────────
-static constexpr double kVt_fps     = 565.685;   // 335.15 KTAS → ft/s
-static constexpr double kAlt_ft     = 10013.0;
+static constexpr double kVt_fps = 565.685;   // 335.15 KTAS → ft/s
+static constexpr double kAlt_ft = 10013.0;
 // Weight from DML mass (637.1596 slug) × local gravity (32.18876 ft/s²)
 static constexpr double kWeight_lbf = 20509.4;  // [lbf]
 
 // ── AC→CG offset: (35%−25%) × 11.32 ft = 1.132 ft ───────────────────────────
-static constexpr double kXcg_ft     = 1.132;    // [ft]
+static constexpr double kXcg_ft = 1.132;    // [ft]
 
 // ── Reference trim values from NASA Atmos_11 ─────────────────────────────────
 static constexpr double kRefAlpha_deg = 2.643;   // [deg]
@@ -79,17 +79,17 @@ TEST_CASE("TrimSolver: converges for Scenario-11 flight condition", "[trim][smok
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop, kXcg_ft);
+    TrimSolver solver(aero, prop, kXcg_ft);
 
     TrimInputs in{};
-    in.vt_fps     = kVt_fps;
-    in.alt_ft     = kAlt_ft;
+    in.vt_fps = kVt_fps;
+    in.alt_ft = kAlt_ft;
     in.weight_lbf = kWeight_lbf;
 
     const TrimPoint tp = solver.solve(in);
 
     INFO("alpha=" << tp.alpha_deg << "  el=" << tp.el_deg
-         << "  pwr=" << tp.pwr_pct << "  |r|=" << tp.residual_norm);
+                  << "  pwr=" << tp.pwr_pct << "  |r|=" << tp.residual_norm);
 
     CHECK(tp.converged);
     CHECK(tp.residual_norm < 0.1);  // residual in lbf
@@ -101,11 +101,11 @@ TEST_CASE("TrimSolver: trim alpha matches NASA reference", "[trim][smoke]")
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop, kXcg_ft);
+    TrimSolver solver(aero, prop, kXcg_ft);
 
     TrimInputs in{};
-    in.vt_fps     = kVt_fps;
-    in.alt_ft     = kAlt_ft;
+    in.vt_fps = kVt_fps;
+    in.alt_ft = kAlt_ft;
     in.weight_lbf = kWeight_lbf;
 
     const TrimPoint tp = solver.solve(in);
@@ -124,7 +124,8 @@ TEST_CASE("TrimSolver: apparent-weight trim matches the altitude-holding NESC si
     // above — trims without the rotating-Earth relief and climbs 51 ft (Scenario
     // 11) and 244 ft (Scenario 12) over the same run, so it is not a trim
     // reference.
-    struct Case {
+    struct Case
+    {
         const char* name;
         double lat_deg, alt_ft, heading_deg, vNorth_fps, vEast_fps, refAlpha_deg;
     };
@@ -137,31 +138,31 @@ TEST_CASE("TrimSolver: apparent-weight trim matches the altitude-holding NESC si
     } };
 
     constexpr double kMass_kg = 9298.6439;  // 637.1596 slug, from F16_inertia.dml
-    constexpr double kFt_m    = TrimSolver::kFt_m;
+    constexpr double kFt_m = TrimSolver::kFt_m;
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop, kXcg_ft);
+    TrimSolver solver(aero, prop, kXcg_ft);
 
     for (const auto& c : cases) {
         TrimInputs in{};
-        in.vt_fps    = std::hypot(c.vNorth_fps, c.vEast_fps);
-        in.alt_ft    = c.alt_ft;
+        in.vt_fps = std::hypot(c.vNorth_fps, c.vEast_fps);
+        in.alt_ft = c.alt_ft;
         in.bodyRates = LevelFlightBodyRates(c.lat_deg, c.alt_ft * kFt_m,
-                                            c.vNorth_fps * kFt_m, c.vEast_fps * kFt_m,
-                                            c.heading_deg, 0.0, 0.0);
+            c.vNorth_fps * kFt_m, c.vEast_fps * kFt_m,
+            c.heading_deg, 0.0, 0.0);
 
         in.weight_lbf = TrimWeight_lbf(kMass_kg, c.lat_deg, c.alt_ft * kFt_m);
         const TrimPoint tpStatic = solver.solve(in);
 
         in.weight_lbf = LevelFlightTrimWeight_lbf(kMass_kg, c.lat_deg, c.alt_ft * kFt_m,
-                                                  c.vNorth_fps * kFt_m, c.vEast_fps * kFt_m);
+            c.vNorth_fps * kFt_m, c.vEast_fps * kFt_m);
         const TrimPoint tp = solver.solve(in);
 
         INFO("Scenario " << c.name << ":  alpha=" << tp.alpha_deg
-             << "  (static weight: " << tpStatic.alpha_deg << ")"
-             << "  ref=" << c.refAlpha_deg
-             << "  el=" << tp.el_deg << "  pwr=" << tp.pwr_pct);
+                         << "  (static weight: " << tpStatic.alpha_deg << ")"
+                         << "  ref=" << c.refAlpha_deg
+                         << "  el=" << tp.el_deg << "  pwr=" << tp.pwr_pct);
 
         REQUIRE(tp.converged);
         CHECK_THAT(tp.alpha_deg, WithinAbs(c.refAlpha_deg, 1.0e-4));
@@ -184,38 +185,42 @@ TEST_CASE("TrimSolver: the trim point is an equilibrium of F16AeroPolicy", "[tri
     // the initial state the examples build and ask the policy what it actually
     // produces there.  Mid-latitude on purpose: a 24 m altitude error in the
     // policy (0.25 % in density, 50 lbf) vanished at the equator and the poles.
-    struct Case { const char* name; double alt_ft, v_fps; };
+    struct Case
+    {
+        const char* name;
+        double alt_ft, v_fps;
+    };
     const std::array<Case, 2> cases{ { Case{ .name = "11", .alt_ft = 10013.0, .v_fps = 400.0 },
-                                       Case{ .name = "12", .alt_ft = 30013.0, .v_fps = 1414.2136 } } };
+        Case{ .name = "12", .alt_ft = 30013.0, .v_fps = 1414.2136 } } };
 
     constexpr double kLat_deg = 36.01917, kLon_deg = -75.67444, kHeading_deg = 45.0;
     constexpr double kMass_kg = 9298.6439;
-    constexpr double kFt_m    = TrimSolver::kFt_m;
+    constexpr double kFt_m = TrimSolver::kFt_m;
 
     const auto aero = std::make_shared<const DAVEMLAeroModel>(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(*aero, prop, kXcg_ft);
+    TrimSolver solver(*aero, prop, kXcg_ft);
 
     for (const auto& c : cases) {
         const double alt_m = c.alt_ft * kFt_m, v = c.v_fps * kFt_m;
 
         TrimInputs in{};
-        in.vt_fps     = std::hypot(c.v_fps, c.v_fps);
-        in.alt_ft     = c.alt_ft;
+        in.vt_fps = std::hypot(c.v_fps, c.v_fps);
+        in.alt_ft = c.alt_ft;
         in.weight_lbf = LevelFlightTrimWeight_lbf(kMass_kg, kLat_deg, alt_m, v, v);
-        in.bodyRates  = LevelFlightBodyRates(kLat_deg, alt_m, v, v, kHeading_deg, 0.0, 0.0);
+        in.bodyRates = LevelFlightBodyRates(kLat_deg, alt_m, v, v, kHeading_deg, 0.0, 0.0);
         const TrimPoint tp = solver.solve(in);
         REQUIRE(tp.converged);
 
         Aetherion::RigidBody::Config cfg{};
-        cfg.pose.lat_deg          = kLat_deg;
-        cfg.pose.lon_deg          = kLon_deg;
-        cfg.pose.alt_m            = alt_m;
-        cfg.pose.azimuth_deg      = kHeading_deg;
-        cfg.pose.zenith_deg       = 90.0 - tp.alpha_deg;
-        cfg.pose.roll_deg         = 0.0;
+        cfg.pose.lat_deg = kLat_deg;
+        cfg.pose.lon_deg = kLon_deg;
+        cfg.pose.alt_m = alt_m;
+        cfg.pose.azimuth_deg = kHeading_deg;
+        cfg.pose.zenith_deg = 90.0 - tp.alpha_deg;
+        cfg.pose.roll_deg = 0.0;
         cfg.velocityNED.north_mps = v;
-        cfg.velocityNED.east_mps  = v;
+        cfg.velocityNED.east_mps = v;
         cfg.bodyRates = LevelFlightBodyRates(kLat_deg, alt_m, v, v, kHeading_deg, tp.alpha_deg, 0.0);
         cfg.inertialParameters.mass_kg = kMass_kg;
 
@@ -228,12 +233,12 @@ TEST_CASE("TrimSolver: the trim point is an equilibrium of F16AeroPolicy", "[tri
             Eigen::Vector3d(x0[L::IDX_P], x0[L::IDX_P + 1], x0[L::IDX_P + 2]));
         Eigen::Matrix<double, 6, 1> nu_B;
         nu_B << x0[L::IDX_W], x0[L::IDX_W + 1], x0[L::IDX_W + 2],
-                x0[L::IDX_V], x0[L::IDX_V + 1], x0[L::IDX_V + 2];
+            x0[L::IDX_V], x0[L::IDX_V + 1], x0[L::IDX_V + 2];
 
         const F16AeroPolicy policy(aero, tp.el_deg, 0.0, 0.0, kXcg_ft * kFt_m);
         const auto w = policy(pose, nu_B, kMass_kg, 0.0);
 
-        const double fz_lbf   = w.f(5) / TrimSolver::kLbf_N;
+        const double fz_lbf = w.f(5) / TrimSolver::kLbf_N;
         const double my_ftlbf = w.f(1) / TrimSolver::kFtLbf_Nm;
         INFO("Scenario " << c.name << ":  Fz=" << fz_lbf << " lbf  My_cg=" << my_ftlbf << " ft.lbf");
 
@@ -248,11 +253,11 @@ TEST_CASE("TrimSolver: force balance at trim", "[trim][smoke]")
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop, kXcg_ft);
+    TrimSolver solver(aero, prop, kXcg_ft);
 
     TrimInputs in{};
-    in.vt_fps     = kVt_fps;
-    in.alt_ft     = kAlt_ft;
+    in.vt_fps = kVt_fps;
+    in.alt_ft = kAlt_ft;
     in.weight_lbf = kWeight_lbf;
 
     const TrimPoint tp = solver.solve(in);
@@ -270,19 +275,19 @@ TEST_CASE("TrimSolver: throttle and elevator in physical range", "[trim][smoke]"
 
     DAVEMLAeroModel aero(kAeroFile);
     DAVEMLPropModel prop(kPropFile);
-    TrimSolver      solver(aero, prop, kXcg_ft);
+    TrimSolver solver(aero, prop, kXcg_ft);
 
     TrimInputs in{};
-    in.vt_fps     = kVt_fps;
-    in.alt_ft     = kAlt_ft;
+    in.vt_fps = kVt_fps;
+    in.alt_ft = kAlt_ft;
     in.weight_lbf = kWeight_lbf;
 
     const TrimPoint tp = solver.solve(in);
 
     CHECK(tp.pwr_pct >= 0.0);
     CHECK(tp.pwr_pct <= 100.0);
-    CHECK(tp.el_deg  >= -25.0);
-    CHECK(tp.el_deg  <=  25.0);
+    CHECK(tp.el_deg >= -25.0);
+    CHECK(tp.el_deg <= 25.0);
 }
 
 TEST_CASE("TrimSolver: F16AeroPolicy concept conformance", "[trim][concept]")

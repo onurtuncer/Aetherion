@@ -35,14 +35,14 @@ namespace Aetherion::Examples::TumblingBrickNoDamping {
 /// - Aero     : None — free torque-free tumble (Euler equations only)
 /// - Thrust   : None
 /// - Mass     : Constant (no propellant consumption)
-using TumblingBrickNoDampingVF = RigidBody::VectorField<
-    FlightDynamics::J2GravityPolicy,       ///< Gravity: J2 perturbation (WGS-84).
-    FlightDynamics::ZeroAeroPolicy,        ///< Aerodynamics: none (no damping).
-    FlightDynamics::ZeroPropulsionPolicy,  ///< Propulsion: none.
-    FlightDynamics::ConstantMassPolicy     ///< Mass: constant.
->;
+    using TumblingBrickNoDampingVF = RigidBody::VectorField<
+        FlightDynamics::J2GravityPolicy,       ///< Gravity: J2 perturbation (WGS-84).
+        FlightDynamics::ZeroAeroPolicy,        ///< Aerodynamics: none (no damping).
+        FlightDynamics::ZeroPropulsionPolicy,  ///< Propulsion: none.
+        FlightDynamics::ConstantMassPolicy     ///< Mass: constant.
+        >;
 
 /// @brief RKMK integrator stepper for @c TumblingBrickNoDampingVF.
-using TumblingBrickNoDampingStepper = RigidBody::SixDoFStepper<TumblingBrickNoDampingVF>;
+    using TumblingBrickNoDampingStepper = RigidBody::SixDoFStepper<TumblingBrickNoDampingVF>;
 
 } // namespace Aetherion::Examples::TumblingBrickNoDamping

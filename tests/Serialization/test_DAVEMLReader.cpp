@@ -39,7 +39,7 @@ using Catch::Matchers::WithinAbs;
 // AV Rule 30 deviation (#define for constants): CMake-injected path constant via
 // target_compile_definitions; see CODING_STANDARDS.md, Pre-Processing Directives.
 #ifndef DAVEML_TEST_FILE
-#  define DAVEML_TEST_FILE ""
+#define DAVEML_TEST_FILE ""
 #endif
 
 static const std::string kFile = DAVEML_TEST_FILE;
@@ -47,7 +47,7 @@ static const std::string kFile = DAVEML_TEST_FILE;
 // ── Minimal self-contained DML used for unit-factor and evalMathML tests ─────
 namespace {
 
-const char* const kMinDML = R"(<?xml version="1.0" encoding="UTF-8"?>
+    const char* const kMinDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 <DAVEfunc>
   <variableDef varID="x_pct"   units="pct"      initialValue="50.0"/>
   <variableDef varID="x_plain" units="nd"        initialValue="7.0"/>
@@ -60,23 +60,23 @@ const char* const kMinDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 // catch_discover_tests runs every TEST_CASE as its own process, so under
 // `ctest -j` several cases write this file at once: each gets its own name, or
 // one case's remove() deletes the file another is still reading.
-std::string writeMinDML()
-{
-    std::random_device rd;
-    const auto tag = (static_cast<std::uint64_t>(rd()) << 32U) | rd();
-    const std::string path =
-        (std::filesystem::temp_directory_path() / ("_ae_test_reader_min_" + std::to_string(tag) + ".dml")).string();
-    std::ofstream f(path);
-    f << kMinDML;
-    return path;
-}
+    std::string writeMinDML()
+    {
+        std::random_device rd;
+        const auto tag = (static_cast<std::uint64_t>(rd()) << 32U) | rd();
+        const std::string path =
+            (std::filesystem::temp_directory_path() / ("_ae_test_reader_min_" + std::to_string(tag) + ".dml")).string();
+        std::ofstream f(path);
+        f << kMinDML;
+        return path;
+    }
 
 } // namespace
 
 // ── Unit conversion constants ────────────────────────────────────────────────
 constexpr double kSlugFt2_to_kgm2 = 1.355817948329279;
-constexpr double kSlug_to_kg       = 14.593902937206364;
-constexpr double kFt_to_m          = 0.3048;
+constexpr double kSlug_to_kg = 14.593902937206364;
+constexpr double kFt_to_m = 0.3048;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Guard: skip all tests if no file path is configured
@@ -113,15 +113,15 @@ TEST_CASE("DAVEMLReader: native values match Stevens & Lewis table", "[daveml][s
     if (kFile.empty()) return;
     DAVEMLReader r(kFile);
 
-    CHECK_THAT(r.getValue("XIXX"),  WithinRel(9496.0,  1e-9));
-    CHECK_THAT(r.getValue("XIYY"),  WithinRel(55814.0, 1e-9));
-    CHECK_THAT(r.getValue("XIZZ"),  WithinRel(63100.0, 1e-9));
-    CHECK_THAT(r.getValue("XIZX"),  WithinRel(982.0,   1e-9));
-    CHECK_THAT(r.getValue("XIXY"),  WithinAbs(0.0,     1e-15));
-    CHECK_THAT(r.getValue("XIYZ"),  WithinAbs(0.0,     1e-15));
+    CHECK_THAT(r.getValue("XIXX"), WithinRel(9496.0, 1e-9));
+    CHECK_THAT(r.getValue("XIYY"), WithinRel(55814.0, 1e-9));
+    CHECK_THAT(r.getValue("XIZZ"), WithinRel(63100.0, 1e-9));
+    CHECK_THAT(r.getValue("XIZX"), WithinRel(982.0, 1e-9));
+    CHECK_THAT(r.getValue("XIXY"), WithinAbs(0.0, 1e-15));
+    CHECK_THAT(r.getValue("XIYZ"), WithinAbs(0.0, 1e-15));
     CHECK_THAT(r.getValue("XMASS"), WithinRel(637.1595, 1e-6));
-    CHECK_THAT(r.getValue("DYCG"),  WithinAbs(0.0, 1e-15));
-    CHECK_THAT(r.getValue("DZCG"),  WithinAbs(0.0, 1e-15));
+    CHECK_THAT(r.getValue("DYCG"), WithinAbs(0.0, 1e-15));
+    CHECK_THAT(r.getValue("DZCG"), WithinAbs(0.0, 1e-15));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -188,21 +188,21 @@ TEST_CASE("LoadInertiaFromDAVEML: F-16 inertia at reference CG", "[daveml][smoke
     const auto ip = LoadInertiaFromDAVEML(kFile);
 
     CHECK_THAT(ip.mass_kg, WithinRel(637.1595 * kSlug_to_kg, 1e-6));
-    CHECK_THAT(ip.Ixx,     WithinRel(9496.0   * kSlugFt2_to_kgm2, 1e-9));
-    CHECK_THAT(ip.Iyy,     WithinRel(55814.0  * kSlugFt2_to_kgm2, 1e-9));
-    CHECK_THAT(ip.Izz,     WithinRel(63100.0  * kSlugFt2_to_kgm2, 1e-9));
-    CHECK_THAT(ip.Ixz,     WithinRel(982.0    * kSlugFt2_to_kgm2, 1e-9));
-    CHECK_THAT(ip.Ixy,     WithinAbs(0.0, 1e-12));
-    CHECK_THAT(ip.Iyz,     WithinAbs(0.0, 1e-12));
-    CHECK_THAT(ip.xbar_m,  WithinAbs(0.0, 1e-12));  // at reference CG
-    CHECK_THAT(ip.ybar_m,  WithinAbs(0.0, 1e-12));
-    CHECK_THAT(ip.zbar_m,  WithinAbs(0.0, 1e-12));
+    CHECK_THAT(ip.Ixx, WithinRel(9496.0 * kSlugFt2_to_kgm2, 1e-9));
+    CHECK_THAT(ip.Iyy, WithinRel(55814.0 * kSlugFt2_to_kgm2, 1e-9));
+    CHECK_THAT(ip.Izz, WithinRel(63100.0 * kSlugFt2_to_kgm2, 1e-9));
+    CHECK_THAT(ip.Ixz, WithinRel(982.0 * kSlugFt2_to_kgm2, 1e-9));
+    CHECK_THAT(ip.Ixy, WithinAbs(0.0, 1e-12));
+    CHECK_THAT(ip.Iyz, WithinAbs(0.0, 1e-12));
+    CHECK_THAT(ip.xbar_m, WithinAbs(0.0, 1e-12));  // at reference CG
+    CHECK_THAT(ip.ybar_m, WithinAbs(0.0, 1e-12));
+    CHECK_THAT(ip.zbar_m, WithinAbs(0.0, 1e-12));
 }
 
 TEST_CASE("LoadInertiaFromDAVEML: F-16 inertia at non-reference CG", "[daveml][smoke]")
 {
     if (kFile.empty()) return;
-    const auto ip = LoadInertiaFromDAVEML(kFile, {{"CG_PCT_MAC", 30.0}});
+    const auto ip = LoadInertiaFromDAVEML(kFile, { { "CG_PCT_MAC", 30.0 } });
 
     // xbar_m = (35 - 30) * 0.01 * 11.32 ft → m (forward = positive)
     const double expected_xbar = 0.01 * 11.32 * (35.0 - 30.0) * kFt_to_m;
@@ -243,7 +243,7 @@ TEST_CASE("DAVEMLReader: evalMathML plus", "[daveml][evalMathML]")
     std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
-        "<math><apply><plus/><cn>3</cn><cn>4</cn></apply></math>"),
+                   "<math><apply><plus/><cn>3</cn><cn>4</cn></apply></math>"),
         WithinAbs(7.0, 1e-12));
 }
 
@@ -254,7 +254,7 @@ TEST_CASE("DAVEMLReader: evalMathML unary minus", "[daveml][evalMathML]")
     std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
-        "<math><apply><minus/><cn>5</cn></apply></math>"),
+                   "<math><apply><minus/><cn>5</cn></apply></math>"),
         WithinAbs(-5.0, 1e-12));
 }
 
@@ -265,7 +265,7 @@ TEST_CASE("DAVEMLReader: evalMathML divide", "[daveml][evalMathML]")
     std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
-        "<math><apply><divide/><cn>10</cn><cn>4</cn></apply></math>"),
+                   "<math><apply><divide/><cn>10</cn><cn>4</cn></apply></math>"),
         WithinAbs(2.5, 1e-12));
 }
 
@@ -276,7 +276,7 @@ TEST_CASE("DAVEMLReader: evalMathML power", "[daveml][evalMathML]")
     std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
-        "<math><apply><power/><cn>2</cn><cn>10</cn></apply></math>"),
+                   "<math><apply><power/><cn>2</cn><cn>10</cn></apply></math>"),
         WithinAbs(1024.0, 1e-9));
 }
 
@@ -287,7 +287,7 @@ TEST_CASE("DAVEMLReader: evalMathML unsupported operator throws", "[daveml][eval
     std::filesystem::remove(path);
 
     REQUIRE_THROWS_AS(r.evalMathML(
-        "<math><apply><modulo/><cn>7</cn><cn>3</cn></apply></math>"),
+                          "<math><apply><modulo/><cn>7</cn><cn>3</cn></apply></math>"),
         std::runtime_error);
 }
 
@@ -308,7 +308,7 @@ TEST_CASE("DAVEMLReader: evalMathML ci with unknown varID throws", "[daveml][eva
     std::filesystem::remove(path);
 
     REQUIRE_THROWS_AS(r.evalMathML(
-        "<math><apply><plus/><ci>NONEXISTENT</ci><cn>1</cn></apply></math>"),
+                          "<math><apply><plus/><ci>NONEXISTENT</ci><cn>1</cn></apply></math>"),
         std::runtime_error);
 }
 
@@ -347,7 +347,7 @@ TEST_CASE("DAVEMLReader: evalMathML times", "[daveml][evalMathML]")
     std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
-        "<math><apply><times/><cn>3</cn><cn>7</cn></apply></math>"),
+                   "<math><apply><times/><cn>3</cn><cn>7</cn></apply></math>"),
         WithinAbs(21.0, 1e-12));
 }
 
@@ -358,7 +358,7 @@ TEST_CASE("DAVEMLReader: evalMathML binary minus", "[daveml][evalMathML]")
     std::filesystem::remove(path);
 
     CHECK_THAT(r.evalMathML(
-        "<math><apply><minus/><cn>10</cn><cn>4</cn></apply></math>"),
+                   "<math><apply><minus/><cn>10</cn><cn>4</cn></apply></math>"),
         WithinAbs(6.0, 1e-12));
 }
 

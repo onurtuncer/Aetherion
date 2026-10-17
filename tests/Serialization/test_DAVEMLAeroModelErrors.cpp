@@ -36,29 +36,31 @@ using Catch::Matchers::WithinAbs;
 
 namespace {
 
-using AD = CppAD::AD<double>;
+    using AD = CppAD::AD<double>;
 
 /// Writes `body` wrapped in a DAVEfunc element to a temp file named after
 /// `tag`, loads it, and removes the file again, also when loading throws.
-DAVEMLAeroModel loadDML(const std::string& tag, const std::string& body)
-{
-    struct TempFile {
-        std::filesystem::path path;
-        ~TempFile()
-        {
-            std::error_code ec;
-            std::filesystem::remove(path, ec);
-        }
-    } file{ std::filesystem::temp_directory_path() / ("_ae_test_daveml_" + tag + ".dml") };
+    DAVEMLAeroModel loadDML(const std::string& tag, const std::string& body)
     {
-        std::ofstream f(file.path);
-        f << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DAVEfunc>\n" << body << "\n</DAVEfunc>\n";
+        struct TempFile
+        {
+            std::filesystem::path path;
+            ~TempFile()
+            {
+                std::error_code ec;
+                std::filesystem::remove(path, ec);
+            }
+        } file{ std::filesystem::temp_directory_path() / ("_ae_test_daveml_" + tag + ".dml") };
+        {
+            std::ofstream f(file.path);
+            f << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DAVEfunc>\n"
+              << body << "\n</DAVEfunc>\n";
+        }
+        return DAVEMLAeroModel(file.path.string());
     }
-    return DAVEMLAeroModel(file.path.string());
-}
 
 // cx follows alpha but is limited to [-1, 2]; cm is limited above only.
-const char* const kLimitedDML = R"(
+    const char* const kLimitedDML = R"(
   <variableDef varID="alpha" units="deg" initialValue="0"><isInput/></variableDef>
   <variableDef varID="cx" units="nd" minValue="-1" maxValue="2">
     <calculation><math><apply><times/><cn>1</cn><ci>alpha</ci></apply></math></calculation>
@@ -67,11 +69,12 @@ const char* const kLimitedDML = R"(
     <calculation><math><apply><divide/><ci>alpha</ci><cn>10</cn></apply></math></calculation>
   </variableDef>)";
 
-std::string calcVar(const std::string& mathBody)
-{
-    return R"(<variableDef varID="x" units="nd" initialValue="2"><isInput/></variableDef>
-  <variableDef varID="y" units="nd"><calculation><math>)" + mathBody + R"(</math></calculation></variableDef>)";
-}
+    std::string calcVar(const std::string& mathBody)
+    {
+        return R"(<variableDef varID="x" units="nd" initialValue="2"><isInput/></variableDef>
+  <variableDef varID="y" units="nd"><calculation><math>)" +
+               mathBody + R"(</math></calculation></variableDef>)";
+    }
 
 } // namespace
 
@@ -183,5 +186,5 @@ TEST_CASE("DAVEMLAeroModel: a table referencing an undefined breakpoint set", "[
       </griddedTableDef>
     </functionDefn>
   </function>)"),
-                        ContainsSubstring("breakpoint 'nowhere', which is not defined"));
+        ContainsSubstring("breakpoint 'nowhere', which is not defined"));
 }

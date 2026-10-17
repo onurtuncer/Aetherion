@@ -30,14 +30,13 @@ namespace Aetherion::Examples::F16SteadyFlight {
 
 /// @brief Six-DoF VectorField for the F-16 Scenario 11:
 ///        J2 gravity + DAVE-ML aero + DAVE-ML prop + constant mass.
-using F16VF = RigidBody::VectorField<
-    FlightDynamics::J2GravityPolicy,
-    FlightDynamics::F16AeroPolicy,
-    FlightDynamics::F16PropPolicy,
-    FlightDynamics::ConstantMassPolicy
->;
+    using F16VF = RigidBody::VectorField<
+        FlightDynamics::J2GravityPolicy,
+        FlightDynamics::F16AeroPolicy,
+        FlightDynamics::F16PropPolicy,
+        FlightDynamics::ConstantMassPolicy>;
 
 /// @brief RKMK Radau IIA stepper for the F-16 VectorField.
-using F16Stepper = RigidBody::SixDoFStepper<F16VF>;
+    using F16Stepper = RigidBody::SixDoFStepper<F16VF>;
 
 } // namespace Aetherion::Examples::F16SteadyFlight

@@ -20,7 +20,8 @@
 
 using namespace fmu4cpp;
 
-class FeedThrough : public fmu_base {
+class FeedThrough : public fmu_base
+{
 public:
     FMU4CPP_CTOR(FeedThrough)
     {
@@ -62,41 +63,41 @@ public:
     bool do_step(double /*dt*/) override
     {
         integerOut_ = integerIn_;
-        realOut_    = realIn_;
+        realOut_ = realIn_;
         booleanOut_ = booleanIn_;
-        stringOut_  = stringIn_;
+        stringOut_ = stringIn_;
         return true;
     }
 
     void reset() override
     {
-        integerIn_  = 0;
-        realIn_     = 0.0;
-        booleanIn_  = false;
-        stringIn_   = "empty";
+        integerIn_ = 0;
+        realIn_ = 0.0;
+        booleanIn_ = false;
+        stringIn_ = "empty";
 
         integerOut_ = 0;
-        realOut_    = 0.0;
+        realOut_ = 0.0;
         booleanOut_ = false;
-        stringOut_  = "empty";
+        stringOut_ = "empty";
     }
 
 private:
-    int         integerIn_{};
-    double      realIn_{};
-    bool        booleanIn_{};
+    int integerIn_{};
+    double realIn_{};
+    bool booleanIn_{};
     std::string stringIn_;
 
-    int         integerOut_{};
-    double      realOut_{};
-    bool        booleanOut_{};
+    int integerOut_{};
+    double realOut_{};
+    bool booleanOut_{};
     std::string stringOut_;
 };
 
 model_info fmu4cpp::get_model_info()
 {
     model_info info;
-    info.modelName   = "FeedThrough";
+    info.modelName = "FeedThrough";
     info.description = "Simple pass-through FMU (output = input) for fmu4cpp integration testing";
     return info;
 }

@@ -37,37 +37,38 @@
 
 namespace Aetherion::Examples::EastwardCannonball {
 
-using SWADSim = SphereWithAtmosphericDrag::SphereWithAtmosphericDragSimulator;
+    using SWADSim = SphereWithAtmosphericDrag::SphereWithAtmosphericDragSimulator;
 
 /// @brief Application for NASA TM-2015-218675 Atmospheric Scenario 9.
 ///
 /// Sphere with drag (CD=0.1) fired eastward from sea level at 45° under J₂ gravity.
 /// Reuses SphereWithAtmosphericDragSimulator (J2 + DragOnlyAeroPolicy).
-class EastwardCannonballApplication : public Simulation::Application
-{
-public:
-    explicit EastwardCannonballApplication(int argc, char** argv)
-        : Application(argc, argv) {}
+    class EastwardCannonballApplication : public Simulation::Application
+    {
+    public:
+        explicit EastwardCannonballApplication(int argc, char** argv)
+            : Application(argc, argv)
+        {}
 
-protected:
-    void logStartupBanner()                                               const override;
-    void prepareSimulation()                                              const override;
-    void writeInitialSnapshot(std::ofstream& csv)                         const override;
-    StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
-    void logFinalSummary()                                                const override;
+    protected:
+        void logStartupBanner() const override;
+        void prepareSimulation() const override;
+        void writeInitialSnapshot(std::ofstream& csv) const override;
+        StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
+        void logFinalSummary() const override;
 
-private:
-    [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
-    [[nodiscard]] static double     computeInitialERA(double t0) noexcept;
-    [[nodiscard]] static RigidBody::StateD
+    private:
+        [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
+        [[nodiscard]] static double computeInitialERA(double t0) noexcept;
+        [[nodiscard]] static RigidBody::StateD
         buildInitialState(const RigidBody::Config& rb_cfg, double theta0);
-    [[nodiscard]] static std::unique_ptr<SWADSim>
-        constructSimulator(const RigidBody::InertialParameters&    ip,
-                           const RigidBody::AerodynamicParameters& aero,
-                           const RigidBody::StateD&                x0,
-                           double                                  theta0);
+        [[nodiscard]] static std::unique_ptr<SWADSim>
+        constructSimulator(const RigidBody::InertialParameters& ip,
+            const RigidBody::AerodynamicParameters& aero,
+            const RigidBody::StateD& x0,
+            double theta0);
 
-    mutable std::unique_ptr<SWADSim> m_Simulator;
-};
+        mutable std::unique_ptr<SWADSim> m_Simulator;
+    };
 
 } // namespace Aetherion::Examples::EastwardCannonball

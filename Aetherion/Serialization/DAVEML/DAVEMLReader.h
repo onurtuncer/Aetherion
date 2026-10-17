@@ -44,16 +44,16 @@ namespace Aetherion::Serialization {
 ///
 /// Unit conversions are applied by @c getValueSI(); they cover:
 ///   @c slugft2 → kg·m², @c slug → kg, @c ft → m, @c pct → dimensionless.
-class DAVEMLReader
-{
-public:
+    class DAVEMLReader
+    {
+    public:
     /// @brief Load and parse the given DAVE-ML file.
     /// @throws std::runtime_error  if the file cannot be opened or parsed.
-    explicit DAVEMLReader(const std::string& path);
+        explicit DAVEMLReader(const std::string& path);
 
     /// @brief Returns the initial value in the units declared in the file.
     /// @throws std::out_of_range   if @p varID is not found.
-    double getValue(const std::string& varID) const;
+        double getValue(const std::string& varID) const;
 
     /// @brief Returns the value converted to SI units.
     ///
@@ -65,28 +65,29 @@ public:
     ///   all other units → × 1.0    (assumed already SI or dimensionless)
     ///
     /// @throws std::out_of_range   if @p varID is not found.
-    double getValueSI(const std::string& varID) const;
+        double getValueSI(const std::string& varID) const;
 
     /// @brief Override the value of an input variable (for re-evaluating
     ///        calculated outputs).  Has no effect on constants.
-    void setInput(const std::string& varID, double value);
+        void setInput(const std::string& varID, double value);
 
     /// @brief Returns @c true if the given @p varID exists in the file.
-    bool hasVar(const std::string& varID) const;
+        bool hasVar(const std::string& varID) const;
 
     /// @brief Evaluate a simple MathML \<apply\> tree; returns the result.
-    double evalMathML(const std::string& xml) const;
+        double evalMathML(const std::string& xml) const;
 
     /// @brief Internal per-variable record — public for .cpp helper access.
-    struct VarEntry {
-        double        value      { 0.0 };
-        std::string   units;
-        bool          isCalculated{ false };
-        std::string   mathmlXml;   ///< serialised MathML for re-evaluation
-    };
+        struct VarEntry
+        {
+            double value{ 0.0 };
+            std::string units;
+            bool isCalculated{ false };
+            std::string mathmlXml;   ///< serialised MathML for re-evaluation
+        };
 
-private:
-    std::unordered_map<std::string, VarEntry> m_vars;
-};
+    private:
+        std::unordered_map<std::string, VarEntry> m_vars;
+    };
 
 } // namespace Aetherion::Serialization

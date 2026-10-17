@@ -52,7 +52,7 @@ using namespace Aetherion;
 using namespace Aetherion::RigidBody;
 using namespace Aetherion::ODE::RKMK;
 
-using ZeroVF       = RigidBody::VectorField<FlightDynamics::ZeroGravityPolicy>;
+using ZeroVF = RigidBody::VectorField<FlightDynamics::ZeroGravityPolicy>;
 using RadauStepper = SixDoFStepper<ZeroVF>;
 
 namespace {
@@ -60,22 +60,28 @@ namespace {
     // ---------------------------------------------------------------------
     // Shared problem definition
     // ---------------------------------------------------------------------
-    constexpr double kT      = 600.0;   // trajectory length [s]
-    constexpr double kH      = 0.1;     // step size [s]
-    constexpr int    kSample = 50;      // record every kSample steps
+    constexpr double kT = 600.0;   // trajectory length [s]
+    constexpr double kH = 0.1;     // step size [s]
+    constexpr int kSample = 50;      // record every kSample steps
 
     constexpr double kIxx = 0.10, kIyy = 0.25, kIzz = 0.32;
 
     const Eigen::Vector3d kOmega0{ 1.0, 2.0, 0.5 };
-    const Eigen::Vector3d kV0    { 50.0, 5.0, -3.0 };
+    const Eigen::Vector3d kV0{ 50.0, 5.0, -3.0 };
 
     InertialParameters asymmetric_body()
     {
         InertialParameters ip;
         ip.mass_kg = 1.0;
-        ip.Ixx = kIxx; ip.Iyy = kIyy; ip.Izz = kIzz;
-        ip.Ixy = 0.0;  ip.Iyz = 0.0;  ip.Ixz = 0.0;
-        ip.xbar_m = 0.0; ip.ybar_m = 0.0; ip.zbar_m = 0.0;
+        ip.Ixx = kIxx;
+        ip.Iyy = kIyy;
+        ip.Izz = kIzz;
+        ip.Ixy = 0.0;
+        ip.Iyz = 0.0;
+        ip.Ixz = 0.0;
+        ip.xbar_m = 0.0;
+        ip.ybar_m = 0.0;
+        ip.zbar_m = 0.0;
         return ip;
     }
 
@@ -112,13 +118,13 @@ namespace {
         // q_dot = 0.5 * q (x) [0, w]   (Hamilton product, scalar-first)
         Eigen::Vector4d qdot;
         qdot(0) = 0.5 * (-q(1) * w(0) - q(2) * w(1) - q(3) * w(2));
-        qdot(1) = 0.5 * ( q(0) * w(0) + q(2) * w(2) - q(3) * w(1));
-        qdot(2) = 0.5 * ( q(0) * w(1) - q(1) * w(2) + q(3) * w(0));
-        qdot(3) = 0.5 * ( q(0) * w(2) + q(1) * w(1) - q(2) * w(0));
+        qdot(1) = 0.5 * (q(0) * w(0) + q(2) * w(2) - q(3) * w(1));
+        qdot(2) = 0.5 * (q(0) * w(1) - q(1) * w(2) + q(3) * w(0));
+        qdot(3) = 0.5 * (q(0) * w(2) + q(1) * w(1) - q(2) * w(0));
 
         // p_dot = R(q) v_B   -- built from the raw (possibly non-unit) q
         const Eigen::Quaterniond qq(q(0), q(1), q(2), q(3));
-        const Eigen::Matrix3d    R = qq.toRotationMatrix();
+        const Eigen::Matrix3d R = qq.toRotationMatrix();
 
         // Euler's equations, torque free:  w_dot = -I^-1 (w x I w)
         const Eigen::Vector3d Iw{ kIxx * w(0), kIyy * w(1), kIzz * w(2) };
@@ -129,9 +135,9 @@ namespace {
         const Eigen::Vector3d vdot = -w.cross(v);
 
         Vec13 dy;
-        dy.segment<4>(0)  = qdot;
-        dy.segment<3>(4)  = R * v;
-        dy.segment<3>(7)  = wdot;
+        dy.segment<4>(0) = qdot;
+        dy.segment<3>(4) = R * v;
+        dy.segment<3>(7) = wdot;
         dy.segment<3>(10) = vdot;
         return dy;
     }
@@ -149,7 +155,7 @@ namespace {
     {
         Vec13 y = Vec13::Zero();
         y(0) = 1.0;                     // identity quaternion
-        y.segment<3>(7)  = kOmega0;
+        y.segment<3>(7) = kOmega0;
         y.segment<3>(10) = kV0;
         return y;
     }
@@ -160,7 +166,8 @@ namespace {
         return q.toRotationMatrix();
     }
 
-    struct DriftTrace {
+    struct DriftTrace
+    {
         std::vector<double> t;
         std::vector<double> rkmk;
         std::vector<double> quat_plain;
@@ -174,15 +181,15 @@ namespace {
             DriftTrace out;
 
             Core::NewtonOptions opt;
-            opt.abs_tol   = 1e-12;
-            opt.rel_tol   = 1e-12;
+            opt.abs_tol = 1e-12;
+            opt.rel_tol = 1e-12;
             opt.max_iters = 30;
 
             RadauStepper stepper{ asymmetric_body(), opt };
 
-            StateD s      = initial_state();
-            Vec13  yPlain = quaternion_initial_state();
-            Vec13  yRenrm = quaternion_initial_state();
+            StateD s = initial_state();
+            Vec13 yPlain = quaternion_initial_state();
+            Vec13 yRenrm = quaternion_initial_state();
 
             const int N = static_cast<int>(std::llround(kT / kH));
             for (int k = 0; k < N; ++k) {
@@ -241,7 +248,7 @@ TEST_CASE("Unconstrained quaternion RK4 accumulates orthonormality error",
 {
     const DriftTrace& d = drift_trace();
 
-    const double rkmk_final  = d.rkmk.back();
+    const double rkmk_final = d.rkmk.back();
     const double plain_final = d.quat_plain.back();
 
     INFO("final defect: RKMK = " << rkmk_final << ", quaternion RK4 = " << plain_final);
@@ -284,9 +291,9 @@ TEST_CASE("Constraint drift: write CSV for paper figure", "[drift][csv]")
 {
     const DriftTrace& d = drift_trace();
 
-    WARN("final defects -- RKMK: "        << d.rkmk.back()
-         << "  quat RK4 (plain): "        << d.quat_plain.back()
-         << "  quat RK4 (renormalised): " << d.quat_renorm.back());
+    WARN("final defects -- RKMK: " << d.rkmk.back()
+                                   << "  quat RK4 (plain): " << d.quat_plain.back()
+                                   << "  quat RK4 (renormalised): " << d.quat_renorm.back());
 
 #ifdef AETHERION_PAPER_DATA_DIR
     const std::string csv_path =
@@ -303,7 +310,7 @@ TEST_CASE("Constraint drift: write CSV for paper figure", "[drift][csv]")
         WARN("CSV written to: " << csv_path);
     } else {
         WARN("Could not write CSV to: " << csv_path
-             << " -- ensure AETHERION_PAPER_DATA_DIR exists.");
+                                        << " -- ensure AETHERION_PAPER_DATA_DIR exists.");
     }
 #else
     WARN("AETHERION_PAPER_DATA_DIR not defined -- no CSV written.");

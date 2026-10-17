@@ -36,12 +36,14 @@ using Aetherion::Coordinate::DirectionNEDFromAzimuthZenith; // already NED
 // Helpers
 // -----------------------------------------------------------------------------
 
-static double Norm(const Vec3<double>& v) {
+static double Norm(const Vec3<double>& v)
+{
     return std::sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
 
 // Wrap longitude difference into [-pi, pi] for comparison
-static double LonDiff(double lon_rec, double lon_ref) {
+static double LonDiff(double lon_rec, double lon_ref)
+{
     const double two_pi = 2.0 * std::numbers::pi;
     double d = lon_rec - lon_ref;
     return std::remainder(d, two_pi);

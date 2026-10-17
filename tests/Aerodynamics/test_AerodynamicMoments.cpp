@@ -134,7 +134,7 @@ TEST_CASE("CppAD: Jacobian of AerodynamicMomentBodyFromClCmCn_Speed wrt speed", 
     CppAD::ADFun<double> f(x, Y);
 
     const double V0 = 123.0;
-    const std::vector<double> jac = f.Jacobian(std::vector<double>{V0});
+    const std::vector<double> jac = f.Jacobian(std::vector<double>{ V0 });
 
     // M_i = q*S*ref*Ci, q = 0.5*rho*V^2
     // dM_i/dV = (0.5*rho*2V)*S*ref*Ci = rho*V*S*ref*Ci
@@ -157,7 +157,9 @@ TEST_CASE("CppAD: Jacobian of AerodynamicMomentBodyFromCPForce wrt force compone
     const double rx = r_d[0], ry = r_d[1], rz = r_d[2];
 
     std::vector<AD> x(3);
-    x[0] = 0.0; x[1] = 0.0; x[2] = 0.0;
+    x[0] = 0.0;
+    x[1] = 0.0;
+    x[2] = 0.0;
     CppAD::Independent(x);
 
     const Aero::Vec3<AD> r{ AD(rx), AD(ry), AD(rz) };

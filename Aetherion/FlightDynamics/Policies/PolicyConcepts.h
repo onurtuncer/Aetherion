@@ -20,28 +20,34 @@
 namespace Aetherion::FlightDynamics {
 
     namespace detail {
-        template<class P, class S>
+        template <class P, class S>
         concept GravityPolicyFor =
-            requires(const P & p,
-        const ODE::RKMK::Lie::SE3<S>&g,
-            S mass)
-        { { p(g, mass) } -> std::same_as<Spatial::Wrench<S>>;
-        };
+            requires(const P& p,
+                const ODE::RKMK::Lie::SE3<S>& g,
+                S mass) {
+                {
+                    p(g, mass)
+                } -> std::same_as<Spatial::Wrench<S>>;
+            };
 
-        template<class P, class S>
+        template <class P, class S>
         concept AeroPolicyFor =
-            requires(const P & p,
-        const ODE::RKMK::Lie::SE3<S>&g,
-            const Eigen::Matrix<S, 6, 1>&nu_B,
-            S mass, S t)
-        { { p(g, nu_B, mass, t) } -> std::same_as<Spatial::Wrench<S>>;
-        };
+            requires(const P& p,
+                const ODE::RKMK::Lie::SE3<S>& g,
+                const Eigen::Matrix<S, 6, 1>& nu_B,
+                S mass, S t) {
+                {
+                    p(g, nu_B, mass, t)
+                } -> std::same_as<Spatial::Wrench<S>>;
+            };
 
-        template<class P, class S>
+        template <class P, class S>
         concept MassPolicyFor =
-            requires(const P & p, S t, S m)
-        { { p.mdot(t, m) } -> std::same_as<S>;
-        };
+            requires(const P& p, S t, S m) {
+                {
+                    p.mdot(t, m)
+                } -> std::same_as<S>;
+            };
     }
 
     // -------------------------------------------------------------------------
@@ -62,9 +68,9 @@ namespace Aetherion::FlightDynamics {
     /// has one).  @c RigidBody::VectorField moves it to the body origin, about
     /// which the equations of motion are written; a policy must not add that
     /// transfer itself.
-    template<class P>
+    template <class P>
     concept GravityPolicy =
-        detail::GravityPolicyFor<P, double>&&
+        detail::GravityPolicyFor<P, double> &&
         detail::GravityPolicyFor<P, CppAD::AD<double>>;
 
     /// @brief Concept for an aerodynamic wrench policy.
@@ -79,9 +85,9 @@ namespace Aetherion::FlightDynamics {
     /// The returned wrench is in the body frame, @f$[M;\,F]@f$, and is **about
     /// the body origin** -- the vehicle model's moment reference centre; it is
     /// summed into the equations of motion as it is.
-    template<class P>
+    template <class P>
     concept AeroPolicy =
-        detail::AeroPolicyFor<P, double>&&
+        detail::AeroPolicyFor<P, double> &&
         detail::AeroPolicyFor<P, CppAD::AD<double>>;
 
     /// @brief Concept for a propulsion wrench policy.
@@ -93,7 +99,7 @@ namespace Aetherion::FlightDynamics {
     ///                                  S mass, S t) const;
     /// @endcode
     /// The wrench is about the body origin, as for @c AeroPolicy.
-    template<class P>
+    template <class P>
     concept PropulsionPolicy = AeroPolicy<P>;
 
     /// @brief Concept for a mass-rate (propellant burn) policy.
@@ -103,9 +109,9 @@ namespace Aetherion::FlightDynamics {
     /// @code
     ///   S mdot(S t, S mass) const;   // [kg/s], typically ≤ 0
     /// @endcode
-    template<class P>
+    template <class P>
     concept MassPolicy =
-        detail::MassPolicyFor<P, double>&&
+        detail::MassPolicyFor<P, double> &&
         detail::MassPolicyFor<P, CppAD::AD<double>>;
 
 } // namespace Aetherion::FlightDynamics

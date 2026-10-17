@@ -31,7 +31,7 @@ namespace Aetherion::ODE::RKMK::Core {
     // Basic building blocks
     // ----------------------------------------------------------------------------
 
-    template<class T>
+    template <class T>
     concept ValueSemantics =
         std::is_default_constructible_v<T> &&
         std::is_copy_constructible_v<T> &&
@@ -39,40 +39,60 @@ namespace Aetherion::ODE::RKMK::Core {
         std::is_copy_assignable_v<T> &&
         std::is_move_assignable_v<T>;
 
-    template<class S>
+    template <class S>
     concept ScalarLike =
         requires(S a, S b) {
         // construction
-        S{ 0 };
-        S{ 1 };
+            S{ 0 };
+            S{ 1 };
 
         // arithmetic
-        { a + b } -> std::convertible_to<S>;
-        { a - b } -> std::convertible_to<S>;
-        { a* b } -> std::convertible_to<S>;
-        { a / b } -> std::convertible_to<S>;
-        { -a }    -> std::convertible_to<S>;
+            {
+                a + b
+            } -> std::convertible_to<S>;
+            {
+                a - b
+            } -> std::convertible_to<S>;
+            {
+                a* b
+            } -> std::convertible_to<S>;
+            {
+                a / b
+            } -> std::convertible_to<S>;
+            {
+                -a
+            } -> std::convertible_to<S>;
 
         // comparisons (needed for CondExp wrappers on doubles)
-        { a < b } -> std::convertible_to<bool>;
-    };
+            {
+                a < b
+            } -> std::convertible_to<bool>;
+        };
 
-    template<class S>
+    template <class S>
     concept ADCompatibleScalar =
         ScalarLike<S> && (std::is_arithmetic_v<std::decay_t<S>> || is_cppad_ad_v<S>);
 
     // We typically store Euclidean parts as Eigen column vectors.
     // Keep this intentionally lightweight: only require "vector-ish" Eigen API.
-    template<class V>
+    template <class V>
     concept EigenVectorLike =
         requires(V v) {
-        typename V::Scalar;
-        { v.rows() } -> std::convertible_to<Eigen::Index>;
-        { v.cols() } -> std::convertible_to<Eigen::Index>;
-        { v.size() } -> std::convertible_to<Eigen::Index>;
+            typename V::Scalar;
+            {
+                v.rows()
+            } -> std::convertible_to<Eigen::Index>;
+            {
+                v.cols()
+            } -> std::convertible_to<Eigen::Index>;
+            {
+                v.size()
+            } -> std::convertible_to<Eigen::Index>;
         // element access (vector overload)
-        { v(0) } -> std::convertible_to<typename V::Scalar>;
-    } &&
+            {
+                v(0)
+            } -> std::convertible_to<typename V::Scalar>;
+        } &&
         // Prefer compile-time vector shapes when available:
         (V::ColsAtCompileTime == 1 || V::RowsAtCompileTime == 1);
 
@@ -94,25 +114,33 @@ namespace Aetherion::ODE::RKMK::Core {
     // - This is RKMK-oriented: dexp_inv is what you need in implicit stages.
     // - We do NOT require Log(), inverse(), Ad(), etc. here.
     //
-    template<class G>
+    template <class G>
     concept LieGroup =
         ValueSemantics<G> &&
         requires {
-        typename G::Scalar;
-        typename G::Tangent;
-    }&&
-        ADCompatibleScalar<typename G::Scalar>&&
+            typename G::Scalar;
+            typename G::Tangent;
+        } &&
+        ADCompatibleScalar<typename G::Scalar> &&
         requires(const G& g1, const G& g2,
-    const typename G::Tangent& x,
-        const typename G::Tangent& y) {
-            { G::Identity() } -> std::same_as<G>;
-            { g1* g2 }       -> std::same_as<G>;
-            { G::Exp(x) }     -> std::same_as<G>;
-            { G::dexp_inv(x, y) } -> std::same_as<typename G::Tangent>;
-    };
+            const typename G::Tangent& x,
+            const typename G::Tangent& y) {
+            {
+                G::Identity()
+            } -> std::same_as<G>;
+            {
+                g1* g2
+            } -> std::same_as<G>;
+            {
+                G::Exp(x)
+            } -> std::same_as<G>;
+            {
+                G::dexp_inv(x, y)
+            } -> std::same_as<typename G::Tangent>;
+        };
 
     // Convenience if you model groups as templates SE3<Scalar>, SO3<Scalar>, ...
-    template<template<class> class GTemplate, class S>
+    template <template <class> class GTemplate, class S>
     concept LieGroupTemplate = LieGroup<GTemplate<S>>;
 
     // ----------------------------------------------------------------------------
@@ -130,25 +158,25 @@ namespace Aetherion::ODE::RKMK::Core {
     // NOTE: In your implementation, xi/f should be templated on Scalar so they work
     // for both double and CppAD::AD<double>.
     //
-    template<class Xi, class G, class X>
+    template <class Xi, class G, class X>
     concept XiField =
         LieGroup<G> &&
         EigenVectorLike<X> &&
-        std::regular_invocable<Xi, typename G::Scalar, const G&, const X&>&&
+        std::regular_invocable<Xi, typename G::Scalar, const G&, const X&> &&
         std::same_as<std::invoke_result_t<Xi, typename G::Scalar, const G&, const X&>,
-        typename G::Tangent>;
+            typename G::Tangent>;
 
-    template<class F, class G, class X>
+    template <class F, class G, class X>
     concept EuclidField =
         LieGroup<G> &&
         EigenVectorLike<X> &&
-        std::regular_invocable<F, typename G::Scalar, const G&, const X&>&&
+        std::regular_invocable<F, typename G::Scalar, const G&, const X&> &&
         std::same_as<std::invoke_result_t<F, typename G::Scalar, const G&, const X&>,
-        X>;
+            X>;
 
     // Often you want both together:
-    template<class Xi, class F, class G, class X>
+    template <class Xi, class F, class G, class X>
     concept ProductDynamics =
-        XiField<Xi, G, X>&& EuclidField<F, G, X>;
+        XiField<Xi, G, X> && EuclidField<F, G, X>;
 
 } // namespace Aetherion::ODE::RKMK::Core

@@ -75,10 +75,10 @@ namespace {
 
     // Parameters representative of the TwoStageRocket example mid-S1-burn
     // (the regime where the sign bug caused divergence).
-    constexpr double kMass_kg  = 280'000.0;    // after ~7 s of burn
-    constexpr double kIxx      =  330'000.0;
-    constexpr double kIyy      =  32'000'000.0; // ≈ 30 MN·m²
-    constexpr double kXcg_m    =       3.5;    // ~half of max 7.5 m offset
+    constexpr double kMass_kg = 280'000.0;    // after ~7 s of burn
+    constexpr double kIxx = 330'000.0;
+    constexpr double kIyy = 32'000'000.0; // ≈ 30 MN·m²
+    constexpr double kXcg_m = 3.5;    // ~half of max 7.5 m offset
 
     InertialParameters rocket_params()
     {
@@ -87,7 +87,9 @@ namespace {
         ip.Ixx = kIxx;
         ip.Iyy = kIyy;
         ip.Izz = kIyy;      // axisymmetric
-        ip.Ixy = 0.0; ip.Iyz = 0.0; ip.Ixz = 0.0;
+        ip.Ixy = 0.0;
+        ip.Iyz = 0.0;
+        ip.Ixz = 0.0;
         ip.xbar_m = kXcg_m; // CG forward of MRC
         ip.ybar_m = 0.0;
         ip.zbar_m = 0.0;
@@ -99,8 +101,8 @@ namespace {
     // altitude so J2 gravity is well-defined.
     ODE::RKMK::Lie::SE3<double> pitched_pose()
     {
-        constexpr double alt_m  = 30'000.0;     // 30 km — within atmosphere
-        constexpr double pitch  = 55.0 * std::numbers::pi / 180.0;
+        constexpr double alt_m = 30'000.0;     // 30 km — within atmosphere
+        constexpr double pitch = 55.0 * std::numbers::pi / 180.0;
 
         ODE::RKMK::Lie::SE3<double> g = ODE::RKMK::Lie::SE3<double>::Identity();
         // Place on equatorial +x axis at given altitude
@@ -122,7 +124,7 @@ namespace {
 // ══════════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("Spatial inertia: Featherstone off-diagonal signs (xcg only)",
-          "[spatial_inertia][sign][regression]")
+    "[spatial_inertia][sign][regression]")
 {
     // With r_CG = [xcg, 0, 0]^T the cross-coupling matrix is
     //   h× = m · [r_CG×] = m · [[0,0,0],[0,0,-xcg],[0,xcg,0]]
@@ -136,7 +138,7 @@ TEST_CASE("Spatial inertia: Featherstone off-diagonal signs (xcg only)",
     using TestVF = VectorField<FlightDynamics::J2GravityPolicy>;
     TestVF vf(ip);
 
-    const double m   = ip.mass_kg;
+    const double m = ip.mass_kg;
     const double xcg = ip.xbar_m;
 
     using Catch::Approx;
@@ -149,8 +151,8 @@ TEST_CASE("Spatial inertia: Featherstone off-diagonal signs (xcg only)",
 
     SECTION("M[2,4] and M[4,2] are positive (+m·xcg)")
     {
-        REQUIRE(vf.M(2, 4) == Approx( m * xcg).epsilon(1e-12));
-        REQUIRE(vf.M(4, 2) == Approx( m * xcg).epsilon(1e-12));
+        REQUIRE(vf.M(2, 4) == Approx(m * xcg).epsilon(1e-12));
+        REQUIRE(vf.M(4, 2) == Approx(m * xcg).epsilon(1e-12));
     }
 
     SECTION("Other off-diagonals vanish for r=[xcg,0,0]")
@@ -180,14 +182,20 @@ TEST_CASE("Spatial inertia: Featherstone off-diagonal signs (xcg only)",
 // ══════════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("Spatial inertia: matrix is symmetric for arbitrary CG offset",
-          "[spatial_inertia][symmetry]")
+    "[spatial_inertia][symmetry]")
 {
     // Test with all three offset components non-zero to cover every term.
     InertialParameters ip;
     ip.mass_kg = 1000.0;
-    ip.Ixx = 500.0; ip.Iyy = 2000.0; ip.Izz = 2100.0;
-    ip.Ixy = 10.0;  ip.Iyz = 5.0;    ip.Ixz = 8.0;
-    ip.xbar_m = 1.5; ip.ybar_m = 0.3; ip.zbar_m = 0.2;
+    ip.Ixx = 500.0;
+    ip.Iyy = 2000.0;
+    ip.Izz = 2100.0;
+    ip.Ixy = 10.0;
+    ip.Iyz = 5.0;
+    ip.Ixz = 8.0;
+    ip.xbar_m = 1.5;
+    ip.ybar_m = 0.3;
+    ip.zbar_m = 0.2;
 
     using TestVF = VectorField<FlightDynamics::J2GravityPolicy>;
     TestVF vf(ip);
@@ -203,7 +211,7 @@ TEST_CASE("Spatial inertia: matrix is symmetric for arbitrary CG offset",
 // ══════════════════════════════════════════════════════════════════════════════
 
 TEST_CASE("Spatial inertia: diagonal blocks have correct magnitude",
-          "[spatial_inertia][magnitude]")
+    "[spatial_inertia][magnitude]")
 {
     const auto ip = rocket_params();
 
@@ -216,9 +224,9 @@ TEST_CASE("Spatial inertia: diagonal blocks have correct magnitude",
     // The tensor in ip is about the CG; M is about the MRC, so the
     // parallel-axis term m xcg^2 appears on the two axes normal to the offset.
     const double shift = ip.mass_kg * ip.xbar_m * ip.xbar_m;
-    REQUIRE(vf.M(0, 0) == Approx( ip.Ixx).epsilon(1e-12));
-    REQUIRE(vf.M(1, 1) == Approx( ip.Iyy + shift).epsilon(1e-12));
-    REQUIRE(vf.M(2, 2) == Approx( ip.Izz + shift).epsilon(1e-12));
+    REQUIRE(vf.M(0, 0) == Approx(ip.Ixx).epsilon(1e-12));
+    REQUIRE(vf.M(1, 1) == Approx(ip.Iyy + shift).epsilon(1e-12));
+    REQUIRE(vf.M(2, 2) == Approx(ip.Izz + shift).epsilon(1e-12));
     REQUIRE(vf.M(0, 1) == Approx(-ip.Ixy).epsilon(1e-12));
     REQUIRE(vf.M(0, 2) == Approx(-ip.Ixz).epsilon(1e-12));
     REQUIRE(vf.M(1, 2) == Approx(-ip.Iyz).epsilon(1e-12));
@@ -257,21 +265,21 @@ TEST_CASE("Spatial inertia: diagonal blocks have correct magnitude",
 // 1×10⁻⁸ rad/s tolerance used below.
 
 TEST_CASE("Spatial inertia: free-fall with CG offset gives zero angular acceleration",
-          "[spatial_inertia][free_fall][regression]")
+    "[spatial_inertia][free_fall][regression]")
 {
     const auto ip = rocket_params();
 
     // J2 gravity at the CG; VectorField moves it to the MRC (xbar_m = xcg).
-    using TestVF      = VectorField<FlightDynamics::J2GravityPolicy>;
+    using TestVF = VectorField<FlightDynamics::J2GravityPolicy>;
     using TestStepper = SixDoFStepper<TestVF>;
 
-    TestVF      vf(ip);
+    TestVF vf(ip);
     TestStepper stepper(vf);
 
     StateD s0;
-    s0.g    = pitched_pose();
+    s0.g = pitched_pose();
     s0.nu_B = Eigen::Matrix<double, 6, 1>::Zero();  // at rest
-    s0.m    = ip.mass_kg;
+    s0.m = ip.mass_kg;
 
     constexpr double dt = 0.001;   // 1 ms — same as Scenario 17 time step
 
@@ -311,13 +319,19 @@ TEST_CASE("Spatial inertia: free-fall with CG offset gives zero angular accelera
 // are zero and M is block-diagonal — the sign fix has no effect.
 
 TEST_CASE("Spatial inertia: no cross-coupling when CG is at MRC (DXCG=0)",
-          "[spatial_inertia][sign][baseline]")
+    "[spatial_inertia][sign][baseline]")
 {
     InertialParameters ip;
     ip.mass_kg = 500.0;
-    ip.Ixx = 1200.0; ip.Iyy = 5000.0; ip.Izz = 5000.0;
-    ip.Ixy = 0.0; ip.Iyz = 0.0; ip.Ixz = 0.0;
-    ip.xbar_m = 0.0; ip.ybar_m = 0.0; ip.zbar_m = 0.0;  // CG = MRC
+    ip.Ixx = 1200.0;
+    ip.Iyy = 5000.0;
+    ip.Izz = 5000.0;
+    ip.Ixy = 0.0;
+    ip.Iyz = 0.0;
+    ip.Ixz = 0.0;
+    ip.xbar_m = 0.0;
+    ip.ybar_m = 0.0;
+    ip.zbar_m = 0.0;  // CG = MRC
 
     using TestVF = VectorField<FlightDynamics::J2GravityPolicy>;
     TestVF vf(ip);

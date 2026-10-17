@@ -53,13 +53,19 @@ namespace {
     using Vec7 = Eigen::Matrix<double, 7, 1>;
 
     InertialParameters params(double m, const Vec3& diag, const Vec3& c,
-                              const Vec3& products = Vec3::Zero())
+        const Vec3& products = Vec3::Zero())
     {
         InertialParameters ip;
         ip.mass_kg = m;
-        ip.Ixx = diag.x(); ip.Iyy = diag.y(); ip.Izz = diag.z();
-        ip.Ixy = products.x(); ip.Iyz = products.y(); ip.Ixz = products.z();
-        ip.xbar_m = c.x(); ip.ybar_m = c.y(); ip.zbar_m = c.z();
+        ip.Ixx = diag.x();
+        ip.Iyy = diag.y();
+        ip.Izz = diag.z();
+        ip.Ixy = products.x();
+        ip.Iyz = products.y();
+        ip.Ixz = products.z();
+        ip.xbar_m = c.x();
+        ip.ybar_m = c.y();
+        ip.zbar_m = c.z();
         return ip;
     }
 
@@ -81,9 +87,10 @@ namespace {
     }
 
     /// Gravity stand-in: a fixed wrench at the centre of mass, mass-independent.
-    struct FixedWrenchAtCM {
+    struct FixedWrenchAtCM
+    {
         Vec6 w = Vec6::Zero();
-        template<class S>
+        template <class S>
         Spatial::Wrench<S> operator()(const ODE::RKMK::Lie::SE3<S>&, S) const
         {
             Spatial::Wrench<S> out{};
@@ -94,11 +101,12 @@ namespace {
     static_assert(FlightDynamics::GravityPolicy<FixedWrenchAtCM>);
 
     /// Aero stand-in: a fixed wrench about the body origin.
-    struct FixedWrenchAtOrigin {
+    struct FixedWrenchAtOrigin
+    {
         Vec6 w = Vec6::Zero();
-        template<class S>
+        template <class S>
         Spatial::Wrench<S> operator()(const ODE::RKMK::Lie::SE3<S>&,
-                                      const Eigen::Matrix<S, 6, 1>&, S, S) const
+            const Eigen::Matrix<S, 6, 1>&, S, S) const
         {
             Spatial::Wrench<S> out{};
             out.f = w.template cast<S>();
@@ -109,7 +117,7 @@ namespace {
 }
 
 TEST_CASE("Gravity wrench: the audit's offset body falls without turning",
-          "[gravity][wrench_origin][regression]")
+    "[gravity][wrench_origin][regression]")
 {
     // 10 kg, unit inertia about the centre of mass, centre of mass 1 m ahead
     // of the origin, at rest on the z axis one Earth radius out, central
@@ -124,8 +132,7 @@ TEST_CASE("Gravity wrench: the audit's offset body falls without turning",
     g.p = Vec3(0.0, 0.0, Environment::WGS84::kSemiMajorAxis_m);
 
     const Vec7 xdot = vf(0.0, g, restState(10.0));
-    const double g0 = Environment::WGS84::kGM_m3_s2
-                    / (Environment::WGS84::kSemiMajorAxis_m * Environment::WGS84::kSemiMajorAxis_m);
+    const double g0 = Environment::WGS84::kGM_m3_s2 / (Environment::WGS84::kSemiMajorAxis_m * Environment::WGS84::kSemiMajorAxis_m);
 
     CHECK(xdot.head<3>().norm() < 1e-9);
     CHECK_THAT(xdot(3), WithinAbs(0.0, 1e-9));
@@ -135,8 +142,8 @@ TEST_CASE("Gravity wrench: the audit's offset body falls without turning",
 }
 
 TEMPLATE_TEST_CASE("Gravity wrench: a body at rest accelerates at g at every point, whatever the offset",
-                   "[gravity][wrench_origin][regression]",
-                   FlightDynamics::CentralGravityPolicy, FlightDynamics::J2GravityPolicy)
+    "[gravity][wrench_origin][regression]",
+    FlightDynamics::CentralGravityPolicy, FlightDynamics::J2GravityPolicy)
 {
     // At rest the bias term vanishes, so M dnu = W. With the gravity wrench
     // moved to the origin, dnu = [0; F / m]: no angular acceleration and the
@@ -146,7 +153,7 @@ TEMPLATE_TEST_CASE("Gravity wrench: a body at rest accelerates at g at every poi
     const VectorField<TestType> vf(ip);
     const SE3d g = pitchedPose(30'000.0, 55.0 * std::numbers::pi / 180.0);
 
-    const Vec7 xdot   = vf(0.0, g, restState(ip.mass_kg));
+    const Vec7 xdot = vf(0.0, g, restState(ip.mass_kg));
     const Vec3 a_body = vf.gravity(g, ip.mass_kg).f.template tail<3>() / ip.mass_kg;
 
     CHECK(xdot.head<3>().norm() < 1e-9);
@@ -155,7 +162,7 @@ TEMPLATE_TEST_CASE("Gravity wrench: a body at rest accelerates at g at every poi
 }
 
 TEST_CASE("Gravity wrench: VectorField adds the moment c x F of the gravity force and nothing else",
-          "[gravity][wrench_origin][contract]")
+    "[gravity][wrench_origin][contract]")
 {
     // A fixed wrench [tau; F] at the centre of mass, c off the origin. At rest
     // M dnu = W_ext, so M times the derivative is the wrench VectorField
@@ -180,7 +187,7 @@ TEST_CASE("Gravity wrench: VectorField adds the moment c x F of the gravity forc
     expected << tau + c.cross(F) + tau_a, F + F_a;
 
     const Vec7 xdot = vf(0.0, g, restState(10.0));
-    const Vec6 W    = vf.M * xdot.head<6>();
+    const Vec6 W = vf.M * xdot.head<6>();
     CHECK((W - expected).norm() < 1e-9 * expected.norm());
 
     // The offset follows setInertialParameters, as a variable-mass vehicle's does.
@@ -189,12 +196,12 @@ TEST_CASE("Gravity wrench: VectorField adds the moment c x F of the gravity forc
     expected << tau + c2.cross(F) + tau_a, F + F_a;
 
     const Vec7 xdot2 = vf(0.0, g, restState(10.0));
-    const Vec6 W2    = vf.M * xdot2.head<6>();
+    const Vec6 W2 = vf.M * xdot2.head<6>();
     CHECK((W2 - expected).norm() < 1e-9 * expected.norm());
 }
 
 TEST_CASE("Gravity wrench: the moment added for a CG ahead of the MRC is the rocket's My = -xcg Fz, Mz = +xcg Fy",
-          "[gravity][wrench_origin][regression]")
+    "[gravity][wrench_origin][regression]")
 {
     // The two-stage rocket integrates about the MRC with the CG DXCG ahead of
     // it. Its RocketGravityPolicy used to add this moment itself; the example
@@ -205,13 +212,13 @@ TEST_CASE("Gravity wrench: the moment added for a CG ahead of the MRC is the roc
     const VectorField<FlightDynamics::J2GravityPolicy> vf(ip);
     const SE3d g = pitchedPose(30'000.0, 55.0 * std::numbers::pi / 180.0);
 
-    const Vec3 F    = vf.gravity(g, ip.mass_kg).f.tail<3>();
+    const Vec3 F = vf.gravity(g, ip.mass_kg).f.tail<3>();
     const Vec7 xdot = vf(0.0, g, restState(ip.mass_kg));
-    const Vec6 W    = vf.M * xdot.head<6>();
+    const Vec6 W = vf.M * xdot.head<6>();
 
     CHECK_THAT(W(0), WithinAbs(0.0, 1e-9 * F.norm()));
     CHECK_THAT(W(1), WithinAbs(-xcg * F.z(), 1e-9 * xcg * F.norm()));
-    CHECK_THAT(W(2), WithinAbs( xcg * F.y(), 1e-9 * xcg * F.norm()));
+    CHECK_THAT(W(2), WithinAbs(xcg * F.y(), 1e-9 * xcg * F.norm()));
     CHECK((W.tail<3>() - F).norm() < 1e-9 * F.norm());
     CHECK(xdot.head<3>().norm() < 1e-8);
 }

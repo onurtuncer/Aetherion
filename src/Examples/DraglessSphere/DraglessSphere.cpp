@@ -49,7 +49,7 @@ namespace Aetherion::Examples::DraglessSphere {
         const auto& cfg = getConfig();
 
         const RigidBody::Config rb_cfg = loadVehicleConfig();          // step 1
-        const double            theta0 = computeInitialERA(cfg.startTime); // step 2
+        const double theta0 = computeInitialERA(cfg.startTime); // step 2
         const RigidBody::StateD x0 = buildInitialState(rb_cfg, theta0);// step 3
 
         AE_CORE_INFO("Initial ECI position  = [{:.3f}, {:.3f}, {:.3f}] m",
@@ -172,8 +172,7 @@ namespace Aetherion::Examples::DraglessSphere {
         state.g.q = q.normalized();
         state.g.R = state.g.q.toRotationMatrix();
 
-        state.nu_B <<
-            x0[Layout::IDX_W], x0[Layout::IDX_W + 1], x0[Layout::IDX_W + 2],
+        state.nu_B << x0[Layout::IDX_W], x0[Layout::IDX_W + 1], x0[Layout::IDX_W + 2],
             x0[Layout::IDX_V], x0[Layout::IDX_V + 1], x0[Layout::IDX_V + 2];
 
         state.m = x0[Layout::IDX_M];
@@ -182,10 +181,10 @@ namespace Aetherion::Examples::DraglessSphere {
 
     // Step 4 --------------------------------------------------------------
     std::unique_ptr<DraglessSphereSimulator>
-        DraglessSphereApplication::constructSimulator(
-            const RigidBody::InertialParameters& ip,
-            const RigidBody::StateD& x0,
-            double                               theta0)
+    DraglessSphereApplication::constructSimulator(
+        const RigidBody::InertialParameters& ip,
+        const RigidBody::StateD& x0,
+        double theta0)
     {
         AE_CORE_INFO("Constructing DraglessSphereSimulator (J2 gravity)...");
         return std::make_unique<DraglessSphereSimulator>(ip, x0, theta0);
@@ -205,4 +204,4 @@ namespace Aetherion::Simulation {
 
 } // namespace Aetherion::Simulation
 
-#include <Aetherion/Simulation/EntryPoint.h>  
+#include <Aetherion/Simulation/EntryPoint.h>

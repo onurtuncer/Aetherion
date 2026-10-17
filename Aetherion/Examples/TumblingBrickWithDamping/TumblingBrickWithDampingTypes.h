@@ -37,14 +37,14 @@ namespace Aetherion::Examples::TumblingBrickWithDamping {
 /// - Aero     : Drag + rotary damping (Clp, Cmq, Cnr from NASA TM Table 5)
 /// - Thrust   : None
 /// - Mass     : Constant
-using TumblingBrickWithDampingVF = RigidBody::VectorField<
-    FlightDynamics::J2GravityPolicy,          ///< Gravity: J2 perturbation.
-    FlightDynamics::BrickDampingAeroPolicy,   ///< Aero: drag + rate damping.
-    FlightDynamics::ZeroPropulsionPolicy,     ///< Propulsion: none.
-    FlightDynamics::ConstantMassPolicy        ///< Mass: constant.
->;
+    using TumblingBrickWithDampingVF = RigidBody::VectorField<
+        FlightDynamics::J2GravityPolicy,          ///< Gravity: J2 perturbation.
+        FlightDynamics::BrickDampingAeroPolicy,   ///< Aero: drag + rate damping.
+        FlightDynamics::ZeroPropulsionPolicy,     ///< Propulsion: none.
+        FlightDynamics::ConstantMassPolicy        ///< Mass: constant.
+        >;
 
 /// @brief RKMK integrator stepper for @c TumblingBrickWithDampingVF.
-using TumblingBrickWithDampingStepper = RigidBody::SixDoFStepper<TumblingBrickWithDampingVF>;
+    using TumblingBrickWithDampingStepper = RigidBody::SixDoFStepper<TumblingBrickWithDampingVF>;
 
 } // namespace Aetherion::Examples::TumblingBrickWithDamping

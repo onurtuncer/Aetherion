@@ -49,9 +49,9 @@ namespace Aetherion::Coordinate {
         const Scalar Z_term = (N * (one - e2) + h_m) * sLat;
 
         return Vec3<Scalar>{
-            cosLatN_plus_h* cLon,  // X
-                cosLatN_plus_h* sLon,  // Y
-                Z_term                   // Z
+            cosLatN_plus_h * cLon,  // X
+            cosLatN_plus_h * sLon,  // Y
+            Z_term                   // Z
         };
     }
 
@@ -77,9 +77,9 @@ namespace Aetherion::Coordinate {
         const Scalar cA = Cosine(azimuth_rad);
 
         return Vec3<Scalar>{
-            sZ* cA,   // N
-                sZ* sA,   // E
-                -cZ         // D (Down)
+            sZ * cA,   // N
+            sZ * sA,   // E
+            -cZ         // D (Down)
         };
     }
 
@@ -107,8 +107,8 @@ namespace Aetherion::Coordinate {
         const Scalar sLon = Sine(lon_rad);
         const Scalar cLon = Cosine(lon_rad);
 
-        const Vec3<Scalar> N{ -sLat * cLon, -sLat * sLon,  cLat };
-        const Vec3<Scalar> E{ -sLon,         cLon,         Scalar(0) };
+        const Vec3<Scalar> N{ -sLat * cLon, -sLat * sLon, cLat };
+        const Vec3<Scalar> E{ -sLon, cLon, Scalar(0) };
         const Vec3<Scalar> D{ -cLat * cLon, -cLat * sLon, -sLat };
 
         const Scalar& vN = v_ned[0];
@@ -116,9 +116,9 @@ namespace Aetherion::Coordinate {
         const Scalar& vD = v_ned[2];
 
         return Vec3<Scalar>{
-            vN* N[0] + vE * E[0] + vD * D[0],
-                vN* N[1] + vE * E[1] + vD * D[1],
-                vN* N[2] + vE * E[2] + vD * D[2]
+            vN * N[0] + vE * E[0] + vD * D[0],
+            vN * N[1] + vE * E[1] + vD * D[1],
+            vN * N[2] + vE * E[2] + vD * D[2]
         };
     }
 
@@ -143,9 +143,9 @@ namespace Aetherion::Coordinate {
         const Scalar s = Sine(theta_rad);
 
         return Vec3<Scalar>{
-            c* v_ecef[0] - s * v_ecef[1],
-                s* v_ecef[0] + c * v_ecef[1],
-                v_ecef[2]
+            c * v_ecef[0] - s * v_ecef[1],
+            s * v_ecef[0] + c * v_ecef[1],
+            v_ecef[2]
         };
     }
 
@@ -153,7 +153,8 @@ namespace Aetherion::Coordinate {
 
 /// @brief ECI launch state derived from geodetic pose and heading.
     template <class Scalar>
-    struct LaunchStateECI {
+    struct LaunchStateECI
+    {
         Vec3<Scalar> r0;       ///< ECI position at launch [m].
         Vec3<Scalar> dir0_eci; ///< Body forward direction (@f$x_B@f$) in ECI at launch.
         Quat<Scalar> q_EB;     ///< Quaternion rotating body frame into ECI frame at launch.
@@ -209,12 +210,10 @@ namespace Aetherion::Coordinate {
 
         auto make_side_ned = [&](const Vec3<Scalar>& ref_ned) -> Vec3<Scalar> {
             const Vec3<Scalar> candidate = Cross(ref_ned, forward_ned);
-            const Scalar n2 = candidate[0] * candidate[0]
-                + candidate[1] * candidate[1]
-                + candidate[2] * candidate[2];
+            const Scalar n2 = candidate[0] * candidate[0] + candidate[1] * candidate[1] + candidate[2] * candidate[2];
             if (n2 > Scalar(1e-12)) return Normalize(candidate);
             return Vec3<Scalar>{ Scalar(0), Scalar(0), Scalar(0) };
-            };
+        };
 
         Vec3<Scalar> side_ned = make_side_ned(down_ref_ned);
         if (side_ned[0] == Scalar(0) && side_ned[1] == Scalar(0) && side_ned[2] == Scalar(0)) {
@@ -277,8 +276,8 @@ namespace Aetherion::Coordinate {
         const Scalar sLon = Sine(lon_rad);
         const Scalar cLon = Cosine(lon_rad);
 
-        const Vec3<Scalar> N_ecef{ -sLat * cLon, -sLat * sLon,  cLat };
-        const Vec3<Scalar> E_ecef{ -sLon,         cLon,         Scalar(0) };
+        const Vec3<Scalar> N_ecef{ -sLat * cLon, -sLat * sLon, cLat };
+        const Vec3<Scalar> E_ecef{ -sLon, cLon, Scalar(0) };
         const Vec3<Scalar> D_ecef{ -cLat * cLon, -cLat * sLon, -sLat };
 
         const Vec3<Scalar> N_eci = ECEFToECI(N_ecef, theta_era_rad);
@@ -287,9 +286,15 @@ namespace Aetherion::Coordinate {
 
         // Columns of R_IN are N_eci, E_eci, D_eci (row-major storage)
         Mat3<Scalar> R_IN{};
-        R_IN[0] = N_eci[0];  R_IN[1] = E_eci[0];  R_IN[2] = D_eci[0];
-        R_IN[3] = N_eci[1];  R_IN[4] = E_eci[1];  R_IN[5] = D_eci[1];
-        R_IN[6] = N_eci[2];  R_IN[7] = E_eci[2];  R_IN[8] = D_eci[2];
+        R_IN[0] = N_eci[0];
+        R_IN[1] = E_eci[0];
+        R_IN[2] = D_eci[0];
+        R_IN[3] = N_eci[1];
+        R_IN[4] = E_eci[1];
+        R_IN[5] = D_eci[1];
+        R_IN[6] = N_eci[2];
+        R_IN[7] = E_eci[2];
+        R_IN[8] = D_eci[2];
 
         return R_IN;
     }

@@ -18,13 +18,15 @@
 namespace {
     namespace Core = Aetherion::ODE::RKMK::Core;
 
-    template<class Vec>
-    void fill_vector_sequential(Vec& v) {
+    template <class Vec>
+    void fill_vector_sequential(Vec& v)
+    {
         for (int i = 0; i < v.size(); ++i) v(i) = static_cast<typename Vec::Scalar>(i + 1);
     }
 
-    template<class Mat>
-    void fill_matrix_sequential(Mat& M) {
+    template <class Mat>
+    void fill_matrix_sequential(Mat& M)
+    {
         int k = 1;
         for (int r = 0; r < M.rows(); ++r) {
             for (int c = 0; c < M.cols(); ++c) {
@@ -34,7 +36,8 @@ namespace {
     }
 } // namespace
 
-TEST_CASE("StagePack fixed EuclidDim: offsets and views are correct", "[stagepack]") {
+TEST_CASE("StagePack fixed EuclidDim: offsets and views are correct", "[stagepack]")
+{
     using Pack = Core::StagePack<double, 3, 2>; // s=3, m=2 => total = 3*(6+2)=24
     Pack pack;
 
@@ -100,7 +103,8 @@ TEST_CASE("StagePack fixed EuclidDim: offsets and views are correct", "[stagepac
     }
 }
 
-TEST_CASE("StagePack dynamic EuclidDim: offsets and views are correct", "[stagepack]") {
+TEST_CASE("StagePack dynamic EuclidDim: offsets and views are correct", "[stagepack]")
+{
     using Pack = Core::StagePack<double, 2, Eigen::Dynamic>; // s=2, m runtime
     Pack pack(/*euclid_dim=*/4); // m=4 => total = 2*(6+4)=20
 
@@ -127,7 +131,8 @@ TEST_CASE("StagePack dynamic EuclidDim: offsets and views are correct", "[stagep
     }
 }
 
-TEST_CASE("StagePack Jacobian block views map correctly", "[stagepack]") {
+TEST_CASE("StagePack Jacobian block views map correctly", "[stagepack]")
+{
     using Pack = Core::StagePack<double, 3, 2>; // total=24
     Pack pack;
 

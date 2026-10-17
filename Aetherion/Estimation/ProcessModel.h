@@ -71,66 +71,67 @@
 #include <Aetherion/ODE/RKMK/Lie/SO3.h>
 #include <Aetherion/Spatial/Skew.h>
 
-namespace Aetherion::Estimation
-{
+namespace Aetherion::Estimation {
 
 /// One IMU sample, body frame: inertial angular rate and specific force.
-template <class S>
-struct ImuSample
-{
-  Eigen::Matrix<S, 3, 1> gyro_rad_s;
-  Eigen::Matrix<S, 3, 1> accel_m_s2;
-};
+    template <class S>
+    struct ImuSample
+    {
+        Eigen::Matrix<S, 3, 1> gyro_rad_s;
+        Eigen::Matrix<S, 3, 1> accel_m_s2;
+    };
 
 /// Continuous-time noise densities (square roots of the PSDs).
-template <class S>
-struct ProcessNoise
-{
-  S gyroNoise = S(0);      ///< [rad/s/sqrt(Hz)]
-  S accelNoise = S(0);     ///< [m/s^2/sqrt(Hz)]
-  S gyroBiasWalk = S(0);   ///< [rad/s^2/sqrt(Hz)]
-  S accelBiasWalk = S(0);  ///< [m/s^3/sqrt(Hz)]
-  S baroBiasWalk = S(0);   ///< [m/s/sqrt(Hz)]
-};
+    template <class S>
+    struct ProcessNoise
+    {
+        S gyroNoise = S(0);      ///< [rad/s/sqrt(Hz)]
+        S accelNoise = S(0);     ///< [m/s^2/sqrt(Hz)]
+        S gyroBiasWalk = S(0);   ///< [rad/s^2/sqrt(Hz)]
+        S accelBiasWalk = S(0);  ///< [m/s^3/sqrt(Hz)]
+        S baroBiasWalk = S(0);   ///< [m/s/sqrt(Hz)]
+    };
 
 /// Dimension of the noise vector n for a configuration.
-[[nodiscard]] constexpr int noiseDimension(const Configuration& cfg)
-{
-  int n = 6;  // IMU white noise
-  for (const BlockSpec& s : kBlockLibrary)
-    if (s.process == ProcessModelKind::RandomWalk && cfg.has(s.id))
-      n += s.dim;
-  return n;
-}
+    [[nodiscard]] constexpr int noiseDimension(const Configuration& cfg)
+    {
+        int n = 6;  // IMU white noise
+        for (const BlockSpec& s : kBlockLibrary)
+            if (s.process == ProcessModelKind::RandomWalk && cfg.has(s.id))
+                n += s.dim;
+        return n;
+    }
 
 /// Column of block b's random-walk driver in n, or -1 if b is not a carried
 /// random-walk block.
-[[nodiscard]] constexpr int noiseOffset(const Configuration& cfg, BlockId b)
-{
-  int n = 6;
-  for (const BlockSpec& s : kBlockLibrary)
-  {
-    if (s.process != ProcessModelKind::RandomWalk || !cfg.has(s.id))
-      continue;
-    if (s.id == b)
-      return n;
-    n += s.dim;
-  }
-  return -1;
-}
+    [[nodiscard]] constexpr int noiseOffset(const Configuration& cfg, BlockId b)
+    {
+        int n = 6;
+        for (const BlockSpec& s : kBlockLibrary)
+        {
+            if (s.process != ProcessModelKind::RandomWalk || !cfg.has(s.id))
+                continue;
+            if (s.id == b)
+                return n;
+            n += s.dim;
+        }
+        return -1;
+    }
 
-template <class S>
-class StrapdownProcessModel
-{
-public:
-  using Mat3 = Eigen::Matrix<S, 3, 3>;
-  using Vec3 = Eigen::Matrix<S, 3, 1>;
-  using MatX = Eigen::Matrix<S, Eigen::Dynamic, Eigen::Dynamic>;
-  using State = EstimationState<S>;
+    template <class S>
+    class StrapdownProcessModel
+    {
+    public:
+        using Mat3 = Eigen::Matrix<S, 3, 3>;
+        using Vec3 = Eigen::Matrix<S, 3, 1>;
+        using MatX = Eigen::Matrix<S, Eigen::Dynamic, Eigen::Dynamic>;
+        using State = EstimationState<S>;
 
-  explicit StrapdownProcessModel(LciFrame<S> frame) : frame_(std::move(frame)) {}
+        explicit StrapdownProcessModel(LciFrame<S> frame)
+            : frame_(std::move(frame))
+        {}
 
-  [[nodiscard]] const LciFrame<S>& frame() const { return frame_; }
+        [[nodiscard]] const LciFrame<S>& frame() const { return frame_; }
 
   /// One step of the nonlinear model. Biases are random walks: their mean
   /// propagation is the identity.
@@ -142,134 +143,133 @@ public:
   /// linearisation of the step then disagrees with Phi at first order (the
   /// finite-difference test shows a residual ratio of 2, not 8, per halving
   /// of dt).
-  [[nodiscard]] State propagate(const State& x, const ImuSample<S>& u, const S& dt) const
-  {
-    namespace SO3 = ODE::RKMK::Lie::SO3;
-    const Vec3 w = u.gyro_rad_s - x.gyroBias;
-    const Vec3 a = u.accel_m_s2 - x.accelBias;
-    const Mat3 R_mid = x.X.R * SO3::Exp_R(Vec3(w * (S(0.5) * dt)));
-    const Vec3 a_L = R_mid * a + frame_.gravity(x.X.p);
+        [[nodiscard]] State propagate(const State& x, const ImuSample<S>& u, const S& dt) const
+        {
+            namespace SO3 = ODE::RKMK::Lie::SO3;
+            const Vec3 w = u.gyro_rad_s - x.gyroBias;
+            const Vec3 a = u.accel_m_s2 - x.accelBias;
+            const Mat3 R_mid = x.X.R * SO3::Exp_R(Vec3(w * (S(0.5) * dt)));
+            const Vec3 a_L = R_mid * a + frame_.gravity(x.X.p);
 
-    State out = x;
-    out.X.p = x.X.p + x.X.v * dt + a_L * (S(0.5) * dt * dt);
-    out.X.v = x.X.v + a_L * dt;
-    out.X.R = x.X.R * SO3::Exp_R(Vec3(w * dt));
-    return out;
-  }
+            State out = x;
+            out.X.p = x.X.p + x.X.v * dt + a_L * (S(0.5) * dt * dt);
+            out.X.v = x.X.v + a_L * dt;
+            out.X.R = x.X.R * SO3::Exp_R(Vec3(w * dt));
+            return out;
+        }
 
   /// Continuous error dynamics at x: F (n x n) and G (n x m) with
   /// n = cfg.dimension(), m = noiseDimension(cfg).
-  template <ErrorConvention C>
-  void errorJacobians(const Configuration& cfg, const State& x, const ImuSample<S>& u, MatX& F, MatX& G) const
-  {
-    const int n = cfg.dimension();
-    F = MatX::Zero(n, n);
-    G = MatX::Zero(n, noiseDimension(cfg));
+        template <ErrorConvention C>
+        void errorJacobians(const Configuration& cfg, const State& x, const ImuSample<S>& u, MatX& F, MatX& G) const
+        {
+            const int n = cfg.dimension();
+            F = MatX::Zero(n, n);
+            G = MatX::Zero(n, noiseDimension(cfg));
 
-    const int nav = cfg.offset(BlockId::NavCore);
-    const int iPhi = nav + NavCoreLayout::kAttitude;
-    const int iNu = nav + NavCoreLayout::kVelocity;
-    const int iRho = nav + NavCoreLayout::kPosition;
-    const int bg = cfg.offset(BlockId::GyroBias);
-    const int ba = cfg.offset(BlockId::AccelBias);
+            const int nav = cfg.offset(BlockId::NavCore);
+            const int iPhi = nav + NavCoreLayout::kAttitude;
+            const int iNu = nav + NavCoreLayout::kVelocity;
+            const int iRho = nav + NavCoreLayout::kPosition;
+            const int bg = cfg.offset(BlockId::GyroBias);
+            const int ba = cfg.offset(BlockId::AccelBias);
 
-    const Mat3 I = Mat3::Identity();
-    const Vec3 g = frame_.gravity(x.X.p);
-    const Mat3 Gg = frame_.gravityGradient(x.X.p);
+            const Mat3 I = Mat3::Identity();
+            const Vec3 g = frame_.gravity(x.X.p);
+            const Mat3 Gg = frame_.gravityGradient(x.X.p);
 
-    if constexpr (C == ErrorConvention::RightInvariant)
-    {
-      const typename SE23<S>::Mat9 Ad = SE23<S>::Adjoint(x.X);
-      F.template block<3, 3>(iNu, iPhi) = Spatial::skew(g) - Gg * Spatial::skew(x.X.p);
-      F.template block<3, 3>(iNu, iRho) = Gg;
-      F.template block<3, 3>(iRho, iNu) = I;
-      if (bg >= 0)
-        F.template block<9, 3>(nav, bg) = -Ad.template block<9, 3>(0, 0);
-      if (ba >= 0)
-        F.template block<9, 3>(nav, ba) = -Ad.template block<9, 3>(0, 3);
-      G.template block<9, 3>(nav, 0) = Ad.template block<9, 3>(0, 0);
-      G.template block<9, 3>(nav, 3) = Ad.template block<9, 3>(0, 3);
-    }
-    else
-    {
-      const Vec3 w = u.gyro_rad_s - x.gyroBias;
-      const Vec3 a = u.accel_m_s2 - x.accelBias;
-      const Mat3 W = Spatial::skew(w);
-      F.template block<3, 3>(iPhi, iPhi) = -W;
-      F.template block<3, 3>(iNu, iPhi) = -Spatial::skew(a);
-      F.template block<3, 3>(iNu, iNu) = -W;
-      F.template block<3, 3>(iNu, iRho) = x.X.R.transpose() * Gg * x.X.R;
-      F.template block<3, 3>(iRho, iNu) = I;
-      F.template block<3, 3>(iRho, iRho) = -W;
-      if (bg >= 0)
-        F.template block<3, 3>(iPhi, bg) = -I;
-      if (ba >= 0)
-        F.template block<3, 3>(iNu, ba) = -I;
-      G.template block<3, 3>(iPhi, 0) = I;
-      G.template block<3, 3>(iNu, 3) = I;
-    }
+            if constexpr (C == ErrorConvention::RightInvariant)
+            {
+                const typename SE23<S>::Mat9 Ad = SE23<S>::Adjoint(x.X);
+                F.template block<3, 3>(iNu, iPhi) = Spatial::skew(g) - Gg * Spatial::skew(x.X.p);
+                F.template block<3, 3>(iNu, iRho) = Gg;
+                F.template block<3, 3>(iRho, iNu) = I;
+                if (bg >= 0)
+                    F.template block<9, 3>(nav, bg) = -Ad.template block<9, 3>(0, 0);
+                if (ba >= 0)
+                    F.template block<9, 3>(nav, ba) = -Ad.template block<9, 3>(0, 3);
+                G.template block<9, 3>(nav, 0) = Ad.template block<9, 3>(0, 0);
+                G.template block<9, 3>(nav, 3) = Ad.template block<9, 3>(0, 3);
+            } else
+            {
+                const Vec3 w = u.gyro_rad_s - x.gyroBias;
+                const Vec3 a = u.accel_m_s2 - x.accelBias;
+                const Mat3 W = Spatial::skew(w);
+                F.template block<3, 3>(iPhi, iPhi) = -W;
+                F.template block<3, 3>(iNu, iPhi) = -Spatial::skew(a);
+                F.template block<3, 3>(iNu, iNu) = -W;
+                F.template block<3, 3>(iNu, iRho) = x.X.R.transpose() * Gg * x.X.R;
+                F.template block<3, 3>(iRho, iNu) = I;
+                F.template block<3, 3>(iRho, iRho) = -W;
+                if (bg >= 0)
+                    F.template block<3, 3>(iPhi, bg) = -I;
+                if (ba >= 0)
+                    F.template block<3, 3>(iNu, ba) = -I;
+                G.template block<3, 3>(iPhi, 0) = I;
+                G.template block<3, 3>(iNu, 3) = I;
+            }
 
-    for (const BlockSpec& s : kBlockLibrary)
-    {
-      if (s.process != ProcessModelKind::RandomWalk || !cfg.has(s.id))
-        continue;
-      const int o = cfg.offset(s.id);
-      const int k = noiseOffset(cfg, s.id);
-      for (int i = 0; i < s.dim; ++i)
-        G(o + i, k + i) = S(1);
-    }
-  }
+            for (const BlockSpec& s : kBlockLibrary)
+            {
+                if (s.process != ProcessModelKind::RandomWalk || !cfg.has(s.id))
+                    continue;
+                const int o = cfg.offset(s.id);
+                const int k = noiseOffset(cfg, s.id);
+                for (int i = 0; i < s.dim; ++i)
+                    G(o + i, k + i) = S(1);
+            }
+        }
 
   /// Diagonal PSD matrix Qc of n for a configuration.
-  [[nodiscard]] MatX continuousNoiseCovariance(const Configuration& cfg, const ProcessNoise<S>& q) const
-  {
-    MatX Qc = MatX::Zero(noiseDimension(cfg), noiseDimension(cfg));
-    for (int i = 0; i < 3; ++i)
-    {
-      Qc(i, i) = q.gyroNoise * q.gyroNoise;
-      Qc(3 + i, 3 + i) = q.accelNoise * q.accelNoise;
-    }
-    auto walk = [&](BlockId b, const S& density) {
-      const int k = noiseOffset(cfg, b);
-      if (k < 0)
-        return;
-      for (int i = 0; i < blockSpec(b).dim; ++i)
-        Qc(k + i, k + i) = density * density;
-    };
-    walk(BlockId::GyroBias, q.gyroBiasWalk);
-    walk(BlockId::AccelBias, q.accelBiasWalk);
-    walk(BlockId::BaroBias, q.baroBiasWalk);
-    return Qc;
-  }
+        [[nodiscard]] MatX continuousNoiseCovariance(const Configuration& cfg, const ProcessNoise<S>& q) const
+        {
+            MatX Qc = MatX::Zero(noiseDimension(cfg), noiseDimension(cfg));
+            for (int i = 0; i < 3; ++i)
+            {
+                Qc(i, i) = q.gyroNoise * q.gyroNoise;
+                Qc(3 + i, 3 + i) = q.accelNoise * q.accelNoise;
+            }
+            auto walk = [&](BlockId b, const S& density) {
+                const int k = noiseOffset(cfg, b);
+                if (k < 0)
+                    return;
+                for (int i = 0; i < blockSpec(b).dim; ++i)
+                    Qc(k + i, k + i) = density * density;
+            };
+            walk(BlockId::GyroBias, q.gyroBiasWalk);
+            walk(BlockId::AccelBias, q.accelBiasWalk);
+            walk(BlockId::BaroBias, q.baroBiasWalk);
+            return Qc;
+        }
 
   /// Propagate x over one IMU step and return the discrete error transition
   /// Phi and process noise Qd for convention C (trapezoidal F, G; see the
   /// header comment). P propagates as Phi P Phi^T + Qd.
-  template <ErrorConvention C>
-  [[nodiscard]] State step(const Configuration& cfg,
-                           const State& x,
-                           const ImuSample<S>& u,
-                           const S& dt,
-                           const MatX& Qc,
-                           MatX& Phi,
-                           MatX& Qd) const
-  {
-    const State x1 = propagate(x, u, dt);
+        template <ErrorConvention C>
+        [[nodiscard]] State step(const Configuration& cfg,
+            const State& x,
+            const ImuSample<S>& u,
+            const S& dt,
+            const MatX& Qc,
+            MatX& Phi,
+            MatX& Qd) const
+        {
+            const State x1 = propagate(x, u, dt);
 
-    MatX F0, G0, F1, G1;
-    errorJacobians<C>(cfg, x, u, F0, G0);
-    errorJacobians<C>(cfg, x1, u, F1, G1);
-    const MatX F = S(0.5) * (F0 + F1);
-    const MatX G = S(0.5) * (G0 + G1);
+            MatX F0, G0, F1, G1;
+            errorJacobians<C>(cfg, x, u, F0, G0);
+            errorJacobians<C>(cfg, x1, u, F1, G1);
+            const MatX F = S(0.5) * (F0 + F1);
+            const MatX G = S(0.5) * (G0 + G1);
 
-    const MatX Fd = F * dt;
-    Phi = MatX::Identity(F.rows(), F.cols()) + Fd + S(0.5) * Fd * Fd;
-    Qd = G * Qc * G.transpose() * dt;
-    return x1;
-  }
+            const MatX Fd = F * dt;
+            Phi = MatX::Identity(F.rows(), F.cols()) + Fd + S(0.5) * Fd * Fd;
+            Qd = G * Qc * G.transpose() * dt;
+            return x1;
+        }
 
-private:
-  LciFrame<S> frame_;
-};
+    private:
+        LciFrame<S> frame_;
+    };
 
 }  // namespace Aetherion::Estimation

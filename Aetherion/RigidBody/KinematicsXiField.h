@@ -59,11 +59,11 @@ namespace Aetherion::RigidBody {
         /// @param g      Current SE(3) pose (unused — kinematics are state-independent).
         /// @param xi     Body-frame twist @f$[\omega_B(3);\,v_B(3)]@f$ [rad/s | m/s].
         /// @return       @c xi unchanged.
-        template<class S>
+        template <class S>
         [[nodiscard]]
         Eigen::Matrix<S, 6, 1> operator()(
-            const S&                         /*t*/,
-            const ODE::RKMK::Lie::SE3<S>&    /*g*/,
+            const S& /*t*/,
+            const ODE::RKMK::Lie::SE3<S>& /*g*/,
             const Eigen::Matrix<S, 6, 1>& xi) const noexcept
         {
             return xi;

@@ -28,8 +28,12 @@ static std::vector<std::string> split_csv(const std::string& line)
     std::string tok;
     for (char c : line)
     {
-        if (c == ',') { out.push_back(tok); tok.clear(); }
-        else { tok += c; }
+        if (c == ',') {
+            out.push_back(tok);
+            tok.clear();
+        } else {
+            tok += c;
+        }
     }
     out.push_back(tok);
     return out;
@@ -301,7 +305,7 @@ TEST_CASE("Snapshot2 Row: negative values round-trip correctly", "[row][values][
         auto it = std::find(header.begin(), header.end(), name);
         REQUIRE(it != header.end());
         return std::stod(row[std::distance(header.begin(), it)]);
-        };
+    };
 
     REQUIRE(col("time") == Catch::Approx(s.time).epsilon(1e-14));
     REQUIRE(col("altitudeMsl_m") == Catch::Approx(s.altitudeMsl_m).epsilon(1e-14));
@@ -324,7 +328,7 @@ TEST_CASE("Snapshot2 Row: large exponent values survive scientific notation roun
         auto it = std::find(header.begin(), header.end(), name);
         REQUIRE(it != header.end());
         return std::stod(row[std::distance(header.begin(), it)]);
-        };
+    };
 
     REQUIRE(col("gePosition_m_X") == Catch::Approx(6.371e6).epsilon(1e-14));
     REQUIRE(col("gePosition_m_Y") == Catch::Approx(-6.371e6).epsilon(1e-14));

@@ -28,85 +28,91 @@ namespace {
     namespace Lie = Aetherion::ODE::RKMK::Lie;
     namespace Int = Aetherion::ODE::RKMK::Integrators;
 
-    template<class...>
+    template <class...>
     inline constexpr bool always_false_v = false;
 
-    template<class S>
+    template <class S>
     using Vec6 = Eigen::Matrix<S, 6, 1>;
 
-  
-   template<class S>
+
+    template <class S>
     [[nodiscard]] Lie::SE3<S> make_se3(const Eigen::Quaternion<S>& q,
-        const Eigen::Matrix<S, 3, 1>& p) {
+        const Eigen::Matrix<S, 3, 1>& p)
+    {
         using G = Lie::SE3<S>;
         if constexpr (requires { G{ q, p }; }) return G{ q, p };
         if constexpr (requires { G(q, p); }) return G(q, p);
         if constexpr (requires { G::FromQuatTranslation(q, p); }) return G::FromQuatTranslation(q, p);
         if constexpr (requires { G::from_quat_translation(q, p); }) return G::from_quat_translation(q, p);
         static_assert(always_false_v<S>, "Cannot construct SE3 from (quat, p).");
-    } 
+    }
 
-    template<class G>
-    [[nodiscard]] G compose(const G& a, const G& b) {
+    template <class G>
+    [[nodiscard]] G compose(const G& a, const G& b)
+    {
         if constexpr (requires { a* b; }) return a * b;
         if constexpr (requires { a.compose(b); }) return a.compose(b);
         if constexpr (requires { G::compose(a, b); }) return G::compose(a, b);
         static_assert(always_false_v<G>, "SE3 must support composition.");
     }
 
-    template<class S>
-    [[nodiscard]] Lie::SE3<S> exp_se3(const Vec6<S>& xi) {
+    template <class S>
+    [[nodiscard]] Lie::SE3<S> exp_se3(const Vec6<S>& xi)
+    {
         using G = Lie::SE3<S>;
         if constexpr (requires { G::Exp(xi); }) return G::Exp(xi);
         if constexpr (requires { G::exp(xi); }) return G::exp(xi);
         static_assert(always_false_v<S>, "SE3 must provide Exp/exp.");
-    } 
+    }
 
-    template<class G>
-    [[nodiscard]] Eigen::Quaterniond get_q(const G& g) {
+    template <class G>
+    [[nodiscard]] Eigen::Quaterniond get_q(const G& g)
+    {
         if constexpr (requires { g.q(); }) {
             const auto q = g.q();
-            return {(double)q.w(), (double)q.x(), (double)q.y(), (double)q.z()};
+            return { (double)q.w(), (double)q.x(), (double)q.y(), (double)q.z() };
         }
         if constexpr (requires { g.rotation(); }) {
             const auto q = g.rotation();
-            return {(double)q.w(), (double)q.x(), (double)q.y(), (double)q.z()};
+            return { (double)q.w(), (double)q.x(), (double)q.y(), (double)q.z() };
         }
         if constexpr (requires { g.q; }) {
             const auto q = g.q;
-            return {(double)q.w(), (double)q.x(), (double)q.y(), (double)q.z()};
+            return { (double)q.w(), (double)q.x(), (double)q.y(), (double)q.z() };
         }
         static_assert(always_false_v<G>, "Cannot extract quaternion.");
     }
 
-    template<class G>
-    [[nodiscard]] Eigen::Vector3d get_p(const G& g) {
+    template <class G>
+    [[nodiscard]] Eigen::Vector3d get_p(const G& g)
+    {
         if constexpr (requires { g.p(); }) {
             const auto p = g.p();
-            return {(double)p(0), (double)p(1), (double)p(2)};
+            return { (double)p(0), (double)p(1), (double)p(2) };
         }
         if constexpr (requires { g.translation(); }) {
             const auto p = g.translation();
-            return {(double)p(0), (double)p(1), (double)p(2)};
+            return { (double)p(0), (double)p(1), (double)p(2) };
         }
         if constexpr (requires { g.p; }) {
             const auto p = g.p;
-            return {(double)p(0), (double)p(1), (double)p(2)};
+            return { (double)p(0), (double)p(1), (double)p(2) };
         }
         static_assert(always_false_v<G>, "Cannot extract translation (need p()/translation() or member p).");
     }
 
-   
+
     [[nodiscard]] Eigen::Quaterniond quat_close_sign(const Eigen::Quaterniond& qa,
         const Eigen::Quaterniond& qb)
     {
         // q and -q represent the same rotation
         return (qa.dot(qb) < 0.0)
-            ? Eigen::Quaterniond(-qb.w(), -qb.x(), -qb.y(), -qb.z())
-            : qb;
+                   ? Eigen::Quaterniond(-qb.w(), -qb.x(), -qb.y(), -qb.z())
+                   : qb;
     }
 
-    [[nodiscard]] Core::NewtonOptions tight_newton() {
+    [[nodiscard]] Core::NewtonOptions tight_newton()
+    {
         Core::NewtonOptions opt;
         opt.max_iters = 40;
         opt.throw_on_fail = true;
@@ -114,19 +120,23 @@ namespace {
     }
 
     // Field: xi(t,g) = 0
-    struct ZeroField final {
-        template<class S>
-        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+    struct ZeroField final
+    {
+        template <class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const
+        {
             return Vec6<S>::Zero();
         }
     };
 
     // Field: xi(t,g) = [0; v] (pure translation), constant v
-    struct PureTranslationConstant final {
+    struct PureTranslationConstant final
+    {
         Eigen::Vector3d v = Eigen::Vector3d::Zero();
 
-        template<class S>
-        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+        template <class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const
+        {
             Vec6<S> xi = Vec6<S>::Zero();
             xi.template segment<3>(3) = v.template cast<S>();
             return xi;
@@ -134,12 +144,14 @@ namespace {
     };
 
     // Field: xi(t,g) = [0; v0 + a*t] (pure translation), time varying
-    struct PureTranslationAffine final {
+    struct PureTranslationAffine final
+    {
         Eigen::Vector3d v0 = Eigen::Vector3d::Zero();
         Eigen::Vector3d a = Eigen::Vector3d::Zero();
 
-        template<class S>
-        Vec6<S> operator()(S t, const Lie::SE3<S>& /*g*/) const {
+        template <class S>
+        Vec6<S> operator()(S t, const Lie::SE3<S>& /*g*/) const
+        {
             Vec6<S> xi = Vec6<S>::Zero();
             const Eigen::Matrix<S, 3, 1> v = v0.template cast<S>() + a.template cast<S>() * t;
             xi.template segment<3>(3) = v;
@@ -147,7 +159,8 @@ namespace {
         }
     };
 
-       inline double so3_angle_error(const Eigen::Quaterniond& qa, const Eigen::Quaterniond& qb) {
+    inline double so3_angle_error(const Eigen::Quaterniond& qa, const Eigen::Quaterniond& qb)
+    {
         // relative rotation q_rel = qa * qb^{-1}
         Eigen::Quaterniond q_rel = qa * qb.conjugate();
         q_rel.normalize();
@@ -157,18 +170,21 @@ namespace {
         return 2.0 * std::acos(w);
     }
 
-   
-    struct ConstantTwistField final {
+
+    struct ConstantTwistField final
+    {
         Vec6<double> xi = Vec6<double>::Zero();
 
-        template<class S>
-        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+        template <class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const
+        {
             return xi.template cast<S>();
         }
     };
 }
 
-TEST_CASE("RadauIIA_RKMK_SE3 constant twist matches g0*Exp(h*xi)", "[rkmk][radau][se3]") {
+TEST_CASE("RadauIIA_RKMK_SE3 constant twist matches g0*Exp(h*xi)", "[rkmk][radau][se3]")
+{
     using SE3d = Lie::SE3<double>;
 
     // Initial pose
@@ -213,11 +229,12 @@ TEST_CASE("RadauIIA_RKMK_SE3 constant twist matches g0*Exp(h*xi)", "[rkmk][radau
     }
 }
 
-TEST_CASE("RadauIIA_RKMK_SE3: zero twist returns identity step", "[rkmk][radau][se3]") {
+TEST_CASE("RadauIIA_RKMK_SE3: zero twist returns identity step", "[rkmk][radau][se3]")
+{
     using SE3d = Lie::SE3<double>;
 
     const Eigen::Quaterniond q0 = Eigen::Quaterniond::Identity();
-    const Eigen::Vector3d    p0(1.0, -2.0, 0.5);
+    const Eigen::Vector3d p0(1.0, -2.0, 0.5);
     const SE3d g0(q0, p0);
 
     ZeroField f;
@@ -240,13 +257,14 @@ TEST_CASE("RadauIIA_RKMK_SE3: zero twist returns identity step", "[rkmk][radau][
     REQUIRE((g1.p - g0qp.p).norm() == Approx(0.0).margin(1e-12));
 }
 
-TEST_CASE("RadauIIA_RKMK_SE3: pure translation constant velocity matches p0 + h*v", "[rkmk][radau][se3]") {
+TEST_CASE("RadauIIA_RKMK_SE3: pure translation constant velocity matches p0 + h*v", "[rkmk][radau][se3]")
+{
     using SE3d = Lie::SE3<double>;
 
    // const Eigen::Quaterniond q0 = Eigen::AngleAxisd(0.4, Eigen::Vector3d(0.2, -0.5, 0.1).normalized());
     const Eigen::Quaterniond q0(Eigen::AngleAxisd(0.4, Eigen::Vector3d(0.2, -0.5, 0.1).normalized()));
 
-    const Eigen::Vector3d    p0(-3.0, 0.2, 5.0);
+    const Eigen::Vector3d p0(-3.0, 0.2, 5.0);
     const SE3d g0(q0, p0);
 
     PureTranslationConstant f;
@@ -273,14 +291,14 @@ TEST_CASE("RadauIIA_RKMK_SE3: pure translation constant velocity matches p0 + h*
     const auto q1_aligned = quat_close_sign(q_ref, g1.q);
     REQUIRE(std::abs(q1_aligned.w() - q_ref.w()) == Approx(0.0).margin(1e-10));
     REQUIRE((q1_aligned.vec() - q_ref.vec()).norm() == Approx(0.0).margin(1e-10));
-
 }
 
-TEST_CASE("RadauIIA_RKMK_SE3: pure translation with v(t)=v0+a*t matches analytic integral", "[rkmk][radau][se3]") {
+TEST_CASE("RadauIIA_RKMK_SE3: pure translation with v(t)=v0+a*t matches analytic integral", "[rkmk][radau][se3]")
+{
     using SE3d = Lie::SE3<double>;
 
     const Eigen::Quaterniond q0 = Eigen::Quaterniond::Identity();
-    const Eigen::Vector3d    p0(0.5, -1.0, 2.0);
+    const Eigen::Vector3d p0(0.5, -1.0, 2.0);
     const SE3d g0(q0, p0);
 
     PureTranslationAffine f;

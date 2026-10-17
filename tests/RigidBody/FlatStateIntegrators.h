@@ -57,7 +57,8 @@ namespace Aetherion::Testing::Flat {
     // c_lin is a linear damping coefficient [N per m/s] applied as a body-frame
     // force -c_lin * v_B, i.e. the stiff aerodynamic damping the Radau IIA
     // tableau is chosen for.  c_lin = 0 recovers the torque-free case.
-    struct Body final {
+    struct Body final
+    {
         double Ixx{ 0.10 };
         double Iyy{ 0.25 };
         double Izz{ 0.32 };
@@ -86,21 +87,21 @@ namespace Aetherion::Testing::Flat {
 
         Eigen::Vector4d qdot;
         qdot(0) = 0.5 * (-q(1) * w(0) - q(2) * w(1) - q(3) * w(2));
-        qdot(1) = 0.5 * ( q(0) * w(0) + q(2) * w(2) - q(3) * w(1));
-        qdot(2) = 0.5 * ( q(0) * w(1) - q(1) * w(2) + q(3) * w(0));
-        qdot(3) = 0.5 * ( q(0) * w(2) + q(1) * w(1) - q(2) * w(0));
+        qdot(1) = 0.5 * (q(0) * w(0) + q(2) * w(2) - q(3) * w(1));
+        qdot(2) = 0.5 * (q(0) * w(1) - q(1) * w(2) + q(3) * w(0));
+        qdot(3) = 0.5 * (q(0) * w(2) + q(1) * w(1) - q(2) * w(0));
 
         const Eigen::Quaterniond qq(q(0), q(1), q(2), q(3));
-        const Eigen::Matrix3d    R = qq.toRotationMatrix();
+        const Eigen::Matrix3d R = qq.toRotationMatrix();
 
         const Eigen::Vector3d Iw{ b.Ixx * w(0), b.Iyy * w(1), b.Izz * w(2) };
         const Eigen::Vector3d c = w.cross(Iw);
         const Eigen::Vector3d wdot{ -c(0) / b.Ixx, -c(1) / b.Iyy, -c(2) / b.Izz };
 
         Vec13 dy;
-        dy.segment<4>(0)  = qdot;
-        dy.segment<3>(4)  = R * v;
-        dy.segment<3>(7)  = wdot;
+        dy.segment<4>(0) = qdot;
+        dy.segment<3>(4) = R * v;
+        dy.segment<3>(7) = wdot;
         dy.segment<3>(10) = -w.cross(v) - (b.c_lin / b.mass) * v;
         return dy;
     }
@@ -144,19 +145,20 @@ namespace Aetherion::Testing::Flat {
     // with block Jacobian  dF/dZ = I - h (A (x) Df).  This mirrors the stage
     // solve in the library RKMK steppers; only the manifold treatment differs.
     // -----------------------------------------------------------------------
-    struct ImplicitResult final {
+    struct ImplicitResult final
+    {
         Vec13 y{ Vec13::Zero() };
-        bool  converged{ false };
-        int   iters{ 0 };
+        bool converged{ false };
+        int iters{ 0 };
     };
 
-    template<int S>
+    template <int S>
     ImplicitResult implicit_rk_step(const Core::ButcherTableau<double, S>& tab,
-                                    const Body&                           b,
-                                    const Vec13&                          y,
-                                    double                                h,
-                                    double                                tol      = 1e-13,
-                                    int                                   max_iter = 60)
+        const Body& b,
+        const Vec13& y,
+        double h,
+        double tol = 1e-13,
+        int max_iter = 60)
     {
         constexpr int N = 13 * S;
         using VecN = Eigen::Matrix<double, N, 1>;
@@ -251,9 +253,9 @@ namespace Aetherion::Testing::Flat {
         b << 5.0 / 18.0, 4.0 / 9.0, 5.0 / 18.0;
 
         Tab::MatA A;
-        A << 5.0 / 36.0,              2.0 / 9.0 - s15 / 15.0, 5.0 / 36.0 - s15 / 30.0,
-             5.0 / 36.0 + s15 / 24.0, 2.0 / 9.0,              5.0 / 36.0 - s15 / 24.0,
-             5.0 / 36.0 + s15 / 30.0, 2.0 / 9.0 + s15 / 15.0, 5.0 / 36.0;
+        A << 5.0 / 36.0, 2.0 / 9.0 - s15 / 15.0, 5.0 / 36.0 - s15 / 30.0,
+            5.0 / 36.0 + s15 / 24.0, 2.0 / 9.0, 5.0 / 36.0 - s15 / 24.0,
+            5.0 / 36.0 + s15 / 30.0, 2.0 / 9.0 + s15 / 15.0, 5.0 / 36.0;
 
         return Tab{ A, b, c };
     }
@@ -261,15 +263,13 @@ namespace Aetherion::Testing::Flat {
     // max_ij | b_i a_ij + b_j a_ji - b_i b_j |.  Zero iff the method conserves
     // every quadratic invariant of the ODE.  Zero for Gauss, non-zero for
     // Radau IIA.
-    template<int S>
+    template <int S>
     double quadratic_invariant_defect(const Core::ButcherTableau<double, S>& tab)
     {
         double worst = 0.0;
         for (int i = 0; i < S; ++i)
             for (int j = 0; j < S; ++j) {
-                const double m = tab.b(i) * tab.A(i, j)
-                               + tab.b(j) * tab.A(j, i)
-                               - tab.b(i) * tab.b(j);
+                const double m = tab.b(i) * tab.A(i, j) + tab.b(j) * tab.A(j, i) - tab.b(i) * tab.b(j);
                 worst = std::max(worst, std::abs(m));
             }
         return worst;
@@ -282,7 +282,7 @@ namespace Aetherion::Testing::Flat {
     {
         Vec13 y = Vec13::Zero();
         y(0) = 1.0;                     // identity quaternion
-        y.segment<3>(7)  = w0;
+        y.segment<3>(7) = w0;
         y.segment<3>(10) = v0;
         return y;
     }

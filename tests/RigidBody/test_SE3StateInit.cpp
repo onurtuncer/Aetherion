@@ -45,59 +45,56 @@ using namespace Aetherion::RigidBody;
 
 namespace {
 
-constexpr double kDeg = std::numbers::pi / 180.0;
+    constexpr double kDeg = std::numbers::pi / 180.0;
 
 // F-16 Scenario-11-like attitude: heading 45°, pitch 2.65°, roll -0.172°
-Eigen::Quaterniond f16_trim_quaternion()
-{
-    return (Eigen::AngleAxisd(45.0 * kDeg,    Eigen::Vector3d::UnitZ())
-          * Eigen::AngleAxisd(2.65 * kDeg,   Eigen::Vector3d::UnitY())
-          * Eigen::AngleAxisd(-0.172 * kDeg, Eigen::Vector3d::UnitX()))
-          .normalized();
-}
+    Eigen::Quaterniond f16_trim_quaternion()
+    {
+        return (Eigen::AngleAxisd(45.0 * kDeg, Eigen::Vector3d::UnitZ()) * Eigen::AngleAxisd(2.65 * kDeg, Eigen::Vector3d::UnitY()) * Eigen::AngleAxisd(-0.172 * kDeg, Eigen::Vector3d::UnitX()))
+            .normalized();
+    }
 
 // Generic non-trivial attitude: 30° pitch, 45° yaw (easier to reason about)
-Eigen::Quaterniond pitched_quaternion()
-{
-    return (Eigen::AngleAxisd(45.0 * kDeg, Eigen::Vector3d::UnitZ())
-          * Eigen::AngleAxisd(30.0 * kDeg, Eigen::Vector3d::UnitY()))
-          .normalized();
-}
+    Eigen::Quaterniond pitched_quaternion()
+    {
+        return (Eigen::AngleAxisd(45.0 * kDeg, Eigen::Vector3d::UnitZ()) * Eigen::AngleAxisd(30.0 * kDeg, Eigen::Vector3d::UnitY()))
+            .normalized();
+    }
 
 // Isotropic inertia (sphere-like) so torque-free dynamics are trivial
-InertialParameters isotropic_ip(double mass_kg = 100.0, double moi = 40.0)
-{
-    InertialParameters ip;
-    ip.mass_kg = mass_kg;
-    ip.Ixx = ip.Iyy = ip.Izz = moi;
-    ip.Ixy = ip.Iyz = ip.Ixz = 0.0;
-    ip.xbar_m = ip.ybar_m = ip.zbar_m = 0.0;
-    return ip;
-}
+    InertialParameters isotropic_ip(double mass_kg = 100.0, double moi = 40.0)
+    {
+        InertialParameters ip;
+        ip.mass_kg = mass_kg;
+        ip.Ixx = ip.Iyy = ip.Izz = moi;
+        ip.Ixy = ip.Iyz = ip.Ixz = 0.0;
+        ip.xbar_m = ip.ybar_m = ip.zbar_m = 0.0;
+        return ip;
+    }
 
 // GEO position so J2 gravity is non-zero but small (~0.224 m/s²)
-Eigen::Vector3d geo_pos() { return { 42164.0e3, 0.0, 0.0 }; }
+    Eigen::Vector3d geo_pos() { return { 42164.0e3, 0.0, 0.0 }; }
 
 // Build a correct StateD (both g.q and g.R set from the same quaternion)
-StateD make_state_correct(const Eigen::Quaterniond& q)
-{
-    StateD s;
-    s.g.q = q.normalized();
-    s.g.R = s.g.q.toRotationMatrix();
-    s.g.p = geo_pos();
-    s.nu_B.setZero();
-    s.m = 100.0;
-    return s;
-}
+    StateD make_state_correct(const Eigen::Quaterniond& q)
+    {
+        StateD s;
+        s.g.q = q.normalized();
+        s.g.R = s.g.q.toRotationMatrix();
+        s.g.p = geo_pos();
+        s.nu_B.setZero();
+        s.m = 100.0;
+        return s;
+    }
 
 // Build a buggy StateD (only g.R set; g.q stays at identity)
-StateD make_state_buggy(const Eigen::Quaterniond& q)
-{
-    StateD s = make_state_correct(q);
-    s.g.q = Eigen::Quaterniond::Identity();   // old bug: q never set
+    StateD make_state_buggy(const Eigen::Quaterniond& q)
+    {
+        StateD s = make_state_correct(q);
+        s.g.q = Eigen::Quaterniond::Identity();   // old bug: q never set
     // s.g.R still holds the correct rotation matrix
-    return s;
-}
+        return s;
+    }
 
 } // namespace
 
@@ -197,7 +194,7 @@ TEST_CASE("REGRESSION: stepper reads g.q, so mismatched g.q gives wrong dynamics
     const StateD s_buggy = make_state_buggy(q);
 
     const auto res_c = stepper.step(0.0, s_correct, 0.1);
-    const auto res_b = stepper.step(0.0, s_buggy,   0.1);
+    const auto res_b = stepper.step(0.0, s_buggy, 0.1);
 
     REQUIRE(res_c.converged);
     REQUIRE(res_b.converged);
@@ -253,7 +250,7 @@ TEST_CASE("Stepper: buggy initialisation diverges from correct trajectory",
     Stepper stepper{ ip };
 
     const StateD s_correct = make_state_correct(q);
-    const StateD s_buggy   = make_state_buggy(q);
+    const StateD s_buggy = make_state_buggy(q);
 
     // Integrate a few steps to amplify the divergence
     StateD sc = s_correct;

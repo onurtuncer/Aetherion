@@ -12,13 +12,14 @@
 #include <cmath>
 #include <cstddef>
 
-#include <Aetherion/Environment/detail/MathWrappers.h> 
+#include <Aetherion/Environment/detail/MathWrappers.h>
 
 namespace Aetherion::Environment {
 
     /// Result of the atmosphere call
     template <class Scalar>
-    struct Us1976State {
+    struct Us1976State
+    {
         Scalar T;    // Temperature [K]
         Scalar p;    // Static pressure [Pa]
         Scalar rho;  // Density [kg/m^3]
@@ -36,9 +37,10 @@ namespace Aetherion::Environment {
     /// dp/dH = -rho g0 holds inside every layer for any offsets, and density
     /// follows from the gas law. Both members zero reproduces the standard
     /// atmosphere bit for bit.
-    struct AtmosphereOffsets {
-        double deltaT_K     { 0.0 };
-        double deltaP_sl_Pa { 0.0 };
+    struct AtmosphereOffsets
+    {
+        double deltaT_K{ 0.0 };
+        double deltaP_sl_Pa{ 0.0 };
 
         [[nodiscard]] constexpr bool isStandard() const noexcept
         {
@@ -49,19 +51,24 @@ namespace Aetherion::Environment {
     namespace detail {
 
         /// Layer tables of the US1976 homosphere (0..84.852 km geopotential).
-        struct Us1976Layers {
+        struct Us1976Layers
+        {
             static constexpr std::array<double, 8> Hb_km = {
-                0.0, 11.0, 20.0, 32.0, 47.0, 51.0, 71.0, 84.852 };
+                0.0, 11.0, 20.0, 32.0, 47.0, 51.0, 71.0, 84.852
+            };
             static constexpr std::array<double, 8> Tb_K = {
-                288.15, 216.65, 216.65, 228.65, 270.65, 270.65, 214.65, 186.946 };
+                288.15, 216.65, 216.65, 228.65, 270.65, 270.65, 214.65, 186.946
+            };
             static constexpr std::array<double, 8> Pb_Pa = {
-                101325.0, 22632.1, 5474.89, 868.019, 110.906, 66.9389, 3.95642, 0.3734 };
+                101325.0, 22632.1, 5474.89, 868.019, 110.906, 66.9389, 3.95642, 0.3734
+            };
             static constexpr std::array<double, 8> Lb_K_per_km = {
-                -6.5, 0.0, 1.0, 2.8, 0.0, -2.8, -2.0, 0.0 };
-            static constexpr double g0    = 9.80665;
-            static constexpr double R     = 287.05287;
+                -6.5, 0.0, 1.0, 2.8, 0.0, -2.8, -2.0, 0.0
+            };
+            static constexpr double g0 = 9.80665;
+            static constexpr double R = 287.05287;
             static constexpr double gamma = 1.4;
-            static constexpr double p_sl  = 101325.0;
+            static constexpr double p_sl = 101325.0;
         };
 
         /// Walk the layers from sea level and return the base pressure of each
@@ -74,9 +81,9 @@ namespace Aetherion::Environment {
             std::array<double, 8> p{};
             p[0] = p_sl_Pa;
             for (std::size_t b = 0; b + 1 < 8; ++b) {
-                const double Tb  = L::Tb_K[b] + deltaT_K;
-                const double Lb  = L::Lb_K_per_km[b] * 1.0e-3;               // [K/m]
-                const double dH  = (L::Hb_km[b + 1] - L::Hb_km[b]) * 1000.0; // [m]
+                const double Tb = L::Tb_K[b] + deltaT_K;
+                const double Lb = L::Lb_K_per_km[b] * 1.0e-3;               // [K/m]
+                const double dH = (L::Hb_km[b + 1] - L::Hb_km[b]) * 1000.0; // [m]
                 if (Lb == 0.0) {
                     p[b + 1] = p[b] * std::exp(-L::g0 * dH / (L::R * Tb));
                 } else {
@@ -103,10 +110,9 @@ namespace Aetherion::Environment {
             // The atmosphere is evaluated once per aero call inside an implicit
             // integrator's Newton iteration, always with the same offsets; a
             // one-entry memo makes the non-standard day as cheap as the table.
-            thread_local AtmosphereOffsets      memo_off{};
-            thread_local std::array<double, 8>  memo_p = L::Pb_Pa;
-            if (memo_off.deltaT_K == off.deltaT_K && memo_off.deltaP_sl_Pa == off.deltaP_sl_Pa
-                && !memo_off.isStandard()) {
+            thread_local AtmosphereOffsets memo_off{};
+            thread_local std::array<double, 8> memo_p = L::Pb_Pa;
+            if (memo_off.deltaT_K == off.deltaT_K && memo_off.deltaP_sl_Pa == off.deltaP_sl_Pa && !memo_off.isStandard()) {
                 return memo_p;
             }
             const auto p_off = Us1976BasePressures(off.deltaT_K, L::p_sl + off.deltaP_sl_Pa);
@@ -116,7 +122,7 @@ namespace Aetherion::Environment {
                 out[b] = L::Pb_Pa[b] * (p_off[b] / p_std[b]);
             }
             memo_off = off;
-            memo_p   = out;
+            memo_p = out;
             return out;
         }
 
@@ -137,7 +143,7 @@ namespace Aetherion::Environment {
     /// pressure offset); the one-argument form is the standard day.
     template <class Scalar>
     inline Us1976State<Scalar> US1976Atmosphere(const Scalar& altitude_m_in,
-                                                const AtmosphereOffsets& offsets)
+        const AtmosphereOffsets& offsets)
     {
         using detail::Exponential;
         using detail::Power;
@@ -178,9 +184,9 @@ namespace Aetherion::Environment {
 
         // ---- US1976 base values per layer (0..7) -------------------------------
         using Layers = detail::Us1976Layers;
-        const auto& Hb_km_arr        = Layers::Hb_km;
-        const auto& Tb_arr           = Layers::Tb_K;
-        const auto& Lb_K_per_km_arr  = Layers::Lb_K_per_km;
+        const auto& Hb_km_arr = Layers::Hb_km;
+        const auto& Tb_arr = Layers::Tb_K;
+        const auto& Lb_K_per_km_arr = Layers::Lb_K_per_km;
         // Base pressures for this day (the published table when offsets are zero).
         const std::array<double, 8> Pb_arr = detail::Us1976OffsetBasePressures(offsets);
         const double dT = offsets.deltaT_K;
@@ -212,8 +218,7 @@ namespace Aetherion::Environment {
             T = Tb;
             const Scalar exponent = -g0 * (H - Hb) / (R * Tb);
             p = Pb * Exponential(exponent);
-        }
-        else {
+        } else {
             // Gradient layer (linear temperature profile)
             T = Tb + Lb * (H - Hb);
             const Scalar theta = T / Tb;

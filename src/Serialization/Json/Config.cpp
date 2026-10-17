@@ -22,19 +22,17 @@ namespace Aetherion::Serialization::Json {
 
     void from_json(const nlohmann::json& j, RigidBody::Config& cfg)
     {
-        auto deserialize = [&](const char* section, auto fn)
-            {
-                try {
-                    if (!j.contains(section))
-                        throw std::runtime_error(
-                            std::string("missing top-level key '") + section + "'");
-                    fn(j.at(section));
-                }
-                catch (const std::exception& e) {
+        auto deserialize = [&](const char* section, auto fn) {
+            try {
+                if (!j.contains(section))
                     throw std::runtime_error(
-                        std::string("Config[") + section + "]: " + e.what());
-                }
-            };
+                        std::string("missing top-level key '") + section + "'");
+                fn(j.at(section));
+            } catch (const std::exception& e) {
+                throw std::runtime_error(
+                    std::string("Config[") + section + "]: " + e.what());
+            }
+        };
 
         // Fully qualify to avoid accidentally picking nlohmann::from_json
         deserialize("pose", [&](const auto& v) { ::Aetherion::Serialization::Json::from_json(v, cfg.pose); });
@@ -51,8 +49,8 @@ namespace Aetherion::Serialization::Json {
             };
             get_ws("gradient_N_mps_m", cfg.windShear.gradient_N_mps_m);
             get_ws("gradient_E_mps_m", cfg.windShear.gradient_E_mps_m);
-            get_ws("intercept_N_mps",  cfg.windShear.intercept_N_mps);
-            get_ws("intercept_E_mps",  cfg.windShear.intercept_E_mps);
+            get_ws("intercept_N_mps", cfg.windShear.intercept_N_mps);
+            get_ws("intercept_E_mps", cfg.windShear.intercept_E_mps);
         }
 
         // Optional: ambient wind in NED frame (defaults to calm if absent)
@@ -62,8 +60,8 @@ namespace Aetherion::Serialization::Json {
                 if (w.contains(key)) field = w.at(key).get<double>();
             };
             get_opt("north_mps", cfg.wind.north_mps);
-            get_opt("east_mps",  cfg.wind.east_mps);
-            get_opt("down_mps",  cfg.wind.down_mps);
+            get_opt("east_mps", cfg.wind.east_mps);
+            get_opt("down_mps", cfg.wind.down_mps);
         }
     }
 

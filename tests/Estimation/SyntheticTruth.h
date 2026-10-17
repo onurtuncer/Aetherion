@@ -35,97 +35,98 @@
 #include <Aetherion/Estimation/ProcessModel.h>
 #include <Aetherion/ODE/RKMK/Lie/SO3.h>
 
-namespace Aetherion::Estimation::Testing
-{
+namespace Aetherion::Estimation::Testing {
 
 // Gaussian samples that are the same on every platform. std::normal_distribution
 // is implementation-defined -- libstdc++ and MSVC draw different sequences
 // from the same engine -- so a "deterministic" seed gave Linux CI a different
 // 240 s run than Windows, and a bound set on one failed on the other.
 // Box-Muller on the engine's own bits, as Environment/DrydenTurbulence.h does.
-class PortableGaussian
-{
-public:
-  explicit PortableGaussian(std::uint64_t seed) : rng_(seed) {}
-
-  double operator()()
-  {
-    if (hasSpare_)
+    class PortableGaussian
     {
-      hasSpare_ = false;
-      return spare_;
-    }
-    double u1 = 0.0;
-    do
-      u1 = uniform();
-    while (u1 <= 0.0);
-    const double u2 = uniform();
-    const double r = std::sqrt(-2.0 * std::log(u1));
-    spare_ = r * std::sin(2.0 * std::numbers::pi * u2);
-    hasSpare_ = true;
-    return r * std::cos(2.0 * std::numbers::pi * u2);
-  }
+    public:
+        explicit PortableGaussian(std::uint64_t seed)
+            : rng_(seed)
+        {}
 
-private:
-  double uniform() { return static_cast<double>(rng_() >> 11) * 0x1.0p-53; }  // [0, 1), 53 bits
+        double operator()()
+        {
+            if (hasSpare_)
+            {
+                hasSpare_ = false;
+                return spare_;
+            }
+            double u1 = 0.0;
+            do
+                u1 = uniform();
+            while (u1 <= 0.0);
+            const double u2 = uniform();
+            const double r = std::sqrt(-2.0 * std::log(u1));
+            spare_ = r * std::sin(2.0 * std::numbers::pi * u2);
+            hasSpare_ = true;
+            return r * std::cos(2.0 * std::numbers::pi * u2);
+        }
 
-  std::mt19937_64 rng_;
-  double spare_ = 0.0;
-  bool hasSpare_ = false;
-};
+    private:
+        double uniform() { return static_cast<double>(rng_() >> 11) * 0x1.0p-53; }  // [0, 1), 53 bits
 
-struct SyntheticTruth
-{
-  static constexpr double kDeg = std::numbers::pi / 180.0;
-  using Vec3 = Eigen::Vector3d;
+        std::mt19937_64 rng_;
+        double spare_ = 0.0;
+        bool hasSpare_ = false;
+    };
 
-  double V = 120.0;
-  double psiDot = 0.05;                              // rad/s: a 126 s circle, V*psiDot = 6 m/s^2 (0.6 g) lateral
-  double h = 500.0;                                  // m above the LCI origin
-  double bank0 = std::atan2(120.0 * 0.05, 9.80665);  // coordinated: ~31.5 deg
-  double bankAmp = 15.0 * kDeg, bankRate = 0.3;
-  double pitchAmp = 8.0 * kDeg, pitchRate = 0.5;
+    struct SyntheticTruth
+    {
+        static constexpr double kDeg = std::numbers::pi / 180.0;
+        using Vec3 = Eigen::Vector3d;
 
-  [[nodiscard]] double bank(double t) const { return bank0 + bankAmp * std::sin(bankRate * t); }
-  [[nodiscard]] double theta(double t) const { return pitchAmp * std::sin(pitchRate * t); }
+        double V = 120.0;
+        double psiDot = 0.05;                              // rad/s: a 126 s circle, V*psiDot = 6 m/s^2 (0.6 g) lateral
+        double h = 500.0;                                  // m above the LCI origin
+        double bank0 = std::atan2(120.0 * 0.05, 9.80665);  // coordinated: ~31.5 deg
+        double bankAmp = 15.0 * kDeg, bankRate = 0.3;
+        double pitchAmp = 8.0 * kDeg, pitchRate = 0.5;
+
+        [[nodiscard]] double bank(double t) const { return bank0 + bankAmp * std::sin(bankRate * t); }
+        [[nodiscard]] double theta(double t) const { return pitchAmp * std::sin(pitchRate * t); }
 
   /// Navigation core at t; biases zero.
-  [[nodiscard]] EstimationState<double> at(double t) const
-  {
-    namespace SO3 = ODE::RKMK::Lie::SO3;
-    const double psi = psiDot * t;
-    EstimationState<double> x;
-    x.X.R =
-        SO3::Exp_R(Vec3(0.0, 0.0, psi)) * SO3::Exp_R(Vec3(bank(t), 0.0, 0.0)) * SO3::Exp_R(Vec3(0.0, theta(t), 0.0));
-    x.X.v = Vec3(V * std::cos(psi), V * std::sin(psi), 0.0);
-    x.X.p = Vec3(V / psiDot * std::sin(psi), V / psiDot * (1.0 - std::cos(psi)), -h);
-    return x;
-  }
+        [[nodiscard]] EstimationState<double> at(double t) const
+        {
+            namespace SO3 = ODE::RKMK::Lie::SO3;
+            const double psi = psiDot * t;
+            EstimationState<double> x;
+            x.X.R =
+                SO3::Exp_R(Vec3(0.0, 0.0, psi)) * SO3::Exp_R(Vec3(bank(t), 0.0, 0.0)) * SO3::Exp_R(Vec3(0.0, theta(t), 0.0));
+            x.X.v = Vec3(V * std::cos(psi), V * std::sin(psi), 0.0);
+            x.X.p = Vec3(V / psiDot * std::sin(psi), V / psiDot * (1.0 - std::cos(psi)), -h);
+            return x;
+        }
 
-  [[nodiscard]] Vec3 accelerationLci(double t) const
-  {
-    const double psi = psiDot * t;
-    return { -V * psiDot * std::sin(psi), V * psiDot * std::cos(psi), 0.0 };
-  }
+        [[nodiscard]] Vec3 accelerationLci(double t) const
+        {
+            const double psi = psiDot * t;
+            return { -V * psiDot * std::sin(psi), V * psiDot * std::cos(psi), 0.0 };
+        }
 
   /// Body rate (R^T R_dot)^vee for R = Rz(psi) Rx(phi) Ry(theta):
   ///   omega = Ry^T [ Rx^T (0, 0, psi_dot) + (phi_dot, 0, 0) ] + (0, theta_dot, 0)
   ///         = (c_th phi_dot - s_th c_phi psi_dot,  s_phi psi_dot + theta_dot,  s_th phi_dot + c_th c_phi psi_dot).
-  [[nodiscard]] Vec3 bodyRate(double t) const
-  {
-    const double th = theta(t), ph = bank(t);
-    const double thDot = pitchAmp * pitchRate * std::cos(pitchRate * t);
-    const double phDot = bankAmp * bankRate * std::cos(bankRate * t);
-    const double cth = std::cos(th), sth = std::sin(th), cph = std::cos(ph), sph = std::sin(ph);
-    return { cth * phDot - sth * cph * psiDot, sph * psiDot + thDot, sth * phDot + cth * cph * psiDot };
-  }
+        [[nodiscard]] Vec3 bodyRate(double t) const
+        {
+            const double th = theta(t), ph = bank(t);
+            const double thDot = pitchAmp * pitchRate * std::cos(pitchRate * t);
+            const double phDot = bankAmp * bankRate * std::cos(bankRate * t);
+            const double cth = std::cos(th), sth = std::sin(th), cph = std::cos(ph), sph = std::sin(ph);
+            return { cth * phDot - sth * cph * psiDot, sph * psiDot + thDot, sth * phDot + cth * cph * psiDot };
+        }
 
   /// The ideal IMU of this truth at time t: inertial rate and specific force, body frame.
-  [[nodiscard]] ImuSample<double> imu(double t, const LciFrame<double>& frame) const
-  {
-    const EstimationState<double> x = at(t);
-    return { bodyRate(t), x.X.R.transpose() * (accelerationLci(t) - frame.gravity(x.X.p)) };
-  }
-};
+        [[nodiscard]] ImuSample<double> imu(double t, const LciFrame<double>& frame) const
+        {
+            const EstimationState<double> x = at(t);
+            return { bodyRate(t), x.X.R.transpose() * (accelerationLci(t) - frame.gravity(x.X.p)) };
+        }
+    };
 
 }  // namespace Aetherion::Estimation::Testing

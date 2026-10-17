@@ -57,21 +57,23 @@ namespace Aetherion::Examples::TwoStageRocket {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// @brief Cumulative fuel-consumption and staging state for the two-stage rocket.
-struct RocketFuelState {
-    double stg1FuelUsed_kg = 0.0; ///< Stage-1 propellant consumed so far [kg].
-    double stg2FuelUsed_kg = 0.0; ///< Stage-2 propellant consumed so far [kg].
-    bool   staged          = false; ///< True once S1 dry stage has been jettisoned.
-};
+    struct RocketFuelState
+    {
+        double stg1FuelUsed_kg = 0.0; ///< Stage-1 propellant consumed so far [kg].
+        double stg2FuelUsed_kg = 0.0; ///< Stage-2 propellant consumed so far [kg].
+        bool staged = false; ///< True once S1 dry stage has been jettisoned.
+    };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RocketPropulsionResult
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// @brief Instantaneous propulsion output for one integration step.
-struct RocketPropulsionResult {
-    double thrust_N  = 0.0; ///< Total axial thrust [N, body +x].
-    double mdot_kgs  = 0.0; ///< Propellant consumption rate [kg/s, positive = burn].
-};
+    struct RocketPropulsionResult
+    {
+        double thrust_N = 0.0; ///< Total axial thrust [N, body +x].
+        double mdot_kgs = 0.0; ///< Propellant consumption rate [kg/s, positive = burn].
+    };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // RocketStageModel
@@ -88,23 +90,24 @@ struct RocketPropulsionResult {
 /// it sets @c staged = true and returns @c true.  The caller (simulator) must
 /// then subtract @c kStg1DryMass_kg from the ODE state mass to model the
 /// stage-separation mass drop.
-class RocketStageModel {
-public:
+    class RocketStageModel
+    {
+    public:
     // ── Rocket constants (from twostage_inertia.dml) ──────────────────────────
-    static constexpr double kStg1MaxFuel_kg  = 180000.0; ///< S1 propellant capacity [kg].
-    static constexpr double kStg2MaxFuel_kg  =  80000.0; ///< S2 propellant capacity [kg].
+        static constexpr double kStg1MaxFuel_kg = 180000.0; ///< S1 propellant capacity [kg].
+        static constexpr double kStg2MaxFuel_kg = 80000.0; ///< S2 propellant capacity [kg].
     /// Dry mass of stage-1 hardware jettisoned at staging [kg].
     /// Derived from stg1burnoutMass(134 000) − stg2igniteMass(99 000).
-    static constexpr double kStg1DryMass_kg  =  35000.0;
+        static constexpr double kStg1DryMass_kg = 35000.0;
 
     // ── Construction ──────────────────────────────────────────────────────────
 
     /// @brief Construct from pre-loaded DAVE-ML engine instances.
     /// @param inertiaDml  Parsed @c twostage_inertia.dml engine.
     /// @param propDml     Parsed @c twostage_prop.dml engine.
-    explicit RocketStageModel(
-        std::shared_ptr<Serialization::DAVEMLAeroModel> inertiaDml,
-        std::shared_ptr<Serialization::DAVEMLAeroModel> propDml);
+        explicit RocketStageModel(
+            std::shared_ptr<Serialization::DAVEMLAeroModel> inertiaDml,
+            std::shared_ptr<Serialization::DAVEMLAeroModel> propDml);
 
     // ── S2 ignition gate ──────────────────────────────────────────────────────
 
@@ -112,20 +115,20 @@ public:
     /// Default 0 = ignite immediately after staging.
     /// Set to (endTime − S2_burn_duration) to match the NASA TM reference,
     /// where S2 fires late enough to burn exactly until the simulation end.
-    double stg2IgnitionTime_s = 0.0;
+        double stg2IgnitionTime_s = 0.0;
 
     // ── Per-step queries ──────────────────────────────────────────────────────
 
     /// @brief Evaluate the propulsion DML at the current firing state.
     /// @param t_sim Current simulation time [s]; used to gate S2 ignition.
     /// @return Thrust [N] and propellant flow rate [kg/s] for this step.
-    [[nodiscard]] RocketPropulsionResult propulsion(double t_sim) const;
+        [[nodiscard]] RocketPropulsionResult propulsion(double t_sim) const;
 
     /// @brief Evaluate the inertia DML at the current fuel state.
     /// @return Mass properties as InertialParameters: XIXX..XIZZ are about the
     ///         centre of mass (AIAA S-119 standard variables), xbar_m = DXCG
     ///         [m, +FWD] is the centre of mass forward of the MRC (body origin).
-    [[nodiscard]] RigidBody::InertialParameters inertialParameters() const;
+        [[nodiscard]] RigidBody::InertialParameters inertialParameters() const;
 
     // ── State advance ─────────────────────────────────────────────────────────
 
@@ -135,20 +138,20 @@ public:
     /// @param mdot_kgs  Propellant consumption rate for this step [kg/s, positive = burn].
     /// @return @c true if a staging event occurred during this advance (S1 exhausted).
     ///         The caller must apply the @c kStg1DryMass_kg mass drop to the ODE state.
-    bool advance(double dt_s, double mdot_kgs);
+        bool advance(double dt_s, double mdot_kgs);
 
     // ── Accessors ─────────────────────────────────────────────────────────────
 
-    [[nodiscard]] const RocketFuelState& fuelState() const noexcept { return m_fuel; }
+        [[nodiscard]] const RocketFuelState& fuelState() const noexcept { return m_fuel; }
 
     /// @brief Mutable accessor — used by callers (e.g. an FMU wrapper) that need
     /// to restore a previously-saved fuel/staging checkpoint.
-    [[nodiscard]] RocketFuelState& fuelState() noexcept { return m_fuel; }
+        [[nodiscard]] RocketFuelState& fuelState() noexcept { return m_fuel; }
 
-private:
-    std::shared_ptr<Serialization::DAVEMLAeroModel> m_inertiaDml;
-    std::shared_ptr<Serialization::DAVEMLAeroModel> m_propDml;
-    RocketFuelState m_fuel;
-};
+    private:
+        std::shared_ptr<Serialization::DAVEMLAeroModel> m_inertiaDml;
+        std::shared_ptr<Serialization::DAVEMLAeroModel> m_propDml;
+        RocketFuelState m_fuel;
+    };
 
 } // namespace Aetherion::Examples::TwoStageRocket

@@ -62,15 +62,14 @@ namespace Aetherion::Environment {
 /// @return        Geometric altitude above the WGS-84 ellipsoid [m].
 ///                Negative values indicate a position below the surface
 ///                (physically impossible in flight; the atmosphere model clamps).
-template<class S>
-inline S GeometricAltitude_m(const Eigen::Matrix<S, 3, 1>& r_eci)
-{
-    const S r         = r_eci.norm();
-    const S sin_gc    = r_eci(2) / r;                         // sin(geocentric lat)
-    const S cos2_gc   = S(1.0) - sin_gc * sin_gc;
-    const S r_surface = S(WGS84::kSemiMajorAxis_m * (1.0 - WGS84::kFlattening))
-                      / detail::SquareRoot(S(1.0) - S(WGS84::kEccentricitySq) * cos2_gc);
-    return r - r_surface;
-}
+    template <class S>
+    inline S GeometricAltitude_m(const Eigen::Matrix<S, 3, 1>& r_eci)
+    {
+        const S r = r_eci.norm();
+        const S sin_gc = r_eci(2) / r;                         // sin(geocentric lat)
+        const S cos2_gc = S(1.0) - sin_gc * sin_gc;
+        const S r_surface = S(WGS84::kSemiMajorAxis_m * (1.0 - WGS84::kFlattening)) / detail::SquareRoot(S(1.0) - S(WGS84::kEccentricitySq) * cos2_gc);
+        return r - r_surface;
+    }
 
 } // namespace Aetherion::Environment

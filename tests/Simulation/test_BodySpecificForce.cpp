@@ -36,53 +36,54 @@ namespace {
 // axis, flying along body +x, nose level.  Body axes are aligned with ECI here
 // only to keep the expected values readable — the policies are evaluated in the
 // body frame either way.
-RigidBody::StateD makeAtmosphericState(double mass_kg = 1000.0,
-                                       double u_m_s   = 200.0)
-{
-    RigidBody::StateD s;
-    s.g.R = Eigen::Matrix3d::Identity();
-    s.g.q = Eigen::Quaterniond::Identity();
-    s.g.p = Eigen::Vector3d(Environment::WGS84::kSemiMajorAxis_m + 10000.0, 0.0, 0.0);
-    s.nu_B.setZero();
-    s.nu_B(3) = u_m_s;   // body-x velocity
-    s.m       = mass_kg;
-    return s;
-}
+    RigidBody::StateD makeAtmosphericState(double mass_kg = 1000.0,
+        double u_m_s = 200.0)
+    {
+        RigidBody::StateD s;
+        s.g.R = Eigen::Matrix3d::Identity();
+        s.g.q = Eigen::Quaterniond::Identity();
+        s.g.p = Eigen::Vector3d(Environment::WGS84::kSemiMajorAxis_m + 10000.0, 0.0, 0.0);
+        s.nu_B.setZero();
+        s.nu_B(3) = u_m_s;   // body-x velocity
+        s.m = mass_kg;
+        return s;
+    }
 
 // Far above the atmosphere, so DragOnlyAeroPolicy returns a vanishing force.
-RigidBody::StateD makeExoatmosphericState(double mass_kg = 1000.0)
-{
-    RigidBody::StateD s = makeAtmosphericState(mass_kg);
-    s.g.p = Eigen::Vector3d(Environment::WGS84::kSemiMajorAxis_m + 400000.0, 0.0, 0.0);
-    return s;
-}
+    RigidBody::StateD makeExoatmosphericState(double mass_kg = 1000.0)
+    {
+        RigidBody::StateD s = makeAtmosphericState(mass_kg);
+        s.g.p = Eigen::Vector3d(Environment::WGS84::kSemiMajorAxis_m + 400000.0, 0.0, 0.0);
+        return s;
+    }
 
 // Constant body-frame force, for arithmetic checks that do not depend on any
 // physical model.  Satisfies AeroPolicy / PropulsionPolicy.
-struct ConstantBodyForcePolicy {
-    double Fx{ 0.0 };
-    double Fy{ 0.0 };
-    double Fz{ 0.0 };
-
-    template<class S>
-    Spatial::Wrench<S> operator()(const ODE::RKMK::Lie::SE3<S>&,
-                                  const Eigen::Matrix<S, 6, 1>&,
-                                  S, S) const
+    struct ConstantBodyForcePolicy
     {
-        Spatial::Wrench<S> w{};
-        w.f.setZero();
+        double Fx{ 0.0 };
+        double Fy{ 0.0 };
+        double Fz{ 0.0 };
+
+        template <class S>
+        Spatial::Wrench<S> operator()(const ODE::RKMK::Lie::SE3<S>&,
+            const Eigen::Matrix<S, 6, 1>&,
+            S, S) const
+        {
+            Spatial::Wrench<S> w{};
+            w.f.setZero();
         // Non-zero moments, to prove they are discarded rather than leaking into
         // the force channels.
-        w.f(0) = S(1234.0);
-        w.f(1) = S(-5678.0);
-        w.f(2) = S(9012.0);
-        w.f(3) = S(Fx);
-        w.f(4) = S(Fy);
-        w.f(5) = S(Fz);
-        return w;
-    }
-};
-static_assert(FlightDynamics::AeroPolicy<ConstantBodyForcePolicy>);
+            w.f(0) = S(1234.0);
+            w.f(1) = S(-5678.0);
+            w.f(2) = S(9012.0);
+            w.f(3) = S(Fx);
+            w.f(4) = S(Fy);
+            w.f(5) = S(Fz);
+            return w;
+        }
+    };
+    static_assert(FlightDynamics::AeroPolicy<ConstantBodyForcePolicy>);
 
 } // namespace
 
@@ -96,7 +97,7 @@ static_assert(FlightDynamics::AeroPolicy<ConstantBodyForcePolicy>);
 
 TEST_CASE("BodySpecificForce: dragless sphere reads exactly zero", "[BodySpecificForce]")
 {
-    const FlightDynamics::ZeroAeroPolicy       aero{};
+    const FlightDynamics::ZeroAeroPolicy aero{};
     const FlightDynamics::ZeroPropulsionPolicy thrust{};
 
     // Several points spanning the atmosphere and beyond, with attitude and
@@ -120,7 +121,7 @@ TEST_CASE("BodySpecificForce: dragless sphere reads exactly zero", "[BodySpecifi
 }
 
 TEST_CASE("BodySpecificForce: gravity magnitude at the same state is not zero",
-          "[BodySpecificForce]")
+    "[BodySpecificForce]")
 {
     // Guards the test above from passing vacuously: confirm the state really is
     // in a strong gravity field, so "zero" is a statement about exclusion of
@@ -139,14 +140,14 @@ TEST_CASE("BodySpecificForce: gravity magnitude at the same state is not zero",
 // ---------------------------------------------------------------------------
 
 TEST_CASE("BodySpecificForce: drag-only sphere is antiparallel to velocity",
-          "[BodySpecificForce]")
+    "[BodySpecificForce]")
 {
-    const FlightDynamics::DragOnlyAeroPolicy   aero{ 0.5, 1.0 };  // CD, S_ref [m²]
+    const FlightDynamics::DragOnlyAeroPolicy aero{ 0.5, 1.0 };  // CD, S_ref [m²]
     const FlightDynamics::ZeroPropulsionPolicy thrust{};
 
     RigidBody::StateD s = makeAtmosphericState(1000.0, 200.0);
     s.nu_B(3) = 180.0;
-    s.nu_B(4) =  60.0;
+    s.nu_B(4) = 60.0;
     s.nu_B(5) = -40.0;
 
     const Eigen::Vector3d f_B = Simulation::BodySpecificForce_m_s2(0.0, s, aero, thrust);
@@ -171,15 +172,15 @@ TEST_CASE("BodySpecificForce: drag-only sphere is antiparallel to velocity",
 }
 
 TEST_CASE("BodySpecificForce: drag-only sphere goes to zero as density does",
-          "[BodySpecificForce]")
+    "[BodySpecificForce]")
 {
-    const FlightDynamics::DragOnlyAeroPolicy   aero{ 0.5, 1.0 };
+    const FlightDynamics::DragOnlyAeroPolicy aero{ 0.5, 1.0 };
     const FlightDynamics::ZeroPropulsionPolicy thrust{};
 
-    const RigidBody::StateD low  = makeAtmosphericState();
+    const RigidBody::StateD low = makeAtmosphericState();
     const RigidBody::StateD high = makeExoatmosphericState();
 
-    const double f_low  = Simulation::BodySpecificForce_m_s2(0.0, low,  aero, thrust).norm();
+    const double f_low = Simulation::BodySpecificForce_m_s2(0.0, low, aero, thrust).norm();
     const double f_high = Simulation::BodySpecificForce_m_s2(0.0, high, aero, thrust).norm();
 
     REQUIRE(f_low > 1.0e-3);
@@ -192,10 +193,10 @@ TEST_CASE("BodySpecificForce: drag-only sphere goes to zero as density does",
 // ---------------------------------------------------------------------------
 
 TEST_CASE("BodySpecificForce: aero and thrust forces sum and divide by mass",
-          "[BodySpecificForce]")
+    "[BodySpecificForce]")
 {
-    const ConstantBodyForcePolicy aero  { -400.0,  200.0, -1000.0 };
-    const ConstantBodyForcePolicy thrust{ 3400.0,    0.0,     0.0 };
+    const ConstantBodyForcePolicy aero{ -400.0, 200.0, -1000.0 };
+    const ConstantBodyForcePolicy thrust{ 3400.0, 0.0, 0.0 };
 
     RigidBody::StateD s = makeAtmosphericState();
     s.m = 2000.0;
@@ -203,18 +204,19 @@ TEST_CASE("BodySpecificForce: aero and thrust forces sum and divide by mass",
     const Eigen::Vector3d f_B = Simulation::BodySpecificForce_m_s2(0.0, s, aero, thrust);
 
     REQUIRE(f_B.x() == Approx(3000.0 / 2000.0));
-    REQUIRE(f_B.y() == Approx( 200.0 / 2000.0));
+    REQUIRE(f_B.y() == Approx(200.0 / 2000.0));
     REQUIRE(f_B.z() == Approx(-1000.0 / 2000.0));
 }
 
 TEST_CASE("BodySpecificForce: independent of vehicle position and attitude for a "
-          "fixed body force", "[BodySpecificForce]")
+          "fixed body force",
+    "[BodySpecificForce]")
 {
     // A body-frame force divided by mass is a body-frame quantity: moving the
     // vehicle must not change it.  This fails if a gravity or frame-rotation
     // term has crept in, since both depend on position.
-    const ConstantBodyForcePolicy aero  { 100.0, -50.0, 25.0 };
-    const ConstantBodyForcePolicy thrust{ 900.0,   0.0,  0.0 };
+    const ConstantBodyForcePolicy aero{ 100.0, -50.0, 25.0 };
+    const ConstantBodyForcePolicy thrust{ 900.0, 0.0, 0.0 };
 
     RigidBody::StateD a = makeAtmosphericState(500.0);
     RigidBody::StateD b = makeExoatmosphericState(500.0);
@@ -229,21 +231,20 @@ TEST_CASE("BodySpecificForce: independent of vehicle position and attitude for a
 }
 
 TEST_CASE("BodySpecificForce: explicit force-sum overload matches the policy form",
-          "[BodySpecificForce]")
+    "[BodySpecificForce]")
 {
     // The FMUs use the explicit overload with an aero force taken from a
     // Snapshot, to avoid re-evaluating the aero tables.  The two forms must
     // agree exactly.
     const FlightDynamics::DragOnlyAeroPolicy aero{ 0.5, 1.0 };
-    const ConstantBodyForcePolicy            thrust{ 5000.0, 0.0, 0.0 };
+    const ConstantBodyForcePolicy thrust{ 5000.0, 0.0, 0.0 };
 
     const RigidBody::StateD s = makeAtmosphericState();
 
     const Eigen::Vector3d viaPolicies =
         Simulation::BodySpecificForce_m_s2(1.5, s, aero, thrust);
 
-    const Eigen::Vector3d F_sum = Simulation::PolicyBodyForce_N(1.5, s, aero)
-                                + Simulation::PolicyBodyForce_N(1.5, s, thrust);
+    const Eigen::Vector3d F_sum = Simulation::PolicyBodyForce_N(1.5, s, aero) + Simulation::PolicyBodyForce_N(1.5, s, thrust);
     const Eigen::Vector3d viaSum = Simulation::BodySpecificForce_m_s2(F_sum, s.m);
 
     REQUIRE((viaPolicies - viaSum).norm() == 0.0);
@@ -254,10 +255,10 @@ TEST_CASE("BodySpecificForce: explicit force-sum overload matches the policy for
 // ---------------------------------------------------------------------------
 
 TEST_CASE("BodySpecificForce: non-positive mass returns zero rather than dividing",
-          "[BodySpecificForce]")
+    "[BodySpecificForce]")
 {
-    const ConstantBodyForcePolicy aero  { 100.0, 200.0, 300.0 };
-    const ConstantBodyForcePolicy thrust{ 400.0,   0.0,   0.0 };
+    const ConstantBodyForcePolicy aero{ 100.0, 200.0, 300.0 };
+    const ConstantBodyForcePolicy thrust{ 400.0, 0.0, 0.0 };
 
     RigidBody::StateD s = makeAtmosphericState();
     s.m = 0.0;
@@ -282,16 +283,16 @@ TEST_CASE("BodySpecificForce: non-positive mass returns zero rather than dividin
 // ---------------------------------------------------------------------------
 
 TEST_CASE("BodySpecificForce: trimmed level flight reads |g| with negative body-z",
-          "[BodySpecificForce]")
+    "[BodySpecificForce]")
 {
     // Straight-and-level unaccelerated flight above the equator on the ECI +X
     // axis.  Orient the body so that body z (down) points at the Earth:
     //   body x → ECI +Y,  body y → ECI −Z,  body z → ECI −X.
     RigidBody::StateD s = makeAtmosphericState(1000.0, 200.0);
-    s.g.R.col(0) = Eigen::Vector3d( 0.0,  1.0,  0.0);
-    s.g.R.col(1) = Eigen::Vector3d( 0.0,  0.0, -1.0);
-    s.g.R.col(2) = Eigen::Vector3d(-1.0,  0.0,  0.0);
-    s.g.q        = Eigen::Quaterniond(s.g.R).normalized();
+    s.g.R.col(0) = Eigen::Vector3d(0.0, 1.0, 0.0);
+    s.g.R.col(1) = Eigen::Vector3d(0.0, 0.0, -1.0);
+    s.g.R.col(2) = Eigen::Vector3d(-1.0, 0.0, 0.0);
+    s.g.q = Eigen::Quaterniond(s.g.R).normalized();
 
     const FlightDynamics::J2GravityPolicy gravity{};
     const Eigen::Vector3d F_grav_B = gravity(s.g, s.m).f.tail<3>();

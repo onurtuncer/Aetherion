@@ -34,20 +34,23 @@
 namespace {
     using Catch::Approx;
     namespace Core = Aetherion::ODE::RKMK::Core;
-    namespace Lie  = Aetherion::ODE::RKMK::Lie;
-    namespace Int  = Aetherion::ODE::RKMK::Integrators;
+    namespace Lie = Aetherion::ODE::RKMK::Lie;
+    namespace Int = Aetherion::ODE::RKMK::Integrators;
 
     /// Euclidean field on the 7-vector: only x(6) evolves, at rate 1 below the
     /// switch value and 2 above it. The comparison is made on S, so CppAD
     /// records it when the field is taped.
-    struct SwitchingField {
+    struct SwitchingField
+    {
         double x_switch = 1.1;
-        template<class S>
+        template <class S>
         Eigen::Matrix<S, 7, 1> operator()(S, const Lie::SE3<S>&, const Eigen::Matrix<S, 7, 1>& x) const
         {
             Eigen::Matrix<S, 7, 1> f = Eigen::Matrix<S, 7, 1>::Zero();
-            if (x(6) < S(x_switch)) f(6) = S(1.0);
-            else                    f(6) = S(2.0);
+            if (x(6) < S(x_switch))
+                f(6) = S(1.0);
+            else
+                f(6) = S(2.0);
             return f;
         }
     };
@@ -56,7 +59,7 @@ namespace {
 }
 
 TEST_CASE("RadauIIA product stepper: a step across a branch of the field is solved on the right branch",
-          "[rkmk][radau][branch][regression]")
+    "[rkmk][radau][branch][regression]")
 {
     Stepper stepper(Aetherion::RigidBody::KinematicsXiField{}, SwitchingField{});
 
@@ -82,7 +85,7 @@ TEST_CASE("RadauIIA product stepper: a step across a branch of the field is solv
 }
 
 TEST_CASE("RadauIIA product stepper: a step that stays on one branch is unchanged",
-          "[rkmk][radau][branch]")
+    "[rkmk][radau][branch]")
 {
     Stepper stepper(Aetherion::RigidBody::KinematicsXiField{}, SwitchingField{});
 

@@ -37,29 +37,33 @@ namespace {
     // Correct namespace alias (note the double ::)
     namespace Core = Aetherion::ODE::RKMK::Core;
 
-    template<class S>
-    S series_A(S t2) {
+    template <class S>
+    S series_A(S t2)
+    {
         const S t4 = t2 * t2;
         const S t6 = t4 * t2;
         const S t8 = t4 * t4;
         return S(1) - t2 / S(6) + t4 / S(120) - t6 / S(5040) + t8 / S(362880);
     }
-    template<class S>
-    S series_B(S t2) {
+    template <class S>
+    S series_B(S t2)
+    {
         const S t4 = t2 * t2;
         const S t6 = t4 * t2;
         const S t8 = t4 * t4;
         return S(1) / S(2) - t2 / S(24) + t4 / S(720) - t6 / S(40320) + t8 / S(3628800);
     }
-    template<class S>
-    S series_C(S t2) {
+    template <class S>
+    S series_C(S t2)
+    {
         const S t4 = t2 * t2;
         const S t6 = t4 * t2;
         const S t8 = t4 * t4;
         return S(1) / S(6) - t2 / S(120) + t4 / S(5040) - t6 / S(362880) + t8 / S(39916800);
     }
 
-    inline Eigen::Matrix3d skew(const Eigen::Vector3d& w) {
+    inline Eigen::Matrix3d skew(const Eigen::Vector3d& w)
+    {
         Eigen::Matrix3d W;
         W << 0.0, -w.z(), w.y(),
             w.z(), 0.0, -w.x(),
@@ -67,7 +71,8 @@ namespace {
         return W;
     }
 
-    inline Eigen::Matrix3d so3_exp_from_ABC(const Eigen::Vector3d& w) {
+    inline Eigen::Matrix3d so3_exp_from_ABC(const Eigen::Vector3d& w)
+    {
         const double theta2 = w.squaredNorm();
         double A{}, B{}, C{};
         Core::so3_ABC(theta2, A, B, C);
@@ -78,7 +83,8 @@ namespace {
         return Eigen::Matrix3d::Identity() + A * W + B * W2;
     }
 
-    inline Eigen::Matrix3d so3_left_jacobian_from_ABC(const Eigen::Vector3d& w) {
+    inline Eigen::Matrix3d so3_left_jacobian_from_ABC(const Eigen::Vector3d& w)
+    {
         const double theta2 = w.squaredNorm();
         double A{}, B{}, C{};
         Core::so3_ABC(theta2, A, B, C);
@@ -91,7 +97,8 @@ namespace {
 
 } // namespace
 
-TEST_CASE("Scalar.so3_ABC: near-zero uses the series expansion", "[scalar][so3_ABC]") {
+TEST_CASE("Scalar.so3_ABC: near-zero uses the series expansion", "[scalar][so3_ABC]")
+{
     const double theta2 = 1e-16; // well below eps^2=1e-12 => series branch
 
     double A{}, B{}, C{};
@@ -102,7 +109,8 @@ TEST_CASE("Scalar.so3_ABC: near-zero uses the series expansion", "[scalar][so3_A
     REQUIRE(C == Approx(series_C(theta2)).margin(1e-15));
 }
 
-TEST_CASE("Scalar.so3_ABC: away from zero matches trig definitions", "[scalar][so3_ABC]") {
+TEST_CASE("Scalar.so3_ABC: away from zero matches trig definitions", "[scalar][so3_ABC]")
+{
     const double theta2 = 1e-2; // theta=0.1
     const double theta = std::sqrt(theta2);
 
@@ -118,7 +126,8 @@ TEST_CASE("Scalar.so3_ABC: away from zero matches trig definitions", "[scalar][s
     REQUIRE(C == Approx(C_true).margin(1e-15));
 }
 
-TEST_CASE("Scalar.so3_ABC: continuity around eps^2 threshold", "[scalar][so3_ABC]") {
+TEST_CASE("Scalar.so3_ABC: continuity around eps^2 threshold", "[scalar][so3_ABC]")
+{
     const double eps2 = 1e-8;
     const double theta2_lo = eps2 * 0.999;
     const double theta2_hi = eps2 * 1.001;
@@ -134,7 +143,8 @@ TEST_CASE("Scalar.so3_ABC: continuity around eps^2 threshold", "[scalar][so3_ABC
     REQUIRE(C_lo == Approx(C_hi).margin(1e-12));
 }
 
-TEST_CASE("Scalar.so3_ABC used in SO(3) exp: R is orthonormal and det(R)=1", "[scalar][so3][se3]") {
+TEST_CASE("Scalar.so3_ABC used in SO(3) exp: R is orthonormal and det(R)=1", "[scalar][so3][se3]")
+{
     const Eigen::Vector3d w(0.3, -0.2, 0.15);
     const Eigen::Matrix3d R = so3_exp_from_ABC(w);
 
@@ -145,7 +155,8 @@ TEST_CASE("Scalar.so3_ABC used in SO(3) exp: R is orthonormal and det(R)=1", "[s
     REQUIRE(R.determinant() == Approx(1.0).margin(1e-12));
 }
 
-TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: J(0)=I and small-angle series", "[scalar][so3][se3]") {
+TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: J(0)=I and small-angle series", "[scalar][so3][se3]")
+{
     const Eigen::Vector3d w_small(1e-6, -2e-6, 3e-6);
     const Eigen::Matrix3d W = skew(w_small);
     const Eigen::Matrix3d W2 = W * W;
@@ -160,12 +171,14 @@ TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: J(0)=I and small-angle se
     REQUIRE((J - J_ser).norm() == Approx(0.0).margin(1e-15));
 }
 
-TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: J(0)=I", "[scalar][so3][se3]") {
+TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: J(0)=I", "[scalar][so3][se3]")
+{
     const Eigen::Matrix3d J0 = so3_left_jacobian_from_ABC(Eigen::Vector3d::Zero());
     REQUIRE((J0 - Eigen::Matrix3d::Identity()).norm() == Approx(0.0).margin(1e-15));
 }
 
-TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: matches small-angle series", "[scalar][so3][se3]") {
+TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: matches small-angle series", "[scalar][so3][se3]")
+{
     const Eigen::Vector3d w_small(1e-6, -2e-6, 3e-6);
     const Eigen::Matrix3d W = skew(w_small);
     const Eigen::Matrix3d W2 = W * W;
@@ -179,7 +192,8 @@ TEST_CASE("Scalar.so3_ABC used in SO(3) left Jacobian: matches small-angle serie
     REQUIRE((J - J_ser).norm() == Approx(0.0).margin(1e-15));
 }
 
-TEST_CASE("Scalar.so3_ABC used in SE(3): p = J(w)v matches small-angle series", "[scalar][se3]") {
+TEST_CASE("Scalar.so3_ABC used in SE(3): p = J(w)v matches small-angle series", "[scalar][se3]")
+{
     const Eigen::Vector3d w_small(2e-6, 1e-6, -3e-6);
     const Eigen::Vector3d v(1.2, -0.7, 0.4);
 
@@ -195,7 +209,8 @@ TEST_CASE("Scalar.so3_ABC used in SE(3): p = J(w)v matches small-angle series", 
     REQUIRE((p - p_ser).norm() == Approx(0.0).margin(1e-15));
 }
 
-TEST_CASE("Scalar.so3_ABC: AD smoke test (CppAD::AD<double>)", "[scalar][so3_ABC][cppad]") {
+TEST_CASE("Scalar.so3_ABC: AD smoke test (CppAD::AD<double>)", "[scalar][so3_ABC][cppad]")
+{
     using AD = CppAD::AD<double>;
 
     CppAD::vector<AD> X(1);
@@ -228,19 +243,22 @@ TEST_CASE("Scalar.so3_ABC: AD smoke test (CppAD::AD<double>)", "[scalar][so3_ABC
     REQUIRE(std::isfinite(J[0]));
 }
 
-TEST_CASE("Scalar.elementary wrappers: sin_s/cos_s/sqrt_s behave like std for double", "[scalar][wrappers]") {
+TEST_CASE("Scalar.elementary wrappers: sin_s/cos_s/sqrt_s behave like std for double", "[scalar][wrappers]")
+{
     const double x = 0.123;
     REQUIRE(Core::sin_s(x) == Approx(std::sin(x)).margin(0.0));
     REQUIRE(Core::cos_s(x) == Approx(std::cos(x)).margin(0.0));
     REQUIRE(Core::sqrt_s(x) == Approx(std::sqrt(x)).margin(0.0));
 }
 
-TEST_CASE("Scalar.condexp_lt: behaves like a normal branch for double", "[scalar][condexp]") {
+TEST_CASE("Scalar.condexp_lt: behaves like a normal branch for double", "[scalar][condexp]")
+{
     REQUIRE(Core::condexp_lt(1.0, 2.0, 10.0, 20.0) == Approx(10.0));
     REQUIRE(Core::condexp_lt(2.0, 1.0, 10.0, 20.0) == Approx(20.0));
 }
 
-TEST_CASE("Scalar.so3_ABC used in SO(3) exp: matches Eigen::AngleAxis", "[scalar][so3][se3][eigen]") {
+TEST_CASE("Scalar.so3_ABC used in SO(3) exp: matches Eigen::AngleAxis", "[scalar][so3][se3][eigen]")
+{
     auto check = [&](const Eigen::Vector3d& w, double tol) {
         const Eigen::Matrix3d R = so3_exp_from_ABC(w);
 
@@ -253,7 +271,7 @@ TEST_CASE("Scalar.so3_ABC used in SO(3) exp: matches Eigen::AngleAxis", "[scalar
         REQUIRE((R - R_ref).norm() == Approx(0.0).margin(tol));
         REQUIRE((R.transpose() * R - Eigen::Matrix3d::Identity()).norm() == Approx(0.0).margin(1e-12));
         REQUIRE(R.determinant() == Approx(1.0).margin(1e-12));
-        };
+    };
 
     check(Eigen::Vector3d::Zero(), 0.0);
     check(Eigen::Vector3d(0.3, -0.2, 0.15), 1e-12);
@@ -263,16 +281,17 @@ TEST_CASE("Scalar.so3_ABC used in SO(3) exp: matches Eigen::AngleAxis", "[scalar
 }
 
 TEST_CASE("Scalar.so3_ABC used in SE(3): J(w) matches integral int_0^1 exp(s[w]_x) ds (Gauss-Legendre)",
-    "[scalar][so3][se3][jacobian][quadrature]") {
+    "[scalar][so3][se3][jacobian][quadrature]")
+{
     static constexpr std::array<double, 8> xi = {
         -0.9602898564975363,
         -0.7966664774136267,
         -0.5255324099163290,
         -0.1834346424956498,
-         0.1834346424956498,
-         0.5255324099163290,
-         0.7966664774136267,
-         0.9602898564975363
+        0.1834346424956498,
+        0.5255324099163290,
+        0.7966664774136267,
+        0.9602898564975363
     };
     static constexpr std::array<double, 8> wi = {
         0.1012285362903763,
@@ -304,13 +323,13 @@ TEST_CASE("Scalar.so3_ABC used in SE(3): J(w) matches integral int_0^1 exp(s[w]_
             J += wgt * R;
         }
         return J;
-        };
+    };
 
     auto check = [&](const Eigen::Vector3d& omega, double tol) {
         const Eigen::Matrix3d J_closed = so3_left_jacobian_from_ABC(omega);
         const Eigen::Matrix3d J_num = J_numeric(omega);
         REQUIRE((J_closed - J_num).norm() == Approx(0.0).margin(tol));
-        };
+    };
 
     check(Eigen::Vector3d::Zero(), 1e-15);
     check(Eigen::Vector3d(1e-6, -2e-6, 3e-6), 1e-14);

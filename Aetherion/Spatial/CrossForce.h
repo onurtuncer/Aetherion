@@ -38,7 +38,7 @@ namespace Aetherion::Spatial {
 /// @brief Spatial force cross-product matrix @f$\mathrm{crf}(v) = \mathrm{ad}^*(v)@f$.
 /// @param v  Twist @f$[\omega;\,v]@f$.
 /// @return   6×6 matrix such that @f$\mathrm{crf}(v)\,f = v \times^* f@f$.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Eigen::Matrix<Scalar, 6, 6> CrossForceMatrix(const Twist<Scalar>& v)
     {
         return ad_star(v);
@@ -48,7 +48,7 @@ namespace Aetherion::Spatial {
 /// @param v  Twist (left operand).
 /// @param f  Wrench (right operand).
 /// @return   Wrench result.
-    template<typename Scalar>
+    template <typename Scalar>
     inline Wrench<Scalar> CrossForce(const Twist<Scalar>& v, const Wrench<Scalar>& f)
     {
         Wrench<Scalar> out{};

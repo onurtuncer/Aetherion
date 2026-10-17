@@ -87,22 +87,22 @@ namespace Aetherion::RigidBody {
 /// @tparam Aero       Aerodynamic policy satisfying @c AeroPolicy concept (default: zero).
 /// @tparam Thrust     Propulsion policy satisfying @c PropulsionPolicy concept (default: zero).
 /// @tparam MassMdot   Mass-rate policy satisfying @c MassPolicy concept (default: constant).
-    template<
-        FD::GravityPolicy    Gravity,
-        FD::AeroPolicy       Aero = FD::ZeroAeroPolicy,
+    template <
+        FD::GravityPolicy Gravity,
+        FD::AeroPolicy Aero = FD::ZeroAeroPolicy,
         FD::PropulsionPolicy Thrust = FD::ZeroPropulsionPolicy,
-        FD::MassPolicy       MassMdot = FD::ConstantMassPolicy
-    >
-    struct VectorField {
+        FD::MassPolicy MassMdot = FD::ConstantMassPolicy>
+    struct VectorField
+    {
         Eigen::Matrix<double, 6, 6> M;     ///< 6×6 spatial inertia about the body origin (body frame).
         Eigen::Matrix<double, 6, 6> M_inv; ///< Inverse of @c M.
-        double                      mass_kg{ 0.0 }; ///< Mass @c M was built with [kg]; handed to the wrench policies.
-        Eigen::Vector3d             com_m{ Eigen::Vector3d::Zero() }; ///< Centre of mass from the body origin, body frame [m]; the gravity wrench is moved from here to the origin.
+        double mass_kg{ 0.0 }; ///< Mass @c M was built with [kg]; handed to the wrench policies.
+        Eigen::Vector3d com_m{ Eigen::Vector3d::Zero() }; ///< Centre of mass from the body origin, body frame [m]; the gravity wrench is moved from here to the origin.
 
-        Gravity   gravity;     ///< Gravity wrench policy instance; returns the wrench at the centre of mass.
-        Aero      aero;        ///< Aerodynamic wrench policy instance.
-        Thrust    thrust;      ///< Propulsion wrench policy instance.
-        MassMdot  mass_model;  ///< Mass-rate model policy instance.
+        Gravity gravity;     ///< Gravity wrench policy instance; returns the wrench at the centre of mass.
+        Aero aero;        ///< Aerodynamic wrench policy instance.
+        Thrust thrust;      ///< Propulsion wrench policy instance.
+        MassMdot mass_model;  ///< Mass-rate model policy instance.
 
         /// @brief Construct from inertial parameters and all policy instances.
         /// @param ip  Inertial parameters (mass, inertia tensor, CoG offset).
@@ -112,10 +112,10 @@ namespace Aetherion::RigidBody {
         /// @param mm  Mass-rate policy instance.
         explicit VectorField(
             const InertialParameters& ip,
-            Gravity   g,
-            Aero      a,
-            Thrust    th,
-            MassMdot  mm)
+            Gravity g,
+            Aero a,
+            Thrust th,
+            MassMdot mm)
             : gravity(std::move(g))
             , aero(std::move(a))
             , thrust(std::move(th))
@@ -140,8 +140,8 @@ namespace Aetherion::RigidBody {
         {
             com_m = Eigen::Vector3d(ip.xbar_m, ip.ybar_m, ip.zbar_m);
             const Spatial::Inertia<double> inertia(ip.mass_kg, inertiaTensor(ip), com_m);
-            M       = inertia.M;
-            M_inv   = M.inverse();
+            M = inertia.M;
+            M_inv = M.inverse();
             mass_kg = ip.mass_kg;
         }
 
@@ -152,33 +152,32 @@ namespace Aetherion::RigidBody {
 
         explicit VectorField(
             const InertialParameters& ip,
-            Gravity   g,
-            Aero      a,
-            Thrust    th)
+            Gravity g,
+            Aero a,
+            Thrust th)
             requires std::default_initializable<MassMdot>
-            : VectorField(ip, std::move(g), std::move(a), std::move(th), MassMdot{}) {}
+            : VectorField(ip, std::move(g), std::move(a), std::move(th), MassMdot{})
+        {}
 
         explicit VectorField(
             const InertialParameters& ip,
-            Gravity   g,
-            Aero      a)
+            Gravity g,
+            Aero a)
             requires std::default_initializable<Thrust> && std::default_initializable<MassMdot>
-            : VectorField(ip, std::move(g), std::move(a), Thrust{}, MassMdot{}) {}
+            : VectorField(ip, std::move(g), std::move(a), Thrust{}, MassMdot{})
+        {}
 
         explicit VectorField(
             const InertialParameters& ip,
-            Gravity   g)
-            requires std::default_initializable<Aero>
-                  && std::default_initializable<Thrust>
-                  && std::default_initializable<MassMdot>
-            : VectorField(ip, std::move(g), Aero{}, Thrust{}, MassMdot{}) {}
+            Gravity g)
+            requires std::default_initializable<Aero> && std::default_initializable<Thrust> && std::default_initializable<MassMdot>
+            : VectorField(ip, std::move(g), Aero{}, Thrust{}, MassMdot{})
+        {}
 
         explicit VectorField(const InertialParameters& ip)
-            requires std::default_initializable<Gravity>
-                  && std::default_initializable<Aero>
-                  && std::default_initializable<Thrust>
-                  && std::default_initializable<MassMdot>
-            : VectorField(ip, Gravity{}, Aero{}, Thrust{}, MassMdot{}) {}
+            requires std::default_initializable<Gravity> && std::default_initializable<Aero> && std::default_initializable<Thrust> && std::default_initializable<MassMdot>
+            : VectorField(ip, Gravity{}, Aero{}, Thrust{}, MassMdot{})
+        {}
 
         /// @brief Evaluate the ODE right-hand side @f$\dot{\mathbf{x}}@f$.
         ///
@@ -186,11 +185,11 @@ namespace Aetherion::RigidBody {
         /// @param g  Current SE(3) pose (rotation + ECI position).
         /// @param x  Current Euclidean state @f$[\nu_B(6);\, m(1)]@f$.
         /// @return   Time derivative @f$[\dot{\nu}_B(6);\, \dot{m}(1)]@f$.
-        template<class S>
+        template <class S>
         Eigen::Matrix<S, 7, 1>
-            operator()(S t,
-                const ODE::RKMK::Lie::SE3<S>& g,
-                const Eigen::Matrix<S, 7, 1>& x) const
+        operator()(S t,
+            const ODE::RKMK::Lie::SE3<S>& g,
+            const Eigen::Matrix<S, 7, 1>& x) const
         {
             const Eigen::Matrix<S, 6, 1> nu_B = x.template head<6>();
 

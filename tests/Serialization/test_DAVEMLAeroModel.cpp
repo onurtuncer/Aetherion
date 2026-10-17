@@ -34,7 +34,7 @@ using Catch::Matchers::WithinAbs;
 // AV Rule 30 deviation (#define for constants): CMake-injected path constant via
 // target_compile_definitions; see CODING_STANDARDS.md, Pre-Processing Directives.
 #ifndef DAVEML_AERO_FILE
-#  define DAVEML_AERO_FILE ""
+#define DAVEML_AERO_FILE ""
 #endif
 static const std::string kAeroFile = DAVEML_AERO_FILE;
 
@@ -44,7 +44,7 @@ static const std::string kAeroFile = DAVEML_AERO_FILE;
 // ─────────────────────────────────────────────────────────────────────────────
 namespace {
 
-const char* const kMathOpDML = R"(<?xml version="1.0" encoding="UTF-8"?>
+    const char* const kMathOpDML = R"(<?xml version="1.0" encoding="UTF-8"?>
 <DAVEfunc>
   <variableDef varID="in_x" units="nd" initialValue="4.0"><isInput/></variableDef>
   <variableDef varID="in_y" units="nd" initialValue="3.0"><isInput/></variableDef>
@@ -93,15 +93,15 @@ const char* const kMathOpDML = R"(<?xml version="1.0" encoding="UTF-8"?>
   </variableDef>
 </DAVEfunc>)";
 
-std::string writeMathOpDML()
-{
+    std::string writeMathOpDML()
+    {
     // One file per process: CTest runs every test case as its own process, and
     // with -j they wrote and deleted one shared path under each other.
-    static const std::string path = "_ae_test_mathop_" + std::to_string(std::random_device{}()) + ".dml";
-    std::ofstream f(path);
-    f << kMathOpDML;
-    return path;
-}
+        static const std::string path = "_ae_test_mathop_" + std::to_string(std::random_device{}()) + ".dml";
+        std::ofstream f(path);
+        f << kMathOpDML;
+        return path;
+    }
 
 } // namespace
 
@@ -122,9 +122,9 @@ TEST_CASE("DAVEMLAeroModel: reference geometry", "[daveml_aero][smoke]")
 {
     if (kAeroFile.empty()) return;
     DAVEMLAeroModel m(kAeroFile);
-    CHECK_THAT(m.srefFt2(),  WithinAbs(300.0,  1e-9));
-    CHECK_THAT(m.cbarFt(),   WithinAbs(11.32,  1e-9));
-    CHECK_THAT(m.bspanFt(),  WithinAbs(30.0,   1e-9));
+    CHECK_THAT(m.srefFt2(), WithinAbs(300.0, 1e-9));
+    CHECK_THAT(m.cbarFt(), WithinAbs(11.32, 1e-9));
+    CHECK_THAT(m.bspanFt(), WithinAbs(30.0, 1e-9));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -137,9 +137,9 @@ TEST_CASE("DAVEMLAeroModel: nominal check-case (double)", "[daveml_aero][smoke]"
     DAVEMLAeroModel m(kAeroFile);
 
     DAVEMLAeroModel::Inputs<double> in;
-    in.vt_fps   = 300.0;
-    in.alpha_deg =  5.0;
-    in.beta_deg  =  0.0;
+    in.vt_fps = 300.0;
+    in.alpha_deg = 5.0;
+    in.beta_deg = 0.0;
     in.p_rps = in.q_rps = in.r_rps = 0.0;
     in.el_deg = in.ail_deg = in.rdr_deg = 0.0;
 
@@ -147,11 +147,11 @@ TEST_CASE("DAVEMLAeroModel: nominal check-case (double)", "[daveml_aero][smoke]"
 
     // Tolerances match the 4-significant-figure check-case values
     CHECK_THAT(out.cx, WithinAbs(-0.004, 1e-4));
-    CHECK_THAT(out.cy, WithinAbs( 0.000, 1e-6));
+    CHECK_THAT(out.cy, WithinAbs(0.000, 1e-6));
     CHECK_THAT(out.cz, WithinAbs(-0.416, 1e-4));
-    CHECK_THAT(out.cl, WithinAbs( 0.000, 1e-6));
+    CHECK_THAT(out.cl, WithinAbs(0.000, 1e-6));
     CHECK_THAT(out.cm, WithinAbs(-0.005, 1e-4));
-    CHECK_THAT(out.cn, WithinAbs( 0.000, 1e-6));
+    CHECK_THAT(out.cn, WithinAbs(0.000, 1e-6));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -165,20 +165,20 @@ TEST_CASE("DAVEMLAeroModel: nominal check-case (AD<double>)", "[daveml_aero][smo
 
     using AD = CppAD::AD<double>;
     DAVEMLAeroModel::Inputs<AD> in;
-    in.vt_fps    = AD(300.0);
+    in.vt_fps = AD(300.0);
     in.alpha_deg = AD(5.0);
-    in.beta_deg  = AD(0.0);
+    in.beta_deg = AD(0.0);
     in.p_rps = in.q_rps = in.r_rps = AD(0.0);
     in.el_deg = in.ail_deg = in.rdr_deg = AD(0.0);
 
     auto out = m.evaluate(in);
 
     CHECK_THAT(CppAD::Value(out.cx), WithinAbs(-0.004, 1e-4));
-    CHECK_THAT(CppAD::Value(out.cy), WithinAbs( 0.000, 1e-6));
+    CHECK_THAT(CppAD::Value(out.cy), WithinAbs(0.000, 1e-6));
     CHECK_THAT(CppAD::Value(out.cz), WithinAbs(-0.416, 1e-4));
-    CHECK_THAT(CppAD::Value(out.cl), WithinAbs( 0.000, 1e-6));
+    CHECK_THAT(CppAD::Value(out.cl), WithinAbs(0.000, 1e-6));
     CHECK_THAT(CppAD::Value(out.cm), WithinAbs(-0.005, 1e-4));
-    CHECK_THAT(CppAD::Value(out.cn), WithinAbs( 0.000, 1e-6));
+    CHECK_THAT(CppAD::Value(out.cn), WithinAbs(0.000, 1e-6));
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -192,9 +192,9 @@ TEST_CASE("DAVEMLAeroModel: physical sanity at alpha=10 deg", "[daveml_aero][smo
     DAVEMLAeroModel m(kAeroFile);
 
     DAVEMLAeroModel::Inputs<double> in;
-    in.vt_fps    = 300.0;
-    in.alpha_deg =  10.0;
-    in.beta_deg  =   0.0;
+    in.vt_fps = 300.0;
+    in.alpha_deg = 10.0;
+    in.beta_deg = 0.0;
     in.p_rps = in.q_rps = in.r_rps = 0.0;
     in.el_deg = in.ail_deg = in.rdr_deg = 0.0;
 
@@ -221,21 +221,21 @@ TEST_CASE("DAVEMLAeroModel: constructor throws for non-existent file", "[daveml_
 // ─────────────────────────────────────────────────────────────────────────────
 
 TEST_CASE("DAVEMLAeroModel: evaluateRaw returns all six force-moment coefficients",
-          "[daveml_aero][smoke]")
+    "[daveml_aero][smoke]")
 {
     if (kAeroFile.empty()) return;
     DAVEMLAeroModel m(kAeroFile);
 
     std::unordered_map<std::string, double> vars;
-    vars["vt"]    = 300.0;
+    vars["vt"] = 300.0;
     vars["alpha"] = 5.0;
-    vars["beta"]  = 0.0;
+    vars["beta"] = 0.0;
     vars["p"] = vars["q"] = vars["r"] = 0.0;
     vars["el"] = vars["ail"] = vars["rdr"] = 0.0;
 
     auto result = m.evaluateRaw(vars);
 
-    for (const char* id : {"cx", "cy", "cz", "cl", "cm", "cn"}) {
+    for (const char* id : { "cx", "cy", "cz", "cl", "cm", "cn" }) {
         auto it = result.find(id);
         REQUIRE(it != result.end());
         CHECK(std::isfinite(it->second));
@@ -254,9 +254,9 @@ TEST_CASE("DAVEMLAeroModel: non-zero sideslip gives non-zero cy", "[daveml_aero]
     DAVEMLAeroModel m(kAeroFile);
 
     DAVEMLAeroModel::Inputs<double> in;
-    in.vt_fps    = 300.0;
-    in.alpha_deg =   5.0;
-    in.beta_deg  =   5.0;
+    in.vt_fps = 300.0;
+    in.alpha_deg = 5.0;
+    in.beta_deg = 5.0;
 
     auto out = m.evaluate(in);
     CHECK(out.cy != 0.0);
@@ -283,7 +283,7 @@ TEST_CASE("DAVEMLAeroModel: negative alpha is evaluated without error", "[daveml
     DAVEMLAeroModel m(kAeroFile);
 
     DAVEMLAeroModel::Inputs<double> in;
-    in.vt_fps    = 300.0;
+    in.vt_fps = 300.0;
     in.alpha_deg = -5.0;
 
     auto out = m.evaluate(in);
@@ -318,7 +318,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw abs of positive value", "[daveml_aero][m
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 4.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
     CHECK_THAT(result["v_abs"], WithinAbs(4.0, 1e-12));
 }
 
@@ -328,7 +328,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw abs of negative value", "[daveml_aero][m
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", -3.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", -3.0 } });
     CHECK_THAT(result["v_abs"], WithinAbs(3.0, 1e-12));
 }
 
@@ -338,7 +338,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw sqrt", "[daveml_aero][mathml]")
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 9.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 9.0 } });
     CHECK_THAT(result["v_sqrt"], WithinAbs(3.0, 1e-12));
 }
 
@@ -348,7 +348,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw sin at zero", "[daveml_aero][mathml]")
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 0.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 0.0 } });
     CHECK_THAT(result["v_sin"], WithinAbs(0.0, 1e-12));
 }
 
@@ -358,7 +358,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw cos at zero", "[daveml_aero][mathml]")
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 0.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 0.0 } });
     CHECK_THAT(result["v_cos"], WithinAbs(1.0, 1e-12));
 }
 
@@ -368,7 +368,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw tan at zero", "[daveml_aero][mathml]")
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 0.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 0.0 } });
     CHECK_THAT(result["v_tan"], WithinAbs(0.0, 1e-12));
 }
 
@@ -389,7 +389,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw lt true", "[daveml_aero][mathml]")
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 4.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
     CHECK_THAT(result["v_lt"], WithinAbs(1.0, 1e-12));  // 4 < 5 → 1
 }
 
@@ -399,7 +399,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw lt false", "[daveml_aero][mathml]")
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 6.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 6.0 } });
     CHECK_THAT(result["v_lt"], WithinAbs(0.0, 1e-12));  // 6 < 5 → 0
 }
 
@@ -409,7 +409,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw gt true", "[daveml_aero][mathml]")
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 4.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
     CHECK_THAT(result["v_gt"], WithinAbs(1.0, 1e-12));  // 4 > 3 → 1
 }
 
@@ -419,7 +419,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw leq equal boundary", "[daveml_aero][math
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 4.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
     CHECK_THAT(result["v_leq"], WithinAbs(1.0, 1e-12));  // 4 <= 4 → 1
 }
 
@@ -429,7 +429,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw geq equal boundary", "[daveml_aero][math
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 4.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
     CHECK_THAT(result["v_geq"], WithinAbs(1.0, 1e-12));  // 4 >= 4 → 1
 }
 
@@ -439,7 +439,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw eq true", "[daveml_aero][mathml]")
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 4.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
     CHECK_THAT(result["v_eq"], WithinAbs(1.0, 1e-12));  // 4 == 4 → 1
 }
 
@@ -449,7 +449,7 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw piecewise otherwise branch", "[daveml_ae
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", 4.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", 4.0 } });
     CHECK_THAT(result["v_pw"], WithinAbs(20.0, 1e-12));  // 4 < 0 is false → otherwise
 }
 
@@ -459,6 +459,6 @@ TEST_CASE("DAVEMLAeroModel: evaluateRaw piecewise piece branch", "[daveml_aero][
     DAVEMLAeroModel m(path);
     std::filesystem::remove(path);
 
-    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{{"in_x", -1.0}});
+    auto result = m.evaluateRaw(std::unordered_map<std::string, double>{ { "in_x", -1.0 } });
     CHECK_THAT(result["v_pw"], WithinAbs(10.0, 1e-12));  // -1 < 0 is true → piece
 }

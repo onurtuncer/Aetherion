@@ -32,43 +32,45 @@
 
 namespace {
 
-struct CounterState {
-    int    steps{ 0 };
-    double integral{ 0.0 };
-};
+    struct CounterState
+    {
+        int steps{ 0 };
+        double integral{ 0.0 };
+    };
 
 /// A model whose registered state is a step counter and the integral of 1
 /// over time; `clock` mirrors the base clock seen by do_step so a test can
 /// read it back through a registered output.
-class Counter : public fmu4cpp::fmu_base {
-public:
-    FMU4CPP_CTOR(Counter)
+    class Counter : public fmu4cpp::fmu_base
     {
-        register_integer("steps", &state_.steps).setCausality(fmu4cpp::causality_t::OUTPUT);
-        register_real("integral", &state_.integral).setCausality(fmu4cpp::causality_t::OUTPUT);
-        register_real("clock", &clock_).setCausality(fmu4cpp::causality_t::OUTPUT);
-        register_state(&Counter::state_);
-        Counter::reset();
-    }
+    public:
+        FMU4CPP_CTOR(Counter)
+        {
+            register_integer("steps", &state_.steps).setCausality(fmu4cpp::causality_t::OUTPUT);
+            register_real("integral", &state_.integral).setCausality(fmu4cpp::causality_t::OUTPUT);
+            register_real("clock", &clock_).setCausality(fmu4cpp::causality_t::OUTPUT);
+            register_state(&Counter::state_);
+            Counter::reset();
+        }
 
-    bool do_step(double dt) override
-    {
-        ++state_.steps;
-        state_.integral += dt;
-        clock_ = currentTime() + dt;
-        return true;
-    }
+        bool do_step(double dt) override
+        {
+            ++state_.steps;
+            state_.integral += dt;
+            clock_ = currentTime() + dt;
+            return true;
+        }
 
-    void reset() override
-    {
-        state_ = CounterState{};
-        clock_ = 0.0;
-    }
+        void reset() override
+        {
+            state_ = CounterState{};
+            clock_ = 0.0;
+        }
 
-private:
-    CounterState state_{};
-    double       clock_{ 0.0 };
-};
+    private:
+        CounterState state_{};
+        double clock_{ 0.0 };
+    };
 
 }  // namespace
 
@@ -92,7 +94,7 @@ namespace {
 }
 
 TEST_CASE("fmu4cpp: a restored FMU state restores the clock, so the next step at that time is accepted",
-          "[fmu4cpp][state][regression]")
+    "[fmu4cpp][state][regression]")
 {
     auto m = fmu4cpp::createInstance({});
     m->enter_initialisation_mode(0.0, std::nullopt, std::nullopt);

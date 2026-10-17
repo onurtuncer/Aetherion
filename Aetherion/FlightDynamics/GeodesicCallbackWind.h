@@ -42,60 +42,65 @@ namespace Aetherion::FlightDynamics {
 /// **AD compatibility**: when called with S = CppAD::AD\<double\>, the method
 /// returns the ECEF wind cached from the most recent *double* evaluation
 /// (frozen-Jacobian approximation, standard for external data sources).
-struct GeodesicCallbackWind {
-    using Callback = std::function<
-        Eigen::Vector3d(double lat_rad, double lon_rad, double alt_m, double t_s)>;
-
-    Callback callback;
-
-    GeodesicCallbackWind() = default;
-    explicit GeodesicCallbackWind(Callback fn) : callback(std::move(fn)) {}
-
-    template<class S>
-    Eigen::Matrix<S, 3, 1>
-    velocity_ecef(const Eigen::Matrix<S,3,1>& r_eci, S t_s) const
+    struct GeodesicCallbackWind
     {
-        if constexpr (std::is_same_v<S, double>) {
-            if (!callback) return Eigen::Matrix<S,3,1>::Zero();
+        using Callback = std::function<
+            Eigen::Vector3d(double lat_rad, double lon_rad, double alt_m, double t_s)>;
+
+        Callback callback;
+
+        GeodesicCallbackWind() = default;
+        explicit GeodesicCallbackWind(Callback fn)
+            : callback(std::move(fn))
+        {}
+
+        template <class S>
+        Eigen::Matrix<S, 3, 1>
+        velocity_ecef(const Eigen::Matrix<S, 3, 1>& r_eci, S t_s) const
+        {
+            if constexpr (std::is_same_v<S, double>) {
+                if (!callback) return Eigen::Matrix<S, 3, 1>::Zero();
 
             // ECI → ECEF (rotate by −θ around z)
-            const double theta = Environment::WGS84::kRotationRate_rad_s * t_s;
-            const double ct = std::cos(theta), st = std::sin(theta);
-            const Eigen::Vector3d r_ecef{
-                 ct * r_eci(0) + st * r_eci(1),
-                -st * r_eci(0) + ct * r_eci(1),
-                       r_eci(2)
-            };
+                const double theta = Environment::WGS84::kRotationRate_rad_s * t_s;
+                const double ct = std::cos(theta), st = std::sin(theta);
+                const Eigen::Vector3d r_ecef{
+                    ct * r_eci(0) + st * r_eci(1),
+                    -st * r_eci(0) + ct * r_eci(1),
+                    r_eci(2)
+                };
 
             // ECEF → geodetic WGS-84
-            std::array<double,3> ra{ r_ecef(0), r_ecef(1), r_ecef(2) };
-            double lat{}, lon{}, alt{};
-            Coordinate::ECEFToGeodeticWGS84(ra, lat, lon, alt);
+                std::array<double, 3> ra{ r_ecef(0), r_ecef(1), r_ecef(2) };
+                double lat{}, lon{}, alt{};
+                Coordinate::ECEFToGeodeticWGS84(ra, lat, lon, alt);
 
             // User callback → NED wind
-            const Eigen::Vector3d v_ned = callback(lat, lon, alt, t_s);
+                const Eigen::Vector3d v_ned = callback(lat, lon, alt, t_s);
 
             // NED → ECEF
-            const double sLat = std::sin(lat), cLat = std::cos(lat);
-            const double sLon = std::sin(lon), cLon = std::cos(lon);
-            m_cached_ecef = {
-                v_ned(0)*(-sLat*cLon) + v_ned(1)*(-sLon) + v_ned(2)*(-cLat*cLon),
-                v_ned(0)*(-sLat*sLon) + v_ned(1)*( cLon) + v_ned(2)*(-cLat*sLon),
-                v_ned(0)*( cLat)                          + v_ned(2)*(-sLat)
-            };
-            return m_cached_ecef;
-        } else {
+                const double sLat = std::sin(lat), cLat = std::cos(lat);
+                const double sLon = std::sin(lon), cLon = std::cos(lon);
+                m_cached_ecef = {
+                    v_ned(0) * (-sLat * cLon) + v_ned(1) * (-sLon) + v_ned(2) * (-cLat * cLon),
+                    v_ned(0) * (-sLat * sLon) + v_ned(1) * (cLon) + v_ned(2) * (-cLat * sLon),
+                    v_ned(0) * (cLat) + v_ned(2) * (-sLat)
+                };
+                return m_cached_ecef;
+            } else {
             // AD path: frozen ECEF cache cast to S
-            return m_cached_ecef.template cast<S>();
+                return m_cached_ecef.template cast<S>();
+            }
         }
-    }
 
-private:
-    mutable Eigen::Vector3d m_cached_ecef{ 0.0, 0.0, 0.0 };
-};
+    private:
+        mutable Eigen::Vector3d m_cached_ecef{ 0.0, 0.0, 0.0 };
+    };
 
 } // namespace Aetherion::FlightDynamics
 
 namespace Aetherion::Environment {
-    template<> struct is_wind_model<FlightDynamics::GeodesicCallbackWind> : std::true_type {};
+    template <>
+    struct is_wind_model<FlightDynamics::GeodesicCallbackWind> : std::true_type
+    {};
 } // namespace Aetherion::Environment

@@ -60,8 +60,8 @@ namespace Aetherion::RigidBody {
     inline Spatial::Wrench<Scalar> GravitationalWrenchJ2AtCG(
         const Aetherion::Environment::Vec3<Scalar>& r_W,
         const Scalar& mass_kg,
-        const Scalar& mu       = Scalar(Environment::WGS84::kGM_m3_s2),
-        const Scalar& Re       = Scalar(Environment::WGS84::kSemiMajorAxis_m),
+        const Scalar& mu = Scalar(Environment::WGS84::kGM_m3_s2),
+        const Scalar& Re = Scalar(Environment::WGS84::kSemiMajorAxis_m),
         const Scalar& J2_coeff = Scalar(Environment::WGS84::kJ2))
     {
         Spatial::Wrench<Scalar> w{};
@@ -82,9 +82,9 @@ namespace Aetherion::RigidBody {
     // =========================================================================
     template <class Scalar>
     inline Spatial::Wrench<Scalar> GravitationalWrenchWithOffset(
-        const Aetherion::Environment::Vec3<Scalar>&  r_W,
-        const Scalar&                                mass_kg,
-        const Eigen::Matrix<Scalar, 3, 1>&           r_app_minus_cg_W_m,
+        const Aetherion::Environment::Vec3<Scalar>& r_W,
+        const Scalar& mass_kg,
+        const Eigen::Matrix<Scalar, 3, 1>& r_app_minus_cg_W_m,
         const Scalar& mu = Scalar(Environment::WGS84::kGM_m3_s2))
     {
         Spatial::Wrench<Scalar> w{};
@@ -94,7 +94,7 @@ namespace Aetherion::RigidBody {
         Eigen::Matrix<Scalar, 3, 1> g_W;
         g_W << g_arr[0], g_arr[1], g_arr[2];
 
-        const Eigen::Matrix<Scalar, 3, 1> F_W_N  = mass_kg * g_W;
+        const Eigen::Matrix<Scalar, 3, 1> F_W_N = mass_kg * g_W;
         const Eigen::Matrix<Scalar, 3, 1> M_W_Nm = r_app_minus_cg_W_m.cross(F_W_N);
 
         w.f.template segment<3>(0) = M_W_Nm;

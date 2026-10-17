@@ -34,65 +34,64 @@
 #include <stdexcept>
 #include <vector>
 
-namespace Aetherion::Estimation::Replay
-{
+namespace Aetherion::Estimation::Replay {
 
-struct TimeBaseFit
-{
-  double offset = 0.0;  ///< host = offset + scale * part
-  double scale = 1.0;
-  double rmsResidual = 0.0;  ///< of host - (offset + scale * part), seconds
-  double maxResidual = 0.0;
-  std::size_t samples = 0;
+    struct TimeBaseFit
+    {
+        double offset = 0.0;  ///< host = offset + scale * part
+        double scale = 1.0;
+        double rmsResidual = 0.0;  ///< of host - (offset + scale * part), seconds
+        double maxResidual = 0.0;
+        std::size_t samples = 0;
 
   /// Part-clock (nominally simulation) time of a host stamp.
-  [[nodiscard]] double toPart(double host) const { return (host - offset) / scale; }
-  [[nodiscard]] double toHost(double part) const { return offset + scale * part; }
-};
+        [[nodiscard]] double toPart(double host) const { return (host - offset) / scale; }
+        [[nodiscard]] double toHost(double part) const { return offset + scale * part; }
+    };
 
 /// Least-squares line through (part, host) pairs. Two or more distinct part
 /// times are required.
-[[nodiscard]] inline TimeBaseFit fitTimeBase(const std::vector<double>& part, const std::vector<double>& host)
-{
-  if (part.size() != host.size())
-    throw std::invalid_argument("fitTimeBase: part and host differ in length");
-  const std::size_t n = part.size();
-  if (n < 2)
-    throw std::invalid_argument("fitTimeBase: fewer than two samples");
+    [[nodiscard]] inline TimeBaseFit fitTimeBase(const std::vector<double>& part, const std::vector<double>& host)
+    {
+        if (part.size() != host.size())
+            throw std::invalid_argument("fitTimeBase: part and host differ in length");
+        const std::size_t n = part.size();
+        if (n < 2)
+            throw std::invalid_argument("fitTimeBase: fewer than two samples");
 
   // Centred for conditioning: part times are seconds since start, host
   // times may be a wall clock.
-  double mp = 0.0, mh = 0.0;
-  for (std::size_t i = 0; i < n; ++i)
-  {
-    mp += part[i];
-    mh += host[i];
-  }
-  mp /= static_cast<double>(n);
-  mh /= static_cast<double>(n);
-  double spp = 0.0, sph = 0.0;
-  for (std::size_t i = 0; i < n; ++i)
-  {
-    const double dp = part[i] - mp;
-    spp += dp * dp;
-    sph += dp * (host[i] - mh);
-  }
-  if (spp <= 0.0)
-    throw std::invalid_argument("fitTimeBase: all part times equal");
+        double mp = 0.0, mh = 0.0;
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            mp += part[i];
+            mh += host[i];
+        }
+        mp /= static_cast<double>(n);
+        mh /= static_cast<double>(n);
+        double spp = 0.0, sph = 0.0;
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            const double dp = part[i] - mp;
+            spp += dp * dp;
+            sph += dp * (host[i] - mh);
+        }
+        if (spp <= 0.0)
+            throw std::invalid_argument("fitTimeBase: all part times equal");
 
-  TimeBaseFit f;
-  f.scale = sph / spp;
-  f.offset = mh - f.scale * mp;
-  f.samples = n;
-  double ss = 0.0;
-  for (std::size_t i = 0; i < n; ++i)
-  {
-    const double r = host[i] - f.toHost(part[i]);
-    ss += r * r;
-    f.maxResidual = std::max(f.maxResidual, std::abs(r));
-  }
-  f.rmsResidual = std::sqrt(ss / static_cast<double>(n));
-  return f;
-}
+        TimeBaseFit f;
+        f.scale = sph / spp;
+        f.offset = mh - f.scale * mp;
+        f.samples = n;
+        double ss = 0.0;
+        for (std::size_t i = 0; i < n; ++i)
+        {
+            const double r = host[i] - f.toHost(part[i]);
+            ss += r * r;
+            f.maxResidual = std::max(f.maxResidual, std::abs(r));
+        }
+        f.rmsResidual = std::sqrt(ss / static_cast<double>(n));
+        return f;
+    }
 
 }  // namespace Aetherion::Estimation::Replay

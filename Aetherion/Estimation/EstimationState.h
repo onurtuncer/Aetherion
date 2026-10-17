@@ -36,57 +36,56 @@
 #include <Aetherion/Estimation/Configuration.h>
 #include <Aetherion/Estimation/SE23.h>
 
-namespace Aetherion::Estimation
-{
+namespace Aetherion::Estimation {
 
-template <class S>
-struct EstimationState
-{
-  using Vec3 = Eigen::Matrix<S, 3, 1>;
-  using VecX = Eigen::Matrix<S, Eigen::Dynamic, 1>;
-  using Tangent = typename SE23<S>::Tangent;
+    template <class S>
+    struct EstimationState
+    {
+        using Vec3 = Eigen::Matrix<S, 3, 1>;
+        using VecX = Eigen::Matrix<S, Eigen::Dynamic, 1>;
+        using Tangent = typename SE23<S>::Tangent;
 
-  SE23<S> X;                      ///< Navigation core: attitude body -> LCI, velocity, position in LCI
-  Vec3 gyroBias = Vec3::Zero();   ///< [rad/s], body
-  Vec3 accelBias = Vec3::Zero();  ///< [m/s^2], body
-  S baroBias = S(0);              ///< [m] of pressure altitude
+        SE23<S> X;                      ///< Navigation core: attitude body -> LCI, velocity, position in LCI
+        Vec3 gyroBias = Vec3::Zero();   ///< [rad/s], body
+        Vec3 accelBias = Vec3::Zero();  ///< [m/s^2], body
+        S baroBias = S(0);              ///< [m] of pressure altitude
 
-  template <ErrorConvention C>
-  [[nodiscard]] EstimationState retract(const Configuration& cfg, const VecX& delta) const
-  {
-    EstimationState out = *this;
-    const SE23<S> E = SE23<S>::Exp(delta.template segment<9>(cfg.offset(BlockId::NavCore)));
-    if constexpr (C == ErrorConvention::RightInvariant)
-      out.X = E * X;
-    else
-      out.X = X * E;
-    if (const int o = cfg.offset(BlockId::GyroBias); o >= 0)
-      out.gyroBias += delta.template segment<3>(o);
-    if (const int o = cfg.offset(BlockId::AccelBias); o >= 0)
-      out.accelBias += delta.template segment<3>(o);
-    if (const int o = cfg.offset(BlockId::BaroBias); o >= 0)
-      out.baroBias += delta[o];
-    return out;
-  }
+        template <ErrorConvention C>
+        [[nodiscard]] EstimationState retract(const Configuration& cfg, const VecX& delta) const
+        {
+            EstimationState out = *this;
+            const SE23<S> E = SE23<S>::Exp(delta.template segment<9>(cfg.offset(BlockId::NavCore)));
+            if constexpr (C == ErrorConvention::RightInvariant)
+                out.X = E * X;
+            else
+                out.X = X * E;
+            if (const int o = cfg.offset(BlockId::GyroBias); o >= 0)
+                out.gyroBias += delta.template segment<3>(o);
+            if (const int o = cfg.offset(BlockId::AccelBias); o >= 0)
+                out.accelBias += delta.template segment<3>(o);
+            if (const int o = cfg.offset(BlockId::BaroBias); o >= 0)
+                out.baroBias += delta[o];
+            return out;
+        }
 
-  template <ErrorConvention C>
-  [[nodiscard]] VecX error(const Configuration& cfg, const EstimationState& other) const
-  {
-    VecX xi = VecX::Zero(cfg.dimension());
-    SE23<S> E;
-    if constexpr (C == ErrorConvention::RightInvariant)
-      E = other.X * X.inverse();
-    else
-      E = X.inverse() * other.X;
-    xi.template segment<9>(cfg.offset(BlockId::NavCore)) = SE23<S>::Log(E);
-    if (const int o = cfg.offset(BlockId::GyroBias); o >= 0)
-      xi.template segment<3>(o) = other.gyroBias - gyroBias;
-    if (const int o = cfg.offset(BlockId::AccelBias); o >= 0)
-      xi.template segment<3>(o) = other.accelBias - accelBias;
-    if (const int o = cfg.offset(BlockId::BaroBias); o >= 0)
-      xi[o] = other.baroBias - baroBias;
-    return xi;
-  }
-};
+        template <ErrorConvention C>
+        [[nodiscard]] VecX error(const Configuration& cfg, const EstimationState& other) const
+        {
+            VecX xi = VecX::Zero(cfg.dimension());
+            SE23<S> E;
+            if constexpr (C == ErrorConvention::RightInvariant)
+                E = other.X * X.inverse();
+            else
+                E = X.inverse() * other.X;
+            xi.template segment<9>(cfg.offset(BlockId::NavCore)) = SE23<S>::Log(E);
+            if (const int o = cfg.offset(BlockId::GyroBias); o >= 0)
+                xi.template segment<3>(o) = other.gyroBias - gyroBias;
+            if (const int o = cfg.offset(BlockId::AccelBias); o >= 0)
+                xi.template segment<3>(o) = other.accelBias - accelBias;
+            if (const int o = cfg.offset(BlockId::BaroBias); o >= 0)
+                xi[o] = other.baroBias - baroBias;
+            return xi;
+        }
+    };
 
 }  // namespace Aetherion::Estimation

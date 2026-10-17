@@ -61,10 +61,8 @@ int main(int argc, char* argv[])
     std::string filename;
 
     auto cli =
-        session.cli()
-        | Opt(filename, "filename")
-        ["--config"]
-        ("Path to FlightSimulationConfig JSON file");
+        session.cli() | Opt(filename, "filename")
+                            ["--config"]("Path to FlightSimulationConfig JSON file");
 
     session.cli(cli);
 
@@ -85,14 +83,17 @@ int main(int argc, char* argv[])
 TEST_CASE("LoadConfig(filename): throws for non-existent file", "[config][LoadConfig]")
 {
     REQUIRE_THROWS_AS(
-        Aetherion::Serialization::LoadConfig(std::string{"_nonexistent_file_xyz.json"}),
+        Aetherion::Serialization::LoadConfig(std::string{ "_nonexistent_file_xyz.json" }),
         std::runtime_error);
 }
 
 TEST_CASE("LoadConfig(filename): throws for malformed JSON", "[config][LoadConfig]")
 {
     const std::string tmp = "_ae_test_bad.json";
-    { std::ofstream f(tmp); f << "{ not : valid json }"; }
+    {
+        std::ofstream f(tmp);
+        f << "{ not : valid json }";
+    }
     REQUIRE_THROWS_AS(
         Aetherion::Serialization::LoadConfig(tmp),
         std::runtime_error);
@@ -102,7 +103,10 @@ TEST_CASE("LoadConfig(filename): throws for malformed JSON", "[config][LoadConfi
 TEST_CASE("LoadConfig(filename): throws for schema mismatch", "[config][LoadConfig]")
 {
     const std::string tmp = "_ae_test_schema.json";
-    { std::ofstream f(tmp); f << R"({"unexpected_key": 42})"; }
+    {
+        std::ofstream f(tmp);
+        f << R"({"unexpected_key": 42})";
+    }
     REQUIRE_THROWS_AS(
         Aetherion::Serialization::LoadConfig(tmp),
         std::runtime_error);
@@ -150,5 +154,5 @@ TEST_CASE("SimulationConfig loads correctly from JSON file", "[config][external_
 
     // Earth rotation sanity
     REQUIRE(cfg.bodyRates.roll_rad_s ==
-        Catch::Approx(-7.292113023867705e-05));
+            Catch::Approx(-7.292113023867705e-05));
 }

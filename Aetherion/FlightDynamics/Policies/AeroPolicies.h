@@ -23,12 +23,13 @@ namespace Aetherion::FlightDynamics {
 ///
 /// Models a dragless, liftless body (e.g. vacuum trajectory or baseline case).
 /// Satisfies @c AeroPolicy; the compiler optimises the zero addition away entirely.
-    struct ZeroAeroPolicy {
-        template<class S>
+    struct ZeroAeroPolicy
+    {
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>&,
-                const Eigen::Matrix<S, 6, 1>&,
-                S, S) const
+        operator()(const ODE::RKMK::Lie::SE3<S>&,
+            const Eigen::Matrix<S, 6, 1>&,
+            S, S) const
         {
             Spatial::Wrench<S> w{};
             w.f.setZero();
@@ -48,18 +49,22 @@ namespace Aetherion::FlightDynamics {
 /// @f$h \approx |\mathbf{r}_\mathrm{ECI}| - R_e@f$.
 ///
 /// Satisfies @c AeroPolicy (works for both @c double and @c CppAD::AD\<double\>).
-    struct DragOnlyAeroPolicy {
-        double CD   { 0.0 }; ///< Drag coefficient [-].
+    struct DragOnlyAeroPolicy
+    {
+        double CD{ 0.0 }; ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].
 
         DragOnlyAeroPolicy() = default;
-        DragOnlyAeroPolicy(double cd, double s_ref) : CD(cd), S_ref(s_ref) {}
+        DragOnlyAeroPolicy(double cd, double s_ref)
+            : CD(cd)
+            , S_ref(s_ref)
+        {}
 
-        template<class S>
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>& g,
-                const Eigen::Matrix<S, 6, 1>& nu_B,
-                S /*mass*/, S /*t*/) const
+        operator()(const ODE::RKMK::Lie::SE3<S>& g,
+            const Eigen::Matrix<S, 6, 1>& nu_B,
+            S /*mass*/, S /*t*/) const
         {
             using Environment::detail::SquareRoot;
 
@@ -82,7 +87,7 @@ namespace Aetherion::FlightDynamics {
             const S rho = Environment::US1976Atmosphere(alt).rho;
 
             // Speed — AD-safe sqrt: avoids undefined derivative at v=0
-            const S v2     = v_rel.squaredNorm();
+            const S v2 = v_rel.squaredNorm();
             const S v_safe = SquareRoot(v2 + S(1.0e-30));
 
             // F_drag = −½ ρ CD S_ref |v_rel| v_rel  (body frame, opposes airspeed)
@@ -114,25 +119,33 @@ namespace Aetherion::FlightDynamics {
 /// consistent with @c DragOnlyAeroPolicy.  AD-safe for use with CppAD.
 ///
 /// Satisfies @c AeroPolicy.
-    struct BrickDampingAeroPolicy {
-        double CD  { 0.0 }; ///< Drag coefficient [-].
-        double S   { 0.0 }; ///< Reference area [m²].
-        double b   { 0.0 }; ///< Span reference length [m] (roll and yaw scaling).
+    struct BrickDampingAeroPolicy
+    {
+        double CD{ 0.0 }; ///< Drag coefficient [-].
+        double S{ 0.0 }; ///< Reference area [m²].
+        double b{ 0.0 }; ///< Span reference length [m] (roll and yaw scaling).
         double cbar{ 0.0 }; ///< Chord reference length [m] (pitch scaling).
-        double Clp { 0.0 }; ///< Roll damping derivative @f$C_{l_p}@f$ [-].
-        double Cmq { 0.0 }; ///< Pitch damping derivative @f$C_{m_q}@f$ [-].
-        double Cnr { 0.0 }; ///< Yaw damping derivative @f$C_{n_r}@f$ [-].
+        double Clp{ 0.0 }; ///< Roll damping derivative @f$C_{l_p}@f$ [-].
+        double Cmq{ 0.0 }; ///< Pitch damping derivative @f$C_{m_q}@f$ [-].
+        double Cnr{ 0.0 }; ///< Yaw damping derivative @f$C_{n_r}@f$ [-].
 
         BrickDampingAeroPolicy() = default;
         BrickDampingAeroPolicy(double cd, double s, double b_,
-                               double cbar_, double clp, double cmq, double cnr)
-            : CD(cd), S(s), b(b_), cbar(cbar_), Clp(clp), Cmq(cmq), Cnr(cnr) {}
+            double cbar_, double clp, double cmq, double cnr)
+            : CD(cd)
+            , S(s)
+            , b(b_)
+            , cbar(cbar_)
+            , Clp(clp)
+            , Cmq(cmq)
+            , Cnr(cnr)
+        {}
 
-        template<class Sc>
+        template <class Sc>
         Spatial::Wrench<Sc>
-            operator()(const ODE::RKMK::Lie::SE3<Sc>& g,
-                const Eigen::Matrix<Sc, 6, 1>& nu_B,
-                Sc /*mass*/, Sc /*t*/) const
+        operator()(const ODE::RKMK::Lie::SE3<Sc>& g,
+            const Eigen::Matrix<Sc, 6, 1>& nu_B,
+            Sc /*mass*/, Sc /*t*/) const
         {
             using Environment::detail::SquareRoot;
 
@@ -151,7 +164,7 @@ namespace Aetherion::FlightDynamics {
             const Sc rho = Environment::US1976Atmosphere(alt).rho;
 
             // True airspeed — AD-safe sqrt
-            const Sc v2     = v_rel.squaredNorm();
+            const Sc v2 = v_rel.squaredNorm();
             const Sc v_safe = SquareRoot(v2 + Sc(1.0e-30));
 
             // Drag force: −½ ρ CD S |v_rel| v_rel
@@ -159,15 +172,15 @@ namespace Aetherion::FlightDynamics {
 
             // Damping moments: ¼ ρ |V| S (ref_len²) C_xrate * rate
             const Sc k_mom = Sc(0.25) * rho * v_safe * Sc(S);
-            const Sc b2    = Sc(b * b);
-            const Sc cb2   = Sc(cbar * cbar);
+            const Sc b2 = Sc(b * b);
+            const Sc cb2 = Sc(cbar * cbar);
 
             Spatial::Wrench<Sc> w{};
             w.f.setZero();
             // Moments (head<3>): [L, M, N]
-            w.f(0) = k_mom * b2  * Sc(Clp) * omega_B(0);
+            w.f(0) = k_mom * b2 * Sc(Clp) * omega_B(0);
             w.f(1) = k_mom * cb2 * Sc(Cmq) * omega_B(1);
-            w.f(2) = k_mom * b2  * Sc(Cnr) * omega_B(2);
+            w.f(2) = k_mom * b2 * Sc(Cnr) * omega_B(2);
             // Force (tail<3>)
             w.f.template tail<3>() = -k_drag * v_rel;
             return w;
@@ -193,8 +206,9 @@ namespace Aetherion::FlightDynamics {
 ///     - \mathbf{v}_\text{wind,body} @f$.
 ///
 /// Satisfies @c AeroPolicy.
-    struct SteadyWindDragPolicy {
-        double CD   { 0.0 }; ///< Drag coefficient [-].
+    struct SteadyWindDragPolicy
+    {
+        double CD{ 0.0 }; ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].
         /// Wind velocity in ECEF frame [m/s].
         double v_wind_ecef_x{ 0.0 };
@@ -203,15 +217,19 @@ namespace Aetherion::FlightDynamics {
 
         SteadyWindDragPolicy() = default;
         SteadyWindDragPolicy(double cd, double s_ref,
-                             double wx, double wy, double wz)
-            : CD(cd), S_ref(s_ref)
-            , v_wind_ecef_x(wx), v_wind_ecef_y(wy), v_wind_ecef_z(wz) {}
+            double wx, double wy, double wz)
+            : CD(cd)
+            , S_ref(s_ref)
+            , v_wind_ecef_x(wx)
+            , v_wind_ecef_y(wy)
+            , v_wind_ecef_z(wz)
+        {}
 
-        template<class S>
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>& g,
-                const Eigen::Matrix<S, 6, 1>& nu_B,
-                S /*mass*/, S t) const
+        operator()(const ODE::RKMK::Lie::SE3<S>& g,
+            const Eigen::Matrix<S, 6, 1>& nu_B,
+            S /*mass*/, S t) const
         {
             using Environment::detail::SquareRoot;
             using Environment::detail::Sine;
@@ -241,9 +259,9 @@ namespace Aetherion::FlightDynamics {
             // ── Altitude, density, drag ───────────────────────────────────
             const S alt = Environment::GeometricAltitude_m(g.p);
             const S rho = Environment::US1976Atmosphere(alt).rho;
-            const S v2      = v_rel.squaredNorm();
-            const S v_safe  = SquareRoot(v2 + S(1.0e-30));
-            const S k       = S(0.5) * rho * S(CD) * S(S_ref) * v_safe;
+            const S v2 = v_rel.squaredNorm();
+            const S v_safe = SquareRoot(v2 + S(1.0e-30));
+            const S k = S(0.5) * rho * S(CD) * S(S_ref) * v_safe;
 
             Spatial::Wrench<S> w{};
             w.f.setZero();
@@ -270,23 +288,27 @@ namespace Aetherion::FlightDynamics {
 ///
 /// @tparam Wind  A type satisfying the @c WindModel concept.
 /// Satisfies @c AeroPolicy.
-    template<class Wind>
-    struct WindAwareDragPolicy {
+    template <class Wind>
+    struct WindAwareDragPolicy
+    {
         static_assert(Environment::is_wind_model_v<Wind>,
             "Wind must be a registered WindModel (specialise Environment::is_wind_model<Wind>).");
-        double CD   { 0.0 }; ///< Drag coefficient [-].
+        double CD{ 0.0 }; ///< Drag coefficient [-].
         double S_ref{ 0.0 }; ///< Reference area [m²].
-        Wind   wind {};      ///< Wind model instance.
+        Wind wind{};      ///< Wind model instance.
 
         WindAwareDragPolicy() = default;
         WindAwareDragPolicy(double cd, double s_ref, Wind w)
-            : CD(cd), S_ref(s_ref), wind(std::move(w)) {}
+            : CD(cd)
+            , S_ref(s_ref)
+            , wind(std::move(w))
+        {}
 
-        template<class S>
+        template <class S>
         Spatial::Wrench<S>
-            operator()(const ODE::RKMK::Lie::SE3<S>& g,
-                const Eigen::Matrix<S, 6, 1>& nu_B,
-                S /*mass*/, S t) const
+        operator()(const ODE::RKMK::Lie::SE3<S>& g,
+            const Eigen::Matrix<S, 6, 1>& nu_B,
+            S /*mass*/, S t) const
         {
             using Environment::detail::SquareRoot;
             using Environment::detail::Sine;
@@ -319,11 +341,11 @@ namespace Aetherion::FlightDynamics {
             const Eigen::Matrix<S, 3, 1> v_wind_body = g.R.transpose() * v_wind_eci;
 
             // ── Atmosphere-relative velocity and drag ─────────────────────
-            const Eigen::Matrix<S, 3, 1> v_B   = nu_B.template tail<3>();
-            const Eigen::Matrix<S, 3, 1> v_rel  = v_B - v_surface_body - v_wind_body;
-            const S rho    = Environment::US1976Atmosphere(h).rho;
+            const Eigen::Matrix<S, 3, 1> v_B = nu_B.template tail<3>();
+            const Eigen::Matrix<S, 3, 1> v_rel = v_B - v_surface_body - v_wind_body;
+            const S rho = Environment::US1976Atmosphere(h).rho;
             const S v_safe = SquareRoot(v_rel.squaredNorm() + S(1.0e-30));
-            const S k      = S(0.5) * rho * S(CD) * S(S_ref) * v_safe;
+            const S k = S(0.5) * rho * S(CD) * S(S_ref) * v_safe;
 
             Spatial::Wrench<S> w{};
             w.f.setZero();

@@ -17,10 +17,10 @@
 
 namespace {
 
-    template<typename S>
+    template <typename S>
     using Vec3 = Eigen::Matrix<S, 3, 1>;
 
-    template<typename S>
+    template <typename S>
     using Mat3 = Eigen::Matrix<S, 3, 3>;
 
 }

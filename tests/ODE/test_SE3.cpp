@@ -38,10 +38,10 @@ namespace {
         -0.7966664774136267,
         -0.5255324099163290,
         -0.1834346424956498,
-         0.1834346424956498,
-         0.5255324099163290,
-         0.7966664774136267,
-         0.9602898564975363
+        0.1834346424956498,
+        0.5255324099163290,
+        0.7966664774136267,
+        0.9602898564975363
     };
 
     constexpr std::array<double, 8> gl_w = {
@@ -55,14 +55,16 @@ namespace {
         0.1012285362903763
     };
 
-    inline Eigen::Matrix3d so3_exp_eigen(const Eigen::Vector3d& w) {
+    inline Eigen::Matrix3d so3_exp_eigen(const Eigen::Vector3d& w)
+    {
         const double theta = w.norm();
         if (theta == 0.0) return Eigen::Matrix3d::Identity();
         return Eigen::AngleAxisd(theta, w / theta).toRotationMatrix();
     }
 
     // J(w) = ∫_0^1 exp(s[w]x) ds  via 8-pt Gauss–Legendre on [0,1]
-    inline Eigen::Matrix3d so3_left_jacobian_integral(const Eigen::Vector3d& w) {
+    inline Eigen::Matrix3d so3_left_jacobian_integral(const Eigen::Vector3d& w)
+    {
         const double theta = w.norm();
         const Eigen::Vector3d axis = (theta > 0.0) ? (w / theta) : Eigen::Vector3d(1.0, 0.0, 0.0);
 
@@ -83,7 +85,8 @@ namespace {
 
     // Series dexp(x) v = sum_{k>=0} ad_x^k v / (k+1)!
     // Truncate at k=5 (sufficient for small/moderate ||x|| in tests).
-    inline SE3d::Tangent dexp_series(const SE3d::Tangent& x, const SE3d::Tangent& v) {
+    inline SE3d::Tangent dexp_series(const SE3d::Tangent& x, const SE3d::Tangent& v)
+    {
         const Eigen::Matrix<double, 6, 6> A = SE3d::ad_matrix(x);
 
         SE3d::Tangent Av = A * v;
@@ -106,10 +109,11 @@ namespace {
 
     namespace Core = Aetherion::ODE::RKMK::Core;
 
-    template<class S>
+    template <class S>
     using Vec6 = Eigen::Matrix<S, 6, 1>;
 
-    Core::NewtonOptions tight_newton() {
+    Core::NewtonOptions tight_newton()
+    {
         Core::NewtonOptions opt;
         opt.max_iters = 40;
         opt.throw_on_fail = true;
@@ -117,19 +121,23 @@ namespace {
     }
 
     // Field: xi(t,g) = 0
-    struct ZeroField final {
-        template<class S>
-        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+    struct ZeroField final
+    {
+        template <class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const
+        {
             return Vec6<S>::Zero();
         }
     };
 
     // Field: xi(t,g) = [0; v] (pure translation), constant v
-    struct PureTranslationConstant final {
+    struct PureTranslationConstant final
+    {
         Eigen::Vector3d v = Eigen::Vector3d::Zero();
 
-        template<class S>
-        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const {
+        template <class S>
+        Vec6<S> operator()(S /*t*/, const Lie::SE3<S>& /*g*/) const
+        {
             Vec6<S> xi = Vec6<S>::Zero();
             xi.template segment<3>(3) = v.template cast<S>();
             return xi;
@@ -137,12 +145,14 @@ namespace {
     };
 
     // Field: xi(t,g) = [0; v0 + a*t] (pure translation), time varying
-    struct PureTranslationAffine final {
+    struct PureTranslationAffine final
+    {
         Eigen::Vector3d v0 = Eigen::Vector3d::Zero();
         Eigen::Vector3d a = Eigen::Vector3d::Zero();
 
-        template<class S>
-        Vec6<S> operator()(S t, const Lie::SE3<S>& /*g*/) const {
+        template <class S>
+        Vec6<S> operator()(S t, const Lie::SE3<S>& /*g*/) const
+        {
             Vec6<S> xi = Vec6<S>::Zero();
             const Eigen::Matrix<S, 3, 1> v = v0.template cast<S>() + a.template cast<S>() * t;
             xi.template segment<3>(3) = v;
@@ -151,7 +161,8 @@ namespace {
     };
 } // namespace
 
-TEST_CASE("SE3.Identity and composition", "[se3]") {
+TEST_CASE("SE3.Identity and composition", "[se3]")
+{
     const auto I = SE3d::Identity();
 
     SE3d g;
@@ -167,7 +178,8 @@ TEST_CASE("SE3.Identity and composition", "[se3]") {
     REQUIRE((right.p - g.p).norm() == Approx(0.0).margin(1e-15));
 }
 
-TEST_CASE("SE3.inverse: g * g^{-1} = I", "[se3]") {
+TEST_CASE("SE3.inverse: g * g^{-1} = I", "[se3]")
+{
     SE3d g;
     g.R = Eigen::AngleAxisd(0.7, Eigen::Vector3d(0.2, -0.4, 1.0).normalized()).toRotationMatrix();
     g.p = Eigen::Vector3d(-3.0, 0.2, 7.0);
@@ -179,7 +191,8 @@ TEST_CASE("SE3.inverse: g * g^{-1} = I", "[se3]") {
     REQUIRE((prod.p - I.p).norm() == Approx(0.0).margin(1e-12));
 }
 
-TEST_CASE("SE3.Exp: rotation is proper (orthonormal, det=1)", "[se3][exp]") {
+TEST_CASE("SE3.Exp: rotation is proper (orthonormal, det=1)", "[se3][exp]")
+{
     SE3d::Tangent xi;
     xi << 0.3, -0.2, 0.15, 1.0, -2.0, 0.5;
 
@@ -190,7 +203,8 @@ TEST_CASE("SE3.Exp: rotation is proper (orthonormal, det=1)", "[se3][exp]") {
     REQUIRE(g.R.determinant() == Approx(1.0).margin(1e-12));
 }
 
-TEST_CASE("SE3.Exp: matches Eigen AngleAxis for rotation; translation uses integral Jacobian", "[se3][exp]") {
+TEST_CASE("SE3.Exp: matches Eigen AngleAxis for rotation; translation uses integral Jacobian", "[se3][exp]")
+{
     // xi = [w; v]
     const Eigen::Vector3d w(0.3, -0.2, 0.15);
     const Eigen::Vector3d v(1.2, -0.7, 0.4);
@@ -209,7 +223,8 @@ TEST_CASE("SE3.Exp: matches Eigen AngleAxis for rotation; translation uses integ
     REQUIRE((g.p - p_ref).norm() == Approx(0.0).margin(3e-12));
 }
 
-TEST_CASE("SE3.dexp_inv: at x=0 returns y exactly", "[se3][dexp_inv]") {
+TEST_CASE("SE3.dexp_inv: at x=0 returns y exactly", "[se3][dexp_inv]")
+{
     SE3d::Tangent x = SE3d::Tangent::Zero();
     SE3d::Tangent y;
     y << 0.1, -0.2, 0.3, 1.0, 2.0, -3.0;
@@ -218,7 +233,8 @@ TEST_CASE("SE3.dexp_inv: at x=0 returns y exactly", "[se3][dexp_inv]") {
     REQUIRE((out - y).norm() == Approx(0.0).margin(0.0));
 }
 
-TEST_CASE("SE3.dexp_inv: approximately inverts dexp series for small x", "[se3][dexp_inv]") {
+TEST_CASE("SE3.dexp_inv: approximately inverts dexp series for small x", "[se3][dexp_inv]")
+{
     // Choose a "small-ish" x so the truncated Bernoulli/ad series is accurate.
     SE3d::Tangent x;
     x << 0.05, -0.04, 0.02, 0.1, -0.05, 0.03;
@@ -233,7 +249,8 @@ TEST_CASE("SE3.dexp_inv: approximately inverts dexp series for small x", "[se3][
     REQUIRE((vinv - v).norm() == Approx(0.0).margin(5e-10));
 }
 
-TEST_CASE("SE3 with CppAD: Exp is tape-able (smoke test)", "[se3][cppad]") {
+TEST_CASE("SE3 with CppAD: Exp is tape-able (smoke test)", "[se3][cppad]")
+{
     using AD = CppAD::AD<double>;
     using SE3ad = Lie::SE3<AD>;
 
@@ -252,7 +269,7 @@ TEST_CASE("SE3 with CppAD: Exp is tape-able (smoke test)", "[se3][cppad]") {
     CppAD::ADFun<double> f;
     f.Dependent(X, Y);
 
-    std::vector<double> x0 = { 0.01, -0.02, 0.03,  1.0, -2.0, 0.5 };
+    std::vector<double> x0 = { 0.01, -0.02, 0.03, 1.0, -2.0, 0.5 };
     std::vector<double> y0 = f.Forward(0, x0);
     REQUIRE(y0.size() == 1);
     REQUIRE(std::isfinite(y0[0]));
@@ -262,7 +279,8 @@ TEST_CASE("SE3 with CppAD: Exp is tape-able (smoke test)", "[se3][cppad]") {
     for (double ji : J) REQUIRE(std::isfinite(ji));
 }
 
-TEST_CASE("SE3.exp: lower-case alias is Exp", "[se3][exp]") {
+TEST_CASE("SE3.exp: lower-case alias is Exp", "[se3][exp]")
+{
     SE3d::Tangent xi;
     xi << 0.1, -0.2, 0.3, 1.0, 2.0, -3.0;
     const auto a = SE3d::exp(xi);

@@ -25,7 +25,7 @@ namespace Aetherion::Simulation {
 /// @return Heap-allocated Application (or subclass) instance. Ownership is transferred to the entry point.
 /// @throws std::invalid_argument if command-line arguments are invalid (caught by EntryPoint before run()).
 // NOLINTNEXTLINE(readability-redundant-declaration) - forward declaration is required here so main() below can call it; the client defines it later in its own .cpp
-Application* CreateApplication(int argc, char** argv);
+    Application* CreateApplication(int argc, char** argv);
 
 } // namespace Aetherion::Simulation
 
@@ -34,12 +34,12 @@ Application* CreateApplication(int argc, char** argv);
 /// Calls Aetherion::Simulation::CreateApplication(), runs the simulation, and handles top-level
 /// exceptions. The client must never define their own `main()`.
 // NOLINTNEXTLINE(misc-definitions-in-headers) - single-header entry point by design; include in exactly one client TU
-int main(int argc, char* argv[]) {
+int main(int argc, char* argv[])
+{
     Aetherion::Simulation::Application* app = nullptr;
     try {
         app = Aetherion::Simulation::CreateApplication(argc, argv);
-    }
-    catch (const std::invalid_argument& e) {
+    } catch (const std::invalid_argument& e) {
         std::cerr << "Error: " << e.what() << "\n\n";
         // Re-create a temporary parser just to print usage, or store it —
         // simplest: just print the error and exit
@@ -48,8 +48,7 @@ int main(int argc, char* argv[]) {
 
     try {
         app->run();
-    }
-    catch (const std::exception& e) {
+    } catch (const std::exception& e) {
         std::cerr << "Fatal error during simulation: " << e.what() << "\n";
         delete app;
         return EXIT_FAILURE;

@@ -30,15 +30,15 @@
 
 #include "Aetherion/Aerodynamics/AerodynamicForces.h"
 #include "Aetherion/Aerodynamics/AerodynamicMoments.h"
-#include "Aetherion/Spatial/Wrench.h" 
+#include "Aetherion/Spatial/Wrench.h"
 
 
 // TODO [Onur] do not use inheritance make this almost like a free function
-// similiar to the way 
+// similiar to the way
 
 namespace Aetherion::RigidBody {
 
-    
+
     // AeroWrench *is-a* Spatial::Wrench with extra semantic accessors.
     template <class Scalar>
     struct AeroWrench : public Spatial::Wrench<Scalar>
@@ -52,13 +52,18 @@ namespace Aetherion::RigidBody {
 
         // Named accessors (moment first, then force) -- matches Base storage.
         Vec3<Scalar> Moment_body_Nm() const { return f.template segment<3>(0); }
-        Vec3<Scalar> Force_body_N()   const { return f.template segment<3>(3); }
+        Vec3<Scalar> Force_body_N() const { return f.template segment<3>(3); }
 
         void SetMoment_body_Nm(const Vec3<Scalar>& M) { f.template segment<3>(0) = M; }
         void SetForce_body_N(const Vec3<Scalar>& F) { f.template segment<3>(3) = F; }
 
         // Convenience: explicit conversion back to base type.
-        Base AsSpatialWrench() const { Base w{}; w.f = f; return w; }
+        Base AsSpatialWrench() const
+        {
+            Base w{};
+            w.f = f;
+            return w;
+        }
     };
 
     // (1) Wrench from force coeffs (CL,CD,CY) and moment coeffs (Cl,Cm,Cn).
@@ -211,5 +216,3 @@ namespace Aetherion::Aerodynamics {
     }
 
 } // namespace Aetherion::Aerodynamics */
-
-

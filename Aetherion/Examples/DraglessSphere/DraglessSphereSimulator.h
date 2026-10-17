@@ -40,11 +40,11 @@ namespace Aetherion::Examples::DraglessSphere {
 
         explicit DraglessSphereSimulator(
             const RigidBody::InertialParameters& ip,
-            RigidBody::StateD                       initialState,
-            double                                  theta0_rad = 0.0,
-            ODE::RKMK::Core::NewtonOptions          opt = {})
+            RigidBody::StateD initialState,
+            double theta0_rad = 0.0,
+            ODE::RKMK::Core::NewtonOptions opt = {})
             : ISimulator<DraglessSphereVF, Simulation::Snapshot1>(
-                ip, std::move(initialState), opt)
+                  ip, std::move(initialState), opt)
             , m_Theta0(theta0_rad)
         {
         }

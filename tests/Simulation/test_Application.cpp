@@ -27,19 +27,21 @@ class StubApplication : public Application
 {
 public:
     using Application::Application;
+
 protected:
-    void prepareSimulation()                              const override {}
-    void writeInitialSnapshot(std::ofstream&)             const override {}
+    void prepareSimulation() const override {}
+    void writeInitialSnapshot(std::ofstream&) const override {}
     StepObservation stepAndRecord(std::ofstream&, double, bool) const override { return {}; }
-    void logFinalSummary()                                const override {}
+    void logFinalSummary() const override {}
 };
 
 // ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
-struct FakeArgv {
-    std::vector<std::string>  strings;
-    std::vector<char*>        ptrs;
+struct FakeArgv
+{
+    std::vector<std::string> strings;
+    std::vector<char*> ptrs;
     explicit FakeArgv(std::initializer_list<const char*> args)
     {
         for (const char* s : args) {
@@ -49,14 +51,15 @@ struct FakeArgv {
             ptrs.push_back(s.data());
         }
     }
-    int    argc() const { return static_cast<int>(ptrs.size()); }
-    char** argv()       { return ptrs.data(); }
+    int argc() const { return static_cast<int>(ptrs.size()); }
+    char** argv() { return ptrs.data(); }
 };
 
 // ─────────────────────────────────────────────────────────────
 // Tests — default values
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Application uses default config when no args are passed", "[Application]") {
+TEST_CASE("Application uses default config when no args are passed", "[Application]")
+{
     FakeArgv args{ "test_program" };
     StubApplication app(args.argc(), args.argv());
     const Config& cfg = app.getConfig();
@@ -70,13 +73,14 @@ TEST_CASE("Application uses default config when no args are passed", "[Applicati
 // ─────────────────────────────────────────────────────────────
 // Tests — combined flags
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Application parses all flags together correctly", "[Application]") {
+TEST_CASE("Application parses all flags together correctly", "[Application]")
+{
     FakeArgv args{
         "test_program",
-        "--timeStep",       "0.001",
-        "--startTime",      "1.0",
-        "--endTime",        "9.0",
-        "--inputFileName",  "data.dat",
+        "--timeStep", "0.001",
+        "--startTime", "1.0",
+        "--endTime", "9.0",
+        "--inputFileName", "data.dat",
         "--outputFileName", "results.csv"
     };
     StubApplication app(args.argc(), args.argv());
@@ -92,23 +96,27 @@ TEST_CASE("Application parses all flags together correctly", "[Application]") {
 // ─────────────────────────────────────────────────────────────
 // Tests — timeStep
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Application parses --timeStep correctly", "[Application]") {
+TEST_CASE("Application parses --timeStep correctly", "[Application]")
+{
     FakeArgv args{ "test_program", "--timeStep", "0.05" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().timeStep == Catch::Approx(0.05));
 }
 
-TEST_CASE("Application rejects non-positive --timeStep", "[Application]") {
+TEST_CASE("Application rejects non-positive --timeStep", "[Application]")
+{
     FakeArgv args{ "test_program", "--timeStep", "-1.0" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
 
-TEST_CASE("Application rejects zero --timeStep", "[Application]") {
+TEST_CASE("Application rejects zero --timeStep", "[Application]")
+{
     FakeArgv args{ "test_program", "--timeStep", "0.0" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
 
-TEST_CASE("Application rejects non-numeric --timeStep", "[Application]") {
+TEST_CASE("Application rejects non-numeric --timeStep", "[Application]")
+{
     FakeArgv args{ "test_program", "--timeStep", "abc" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
@@ -116,29 +124,34 @@ TEST_CASE("Application rejects non-numeric --timeStep", "[Application]") {
 // ─────────────────────────────────────────────────────────────
 // Tests — startTime / endTime
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Application parses --startTime correctly", "[Application]") {
+TEST_CASE("Application parses --startTime correctly", "[Application]")
+{
     FakeArgv args{ "test_program", "--startTime", "5.0", "--endTime", "10.0" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().startTime == Catch::Approx(5.0));
 }
 
-TEST_CASE("Application parses --endTime correctly", "[Application]") {
+TEST_CASE("Application parses --endTime correctly", "[Application]")
+{
     FakeArgv args{ "test_program", "--endTime", "42.0" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().endTime == Catch::Approx(42.0));
 }
 
-TEST_CASE("Application rejects --endTime <= --startTime", "[Application]") {
+TEST_CASE("Application rejects --endTime <= --startTime", "[Application]")
+{
     FakeArgv args{ "test_program", "--startTime", "3.0", "--endTime", "1.0" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
 
-TEST_CASE("Application rejects --endTime equal to --startTime", "[Application]") {
+TEST_CASE("Application rejects --endTime equal to --startTime", "[Application]")
+{
     FakeArgv args{ "test_program", "--startTime", "2.0", "--endTime", "2.0" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
 
-TEST_CASE("Application rejects non-numeric --endTime", "[Application]") {
+TEST_CASE("Application rejects non-numeric --endTime", "[Application]")
+{
     FakeArgv args{ "test_program", "--endTime", "xyz" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
@@ -146,35 +159,41 @@ TEST_CASE("Application rejects non-numeric --endTime", "[Application]") {
 // ─────────────────────────────────────────────────────────────
 // Tests — inputFileName / outputFileName
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Application parses --inputFileName correctly", "[Application]") {
+TEST_CASE("Application parses --inputFileName correctly", "[Application]")
+{
     FakeArgv args{ "test_program", "--inputFileName", "data.dat" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().inputFileName == "data.dat");
 }
 
-TEST_CASE("Application default inputFileName is empty", "[Application]") {
+TEST_CASE("Application default inputFileName is empty", "[Application]")
+{
     FakeArgv args{ "test_program" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().inputFileName.empty());
 }
 
-TEST_CASE("Application parses --outputFileName correctly", "[Application]") {
+TEST_CASE("Application parses --outputFileName correctly", "[Application]")
+{
     FakeArgv args{ "test_program", "--outputFileName", "sim.csv" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().outputFileName == "sim.csv");
 }
 
-TEST_CASE("Application rejects non-numeric --startTime", "[Application]") {
+TEST_CASE("Application rejects non-numeric --startTime", "[Application]")
+{
     FakeArgv args{ "test_program", "--startTime", "noon" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
 
-TEST_CASE("Application rejects an empty --inputFileName", "[Application]") {
+TEST_CASE("Application rejects an empty --inputFileName", "[Application]")
+{
     FakeArgv args{ "test_program", "--inputFileName", "" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
 
-TEST_CASE("Application rejects an empty --outputFileName", "[Application]") {
+TEST_CASE("Application rejects an empty --outputFileName", "[Application]")
+{
     FakeArgv args{ "test_program", "--outputFileName", "" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
@@ -182,24 +201,28 @@ TEST_CASE("Application rejects an empty --outputFileName", "[Application]") {
 // ─────────────────────────────────────────────────────────────
 // Tests — writeInterval
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Application default writeInterval is 1", "[Application]") {
+TEST_CASE("Application default writeInterval is 1", "[Application]")
+{
     FakeArgv args{ "test_program" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().writeInterval == 1U);
 }
 
-TEST_CASE("Application parses --writeInterval correctly", "[Application]") {
+TEST_CASE("Application parses --writeInterval correctly", "[Application]")
+{
     FakeArgv args{ "test_program", "--writeInterval", "10" };
     StubApplication app(args.argc(), args.argv());
     REQUIRE(app.getConfig().writeInterval == 10U);
 }
 
-TEST_CASE("Application rejects --writeInterval of zero", "[Application]") {
+TEST_CASE("Application rejects --writeInterval of zero", "[Application]")
+{
     FakeArgv args{ "test_program", "--writeInterval", "0" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
 
-TEST_CASE("Application rejects negative --writeInterval", "[Application]") {
+TEST_CASE("Application rejects negative --writeInterval", "[Application]")
+{
     FakeArgv args{ "test_program", "--writeInterval", "-5" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
@@ -207,12 +230,14 @@ TEST_CASE("Application rejects negative --writeInterval", "[Application]") {
 // ─────────────────────────────────────────────────────────────
 // Tests — ArgumentParser error paths
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Application rejects unknown flag", "[Application][ArgumentParser]") {
+TEST_CASE("Application rejects unknown flag", "[Application][ArgumentParser]")
+{
     FakeArgv args{ "test_program", "--unknownFlag", "value" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
 }
 
-TEST_CASE("Application rejects flag with no value", "[Application][ArgumentParser]") {
+TEST_CASE("Application rejects flag with no value", "[Application][ArgumentParser]")
+{
     // --timeStep at the end of argv with no following token
     FakeArgv args{ "test_program", "--timeStep" };
     REQUIRE_THROWS_AS(StubApplication(args.argc(), args.argv()), std::invalid_argument);
@@ -221,12 +246,16 @@ TEST_CASE("Application rejects flag with no value", "[Application][ArgumentParse
 // ─────────────────────────────────────────────────────────────
 // Sentinel thrown by the exit stub so --help tests stay in-process
 // ─────────────────────────────────────────────────────────────
-namespace { struct HelpExitCalled {}; }
+namespace {
+    struct HelpExitCalled
+    {};
+}
 
 // ─────────────────────────────────────────────────────────────
 // Tests — ArgumentParser --help / -h
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("ArgumentParser --help prints usage and triggers exit", "[ArgumentParser][help]") {
+TEST_CASE("ArgumentParser --help prints usage and triggers exit", "[ArgumentParser][help]")
+{
     ArgumentParser parser("my_prog",
         [](int) { throw HelpExitCalled{}; });
     parser.addArgument("--foo", "A foo argument", [](const std::string&) {});
@@ -237,8 +266,9 @@ TEST_CASE("ArgumentParser --help prints usage and triggers exit", "[ArgumentPars
     try {
         FakeArgv fakeArgv{ "my_prog", "--help" };
         parser.parse(fakeArgv.argc(), fakeArgv.argv());
+    } catch (const HelpExitCalled&) {
+        exited = true;
     }
-    catch (const HelpExitCalled&) { exited = true; }
     std::cerr.rdbuf(old);
 
     REQUIRE(exited);
@@ -247,7 +277,8 @@ TEST_CASE("ArgumentParser --help prints usage and triggers exit", "[ArgumentPars
     CHECK(buf.str().find("--foo") != std::string::npos);
 }
 
-TEST_CASE("ArgumentParser -h is an alias for --help", "[ArgumentParser][help]") {
+TEST_CASE("ArgumentParser -h is an alias for --help", "[ArgumentParser][help]")
+{
     ArgumentParser parser("my_prog",
         [](int) { throw HelpExitCalled{}; });
 
@@ -260,7 +291,8 @@ TEST_CASE("ArgumentParser -h is an alias for --help", "[ArgumentParser][help]") 
 // ─────────────────────────────────────────────────────────────
 // Tests — ArgumentParser::printUsage
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("ArgumentParser::printUsage writes Usage header to cerr", "[ArgumentParser][printUsage]") {
+TEST_CASE("ArgumentParser::printUsage writes Usage header to cerr", "[ArgumentParser][printUsage]")
+{
     Aetherion::Simulation::ArgumentParser parser("my_program");
     parser.addArgument("--foo", "A foo argument", [](const std::string&) {});
 
@@ -293,25 +325,25 @@ public:
     int stepsCalled() const { return stepsCalled_; }
 
 protected:
-    void prepareSimulation()                  const override {}
+    void prepareSimulation() const override {}
     void writeInitialSnapshot(std::ofstream&) const override {}
-    void logFinalSummary()                    const override {}
+    void logFinalSummary() const override {}
 
     StepObservation stepAndRecord(std::ofstream&, double h, bool) const override
     {
         ++stepsCalled_;
         time_ += h;
         StepObservation obs;
-        obs.time_s    = time_;
+        obs.time_s = time_;
         obs.converged = (stepsCalled_ != failOnStep_);
-        obs.residual  = obs.converged ? 0.0 : 1.23e-4;
+        obs.residual = obs.converged ? 0.0 : 1.23e-4;
         return obs;
     }
 
 private:
-    int            failOnStep_;
-    mutable int    stepsCalled_ = 0;
-    mutable double time_        = 0.0;   // elapsed, as every simulator reports it
+    int failOnStep_;
+    mutable int stepsCalled_ = 0;
+    mutable double time_ = 0.0;   // elapsed, as every simulator reports it
 };
 
 // ─────────────────────────────────────────────────────────────
@@ -320,11 +352,12 @@ private:
 // and error path), run, runTimeStepLoop (convergence warn,
 // per-10-step progress log).
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Application::run completes a short simulation", "[Application][run]") {
+TEST_CASE("Application::run completes a short simulation", "[Application][run]")
+{
     const std::string outFile = "_ae_run_test_output.csv";
     FakeArgv args{ "test_program",
-        "--timeStep",       "0.1",
-        "--endTime",        "0.3",
+        "--timeStep", "0.1",
+        "--endTime", "0.3",
         "--outputFileName", outFile.c_str() };
     RunableStub app(args);
 
@@ -334,11 +367,12 @@ TEST_CASE("Application::run completes a short simulation", "[Application][run]")
     std::filesystem::remove(outFile);
 }
 
-TEST_CASE("Application::run continues past a non-converging step", "[Application][run]") {
+TEST_CASE("Application::run continues past a non-converging step", "[Application][run]")
+{
     const std::string outFile = "_ae_run_test_nonconv.csv";
     FakeArgv args{ "test_program",
-        "--timeStep",       "0.1",
-        "--endTime",        "0.3",
+        "--timeStep", "0.1",
+        "--endTime", "0.3",
         "--outputFileName", outFile.c_str() };
     RunableStub app(args, /*failOnStep=*/2);
 
@@ -348,11 +382,12 @@ TEST_CASE("Application::run continues past a non-converging step", "[Application
     std::filesystem::remove(outFile);
 }
 
-TEST_CASE("Application::run exercises per-10-step progress logging", "[Application][run]") {
+TEST_CASE("Application::run exercises per-10-step progress logging", "[Application][run]")
+{
     const std::string outFile = "_ae_run_test_10steps.csv";
     FakeArgv args{ "test_program",
-        "--timeStep",       "0.1",
-        "--endTime",        "2.0",
+        "--timeStep", "0.1",
+        "--endTime", "2.0",
         "--outputFileName", outFile.c_str() };
     RunableStub app(args);
 
@@ -363,7 +398,8 @@ TEST_CASE("Application::run exercises per-10-step progress logging", "[Applicati
 }
 
 TEST_CASE("Application::run throws std::runtime_error for unwritable output path",
-          "[Application][run][openOutputCsv]") {
+    "[Application][run][openOutputCsv]")
+{
     FakeArgv args{ "test_program",
         "--outputFileName", "nonexistent_subdir_xyz/output.csv" };
     RunableStub app(args);
@@ -377,7 +413,8 @@ TEST_CASE("Application::run throws std::runtime_error for unwritable output path
 // called once per process. All assertions are in a single
 // TEST_CASE so Init() is invoked exactly once.
 // ─────────────────────────────────────────────────────────────
-TEST_CASE("Log: Init populates core and client loggers", "[Log]") {
+TEST_CASE("Log: Init populates core and client loggers", "[Log]")
+{
     using namespace Aetherion::Simulation;
     Log::Init();
 
@@ -404,38 +441,39 @@ public:
     int stepsCalled() const { return stepsCalled_; }
 
 protected:
-    void prepareSimulation()                  const override {}
+    void prepareSimulation() const override {}
     void writeInitialSnapshot(std::ofstream&) const override {}
-    void logFinalSummary()                    const override {}
+    void logFinalSummary() const override {}
 
     StepObservation stepAndRecord(std::ofstream&, double h, bool) const override
     {
         ++stepsCalled_;
         StepObservation obs;
         if (stepsCalled_ <= stalls_) {
-            obs.time_s    = time_;      // unchanged
+            obs.time_s = time_;      // unchanged
             obs.converged = false;
-            obs.residual  = 0.5;
+            obs.residual = 0.5;
             return obs;
         }
         time_ += h;
-        obs.time_s    = time_;
+        obs.time_s = time_;
         obs.converged = true;
         return obs;
     }
 
 private:
-    int            stalls_;
-    mutable int    stepsCalled_ = 0;
-    mutable double time_        = 0.0;   // elapsed, as every simulator reports it
+    int stalls_;
+    mutable int stepsCalled_ = 0;
+    mutable double time_ = 0.0;   // elapsed, as every simulator reports it
 };
 
 TEST_CASE("Application::run aborts a step that keeps failing without advancing",
-          "[Application][run][regression]") {
+    "[Application][run][regression]")
+{
     const std::string outFile = "_ae_run_test_stalled.csv";
     FakeArgv args{ "test_program",
-        "--timeStep",       "0.1",
-        "--endTime",        "0.3",
+        "--timeStep", "0.1",
+        "--endTime", "0.3",
         "--outputFileName", outFile.c_str() };
     StalledStub app(args, /*stalls=*/1000);
 
@@ -447,11 +485,12 @@ TEST_CASE("Application::run aborts a step that keeps failing without advancing",
 }
 
 TEST_CASE("Application::run recovers when a stalled step eventually advances",
-          "[Application][run][regression]") {
+    "[Application][run][regression]")
+{
     const std::string outFile = "_ae_run_test_stall_recover.csv";
     FakeArgv args{ "test_program",
-        "--timeStep",       "0.1",
-        "--endTime",        "0.3",
+        "--timeStep", "0.1",
+        "--endTime", "0.3",
         "--outputFileName", outFile.c_str() };
     StalledStub app(args, /*stalls=*/2);
 
@@ -462,15 +501,16 @@ TEST_CASE("Application::run recovers when a stalled step eventually advances",
 }
 
 TEST_CASE("Application::run with a nonzero --startTime runs for endTime - startTime",
-          "[Application][run][regression]") {
+    "[Application][run][regression]")
+{
     // F08: --startTime 1 --endTime 1.3 --timeStep 0.1 is a 0.3 s run. The loop
     // used to start at 1, adopt the simulator's elapsed time (0.1) after the
     // first step and run on to 1.3 elapsed: 13 steps.
     const std::string outFile = "_ae_run_test_starttime.csv";
     FakeArgv args{ "test_program",
-        "--startTime",      "1.0",
-        "--endTime",        "1.3",
-        "--timeStep",       "0.1",
+        "--startTime", "1.0",
+        "--endTime", "1.3",
+        "--timeStep", "0.1",
         "--outputFileName", outFile.c_str() };
     RunableStub app(args);
 

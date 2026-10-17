@@ -9,16 +9,16 @@
 #include <iostream>
 #include <print>
 
-int main() {
+int main()
+{
 
-	try {
+    try {
 
-	}
-	catch (const std::exception& e) {
-		std::print("Exception: {}\n", e.what());
-		return 1;
-	}
+    } catch (const std::exception& e) {
+        std::print("Exception: {}\n", e.what());
+        return 1;
+    }
 
 
-	return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }

@@ -20,92 +20,91 @@
 
 namespace Aetherion::Examples::DroppedSphereSteadyWind {
 
-class DroppedSphereSteadyWindSimulator
-    : public Simulation::ISimulator<DroppedSphereSteadyWindVF, Simulation::Snapshot1>
-{
-public:
-    static constexpr double kOmegaEarth_rad_s = 7.2921150e-5;
-
-    explicit DroppedSphereSteadyWindSimulator(
-        const RigidBody::InertialParameters&    ip,
-        const RigidBody::AerodynamicParameters& aero,
-        const Environment::ConstantWind&        wind,
-        double                                  lat0_rad,
-        double                                  lon0_rad,
-        RigidBody::StateD                       initialState,
-        double                                  theta0_rad = 0.0,
-        ODE::RKMK::Core::NewtonOptions          opt = {})
-        : ISimulator<DroppedSphereSteadyWindVF, Simulation::Snapshot1>(
-            DroppedSphereSteadyWindVF(
-                ip,
-                FlightDynamics::J2GravityPolicy{},
-                makeDragPolicy(aero, wind, lat0_rad, lon0_rad)),
-            std::move(initialState), opt)
-        , m_Theta0(theta0_rad)
-        , m_WindNED(wind.north_mps, wind.east_mps, wind.down_mps)
+    class DroppedSphereSteadyWindSimulator
+        : public Simulation::ISimulator<DroppedSphereSteadyWindVF, Simulation::Snapshot1>
     {
-    }
+    public:
+        static constexpr double kOmegaEarth_rad_s = 7.2921150e-5;
 
-    [[nodiscard]]
-    Simulation::Snapshot1 snapshot() const noexcept override
-    {
-        auto snap = Simulation::MakeSnapshot1(
-            time(), state(), currentTheta(),
-            vectorField().gravity, vectorField().aero);
+        explicit DroppedSphereSteadyWindSimulator(
+            const RigidBody::InertialParameters& ip,
+            const RigidBody::AerodynamicParameters& aero,
+            const Environment::ConstantWind& wind,
+            double lat0_rad,
+            double lon0_rad,
+            RigidBody::StateD initialState,
+            double theta0_rad = 0.0,
+            ODE::RKMK::Core::NewtonOptions opt = {})
+            : ISimulator<DroppedSphereSteadyWindVF, Simulation::Snapshot1>(
+                  DroppedSphereSteadyWindVF(
+                      ip,
+                      FlightDynamics::J2GravityPolicy{},
+                      makeDragPolicy(aero, wind, lat0_rad, lon0_rad)),
+                  std::move(initialState), opt)
+            , m_Theta0(theta0_rad)
+            , m_WindNED(wind.north_mps, wind.east_mps, wind.down_mps)
+        {
+        }
+
+        [[nodiscard]]
+        Simulation::Snapshot1 snapshot() const noexcept override
+        {
+            auto snap = Simulation::MakeSnapshot1(
+                time(), state(), currentTheta(),
+                vectorField().gravity, vectorField().aero);
 
         // Correct TAS, Mach, and dynamic pressure to use wind-relative airspeed.
         // MakeSnapshot1 computes TAS = |v_NED| (Earth-relative); the correct
         // atmosphere-relative TAS subtracts the ambient wind.
-        const Eigen::Vector3d v_air = snap.feVelocity_m_s - m_WindNED;
-        snap.trueAirspeed_m_s  = v_air.norm();
-        snap.mach              = snap.trueAirspeed_m_s / snap.speedOfSound_m_s;
-        snap.dynamicPressure_Pa = 0.5 * snap.airDensity_kg_m3
-                                      * snap.trueAirspeed_m_s
-                                      * snap.trueAirspeed_m_s;
-        return snap;
-    }
+            const Eigen::Vector3d v_air = snap.feVelocity_m_s - m_WindNED;
+            snap.trueAirspeed_m_s = v_air.norm();
+            snap.mach = snap.trueAirspeed_m_s / snap.speedOfSound_m_s;
+            snap.dynamicPressure_Pa = 0.5 * snap.airDensity_kg_m3 * snap.trueAirspeed_m_s * snap.trueAirspeed_m_s;
+            return snap;
+        }
 
-    [[nodiscard]]
-    double currentTheta() const noexcept
-    {
-        return m_Theta0 + kOmegaEarth_rad_s * time();
-    }
+        [[nodiscard]]
+        double currentTheta() const noexcept
+        {
+            return m_Theta0 + kOmegaEarth_rad_s * time();
+        }
 
-protected:
-    void validate() const override {}
+    protected:
+        void validate() const override {}
 
-private:
-    double          m_Theta0;
-    Eigen::Vector3d m_WindNED;
+    private:
+        double m_Theta0;
+        Eigen::Vector3d m_WindNED;
 
     /// Convert NED wind → ECEF at the initial launch position, then construct policy.
-    static FlightDynamics::SteadyWindDragPolicy
+        static FlightDynamics::SteadyWindDragPolicy
         makeDragPolicy(const RigidBody::AerodynamicParameters& aero,
-                       const Environment::ConstantWind&        wind,
-                       double lat0_rad, double lon0_rad)
-    {
+            const Environment::ConstantWind& wind,
+            double lat0_rad, double lon0_rad)
+        {
         // NED-to-ECEF at (lat0, lon0):
         //   N_ecef = (-sin(lat)*cos(lon), -sin(lat)*sin(lon),  cos(lat))
         //   E_ecef = (-sin(lon),           cos(lon),            0       )
         //   D_ecef = (-cos(lat)*cos(lon), -cos(lat)*sin(lon), -sin(lat) )
-        const double sLat = std::sin(lat0_rad), cLat = std::cos(lat0_rad);
-        const double sLon = std::sin(lon0_rad), cLon = std::cos(lon0_rad);
+            const double sLat = std::sin(lat0_rad), cLat = std::cos(lat0_rad);
+            const double sLon = std::sin(lon0_rad), cLon = std::cos(lon0_rad);
 
-        const double Nx = -sLat*cLon, Ny = -sLat*sLon, Nz =  cLat;
-        const double Ex = -sLon,      Ey =  cLon,      Ez =  0.0;
-        const double Dx = -cLat*cLon, Dy = -cLat*sLon, Dz = -sLat;
+            const double Nx = -sLat * cLon, Ny = -sLat * sLon, Nz = cLat;
+            const double Ex = -sLon, Ey = cLon, Ez = 0.0;
+            const double Dx = -cLat * cLon, Dy = -cLat * sLon, Dz = -sLat;
 
-        const double vN = wind.north_mps, vE = wind.east_mps, vD = wind.down_mps;
+            const double vN = wind.north_mps, vE = wind.east_mps, vD = wind.down_mps;
 
         // Wind in ECEF
-        double wx_ecef = vN*Nx + vE*Ex + vD*Dx;
-        double wy_ecef = vN*Ny + vE*Ey + vD*Dy;
-        double wz_ecef = vN*Nz + vE*Ez + vD*Dz;
+            double wx_ecef = vN * Nx + vE * Ex + vD * Dx;
+            double wy_ecef = vN * Ny + vE * Ey + vD * Dy;
+            double wz_ecef = vN * Nz + vE * Ez + vD * Dz;
 
         // Store as ECEF (the policy rotates back to ECI at runtime using ERA)
-        return FlightDynamics::SteadyWindDragPolicy{
-            aero.CD, aero.S, wx_ecef, wy_ecef, wz_ecef };
-    }
-};
+            return FlightDynamics::SteadyWindDragPolicy{
+                aero.CD, aero.S, wx_ecef, wy_ecef, wz_ecef
+            };
+        }
+    };
 
 } // namespace Aetherion::Examples::DroppedSphereSteadyWind

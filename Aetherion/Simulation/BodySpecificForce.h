@@ -77,9 +77,9 @@ namespace Aetherion::Simulation {
     template <FlightDynamics::AeroPolicy Pol>
     [[nodiscard]]
     Eigen::Vector3d PolicyBodyForce_N(
-        double                   t,
+        double t,
         const RigidBody::StateD& s,
-        const Pol&               p)
+        const Pol& p)
     {
         // `template` disambiguator required: p(...) is type-dependent, so without
         // it a conforming compiler parses `tail < 3` as a comparison.
@@ -103,7 +103,7 @@ namespace Aetherion::Simulation {
     [[nodiscard]]
     inline Eigen::Vector3d BodySpecificForce_m_s2(
         const Eigen::Vector3d& nonGravitationalBodyForce_N,
-        double                 mass_kg)
+        double mass_kg)
     {
         if (mass_kg <= 0.0)
             return Eigen::Vector3d::Zero();
@@ -121,17 +121,16 @@ namespace Aetherion::Simulation {
     // For a vehicle with no propulsion, pass FlightDynamics::ZeroPropulsionPolicy{};
     // for one with no aerodynamics, FlightDynamics::ZeroAeroPolicy{}.
     // ─────────────────────────────────────────────────────────────────────────
-    template <FlightDynamics::AeroPolicy       AeroPol,
-              FlightDynamics::PropulsionPolicy PropPol>
+    template <FlightDynamics::AeroPolicy AeroPol,
+        FlightDynamics::PropulsionPolicy PropPol>
     [[nodiscard]]
     Eigen::Vector3d BodySpecificForce_m_s2(
-        double                   t,
+        double t,
         const RigidBody::StateD& s,
-        const AeroPol&           aero,
-        const PropPol&           thrust)
+        const AeroPol& aero,
+        const PropPol& thrust)
     {
-        const Eigen::Vector3d F_B = PolicyBodyForce_N(t, s, aero)
-                                  + PolicyBodyForce_N(t, s, thrust);
+        const Eigen::Vector3d F_B = PolicyBodyForce_N(t, s, aero) + PolicyBodyForce_N(t, s, thrust);
         return BodySpecificForce_m_s2(F_B, s.m);
     }
 

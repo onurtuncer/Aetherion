@@ -30,70 +30,80 @@ namespace Aetherion::Coordinate {
 
         /// @brief Dot product of two 3-vectors.
         template <class S>
-        inline S Dot(const Vec3<S>& a, const Vec3<S>& b) {
+        inline S Dot(const Vec3<S>& a, const Vec3<S>& b)
+        {
             return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
         }
 
         /// @brief Convert NED @f$[N,E,D]@f$ to NEU @f$[N,E,U]@f$ (negate Down).
         template <class S>
-        inline Vec3<S> NEDToNEU(const Vec3<S>& v_ned) {
+        inline Vec3<S> NEDToNEU(const Vec3<S>& v_ned)
+        {
             return Vec3<S>{ v_ned[0], v_ned[1], -v_ned[2] };
         }
 
         /// @brief Convert NEU @f$[N,E,U]@f$ to NED @f$[N,E,D]@f$ (negate Up).
         template <class S>
-        inline Vec3<S> NEUToNED(const Vec3<S>& v_neu) {
+        inline Vec3<S> NEUToNED(const Vec3<S>& v_neu)
+        {
             return Vec3<S>{ v_neu[0], v_neu[1], -v_neu[2] };
         }
 
         /// @brief @c std::sin wrapper — enables ADL for CppAD scalars.
         template <class S>
-        inline S Sine(const S& x) {
+        inline S Sine(const S& x)
+        {
             using std::sin;
             return sin(x);
         }
 
         /// @brief @c std::cos wrapper — enables ADL for CppAD scalars.
         template <class S>
-        inline S Cosine(const S& x) {
+        inline S Cosine(const S& x)
+        {
             using std::cos;
             return cos(x);
         }
 
         /// @brief @c std::atan2 wrapper — enables ADL for CppAD scalars.
         template <class S>
-        inline S ArcTangent2(const S& y, const S& x) {
+        inline S ArcTangent2(const S& y, const S& x)
+        {
             using std::atan2;
             return atan2(y, x);
         }
 
         /// @brief @c std::acos wrapper — enables ADL for CppAD scalars.
         template <class S>
-        inline S ArcCos(const S& x) {
+        inline S ArcCos(const S& x)
+        {
             using std::acos;
             return acos(x);
         }
 
         /// @brief @c std::sqrt wrapper — enables ADL for CppAD scalars.
         template <class S>
-        inline S SquareRoot(const S& x) {
+        inline S SquareRoot(const S& x)
+        {
             using std::sqrt;
             return sqrt(x);
         }
 
         /// @brief Cross product @f$\mathbf{a} \times \mathbf{b}@f$.
         template <class S>
-        inline Vec3<S> Cross(const Vec3<S>& a, const Vec3<S>& b) {
+        inline Vec3<S> Cross(const Vec3<S>& a, const Vec3<S>& b)
+        {
             return Vec3<S>{
                 a[1] * b[2] - a[2] * b[1],
-                    a[2] * b[0] - a[0] * b[2],
-                    a[0] * b[1] - a[1] * b[0]
+                a[2] * b[0] - a[0] * b[2],
+                a[0] * b[1] - a[1] * b[0]
             };
         }
 
         /// @brief Normalise a 3-vector to unit length.
         template <class S>
-        inline Vec3<S> Normalize(const Vec3<S>& v) {
+        inline Vec3<S> Normalize(const Vec3<S>& v)
+        {
             const S n2 = v[0] * v[0] + v[1] * v[1] + v[2] * v[2];
             const S inv_n = S(1) / SquareRoot(n2);
             return Vec3<S>{ v[0] * inv_n, v[1] * inv_n, v[2] * inv_n };
@@ -118,9 +128,15 @@ namespace Aetherion::Coordinate {
         {
             using detail::SquareRoot;
 
-            const S& m00 = x_b[0]; const S& m01 = y_b[0]; const S& m02 = z_b[0];
-            const S& m10 = x_b[1]; const S& m11 = y_b[1]; const S& m12 = z_b[1];
-            const S& m20 = x_b[2]; const S& m21 = y_b[2]; const S& m22 = z_b[2];
+            const S& m00 = x_b[0];
+            const S& m01 = y_b[0];
+            const S& m02 = z_b[0];
+            const S& m10 = x_b[1];
+            const S& m11 = y_b[1];
+            const S& m12 = z_b[1];
+            const S& m20 = x_b[2];
+            const S& m21 = y_b[2];
+            const S& m22 = z_b[2];
 
             const S one = S(1);
 
@@ -135,24 +151,21 @@ namespace Aetherion::Coordinate {
                 x = (m21 - m12) / S4;
                 y = (m02 - m20) / S4;
                 z = (m10 - m01) / S4;
-            }
-            else if (m00 > m11 && m00 > m22) {
+            } else if (m00 > m11 && m00 > m22) {
                 // m00 is largest on diagonal: use x as the primary
                 const S S4 = SquareRoot(one + m00 - m11 - m22) * S(2); // 4*x
                 w = (m21 - m12) / S4;
                 x = S4 * S(0.25);
                 y = (m01 + m10) / S4;
                 z = (m02 + m20) / S4;
-            }
-            else if (m11 > m22) {
+            } else if (m11 > m22) {
                 // m11 is largest: use y as the primary
                 const S S4 = SquareRoot(one + m11 - m00 - m22) * S(2); // 4*y
                 w = (m02 - m20) / S4;
                 x = (m01 + m10) / S4;
                 y = S4 * S(0.25);
                 z = (m12 + m21) / S4;
-            }
-            else {
+            } else {
                 // m22 is largest: use z as the primary
                 const S S4 = SquareRoot(one + m22 - m00 - m11) * S(2); // 4*z
                 w = (m10 - m01) / S4;
@@ -165,7 +178,7 @@ namespace Aetherion::Coordinate {
             const S norm2 = w * w + x * x + y * y + z * z;
             const S inv_n = one / SquareRoot(norm2);
 
-            return Quat<S>{ w* inv_n, x* inv_n, y* inv_n, z* inv_n };
+            return Quat<S>{ w * inv_n, x * inv_n, y * inv_n, z * inv_n };
         }
 
         /// @brief Convert a unit quaternion to a row-major 3×3 rotation matrix.
@@ -177,7 +190,8 @@ namespace Aetherion::Coordinate {
         /// @param q_in  Quaternion @f$[w,\,x,\,y,\,z]@f$.
         /// @return      Row-major 3×3 rotation matrix.
         template <class S>
-        inline Mat3<S> QuaternionToRotationMatrix(const Quat<S>& q_in) {
+        inline Mat3<S> QuaternionToRotationMatrix(const Quat<S>& q_in)
+        {
             S w = q_in[0];
             S x = q_in[1];
             S y = q_in[2];

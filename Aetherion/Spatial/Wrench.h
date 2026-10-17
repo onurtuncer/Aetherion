@@ -21,10 +21,11 @@ namespace Aetherion::Spatial {
 ///       consistent with the @f$ P = \mathbf{f}^\top \mathbf{v} @f$ inner product.
 ///
 /// @tparam Scalar Numeric type (e.g. @c double or @c CppAD::AD\<double\>).
-	template<typename Scalar>
-	struct Wrench {
-		/// Packed 6-vector @f$[M; F]@f$: indices 0–2 moment [N·m], 3–5 force [N].
-		Eigen::Matrix<Scalar, 6, 1> f; // [M_x,M_y,M_z, F_x,F_y,F_z]^T
-	};
+    template <typename Scalar>
+    struct Wrench
+    {
+  /// Packed 6-vector @f$[M; F]@f$: indices 0–2 moment [N·m], 3–5 force [N].
+        Eigen::Matrix<Scalar, 6, 1> f; // [M_x,M_y,M_z, F_x,F_y,F_z]^T
+    };
 
 } // namespace Aetherion::Spatial

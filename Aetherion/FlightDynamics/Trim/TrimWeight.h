@@ -68,7 +68,7 @@
 namespace Aetherion::FlightDynamics {
 
 /// @brief Pound-force in newtons — matches TrimSolver::kLbf_N.
-inline constexpr double kTrimLbf_N = 4.448221615260751;
+    inline constexpr double kTrimLbf_N = 4.448221615260751;
 
 /// @brief Magnitude of the WGS-84 J2 gravitational acceleration at a geodetic
 ///        position.
@@ -79,16 +79,16 @@ inline constexpr double kTrimLbf_N = 4.448221615260751;
 /// @param lat_deg Geodetic latitude [deg].
 /// @param alt_m   Ellipsoidal height above the WGS-84 ellipsoid [m].
 /// @return Gravitational acceleration magnitude [m/s²].
-inline double LocalGravityMagnitude_m_s2(double lat_deg, double alt_m)
-{
-    constexpr double kDegRad = std::numbers::pi / 180.0;
+    inline double LocalGravityMagnitude_m_s2(double lat_deg, double alt_m)
+    {
+        constexpr double kDegRad = std::numbers::pi / 180.0;
 
     // Longitude is arbitrary — see the axisymmetry note in the file header.
-    const auto r = Coordinate::GeodeticToECEF(lat_deg * kDegRad, 0.0, alt_m);
-    const auto g = Environment::J2(Environment::Vec3<double>{ r[0], r[1], r[2] });
+        const auto r = Coordinate::GeodeticToECEF(lat_deg * kDegRad, 0.0, alt_m);
+        const auto g = Environment::J2(Environment::Vec3<double>{ r[0], r[1], r[2] });
 
-    return std::sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]);
-}
+        return std::sqrt(g[0] * g[0] + g[1] * g[1] + g[2] * g[2]);
+    }
 
 /// @brief Aircraft weight at a geodetic trim position, in the units
 ///        @c TrimInputs::weight_lbf expects.
@@ -97,27 +97,28 @@ inline double LocalGravityMagnitude_m_s2(double lat_deg, double alt_m)
 /// @param lat_deg Geodetic latitude of the trim point [deg].
 /// @param alt_m   Ellipsoidal height of the trim point [m].
 /// @return Weight [lbf].
-inline double TrimWeight_lbf(double mass_kg, double lat_deg, double alt_m)
-{
-    return mass_kg * LocalGravityMagnitude_m_s2(lat_deg, alt_m) / kTrimLbf_N;
-}
+    inline double TrimWeight_lbf(double mass_kg, double lat_deg, double alt_m)
+    {
+        return mass_kg * LocalGravityMagnitude_m_s2(lat_deg, alt_m) / kTrimLbf_N;
+    }
 
 /// @brief Meridian (M) and prime-vertical (N) radii of curvature of the WGS-84
 ///        ellipsoid at a geodetic latitude [m].
-struct CurvatureRadii {
-    double meridian_m{};       ///< M — north–south
-    double primeVertical_m{};  ///< N — east–west
-};
+    struct CurvatureRadii
+    {
+        double meridian_m{};       ///< M — north–south
+        double primeVertical_m{};  ///< N — east–west
+    };
 
-inline CurvatureRadii WGS84CurvatureRadii(double lat_rad)
-{
-    namespace WGS84 = Environment::WGS84;
+    inline CurvatureRadii WGS84CurvatureRadii(double lat_rad)
+    {
+        namespace WGS84 = Environment::WGS84;
 
-    const double sinLat = std::sin(lat_rad);
-    const double w2     = 1.0 - WGS84::kEccentricitySq * sinLat * sinLat;
-    const double N      = WGS84::kSemiMajorAxis_m / std::sqrt(w2);
-    return { N * (1.0 - WGS84::kEccentricitySq) / w2, N };
-}
+        const double sinLat = std::sin(lat_rad);
+        const double w2 = 1.0 - WGS84::kEccentricitySq * sinLat * sinLat;
+        const double N = WGS84::kSemiMajorAxis_m / std::sqrt(w2);
+        return { N * (1.0 - WGS84::kEccentricitySq) / w2, N };
+    }
 
 /// @brief Specific force a vehicle must generate, along the geodetic vertical,
 ///        to hold constant geodetic altitude at a given Earth-relative velocity.
@@ -132,32 +133,29 @@ inline CurvatureRadii WGS84CurvatureRadii(double lat_rad)
 /// @param vNorth_mps Earth-relative north velocity [m/s].
 /// @param vEast_mps  Earth-relative east velocity [m/s].
 /// @return Apparent gravitational acceleration [m/s²].
-inline double LevelFlightApparentGravity_m_s2(double lat_deg, double alt_m,
-                                              double vNorth_mps, double vEast_mps)
-{
-    namespace WGS84 = Environment::WGS84;
-    constexpr double kDegRad = std::numbers::pi / 180.0;
+    inline double LevelFlightApparentGravity_m_s2(double lat_deg, double alt_m,
+        double vNorth_mps, double vEast_mps)
+    {
+        namespace WGS84 = Environment::WGS84;
+        constexpr double kDegRad = std::numbers::pi / 180.0;
 
-    const double lat    = lat_deg * kDegRad;
-    const double sinLat = std::sin(lat);
-    const double cosLat = std::cos(lat);
+        const double lat = lat_deg * kDegRad;
+        const double sinLat = std::sin(lat);
+        const double cosLat = std::cos(lat);
 
     // J2 attraction projected on geodetic down, (−cos φ, 0, −sin φ) at zero
     // longitude — arbitrary by the axisymmetry noted in the file header.
-    const auto r = Coordinate::GeodeticToECEF(lat, 0.0, alt_m);
-    const auto g = Environment::J2(Environment::Vec3<double>{ r[0], r[1], r[2] });
-    const double gDown = -(g[0] * cosLat + g[2] * sinLat);
+        const auto r = Coordinate::GeodeticToECEF(lat, 0.0, alt_m);
+        const auto g = Environment::J2(Environment::Vec3<double>{ r[0], r[1], r[2] });
+        const double gDown = -(g[0] * cosLat + g[2] * sinLat);
 
-    const auto [M, N] = WGS84CurvatureRadii(lat);
+        const auto [M, N] = WGS84CurvatureRadii(lat);
 
     // East velocity seen from ECI: Earth-relative plus the local surface speed
-    const double vEastInertial = vEast_mps
-                               + WGS84::kRotationRate_rad_s * (N + alt_m) * cosLat;
+        const double vEastInertial = vEast_mps + WGS84::kRotationRate_rad_s * (N + alt_m) * cosLat;
 
-    return gDown
-         - vNorth_mps * vNorth_mps / (M + alt_m)
-         - vEastInertial * vEastInertial / (N + alt_m);
-}
+        return gDown - vNorth_mps * vNorth_mps / (M + alt_m) - vEastInertial * vEastInertial / (N + alt_m);
+    }
 
 /// @brief Apparent aircraft weight in level flight at a geodetic trim position
 ///        and Earth-relative velocity, in the units @c TrimInputs::weight_lbf
@@ -173,12 +171,10 @@ inline double LevelFlightApparentGravity_m_s2(double lat_deg, double alt_m,
 /// @param vNorth_mps Earth-relative north velocity at trim [m/s].
 /// @param vEast_mps  Earth-relative east velocity at trim [m/s].
 /// @return Apparent weight [lbf].
-inline double LevelFlightTrimWeight_lbf(double mass_kg, double lat_deg, double alt_m,
-                                        double vNorth_mps, double vEast_mps)
-{
-    return mass_kg
-         * LevelFlightApparentGravity_m_s2(lat_deg, alt_m, vNorth_mps, vEast_mps)
-         / kTrimLbf_N;
-}
+    inline double LevelFlightTrimWeight_lbf(double mass_kg, double lat_deg, double alt_m,
+        double vNorth_mps, double vEast_mps)
+    {
+        return mass_kg * LevelFlightApparentGravity_m_s2(lat_deg, alt_m, vNorth_mps, vEast_mps) / kTrimLbf_N;
+    }
 
 } // namespace Aetherion::FlightDynamics

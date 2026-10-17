@@ -24,17 +24,20 @@ namespace {
     using Catch::Approx;
     namespace Core = Aetherion::ODE::RKMK::Core;
 
-    inline bool finite_vec(const Eigen::VectorXd& v) {
+    inline bool finite_vec(const Eigen::VectorXd& v)
+    {
         for (int i = 0; i < v.size(); ++i) {
             if (!std::isfinite(v(i))) return false;
         }
         return true;
     }
 
-    struct SqrtSystemFunctor {
-        template<class S>
+    struct SqrtSystemFunctor
+    {
+        template <class S>
         Eigen::Matrix<S, Eigen::Dynamic, 1>
-            operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const {
+        operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const
+        {
             Eigen::Matrix<S, Eigen::Dynamic, 1> r(2);
             r(0) = x(0) * x(0) - S(2);
             r(1) = x(1) * x(1) - S(3);
@@ -43,7 +46,8 @@ namespace {
     };
 } // namespace
 
-TEST_CASE("NewtonSolve: solves scalar x^2 - 2 = 0", "[newton]") {
+TEST_CASE("NewtonSolve: solves scalar x^2 - 2 = 0", "[newton]")
+{
     Eigen::VectorXd x(1);
     x(0) = 1.0;
 
@@ -52,7 +56,7 @@ TEST_CASE("NewtonSolve: solves scalar x^2 - 2 = 0", "[newton]") {
         J.resize(1, 1);
         r(0) = xin(0) * xin(0) - 2.0;
         J(0, 0) = 2.0 * xin(0);
-        };
+    };
 
     Core::NewtonOptions opt;
     opt.max_iters = 30;
@@ -69,7 +73,8 @@ TEST_CASE("NewtonSolve: solves scalar x^2 - 2 = 0", "[newton]") {
     REQUIRE(res.r_norm == Approx(0.0).margin(1e-12));
 }
 
-TEST_CASE("NewtonSolve: solves a linear 2x2 system in one Newton step", "[newton]") {
+TEST_CASE("NewtonSolve: solves a linear 2x2 system in one Newton step", "[newton]")
+{
     Eigen::Matrix2d A;
     A << 3.0, 1.0,
         1.0, 2.0;
@@ -82,7 +87,7 @@ TEST_CASE("NewtonSolve: solves a linear 2x2 system in one Newton step", "[newton
     auto eval = [&](const Eigen::VectorXd& xin, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
         r = A * xin - b;
         J = A;
-        };
+    };
 
     Core::NewtonOptions opt;
     opt.max_iters = 5;
@@ -98,7 +103,8 @@ TEST_CASE("NewtonSolve: solves a linear 2x2 system in one Newton step", "[newton
     REQUIRE((x - x_ref).norm() == Approx(0.0).margin(1e-13));
 }
 
-TEST_CASE("NewtonSolveRJ: wrapper works (same linear system)", "[newton]") {
+TEST_CASE("NewtonSolveRJ: wrapper works (same linear system)", "[newton]")
+{
     Eigen::Matrix2d A;
     A << 4.0, -1.0,
         -2.0, 3.0;
@@ -126,7 +132,8 @@ TEST_CASE("NewtonSolveRJ: wrapper works (same linear system)", "[newton]") {
     REQUIRE((x - x_ref).norm() == Approx(0.0).margin(1e-12));
 }
 
-TEST_CASE("NewtonSolve: line-search fails when residual cannot decrease", "[newton]") {
+TEST_CASE("NewtonSolve: line-search fails when residual cannot decrease", "[newton]")
+{
     // r(x) = 1 (constant), J(x) = 1 -> ||r|| never decreases for any step.
     Eigen::VectorXd x(1);
     x(0) = 0.0;
@@ -136,7 +143,7 @@ TEST_CASE("NewtonSolve: line-search fails when residual cannot decrease", "[newt
         J.resize(1, 1);
         r(0) = 1.0;
         J(0, 0) = 1.0;
-        };
+    };
 
     Core::NewtonOptions opt;
     opt.max_iters = 10;
@@ -158,7 +165,8 @@ TEST_CASE("NewtonSolve: line-search fails when residual cannot decrease", "[newt
 }
 
 
-TEST_CASE("NewtonSolve: reaches max_iters without throwing when throw_on_fail=false", "[newton]") {
+TEST_CASE("NewtonSolve: reaches max_iters without throwing when throw_on_fail=false", "[newton]")
+{
     // No real root: x^2 + 1 = 0
     Eigen::VectorXd x(1);
     x(0) = 0.1;
@@ -168,7 +176,7 @@ TEST_CASE("NewtonSolve: reaches max_iters without throwing when throw_on_fail=fa
         J.resize(1, 1);
         r(0) = xin(0) * xin(0) + 1.0;
         J(0, 0) = 2.0 * xin(0);
-        };
+    };
 
     Core::NewtonOptions opt;
     opt.max_iters = 3;
@@ -182,7 +190,8 @@ TEST_CASE("NewtonSolve: reaches max_iters without throwing when throw_on_fail=fa
     REQUIRE(std::isfinite(res.r_norm));
 }
 
-TEST_CASE("NewtonSolve: throws on max_iters when throw_on_fail=true", "[newton]") {
+TEST_CASE("NewtonSolve: throws on max_iters when throw_on_fail=true", "[newton]")
+{
     Eigen::VectorXd x(1);
     x(0) = 0.1;
 
@@ -191,7 +200,7 @@ TEST_CASE("NewtonSolve: throws on max_iters when throw_on_fail=true", "[newton]"
         J.resize(1, 1);
         r(0) = xin(0) * xin(0) + 1.0;
         J(0, 0) = 2.0 * xin(0);
-        };
+    };
 
     Core::NewtonOptions opt;
     opt.max_iters = 2;
@@ -201,7 +210,8 @@ TEST_CASE("NewtonSolve: throws on max_iters when throw_on_fail=true", "[newton]"
     REQUIRE_THROWS_AS(Core::NewtonSolve(eval, x, opt), std::runtime_error);
 }
 
-TEST_CASE("CppADResidualJacobian: NewtonSolve converges using AD Jacobian", "[newton][cppad]") {
+TEST_CASE("CppADResidualJacobian: NewtonSolve converges using AD Jacobian", "[newton][cppad]")
+{
     Core::CppADResidualJacobian eval(SqrtSystemFunctor{}, /*n=*/2);
 
     Eigen::VectorXd x(2);
@@ -223,7 +233,8 @@ TEST_CASE("CppADResidualJacobian: NewtonSolve converges using AD Jacobian", "[ne
     REQUIRE(x(1) == Approx(std::sqrt(3.0)).margin(1e-12));
 }
 
-TEST_CASE("NewtonSolve: line-search failure throws when throw_on_fail=true", "[newton]") {
+TEST_CASE("NewtonSolve: line-search failure throws when throw_on_fail=true", "[newton]")
+{
     Eigen::VectorXd x(1);
     x(0) = 0.0;
 
@@ -232,7 +243,7 @@ TEST_CASE("NewtonSolve: line-search failure throws when throw_on_fail=true", "[n
         J.resize(1, 1);
         r(0) = 1.0;
         J(0, 0) = 1.0;
-        };
+    };
 
     Core::NewtonOptions opt;
     opt.max_iters = 10;
@@ -247,7 +258,8 @@ TEST_CASE("NewtonSolve: line-search failure throws when throw_on_fail=true", "[n
     REQUIRE_THROWS_AS(Core::NewtonSolve(eval, x, opt), std::runtime_error);
 }
 
-TEST_CASE("NewtonSolve: exhausted line search still takes the last damped step", "[newton]") {
+TEST_CASE("NewtonSolve: exhausted line search still takes the last damped step", "[newton]")
+{
     // Constant residual: no step is ever accepted by the sufficient-decrease
     // test, but with a single line-search iteration lambda (0.5) stays above
     // damping_min, so the damped step is taken anyway and iteration goes on.
@@ -259,7 +271,7 @@ TEST_CASE("NewtonSolve: exhausted line search still takes the last damped step",
         J.resize(1, 1);
         r(0) = 1.0;
         J(0, 0) = 1.0;
-        };
+    };
 
     Core::NewtonOptions opt;
     opt.max_iters = 3;
@@ -279,7 +291,8 @@ TEST_CASE("NewtonSolve: exhausted line search still takes the last damped step",
     REQUIRE(x(0) == Approx(-1.5));
 }
 
-TEST_CASE("NewtonSolve: empty unknown vector", "[newton]") {
+TEST_CASE("NewtonSolve: empty unknown vector", "[newton]")
+{
     auto eval = [](const Eigen::VectorXd&, Eigen::VectorXd&, Eigen::MatrixXd&) {};
     Eigen::VectorXd x;
 
@@ -303,7 +316,8 @@ TEST_CASE("NewtonSolve: empty unknown vector", "[newton]") {
 // -----------------------------------------------------------------------------
 
 namespace {
-    void linear_eval(const Eigen::VectorXd& xin, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
+    void linear_eval(const Eigen::VectorXd& xin, Eigen::VectorXd& r, Eigen::MatrixXd& J)
+    {
         r.resize(1);
         J.resize(1, 1);
         r(0) = xin(0) - 1.0;
@@ -312,11 +326,13 @@ namespace {
 }
 
 TEST_CASE("NewtonSolve: a root reached on the last permitted iteration is reported as converged",
-          "[newton][regression]") {
+    "[newton][regression]")
+{
     Core::NewtonOptions opt;
     opt.max_iters = 1;
 
-    SECTION("undamped") {
+    SECTION("undamped")
+    {
         opt.use_damping = false;
         Eigen::VectorXd x(1);
         x(0) = 0.0;
@@ -327,7 +343,8 @@ TEST_CASE("NewtonSolve: a root reached on the last permitted iteration is report
         CHECK(res.r_norm == Approx(0.0).margin(1e-15));
     }
 
-    SECTION("damped") {
+    SECTION("damped")
+    {
         opt.use_damping = true;
         Eigen::VectorXd x(1);
         x(0) = 0.0;
@@ -337,7 +354,8 @@ TEST_CASE("NewtonSolve: a root reached on the last permitted iteration is report
         CHECK(res.r_norm == Approx(0.0).margin(1e-15));
     }
 
-    SECTION("throw_on_fail does not throw for a converged final iterate") {
+    SECTION("throw_on_fail does not throw for a converged final iterate")
+    {
         opt.use_damping = false;
         opt.throw_on_fail = true;
         Eigen::VectorXd x(1);
@@ -346,7 +364,8 @@ TEST_CASE("NewtonSolve: a root reached on the last permitted iteration is report
     }
 }
 
-TEST_CASE("NewtonSolve: an unconverged result describes the returned iterate", "[newton][regression]") {
+TEST_CASE("NewtonSolve: an unconverged result describes the returned iterate", "[newton][regression]")
+{
     // x^2 - 2 from x = 1 with one step lands on 1.5, residual 0.25: still not
     // converged, and r_norm must be 0.25 (the returned x), not 1 (the start).
     auto eval = [](const Eigen::VectorXd& xin, Eigen::VectorXd& r, Eigen::MatrixXd& J) {
@@ -380,28 +399,37 @@ TEST_CASE("NewtonSolve: an unconverged result describes the returned iterate", "
 // -----------------------------------------------------------------------------
 
 namespace {
-    struct BranchFunctor {
-        template<class S>
+    struct BranchFunctor
+    {
+        template <class S>
         Eigen::Matrix<S, Eigen::Dynamic, 1>
-            operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const {
+        operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const
+        {
             Eigen::Matrix<S, Eigen::Dynamic, 1> r(1);
-            if (x(0) < S(1.0)) r(0) = x(0) - S(2.0);          // slope 1
-            else               r(0) = S(2.0) * x(0) - S(3.0);  // slope 2
+            if (x(0) < S(1.0))
+                r(0) = x(0) - S(2.0);          // slope 1
+            else
+                r(0) = S(2.0) * x(0) - S(3.0);  // slope 2
             return r;
         }
     };
-    struct BranchFunctorFixed {
-        template<class S>
-        Eigen::Matrix<S, 1, 1> operator()(const Eigen::Matrix<S, 1, 1>& x) const {
+    struct BranchFunctorFixed
+    {
+        template <class S>
+        Eigen::Matrix<S, 1, 1> operator()(const Eigen::Matrix<S, 1, 1>& x) const
+        {
             Eigen::Matrix<S, 1, 1> r;
-            if (x(0) < S(1.0)) r(0) = x(0) - S(2.0);
-            else               r(0) = S(2.0) * x(0) - S(3.0);
+            if (x(0) < S(1.0))
+                r(0) = x(0) - S(2.0);
+            else
+                r(0) = S(2.0) * x(0) - S(3.0);
             return r;
         }
     };
 }
 
-TEST_CASE("CppADResidualJacobian: re-records the tape when a branch changes", "[newton][cppad][regression]") {
+TEST_CASE("CppADResidualJacobian: re-records the tape when a branch changes", "[newton][cppad][regression]")
+{
     Core::CppADResidualJacobian<BranchFunctor> eval(BranchFunctor{}, 1);
     Eigen::VectorXd x(1), r;
     Eigen::MatrixXd J;
@@ -430,7 +458,8 @@ TEST_CASE("CppADResidualJacobian: re-records the tape when a branch changes", "[
     CHECK(eval.retape_count() == 2);
 }
 
-TEST_CASE("FixedCppADResidualJacobian: re-records the tape when a branch changes", "[newton][cppad][regression]") {
+TEST_CASE("FixedCppADResidualJacobian: re-records the tape when a branch changes", "[newton][cppad][regression]")
+{
     Core::FixedCppADResidualJacobian<1, BranchFunctorFixed> eval(BranchFunctorFixed{});
     Eigen::Matrix<double, 1, 1> x, r;
     Eigen::Matrix<double, 1, 1> J;
@@ -447,7 +476,8 @@ TEST_CASE("FixedCppADResidualJacobian: re-records the tape when a branch changes
     CHECK(eval.retape_count() == 1);
 }
 
-TEST_CASE("NewtonSolve on a taped functor converges on the branch the root lies in", "[newton][cppad][regression]") {
+TEST_CASE("NewtonSolve on a taped functor converges on the branch the root lies in", "[newton][cppad][regression]")
+{
     // Root of the branch functor: 2x - 3 = 0 -> x = 1.5 (second branch).
     // Starting in the first branch, the frozen tape solved x - 2 = 0 instead.
     Core::CppADResidualJacobian<BranchFunctor> eval(BranchFunctor{}, 1);

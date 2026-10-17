@@ -158,7 +158,9 @@ TEST_CASE("CppAD: AerodynamicForceBodyFromCxyz Jacobian wrt velocity matches ana
 
     // Independent: u,v,w
     std::vector<AD> x(3);
-    x[0] = 0.0; x[1] = 0.0; x[2] = 0.0;
+    x[0] = 0.0;
+    x[1] = 0.0;
+    x[2] = 0.0;
     CppAD::Independent(x);
 
     Aero::Vec3<AD> vb{ x[0], x[1], x[2] };
@@ -167,7 +169,9 @@ TEST_CASE("CppAD: AerodynamicForceBodyFromCxyz Jacobian wrt velocity matches ana
         vb, AD(rho), AD(S), AD(Cx), AD(Cy), AD(Cz), AD(eps));
 
     std::vector<AD> Y(3);
-    Y[0] = Fb[0]; Y[1] = Fb[1]; Y[2] = Fb[2];
+    Y[0] = Fb[0];
+    Y[1] = Fb[1];
+    Y[2] = Fb[2];
 
     CppAD::ADFun<double> f(x, Y);
 

@@ -129,5 +129,3 @@ TEST_CASE("CppAD derivative: SpeedFromVelocity gradients match v_i/speed", "[Aer
     REQUIRE(jac[1] == Approx(4.0 / speed).margin(1e-12));
     REQUIRE(jac[2] == Approx(0.0).margin(1e-12));
 }
-
-

@@ -51,9 +51,10 @@ namespace {
     using Vec7 = Eigen::Matrix<double, 7, 1>;
 
     /// Gravity-policy stand-in that applies a fixed body-frame wrench, mass-independent.
-    struct BodyWrenchPolicy {
+    struct BodyWrenchPolicy
+    {
         Vec6 w = Vec6::Zero();
-        template<class S>
+        template <class S>
         Spatial::Wrench<S> operator()(const ODE::RKMK::Lie::SE3<S>&, S) const
         {
             Spatial::Wrench<S> out{};
@@ -64,8 +65,9 @@ namespace {
     static_assert(FlightDynamics::GravityPolicy<BodyWrenchPolicy>);
 
     /// Uniform gravity of 10 m/s^2 along body -z, proportional to the mass it is handed.
-    struct UniformGravityPolicy {
-        template<class S>
+    struct UniformGravityPolicy
+    {
+        template <class S>
         Spatial::Wrench<S> operator()(const ODE::RKMK::Lie::SE3<S>&, S mass) const
         {
             Spatial::Wrench<S> out{};
@@ -77,13 +79,19 @@ namespace {
     static_assert(FlightDynamics::GravityPolicy<UniformGravityPolicy>);
 
     InertialParameters params(double m, const Eigen::Vector3d& diag, const Eigen::Vector3d& c,
-                              const Eigen::Vector3d& products = Eigen::Vector3d::Zero())
+        const Eigen::Vector3d& products = Eigen::Vector3d::Zero())
     {
         InertialParameters ip;
         ip.mass_kg = m;
-        ip.Ixx = diag.x(); ip.Iyy = diag.y(); ip.Izz = diag.z();
-        ip.Ixy = products.x(); ip.Iyz = products.y(); ip.Ixz = products.z();
-        ip.xbar_m = c.x(); ip.ybar_m = c.y(); ip.zbar_m = c.z();
+        ip.Ixx = diag.x();
+        ip.Iyy = diag.y();
+        ip.Izz = diag.z();
+        ip.Ixy = products.x();
+        ip.Iyz = products.y();
+        ip.Ixz = products.z();
+        ip.xbar_m = c.x();
+        ip.ybar_m = c.y();
+        ip.zbar_m = c.z();
         return ip;
     }
 
@@ -96,16 +104,16 @@ namespace {
 }
 
 TEST_CASE("Spatial inertia: VectorField::M is Spatial::Inertia about the body origin",
-          "[spatial_inertia][contract][regression]")
+    "[spatial_inertia][contract][regression]")
 {
     // General case: products of inertia and an offset in all three axes.
     const InertialParameters ip = params(12.5, { 3.0, 7.0, 9.0 }, { 0.8, -0.3, 0.45 }, { 0.2, -0.1, 0.35 });
     const VectorField<BodyWrenchPolicy> vf(ip);
 
     Eigen::Matrix3d I_C;
-    I_C <<  ip.Ixx, -ip.Ixy, -ip.Ixz,
-           -ip.Ixy,  ip.Iyy, -ip.Iyz,
-           -ip.Ixz, -ip.Iyz,  ip.Izz;
+    I_C << ip.Ixx, -ip.Ixy, -ip.Ixz,
+        -ip.Ixy, ip.Iyy, -ip.Iyz,
+        -ip.Ixz, -ip.Iyz, ip.Izz;
     const Spatial::Inertia<double> ref(ip.mass_kg, I_C, Eigen::Vector3d(ip.xbar_m, ip.ybar_m, ip.zbar_m));
 
     CHECK((vf.M - ref.M).norm() < 1e-12 * ref.M.norm());
@@ -120,7 +128,7 @@ TEST_CASE("Spatial inertia: VectorField::M is Spatial::Inertia about the body or
 }
 
 TEST_CASE("Spatial inertia: M is positive definite for a centre of mass off the origin",
-          "[spatial_inertia][contract][regression]")
+    "[spatial_inertia][contract][regression]")
 {
     // The audit's probe: 10 kg, unit CG inertia, CG 1 m ahead of the origin.
     // Without the parallel-axis term the smallest eigenvalue was -5.47.
@@ -141,7 +149,7 @@ TEST_CASE("Spatial inertia: M is positive definite for a centre of mass off the 
 
 TEST_CASE("Spatial inertia: a torque about the centre of mass turns the body the same "
           "whether or not the origin is at the centre of mass",
-          "[spatial_inertia][contract][regression]")
+    "[spatial_inertia][contract][regression]")
 {
     // Body A: origin at the centre of mass. Body B: the same body described
     // from an origin displaced by c. A pure torque tau about the centre of
@@ -174,7 +182,7 @@ TEST_CASE("Spatial inertia: a torque about the centre of mass turns the body the
 }
 
 TEST_CASE("Mass state: free-fall acceleration is g whatever the integrated mass says",
-          "[spatial_inertia][contract][mass][regression]")
+    "[spatial_inertia][contract][mass][regression]")
 {
     // Built at 10 kg, evaluated with the mass state at 5 kg: the audit's probe
     // gave -5 m/s^2 because gravity used x(6) and M_inv the constructor mass.
@@ -193,7 +201,7 @@ TEST_CASE("Mass state: free-fall acceleration is g whatever the integrated mass 
 }
 
 TEST_CASE("Mass state: a force divides by the mass M was built with, and follows setInertialParameters",
-          "[spatial_inertia][contract][mass][regression]")
+    "[spatial_inertia][contract][mass][regression]")
 {
     BodyWrenchPolicy force;
     force.w(3) = 40.0;  // 40 N along body x

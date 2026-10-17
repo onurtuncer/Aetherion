@@ -29,30 +29,31 @@ namespace Aetherion::Examples::DroppedSphere2DWindShear {
 ///
 /// Sphere (CD=0.1) dropped from 9144 m in a power-law altitude wind shear:
 /// v_E(h) = 21.336 × (h/9144)^(4/3) m/s (east only).
-class DroppedSphere2DWindShearApplication : public Simulation::Application
-{
-public:
-    explicit DroppedSphere2DWindShearApplication(int argc, char** argv)
-        : Application(argc, argv) {}
+    class DroppedSphere2DWindShearApplication : public Simulation::Application
+    {
+    public:
+        explicit DroppedSphere2DWindShearApplication(int argc, char** argv)
+            : Application(argc, argv)
+        {}
 
-protected:
-    void logStartupBanner()                                               const override;
-    void prepareSimulation()                                              const override;
-    void writeInitialSnapshot(std::ofstream& csv)                         const override;
-    StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
-    void logFinalSummary()                                                const override;
+    protected:
+        void logStartupBanner() const override;
+        void prepareSimulation() const override;
+        void writeInitialSnapshot(std::ofstream& csv) const override;
+        StepObservation stepAndRecord(std::ofstream& csv, double h, bool doWrite) const override;
+        void logFinalSummary() const override;
 
-private:
-    [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
-    [[nodiscard]] static double     computeInitialERA(double t0) noexcept;
-    [[nodiscard]] static RigidBody::StateD
+    private:
+        [[nodiscard]] RigidBody::Config loadVehicleConfig() const;
+        [[nodiscard]] static double computeInitialERA(double t0) noexcept;
+        [[nodiscard]] static RigidBody::StateD
         buildInitialState(const RigidBody::Config& rb_cfg, double theta0);
-    [[nodiscard]] static std::unique_ptr<DroppedSphere2DWindShearSimulator>
+        [[nodiscard]] static std::unique_ptr<DroppedSphere2DWindShearSimulator>
         constructSimulator(const RigidBody::Config& rb_cfg,
-                           const RigidBody::StateD& x0,
-                           double                   theta0);
+            const RigidBody::StateD& x0,
+            double theta0);
 
-    mutable std::unique_ptr<DroppedSphere2DWindShearSimulator> m_Simulator;
-};
+        mutable std::unique_ptr<DroppedSphere2DWindShearSimulator> m_Simulator;
+    };
 
 } // namespace Aetherion::Examples::DroppedSphere2DWindShear

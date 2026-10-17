@@ -60,10 +60,11 @@ namespace Aetherion::ODE::RKMK::Core {
     // Result
     // -------------------------------------------------------------------------
 
-    struct NewtonResult final {
-        bool   converged = false;
-        int    iters = 0;
-        int    line_search_iters = 0;
+    struct NewtonResult final
+    {
+        bool converged = false;
+        int iters = 0;
+        int line_search_iters = 0;
 
         double r0_norm = 0.0;
         double r_norm = 0.0;
@@ -82,11 +83,12 @@ namespace Aetherion::ODE::RKMK::Core {
 
     namespace detail {
 
-        template<class VecT, class MatT, class EvalT, class MakeVec>
+        template <class VecT, class MatT, class EvalT, class MakeVec>
         inline NewtonResult newton_loop(EvalT&& eval,
             VecT& x,
             const NewtonOptions& opt,
-            MakeVec              make_vec) {
+            MakeVec make_vec)
+        {
             NewtonResult res{};
             const int n = static_cast<int>(x.size());
 
@@ -106,7 +108,7 @@ namespace Aetherion::ODE::RKMK::Core {
                 std::forward<EvalT>(eval)(x, r, J);
                 const double r_norm = r.norm();
                 const double x_norm = x.norm();
-                const VecT   dx = J.colPivHouseholderQr().solve(-r);
+                const VecT dx = J.colPivHouseholderQr().solve(-r);
                 const double dx_norm = dx.norm();
 
                 res.iters = k + 1;
@@ -152,8 +154,7 @@ namespace Aetherion::ODE::RKMK::Core {
                     if (lambda >= opt.damping_min) {
                         x.noalias() += lambda * dx;
                         res.last_lambda = lambda;
-                    }
-                    else {
+                    } else {
                         res.converged = false;
                         if (opt.throw_on_fail)
                             throw std::runtime_error(
@@ -189,10 +190,11 @@ namespace Aetherion::ODE::RKMK::Core {
     // FIXED-SIZE PATH  (N known at compile time)
     // =========================================================================
 
-    template<int N, class Eval>
+    template <int N, class Eval>
     inline NewtonResult NewtonSolve(Eval&& eval,
         Eigen::Matrix<double, N, 1>& x,
-        const NewtonOptions& opt = {}) {
+        const NewtonOptions& opt = {})
+    {
         static_assert(N > 0, "NewtonSolve<N> requires N > 0 at compile time");
         using VecN = Eigen::Matrix<double, N, 1>;
         using MatN = Eigen::Matrix<double, N, N>;
@@ -200,17 +202,18 @@ namespace Aetherion::ODE::RKMK::Core {
             std::forward<Eval>(eval), x, opt, [](int) { return VecN{}; });
     }
 
-    template<int N, class Residual, class Jacobian>
+    template <int N, class Residual, class Jacobian>
     inline NewtonResult NewtonSolveRJ(Residual&& residual,
         Jacobian&& jacobian,
         Eigen::Matrix<double, N, 1>& x,
-        const NewtonOptions& opt = {}) {
+        const NewtonOptions& opt = {})
+    {
         using VecN = Eigen::Matrix<double, N, 1>;
         using MatN = Eigen::Matrix<double, N, N>;
         auto eval = [&](const VecN& xin, VecN& r, MatN& J) {
             std::forward<Residual>(residual)(xin, r);
             std::forward<Jacobian>(jacobian)(xin, J);
-            };
+        };
         return NewtonSolve<N>(eval, x, opt);
     }
 
@@ -226,14 +229,16 @@ namespace Aetherion::ODE::RKMK::Core {
     //   Eigen::Matrix<S, N, 1> operator()(const Eigen::Matrix<S, N, 1>&) const;
     // -------------------------------------------------------------------------
 
-    template<int N, class Functor>
-    class FixedCppADResidualJacobian final {
+    template <int N, class Functor>
+    class FixedCppADResidualJacobian final
+    {
     public:
         using VecN = Eigen::Matrix<double, N, 1>;
         using MatN = Eigen::Matrix<double, N, N>;
 
         explicit FixedCppADResidualJacobian(Functor f)
-            : functor_(std::move(f)) {
+            : functor_(std::move(f))
+        {
             static_assert(N > 0, "FixedCppADResidualJacobian requires N > 0");
         }
 
@@ -245,9 +250,13 @@ namespace Aetherion::ODE::RKMK::Core {
         // re-recorded at x. Without this the Newton iteration converged on the
         // residual of the region the tape was recorded in, not on the
         // residual of the function (pre-DOI audit finding F01).
-        void operator()(const VecN& x, VecN& r, MatN& J) const {
+        void operator()(const VecN& x, VecN& r, MatN& J) const
+        {
             const std::vector<double> xd = to_std_(x);
-            if (!taped_) { tape_ = build_tape_(xd); taped_ = true; }
+            if (!taped_) {
+                tape_ = build_tape_(xd);
+                taped_ = true;
+            }
             std::vector<double> yd = tape_.Forward(0, xd);
             if (tape_.compare_change_number() > 0) {
                 tape_ = build_tape_(xd);
@@ -266,13 +275,15 @@ namespace Aetherion::ODE::RKMK::Core {
         [[nodiscard]] int retape_count() const noexcept { return retapes_; }
 
     private:
-        static std::vector<double> to_std_(const VecN& x) {
+        static std::vector<double> to_std_(const VecN& x)
+        {
             std::vector<double> v(N);
             for (int i = 0; i < N; ++i) v[(std::size_t)i] = x(i);
             return v;
         }
 
-        CppAD::ADFun<double> build_tape_(const std::vector<double>& at) const {
+        CppAD::ADFun<double> build_tape_(const std::vector<double>& at) const
+        {
             using AD = CppAD::AD<double>;
             using VecAD = Eigen::Matrix<AD, N, 1>;
 
@@ -282,7 +293,7 @@ namespace Aetherion::ODE::RKMK::Core {
 
             VecAD x_ad;
             for (int i = 0; i < N; ++i) x_ad(i) = ax[(std::size_t)i];
-            const VecAD y_ad = functor_.template operator() < AD > (x_ad);
+            const VecAD y_ad = functor_.template operator()<AD>(x_ad);
 
             CppAD::vector<AD> ay(N);
             for (int i = 0; i < N; ++i) ay[(std::size_t)i] = y_ad(i);
@@ -293,17 +304,18 @@ namespace Aetherion::ODE::RKMK::Core {
             return f;
         }
 
-        Functor                      functor_;
+        Functor functor_;
         mutable CppAD::ADFun<double> tape_;
-        mutable bool                 taped_{ false };
-        mutable int                  retapes_{ 0 };
+        mutable bool taped_{ false };
+        mutable int retapes_{ 0 };
     };
 
     // Factory: deduces Functor, N must be specified explicitly.
     //   auto eval = MakeCppADResidualJacobian<18>(my_residual);
-    template<int N, class Functor>
+    template <int N, class Functor>
     [[nodiscard]] auto MakeCppADResidualJacobian(Functor&& f)
-        -> FixedCppADResidualJacobian<N, std::decay_t<Functor>> {
+        -> FixedCppADResidualJacobian<N, std::decay_t<Functor>>
+    {
         return FixedCppADResidualJacobian<N, std::decay_t<Functor>>(
             std::forward<Functor>(f));
     }
@@ -312,10 +324,11 @@ namespace Aetherion::ODE::RKMK::Core {
     // DYNAMIC PATH  (n known only at runtime)
     // =========================================================================
 
-    template<class Eval>
+    template <class Eval>
     inline NewtonResult NewtonSolve(Eval&& eval,
         Eigen::VectorXd& x,
-        const NewtonOptions& opt = {}) {
+        const NewtonOptions& opt = {})
+    {
         const int n = static_cast<int>(x.size());
         if (n <= 0) {
             if (opt.throw_on_fail)
@@ -327,17 +340,18 @@ namespace Aetherion::ODE::RKMK::Core {
             [](int sz) { return Eigen::VectorXd(sz); });
     }
 
-    template<class Residual, class Jacobian>
+    template <class Residual, class Jacobian>
     inline NewtonResult NewtonSolveRJ(Residual&& residual,
         Jacobian&& jacobian,
         Eigen::VectorXd& x,
-        const NewtonOptions& opt = {}) {
+        const NewtonOptions& opt = {})
+    {
         auto eval = [&](const Eigen::VectorXd& xin,
-            Eigen::VectorXd& r,
-            Eigen::MatrixXd& J) {
-                std::forward<Residual>(residual)(xin, r);
-                std::forward<Jacobian>(jacobian)(xin, J);
-            };
+                        Eigen::VectorXd& r,
+                        Eigen::MatrixXd& J) {
+            std::forward<Residual>(residual)(xin, r);
+            std::forward<Jacobian>(jacobian)(xin, J);
+        };
         return NewtonSolve(eval, x, opt);
     }
 
@@ -354,11 +368,14 @@ namespace Aetherion::ODE::RKMK::Core {
     // tape_ is mutable because ADFun::Forward/Jacobian are non-const.
     // -------------------------------------------------------------------------
 
-    template<class Functor>
-    class CppADResidualJacobian final {
+    template <class Functor>
+    class CppADResidualJacobian final
+    {
     public:
         explicit CppADResidualJacobian(Functor f, int n)
-            : functor_(std::move(f)), n_(n) {
+            : functor_(std::move(f))
+            , n_(n)
+        {
             if (n_ <= 0) throw std::invalid_argument(
                 "CppADResidualJacobian: n must be > 0");
         }
@@ -368,9 +385,13 @@ namespace Aetherion::ODE::RKMK::Core {
         // evaluator above).
         void operator()(const Eigen::VectorXd& x,
             Eigen::VectorXd& r,
-            Eigen::MatrixXd& J) const {
+            Eigen::MatrixXd& J) const
+        {
             const std::vector<double> xd = to_std_(x);
-            if (!taped_) { tape_ = build_tape_(xd); taped_ = true; }
+            if (!taped_) {
+                tape_ = build_tape_(xd);
+                taped_ = true;
+            }
             std::vector<double> yd = tape_.Forward(0, xd);
             if (tape_.compare_change_number() > 0) {
                 tape_ = build_tape_(xd);
@@ -393,13 +414,15 @@ namespace Aetherion::ODE::RKMK::Core {
         [[nodiscard]] int retape_count() const noexcept { return retapes_; }
 
     private:
-        std::vector<double> to_std_(const Eigen::VectorXd& x) const {
+        std::vector<double> to_std_(const Eigen::VectorXd& x) const
+        {
             std::vector<double> v((std::size_t)n_);
             for (int i = 0; i < n_; ++i) v[(std::size_t)i] = x(i);
             return v;
         }
 
-        CppAD::ADFun<double> build_tape_(const std::vector<double>& at) const {
+        CppAD::ADFun<double> build_tape_(const std::vector<double>& at) const
+        {
             using AD = CppAD::AD<double>;
 
             CppAD::vector<AD> ax((std::size_t)n_);
@@ -408,7 +431,7 @@ namespace Aetherion::ODE::RKMK::Core {
 
             Eigen::Matrix<AD, Eigen::Dynamic, 1> x_ad(n_);
             for (int i = 0; i < n_; ++i) x_ad(i) = ax[(std::size_t)i];
-            const auto y_ad = functor_.template operator() < AD > (x_ad);
+            const auto y_ad = functor_.template operator()<AD>(x_ad);
 
             CppAD::vector<AD> ay((std::size_t)n_);
             for (int i = 0; i < n_; ++i) ay[(std::size_t)i] = y_ad(i);
@@ -419,11 +442,11 @@ namespace Aetherion::ODE::RKMK::Core {
             return f;
         }
 
-        Functor              functor_;
-        int                  n_{ 0 };
+        Functor functor_;
+        int n_{ 0 };
         mutable CppAD::ADFun<double> tape_;
-        mutable bool         taped_{ false };
-        mutable int          retapes_{ 0 };
+        mutable bool taped_{ false };
+        mutable int retapes_{ 0 };
     };
 
 } // namespace Aetherion::ODE::RKMK::Core

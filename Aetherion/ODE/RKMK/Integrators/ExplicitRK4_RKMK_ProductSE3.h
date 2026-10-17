@@ -37,8 +37,9 @@ namespace Aetherion::ODE::RKMK::Integrators {
     namespace Lie = Aetherion::ODE::RKMK::Lie;
     namespace Core = Aetherion::ODE::RKMK::Core;
 
-    template<class XiField, class FField, int EuclidDim = 7>
-    class ExplicitRK4_RKMK_ProductSE3 final {
+    template <class XiField, class FField, int EuclidDim = 7>
+    class ExplicitRK4_RKMK_ProductSE3 final
+    {
     public:
         using Scalar = double;
 
@@ -46,7 +47,8 @@ namespace Aetherion::ODE::RKMK::Integrators {
         using Vec6 = Eigen::Matrix<Scalar, 6, 1>;
         using VecE = Eigen::Matrix<Scalar, EuclidDim, 1>;
 
-        struct StepResult {
+        struct StepResult
+        {
             SE3d g1;
             VecE x1{ VecE::Zero() };
             bool converged{ true };  // explicit: always "converged"
@@ -73,35 +75,35 @@ namespace Aetherion::ODE::RKMK::Integrators {
             // Stage 1  (at t0, g0, x0)
             // ------------------------------------------------------------------
             const Vec6 xi0 = x0.template head<6>();
-            const Vec6 K1  = xi_field_(t0, g0, xi0);          // dexp_inv(0)=I
-            const VecE k1  = f_field_(t0, g0, x0);
+            const Vec6 K1 = xi_field_(t0, g0, xi0);          // dexp_inv(0)=I
+            const VecE k1 = f_field_(t0, g0, x0);
 
             // ------------------------------------------------------------------
             // Stage 2  (at t0 + h/2, g0*Exp(h/2*K1), x0 + h/2*k1)
             // ------------------------------------------------------------------
             const Vec6 eta2 = (h * 0.5) * K1;
-            const SE3d g2   = g0 * SE3d::Exp(eta2);
-            const VecE x2   = x0 + (h * 0.5) * k1;
-            const Vec6 K2   = SE3d::dexp_inv_left(eta2, xi_field_(t0 + h * 0.5, g2, x2.template head<6>().eval()));
-            const VecE k2   = f_field_(t0 + h * 0.5, g2, x2);
+            const SE3d g2 = g0 * SE3d::Exp(eta2);
+            const VecE x2 = x0 + (h * 0.5) * k1;
+            const Vec6 K2 = SE3d::dexp_inv_left(eta2, xi_field_(t0 + h * 0.5, g2, x2.template head<6>().eval()));
+            const VecE k2 = f_field_(t0 + h * 0.5, g2, x2);
 
             // ------------------------------------------------------------------
             // Stage 3  (at t0 + h/2, g0*Exp(h/2*K2), x0 + h/2*k2)
             // ------------------------------------------------------------------
             const Vec6 eta3 = (h * 0.5) * K2;
-            const SE3d g3   = g0 * SE3d::Exp(eta3);
-            const VecE x3   = x0 + (h * 0.5) * k2;
-            const Vec6 K3   = SE3d::dexp_inv_left(eta3, xi_field_(t0 + h * 0.5, g3, x3.template head<6>().eval()));
-            const VecE k3   = f_field_(t0 + h * 0.5, g3, x3);
+            const SE3d g3 = g0 * SE3d::Exp(eta3);
+            const VecE x3 = x0 + (h * 0.5) * k2;
+            const Vec6 K3 = SE3d::dexp_inv_left(eta3, xi_field_(t0 + h * 0.5, g3, x3.template head<6>().eval()));
+            const VecE k3 = f_field_(t0 + h * 0.5, g3, x3);
 
             // ------------------------------------------------------------------
             // Stage 4  (at t0 + h, g0*Exp(h*K3), x0 + h*k3)
             // ------------------------------------------------------------------
             const Vec6 eta4 = h * K3;
-            const SE3d g4   = g0 * SE3d::Exp(eta4);
-            const VecE x4   = x0 + h * k3;
-            const Vec6 K4   = SE3d::dexp_inv_left(eta4, xi_field_(t0 + h, g4, x4.template head<6>().eval()));
-            const VecE k4   = f_field_(t0 + h, g4, x4);
+            const SE3d g4 = g0 * SE3d::Exp(eta4);
+            const VecE x4 = x0 + h * k3;
+            const Vec6 K4 = SE3d::dexp_inv_left(eta4, xi_field_(t0 + h, g4, x4.template head<6>().eval()));
+            const VecE k4 = f_field_(t0 + h, g4, x4);
 
             // ------------------------------------------------------------------
             // Update
@@ -117,7 +119,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
 
     private:
         XiField xi_field_;
-        FField  f_field_;
+        FField f_field_;
     };
 
 } // namespace Aetherion::ODE::RKMK::Integrators

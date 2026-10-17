@@ -9,6 +9,6 @@
 #include <Aetherion/Serialization/Json/ConfigNlohmannAdapter.h>
 #include "Aetherion/Serialization/Json/Adapter.h"
 
-namespace Aetherion::FlightDynamics{
+namespace Aetherion::FlightDynamics {
 
 } // namespace Aetherion::FlightDynamics

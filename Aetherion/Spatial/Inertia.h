@@ -32,7 +32,7 @@ namespace Aetherion::Spatial {
 /// @f]
 ///
 /// @tparam Scalar Numeric type (e.g. @c double or @c CppAD::AD\<double\>).
-    template<typename Scalar>
+    template <typename Scalar>
     struct Inertia
     {
         using Mat3 = Eigen::Matrix<Scalar, 3, 3>;
@@ -40,10 +40,10 @@ namespace Aetherion::Spatial {
         using Mat6 = Eigen::Matrix<Scalar, 6, 6>;
 
         Scalar mass;   ///< Vehicle mass [kg].
-        Mat3   I_com;  ///< Rotational inertia about CoM, expressed in body frame [kg·m²].
-        Vec3   c;      ///< Position of CoM w.r.t. body-frame origin, in body frame [m].
+        Mat3 I_com;  ///< Rotational inertia about CoM, expressed in body frame [kg·m²].
+        Vec3 c;      ///< Position of CoM w.r.t. body-frame origin, in body frame [m].
 
-        Mat6   M;      ///< Cached 6×6 spatial inertia matrix (rebuilt by @c build()).
+        Mat6 M;      ///< Cached 6×6 spatial inertia matrix (rebuilt by @c build()).
 
         /// @brief Construct and cache the 6×6 spatial inertia.
         /// @param m    Mass [kg].
@@ -53,7 +53,9 @@ namespace Aetherion::Spatial {
             Scalar m,
             Mat3 I_C,
             Vec3 c_C)
-            : mass(m), I_com(std::move(I_C)), c(std::move(c_C))
+            : mass(m)
+            , I_com(std::move(I_C))
+            , c(std::move(c_C))
         {
             build();
         }
@@ -114,7 +116,6 @@ namespace Aetherion::Spatial {
     };
 
 } // namespace Aetherion::Spatial
-
 
 
 /*#pragma once

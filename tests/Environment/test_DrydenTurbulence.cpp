@@ -33,20 +33,25 @@ using Catch::Matchers::WithinRel;
 
 namespace {
 
-    constexpr double kV  = 200.0;   // airspeed [m/s]
-    constexpr double kL  = 533.4;   // scale length [m]
+    constexpr double kV = 200.0;   // airspeed [m/s]
+    constexpr double kL = 533.4;   // scale length [m]
     constexpr double kPi = std::numbers::pi;
 
     DrydenParameters testParams(double su = 1.0, double sv = 2.0, double sw = 3.0)
     {
         DrydenParameters p{};
-        p.sigma_u_mps = su; p.sigma_v_mps = sv; p.sigma_w_mps = sw;
+        p.sigma_u_mps = su;
+        p.sigma_v_mps = sv;
+        p.sigma_w_mps = sw;
         p.L_u_m = p.L_v_m = p.L_w_m = kL;
         p.wingspan_m = 9.144;
         return p;
     }
 
-    struct Stats { double mean{}, var{}; };
+    struct Stats
+    {
+        double mean{}, var{};
+    };
 
     Stats meanVar(const std::vector<double>& x)
     {
@@ -61,23 +66,37 @@ namespace {
 
     // MIL-F-8785C one-sided spectra, converted to temporal frequency omega [rad/s]
     // (Omega = omega / V): they integrate to sigma^2 over omega in [0, inf).
-    double PhiU(double omega, double sigma) {
+    double PhiU(double omega, double sigma)
+    {
         const double x = kL * omega / kV;
         return sigma * sigma * (2.0 * kL / (kPi * kV)) / (1.0 + x * x);
     }
-    double PhiW(double omega, double sigma) {
+    double PhiW(double omega, double sigma)
+    {
         const double x = kL * omega / kV;
         return sigma * sigma * (kL / (kPi * kV)) * (1.0 + 3.0 * x * x) / ((1.0 + x * x) * (1.0 + x * x));
     }
 
     // Averaged rectangular-window periodogram at the DFT bins k of segments of
     // length N:  Phi_hat(omega_k) = (dt / (pi N)) |X_k|^2, one-sided in omega.
-    struct Periodogram {
-        int N; double dt; std::vector<int> bins;
-        std::vector<std::complex<double>> acc; std::vector<double> power; int nseg{ 0 }; int n{ 0 };
+    struct Periodogram
+    {
+        int N;
+        double dt;
+        std::vector<int> bins;
+        std::vector<std::complex<double>> acc;
+        std::vector<double> power;
+        int nseg{ 0 };
+        int n{ 0 };
         Periodogram(int N_, double dt_, std::vector<int> bins_)
-            : N(N_), dt(dt_), bins(std::move(bins_)), acc(bins.size()), power(bins.size(), 0.0) {}
-        void push(double x) {
+            : N(N_)
+            , dt(dt_)
+            , bins(std::move(bins_))
+            , acc(bins.size())
+            , power(bins.size(), 0.0)
+        {}
+        void push(double x)
+        {
             for (std::size_t j = 0; j < bins.size(); ++j) {
                 const double ang = -2.0 * kPi * bins[j] * n / static_cast<double>(N);
                 acc[j] += x * std::complex<double>(std::cos(ang), std::sin(ang));
@@ -87,11 +106,12 @@ namespace {
                     power[j] += std::norm(acc[j]);
                     acc[j] = 0.0;
                 }
-                n = 0; ++nseg;
+                n = 0;
+                ++nseg;
             }
         }
         double omega(std::size_t j) const { return 2.0 * kPi * bins[j] / (N * dt); }
-        double phi(std::size_t j)   const { return (dt / (kPi * N)) * power[j] / nseg; }
+        double phi(std::size_t j) const { return (dt / (kPi * N)) * power[j] / nseg; }
     };
 }
 
@@ -100,8 +120,12 @@ TEST_CASE("DrydenTurbulence: zero intensity is calm", "[dryden]")
     DrydenTurbulence t(DrydenParameters{}, 7);
     for (int i = 0; i < 100; ++i) {
         const GustState g = t.step(0.01, kV);
-        CHECK(g.u_mps == 0.0); CHECK(g.v_mps == 0.0); CHECK(g.w_mps == 0.0);
-        CHECK(g.p_rad_s == 0.0); CHECK(g.q_rad_s == 0.0); CHECK(g.r_rad_s == 0.0);
+        CHECK(g.u_mps == 0.0);
+        CHECK(g.v_mps == 0.0);
+        CHECK(g.w_mps == 0.0);
+        CHECK(g.p_rad_s == 0.0);
+        CHECK(g.q_rad_s == 0.0);
+        CHECK(g.r_rad_s == 0.0);
     }
 }
 
@@ -111,26 +135,36 @@ TEST_CASE("DrydenTurbulence: the same seed reproduces the same record", "[dryden
     bool differsFromC = false;
     for (int i = 0; i < 2000; ++i) {
         const GustState ga = a.step(0.02, kV), gb = b.step(0.02, kV), gc = c.step(0.02, kV);
-        REQUIRE(ga.u_mps == gb.u_mps); REQUIRE(ga.v_mps == gb.v_mps); REQUIRE(ga.w_mps == gb.w_mps);
-        REQUIRE(ga.p_rad_s == gb.p_rad_s); REQUIRE(ga.q_rad_s == gb.q_rad_s); REQUIRE(ga.r_rad_s == gb.r_rad_s);
+        REQUIRE(ga.u_mps == gb.u_mps);
+        REQUIRE(ga.v_mps == gb.v_mps);
+        REQUIRE(ga.w_mps == gb.w_mps);
+        REQUIRE(ga.p_rad_s == gb.p_rad_s);
+        REQUIRE(ga.q_rad_s == gb.q_rad_s);
+        REQUIRE(ga.r_rad_s == gb.r_rad_s);
         differsFromC = differsFromC || (ga.u_mps != gc.u_mps);
     }
     CHECK(differsFromC);
 }
 
 TEST_CASE("DrydenTurbulence: variance of every linear channel is sigma^2, p matches Phi_p",
-          "[dryden][statistics]")
+    "[dryden][statistics]")
 {
     const auto prm = testParams(1.0, 2.0, 3.0);
     DrydenTurbulence t(prm, 1);
     const double dt = 0.02;
-    const int    N  = 10'000'000;           // 2e5 s: ~3.7e4 correlation times of L/V
+    const int N = 10'000'000;           // 2e5 s: ~3.7e4 correlation times of L/V
 
     std::vector<double> u, v, w, p;
-    u.reserve(N); v.reserve(N); w.reserve(N); p.reserve(N);
+    u.reserve(N);
+    v.reserve(N);
+    w.reserve(N);
+    p.reserve(N);
     for (int i = 0; i < N; ++i) {
         const GustState g = t.step(dt, kV);
-        u.push_back(g.u_mps); v.push_back(g.v_mps); w.push_back(g.w_mps); p.push_back(g.p_rad_s);
+        u.push_back(g.u_mps);
+        v.push_back(g.v_mps);
+        w.push_back(g.w_mps);
+        p.push_back(g.p_rad_s);
     }
     const Stats su = meanVar(u), sv = meanVar(v), sw = meanVar(w), sp = meanVar(p);
 
@@ -148,12 +182,12 @@ TEST_CASE("DrydenTurbulence: variance of every linear channel is sigma^2, p matc
 }
 
 TEST_CASE("DrydenTurbulence: spectrum matches MIL-F-8785C, including the sqrt(3) zero",
-          "[dryden][statistics]")
+    "[dryden][statistics]")
 {
     const auto prm = testParams(1.0, 2.0, 3.0);
     DrydenTurbulence t(prm, 3);
     const double dt = 0.02;
-    const int    Nseg = 4096;                       // 81.9 s per segment, d_omega = 0.077 rad/s
+    const int Nseg = 4096;                       // 81.9 s per segment, d_omega = 0.077 rad/s
     const std::vector<int> bins = { 2, 5, 13, 39 }; // 0.15, 0.38, 1.0, 3.0 rad/s (corner V/L = 0.375)
     Periodogram pu(Nseg, dt, bins), pw(Nseg, dt, bins);
 
@@ -186,26 +220,28 @@ TEST_CASE("DrydenTurbulence: statistics do not depend on the step size", "[dryde
 {
     const auto prm = testParams(1.0, 2.0, 3.0);
     const double T = 1.0e5;
-    std::array<Stats, 2>  s{};
+    std::array<Stats, 2> s{};
     std::array<double, 2> vr{};
     const std::array<double, 2> dts{ { 0.01, 0.04 } };
     for (int k = 0; k < 2; ++k) {
         DrydenTurbulence t(prm, 11 + k);
         const int N = static_cast<int>(T / dts[k]);
-        std::vector<double> w; w.reserve(N);
-        std::vector<double> r; r.reserve(N);
+        std::vector<double> w;
+        w.reserve(N);
+        std::vector<double> r;
+        r.reserve(N);
         for (int i = 0; i < N; ++i) {
             const GustState g = t.step(dts[k], kV);
             w.push_back(g.w_mps);
             r.push_back(g.r_rad_s);
         }
-        s[k]  = meanVar(w);
+        s[k] = meanVar(w);
         vr[k] = meanVar(r).var;
     }
     CHECK_THAT(s[0].var, WithinRel(9.0, 0.05));
     CHECK_THAT(s[1].var, WithinRel(9.0, 0.05));
     CHECK_THAT(s[1].var, WithinRel(s[0].var, 0.06));
-    CHECK_THAT(vr[1],    WithinRel(vr[0], 0.08));   // the lagged-derivative channel too
+    CHECK_THAT(vr[1], WithinRel(vr[0], 0.08));   // the lagged-derivative channel too
     CHECK(vr[0] > 0.0);
 }
 
@@ -218,8 +254,12 @@ TEST_CASE("DrydenTurbulence: filter states round-trip through states()/setStates
     DrydenTurbulence b(testParams(), 999);
     b.setStates(x);
     const GustState ga = a.current(kV), gb = b.current(kV);
-    CHECK(ga.u_mps == gb.u_mps); CHECK(ga.v_mps == gb.v_mps); CHECK(ga.w_mps == gb.w_mps);
-    CHECK(ga.p_rad_s == gb.p_rad_s); CHECK(ga.q_rad_s == gb.q_rad_s); CHECK(ga.r_rad_s == gb.r_rad_s);
+    CHECK(ga.u_mps == gb.u_mps);
+    CHECK(ga.v_mps == gb.v_mps);
+    CHECK(ga.w_mps == gb.w_mps);
+    CHECK(ga.p_rad_s == gb.p_rad_s);
+    CHECK(ga.q_rad_s == gb.q_rad_s);
+    CHECK(ga.r_rad_s == gb.r_rad_s);
 }
 
 TEST_CASE("DrydenLowAltitudeParameters: MIL-F-8785C low-altitude rules", "[dryden]")
@@ -239,7 +279,7 @@ TEST_CASE("DrydenLowAltitudeParameters: MIL-F-8785C low-altitude rules", "[dryde
 }
 
 TEST_CASE("DrydenTurbulence: a restored noise state reproduces the realisation gust for gust",
-          "[dryden][regression]")
+    "[dryden][regression]")
 {
     // F06: states() carried the eight filter states but not the generator,
     // so a restored turbulence diverged from the original at the first step.

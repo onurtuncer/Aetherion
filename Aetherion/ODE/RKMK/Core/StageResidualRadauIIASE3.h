@@ -43,19 +43,20 @@ namespace Aetherion::ODE::RKMK::Core {
 
     namespace detail {
 
-        template<class...>
+        template <class...>
         inline constexpr bool always_false_v = false;
 
-        template<class S>
+        template <class S>
         using Vec6 = Eigen::Matrix<S, 6, 1>;
 
-        template<class S>
+        template <class S>
         using Mat6 = Eigen::Matrix<S, 6, 6>;
 
         // Construct SE3<S> from stored double pose (q0_, p0_).
-        template<class S>
+        template <class S>
         [[nodiscard]] inline auto make_se3_from_qp(const Eigen::Quaterniond& qd,
-            const Eigen::Vector3d& pd) {
+            const Eigen::Vector3d& pd)
+        {
             using G = Aetherion::ODE::RKMK::Lie::SE3<S>;
 
             const Eigen::Quaternion<S> q(static_cast<S>(qd.w()),
@@ -66,53 +67,45 @@ namespace Aetherion::ODE::RKMK::Core {
 
             if constexpr (requires { G{ q, p }; }) {
                 return G{ q, p };
-            }
-            else if constexpr (requires { G(q, p); }) {
+            } else if constexpr (requires { G(q, p); }) {
                 return G(q, p);
-            }
-            else if constexpr (requires { G::FromQuatTranslation(q, p); }) {
+            } else if constexpr (requires { G::FromQuatTranslation(q, p); }) {
                 return G::FromQuatTranslation(q, p);
-            }
-            else if constexpr (requires { G::from_quat_translation(q, p); }) {
+            } else if constexpr (requires { G::from_quat_translation(q, p); }) {
                 return G::from_quat_translation(q, p);
-            }
-            else {
+            } else {
                 static_assert(always_false_v<S>,
                     "Lie::SE3<S> must be constructible from (Eigen::Quaternion<S>, Vec3) "
                     "or provide FromQuatTranslation / from_quat_translation.");
             }
         }
 
-        template<class S>
-        [[nodiscard]] inline auto se3_exp(const Vec6<S>& eta) {
+        template <class S>
+        [[nodiscard]] inline auto se3_exp(const Vec6<S>& eta)
+        {
             using G = Aetherion::ODE::RKMK::Lie::SE3<S>;
             if constexpr (requires { G::Exp(eta); }) {
                 return G::Exp(eta);
-            }
-            else if constexpr (requires { G::exp(eta); }) {
+            } else if constexpr (requires { G::exp(eta); }) {
                 return G::exp(eta);
-            }
-            else {
+            } else {
                 static_assert(always_false_v<S>, "Lie::SE3<S> must provide static Exp(eta) or exp(eta).");
             }
         }
 
-        template<class S>
-        [[nodiscard]] inline Mat6<S> se3_dexp_inv(const Vec6<S>& eta) {
+        template <class S>
+        [[nodiscard]] inline Mat6<S> se3_dexp_inv(const Vec6<S>& eta)
+        {
             using G = Aetherion::ODE::RKMK::Lie::SE3<S>;
             if constexpr (requires { G::dexp_inv(eta); }) {
                 return G::dexp_inv(eta);
-            }
-            else if constexpr (requires { G::dexpInv(eta); }) {
+            } else if constexpr (requires { G::dexpInv(eta); }) {
                 return G::dexpInv(eta);
-            }
-            else if constexpr (requires { G::left_jacobian_inv(eta); }) {
+            } else if constexpr (requires { G::left_jacobian_inv(eta); }) {
                 return G::left_jacobian_inv(eta);
-            }
-            else if constexpr (requires { G::LeftJacobianInv(eta); }) {
+            } else if constexpr (requires { G::LeftJacobianInv(eta); }) {
                 return G::LeftJacobianInv(eta);
-            }
-            else {
+            } else {
                 static_assert(always_false_v<S>,
                     "Lie::SE3<S> must provide dexp_inv(eta) (or dexpInv/left_jacobian_inv).");
             }
@@ -121,29 +114,27 @@ namespace Aetherion::ODE::RKMK::Core {
         // Left-trivialised variant: dexp^{-1} evaluated at -eta, as required by the
         // RKMK stage correction for g_dot = g * hat(xi).  Centralised here so call
         // sites cannot drop the negation (doing so caps the method at order 2).
-        template<class S>
-        [[nodiscard]] inline Mat6<S> se3_dexp_inv_left(const Vec6<S>& eta) {
+        template <class S>
+        [[nodiscard]] inline Mat6<S> se3_dexp_inv_left(const Vec6<S>& eta)
+        {
             using G = Aetherion::ODE::RKMK::Lie::SE3<S>;
             if constexpr (requires { G::dexp_inv_left(eta); }) {
                 return G::dexp_inv_left(eta);
-            }
-            else {
+            } else {
                 return se3_dexp_inv<S>((-eta).eval());
             }
         }
 
-        template<class G>
-        [[nodiscard]] inline auto se3_compose(const G& a, const G& b) {
+        template <class G>
+        [[nodiscard]] inline auto se3_compose(const G& a, const G& b)
+        {
             if constexpr (requires { a* b; }) {
                 return a * b;
-            }
-            else if constexpr (requires { a.compose(b); }) {
+            } else if constexpr (requires { a.compose(b); }) {
                 return a.compose(b);
-            }
-            else if constexpr (requires { G::compose(a, b); }) {
+            } else if constexpr (requires { G::compose(a, b); }) {
                 return G::compose(a, b);
-            }
-            else {
+            } else {
                 static_assert(always_false_v<G>, "SE3 must support composition (operator* or compose).");
             }
         }
@@ -154,8 +145,9 @@ namespace Aetherion::ODE::RKMK::Core {
     // StageResidualIRK_SE3
     // -----------------------------------------------------------------------------
 
-    template<int Stages, class VectorField, class Tableau>
-    class StageResidualIRK_SE3 final {
+    template <int Stages, class VectorField, class Tableau>
+    class StageResidualIRK_SE3 final
+    {
     public:
         static_assert(Stages > 0, "Stages must be > 0");
 
@@ -171,14 +163,16 @@ namespace Aetherion::ODE::RKMK::Core {
             , t0_(t0)
             , h_(h)
             , tableau_(std::move(tableau))
-            , f_(std::move(f)) {
+            , f_(std::move(f))
+        {
         }
 
         [[nodiscard]] constexpr int stages() const noexcept { return Stages; }
 
-        template<class S>
+        template <class S>
         [[nodiscard]] Eigen::Matrix<S, Eigen::Dynamic, 1>
-            operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const {
+        operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const
+        {
             using detail::Vec6;
             using detail::Mat6;
 
@@ -237,17 +231,16 @@ namespace Aetherion::ODE::RKMK::Core {
 
     private:
         Eigen::Quaterniond q0_;
-        Eigen::Vector3d    p0_;
-        double             t0_{ 0.0 };
-        double             h_{ 0.0 };
-        Tableau            tableau_;
-        VectorField        f_;
+        Eigen::Vector3d p0_;
+        double t0_{ 0.0 };
+        double h_{ 0.0 };
+        Tableau tableau_;
+        VectorField f_;
     };
 
     // Convenience alias for your tableau type
-    template<class ScalarCoeff, int Stages, class VectorField>
+    template <class ScalarCoeff, int Stages, class VectorField>
     using StageResidualRadauIIA_SE3 =
         StageResidualIRK_SE3<Stages, VectorField, ButcherTableau<ScalarCoeff, Stages>>;
 
 } // namespace Aetherion::ODE::RKMK::Core
-

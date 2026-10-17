@@ -38,8 +38,7 @@ namespace Aetherion::Simulation {
         registerArguments();
         try {
             parser_.parse(argc, argv);
-        }
-        catch (const std::invalid_argument&) {
+        } catch (const std::invalid_argument&) {
             throw;
         }
     }
@@ -56,8 +55,7 @@ namespace Aetherion::Simulation {
                     if (ts <= 0.0)
                         throw std::invalid_argument("--timeStep must be positive.");
                     config_.timeStep = ts;
-                }
-                catch (const std::invalid_argument& e) {
+                } catch (const std::invalid_argument& e) {
                     throw std::invalid_argument(
                         std::string("Invalid --timeStep value: ") + e.what());
                 }
@@ -69,8 +67,7 @@ namespace Aetherion::Simulation {
             [this](const std::string& val) {
                 try {
                     config_.startTime = std::stod(val);
-                }
-                catch (const std::exception&) {
+                } catch (const std::exception&) {
                     throw std::invalid_argument(
                         "Invalid --startTime value: must be a number.");
                 }
@@ -86,8 +83,7 @@ namespace Aetherion::Simulation {
                         throw std::invalid_argument(
                             "--endTime must be greater than --startTime.");
                     config_.endTime = et;
-                }
-                catch (const std::invalid_argument& e) {
+                } catch (const std::invalid_argument& e) {
                     throw std::invalid_argument(
                         std::string("Invalid --endTime value: ") + e.what());
                 }
@@ -122,8 +118,7 @@ namespace Aetherion::Simulation {
                     if (n < 1)
                         throw std::invalid_argument("--writeInterval must be >= 1.");
                     config_.writeInterval = static_cast<std::size_t>(n);
-                }
-                catch (const std::invalid_argument& e) {
+                } catch (const std::invalid_argument& e) {
                     throw std::invalid_argument(
                         std::string("Invalid --writeInterval value: ") + e.what());
                 }
@@ -194,14 +189,14 @@ namespace Aetherion::Simulation {
         std::size_t step_count = 0;
         std::size_t failed_steps = 0;
         std::size_t stalled_steps = 0;   // consecutive failures that left the clock where it was
-        double      t_current = 0.0;   // elapsed
+        double t_current = 0.0;   // elapsed
 
         while (t_current < t_end - 1e-12)
         {
             const double h = std::min(dt, t_end - t_current);
             ++step_count;
-            const bool   doWrite = (step_count % writeInterval == 0);
-            const auto   obs = stepAndRecord(csv, h, doWrite);
+            const bool doWrite = (step_count % writeInterval == 0);
+            const auto obs = stepAndRecord(csv, h, doWrite);
 
             const bool advanced = (obs.time_s != t_current);
             t_current = obs.time_s;
@@ -223,8 +218,7 @@ namespace Aetherion::Simulation {
                     "Step {} did not converge at t={:.6f} s  (residual={:.3e}). {}",
                     step_count, obs.time_s, obs.residual,
                     advanced ? "Continuing." : "Retrying.");
-            }
-            else
+            } else
             {
                 stalled_steps = 0;
             }

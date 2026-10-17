@@ -33,8 +33,9 @@ namespace Aetherion::ODE::RKMK::Integrators {
     namespace Lie = Aetherion::ODE::RKMK::Lie;
     namespace Core = Aetherion::ODE::RKMK::Core;
 
-    template<class XiField, class FField, int EuclidDim = 7>
-    class RadauIIA_RKMK_ProductSE3 final {
+    template <class XiField, class FField, int EuclidDim = 7>
+    class RadauIIA_RKMK_ProductSE3 final
+    {
     public:
         using Scalar = double;
         static constexpr int Stages = 3;
@@ -45,17 +46,17 @@ namespace Aetherion::ODE::RKMK::Integrators {
 
         // Hoisted to class scope -- MSVC resolves constexpr members here
         // but not inside function-body using-declarations.
-        using Residual = Core::StageResidualIRK_ProductSE3
-            <Stages, EuclidDim, XiField, FField, Tableau>;
+        using Residual = Core::StageResidualIRK_ProductSE3<Stages, EuclidDim, XiField, FField, Tableau>;
 
         static constexpr int BlockDim = 6 + EuclidDim;
         static constexpr int NewtonDim = Stages * BlockDim;
 
-        struct StepResult {
-            SE3d   g1;
-            VecE   x1{ VecE::Zero() };
-            bool   converged{ false };
-            int    iters{ 0 };
+        struct StepResult
+        {
+            SE3d g1;
+            VecE x1{ VecE::Zero() };
+            bool converged{ false };
+            int iters{ 0 };
             double residual_norm{ 0.0 };
         };
 
@@ -67,14 +68,14 @@ namespace Aetherion::ODE::RKMK::Integrators {
         }
 
         StepResult step(
-            double             t0,
+            double t0,
             const SE3d& g0,
             const VecE& x0,
-            double             h,
+            double h,
             const Core::NewtonOptions& opt = Core::NewtonOptions{}) const
         {
             const Eigen::Quaterniond q0 = Lie::detail::extract_q_double(g0);
-            const Eigen::Vector3d    p0 = Lie::detail::extract_p_double(g0);
+            const Eigen::Vector3d p0 = Lie::detail::extract_p_double(g0);
 
             Eigen::VectorXd x0d(EuclidDim);
             for (int i = 0; i < EuclidDim; ++i) x0d(i) = x0(i);
@@ -120,7 +121,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
             Eigen::Matrix<double, 6, 1> Delta_xi = Eigen::Matrix<double, 6, 1>::Zero();
             VecE Delta_u = VecE::Zero();
             for (int i = 0; i < Stages; ++i) {
-                const int    base = i * BlockDim;
+                const int base = i * BlockDim;
                 const double bi = tableau_.b(i);
                 Delta_xi.noalias() += bi * sol.template segment<6>(base);
                 Delta_u.noalias() += bi * sol.template segment<EuclidDim>(base + 6);
@@ -133,7 +134,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
 
     private:
         XiField xi_field_;
-        FField  f_field_;
+        FField f_field_;
         Tableau tableau_;
     };
 

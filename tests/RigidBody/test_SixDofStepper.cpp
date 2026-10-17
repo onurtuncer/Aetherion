@@ -42,9 +42,15 @@ namespace {
     {
         InertialParameters ip;
         ip.mass_kg = 1.0;
-        ip.Ixx = 0.4; ip.Iyy = 0.4; ip.Izz = 0.4;
-        ip.Ixy = 0.0; ip.Iyz = 0.0; ip.Ixz = 0.0;
-        ip.xbar_m = 0.0; ip.ybar_m = 0.0; ip.zbar_m = 0.0;
+        ip.Ixx = 0.4;
+        ip.Iyy = 0.4;
+        ip.Izz = 0.4;
+        ip.Ixy = 0.0;
+        ip.Iyz = 0.0;
+        ip.Ixz = 0.0;
+        ip.xbar_m = 0.0;
+        ip.ybar_m = 0.0;
+        ip.zbar_m = 0.0;
         return ip;
     }
 
@@ -259,12 +265,16 @@ TEST_CASE("SixDoFStepper -- symmetric torque-free body conserves rotational KE",
     EnergyStepper stepper{ ip };
 
     Eigen::Matrix<double, 6, 6> M = Eigen::Matrix<double, 6, 6>::Zero();
-    M(0, 0) = ip.Ixx;     M(1, 1) = ip.Iyy;     M(2, 2) = ip.Izz;
-    M(3, 3) = ip.mass_kg; M(4, 4) = ip.mass_kg; M(5, 5) = ip.mass_kg;
+    M(0, 0) = ip.Ixx;
+    M(1, 1) = ip.Iyy;
+    M(2, 2) = ip.Izz;
+    M(3, 3) = ip.mass_kg;
+    M(4, 4) = ip.mass_kg;
+    M(5, 5) = ip.mass_kg;
 
     auto ke = [&](const StateD& s) {
         return 0.5 * s.nu_B.dot(M * s.nu_B);
-        };
+    };
 
     // Pure spin -- no translation, no gravity, no external forces.
     StateD s = rest_state();

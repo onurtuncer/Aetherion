@@ -9,7 +9,8 @@
 #include <catch2/catch_test_macros.hpp>
 #include <Eigen/Dense>
 
-TEST_CASE("Eigen basic matrix operations work", "[eigen]") {
+TEST_CASE("Eigen basic matrix operations work", "[eigen]")
+{
 
     Eigen::Matrix2d A;
     A << 1.0, 2.0,

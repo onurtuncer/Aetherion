@@ -14,44 +14,48 @@
 
 namespace Aetherion::Simulation {
 
-ArgumentParser::ArgumentParser(std::string programName, ExitFn exitFn)
-    : programName_(std::move(programName))
-    , exitFn_(std::move(exitFn)) {}
+    ArgumentParser::ArgumentParser(std::string programName, ExitFn exitFn)
+        : programName_(std::move(programName))
+        , exitFn_(std::move(exitFn))
+    {}
 
-void ArgumentParser::addArgument(const std::string& flag,
-                                 const std::string& description,
-                                 Handler            handler) {
-    handlers_[flag]     = std::move(handler);
-    descriptions_[flag] = description;
-    order_.push_back(flag);   // keep insertion order for help text
-}
-
-void ArgumentParser::parse(int argc, char** argv) {
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-
-        if (arg == "--help" || arg == "-h") {
-            printUsage();
-            exitFn_(EXIT_SUCCESS);
-            return;
-        }
-
-        auto it = handlers_.find(arg);
-        if (it == handlers_.end())
-            throw std::invalid_argument("Unknown argument: " + arg);
-
-        if (i + 1 >= argc)
-            throw std::invalid_argument(arg + " requires a value.");
-
-        it->second(argv[++i]);   // invoke the registered handler
+    void ArgumentParser::addArgument(const std::string& flag,
+        const std::string& description,
+        Handler handler)
+    {
+        handlers_[flag] = std::move(handler);
+        descriptions_[flag] = description;
+        order_.push_back(flag);   // keep insertion order for help text
     }
-}
 
-void ArgumentParser::printUsage() const {
-    std::cerr << "Usage: " << programName_ << " [options]\n\nOptions:\n";
-    for (const auto& flag : order_)
-        std::cerr << "  " << flag << "\t" << descriptions_.at(flag) << "\n";
-    std::cerr << "  --help\t\tShow this help message\n";
-}
+    void ArgumentParser::parse(int argc, char** argv)
+    {
+        for (int i = 1; i < argc; ++i) {
+            std::string arg = argv[i];
+
+            if (arg == "--help" || arg == "-h") {
+                printUsage();
+                exitFn_(EXIT_SUCCESS);
+                return;
+            }
+
+            auto it = handlers_.find(arg);
+            if (it == handlers_.end())
+                throw std::invalid_argument("Unknown argument: " + arg);
+
+            if (i + 1 >= argc)
+                throw std::invalid_argument(arg + " requires a value.");
+
+            it->second(argv[++i]);   // invoke the registered handler
+        }
+    }
+
+    void ArgumentParser::printUsage() const
+    {
+        std::cerr << "Usage: " << programName_ << " [options]\n\nOptions:\n";
+        for (const auto& flag : order_)
+            std::cerr << "  " << flag << "\t" << descriptions_.at(flag) << "\n";
+        std::cerr << "  --help\t\tShow this help message\n";
+    }
 
 } // namespace Aetherion::Simulation

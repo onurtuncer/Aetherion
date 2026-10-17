@@ -14,7 +14,7 @@
 #include <array>
 #include <numbers>
 
-#include "Aetherion/Coordinate/QuaternionToLocalNED.h"  
+#include "Aetherion/Coordinate/QuaternionToLocalNED.h"
 
 using Aetherion::Coordinate::Quat;
 using Aetherion::Coordinate::QuaternionToAzZenRollNED;
@@ -43,7 +43,7 @@ namespace {
         const double c = std::cos(half);
         const double s = std::sin(half);
 
-        return Quat<double>{ c, s* ax, s* ay, s* az };
+        return Quat<double>{ c, s * ax, s * ay, s * az };
     }
 
 } // namespace

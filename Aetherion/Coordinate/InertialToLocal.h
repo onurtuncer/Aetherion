@@ -33,9 +33,9 @@ namespace Aetherion::Coordinate {
         const Scalar s = Sine(theta_rad);
 
         return Vec3<Scalar>{
-            c* v_eci[0] + s * v_eci[1],
-                -s * v_eci[0] + c * v_eci[1],
-                v_eci[2]
+            c * v_eci[0] + s * v_eci[1],
+            -s * v_eci[0] + c * v_eci[1],
+            v_eci[2]
         };
     }
 
@@ -79,14 +79,14 @@ namespace Aetherion::Coordinate {
         const Scalar sLon = Sine(lon_rad);
         const Scalar cLon = Cosine(lon_rad);
 
-        const Vec3<Scalar> N{ -sLat * cLon, -sLat * sLon,  cLat };
-        const Vec3<Scalar> E{ -sLon,         cLon,         Scalar(0) };
+        const Vec3<Scalar> N{ -sLat * cLon, -sLat * sLon, cLat };
+        const Vec3<Scalar> E{ -sLon, cLon, Scalar(0) };
         const Vec3<Scalar> D{ -cLat * cLon, -cLat * sLon, -sLat };
 
         return Vec3<Scalar>{
             detail::Dot(v_ecef, N),
-                detail::Dot(v_ecef, E),
-                detail::Dot(v_ecef, D)
+            detail::Dot(v_ecef, E),
+            detail::Dot(v_ecef, D)
         };
     }
 
@@ -188,10 +188,11 @@ namespace Aetherion::Coordinate {
 
     /// @brief Current vehicle state expressed in local NED coordinates.
     template <class Scalar>
-    struct LocalStateNED {
-        Scalar       lat_rad{}; ///< Geodetic latitude [rad].
-        Scalar       lon_rad{}; ///< Geodetic longitude [rad].
-        Scalar       h_m{};     ///< Ellipsoidal height [m].
+    struct LocalStateNED
+    {
+        Scalar lat_rad{}; ///< Geodetic latitude [rad].
+        Scalar lon_rad{}; ///< Geodetic longitude [rad].
+        Scalar h_m{};     ///< Ellipsoidal height [m].
         Vec3<Scalar> dir_ned{}; ///< Body forward direction (unit vector) in NED.
         Quat<Scalar> q_LB{};    ///< Quaternion rotating body frame into local NED frame.
     };

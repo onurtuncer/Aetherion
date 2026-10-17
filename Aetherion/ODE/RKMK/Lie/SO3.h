@@ -54,7 +54,7 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
     // -------------------------------------------------------------------------
     template <class S>
     [[nodiscard]] inline Eigen::Matrix<S, 3, 3>
-        Exp_R(const Eigen::Matrix<S, 3, 1>& w)
+    Exp_R(const Eigen::Matrix<S, 3, 1>& w)
     {
         const S theta2 = w.dot(w);
         S A{}, B{}, C{};
@@ -79,7 +79,7 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
     // -------------------------------------------------------------------------
     template <class S>
     [[nodiscard]] inline Eigen::Matrix<S, 3, 3>
-        LeftJacobian(const Eigen::Matrix<S, 3, 1>& w)
+    LeftJacobian(const Eigen::Matrix<S, 3, 1>& w)
     {
         const S theta2 = w.dot(w);
         S A{}, B{}, C{};
@@ -105,7 +105,7 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
     // -------------------------------------------------------------------------
     template <class S>
     [[nodiscard]] inline Eigen::Matrix<S, 3, 3>
-        LeftJacobianInverse(const Eigen::Matrix<S, 3, 1>& w)
+    LeftJacobianInverse(const Eigen::Matrix<S, 3, 1>& w)
     {
         const S theta2 = w.dot(w);
         S A{}, B{}, C{};
@@ -116,9 +116,9 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         // Keep the discarded branch free of 0/0: both branches are evaluated
         // under CondExp.
         const S theta2_safe = Core::condexp_lt(theta2, eps2, S(1), theta2);
-        const S D_series    = S(1) / S(12) + theta2 / S(720);
-        const S D_closed    = (S(1) - A / (S(2) * B)) / theta2_safe;
-        const S D           = Core::condexp_lt(theta2, eps2, D_series, D_closed);
+        const S D_series = S(1) / S(12) + theta2 / S(720);
+        const S D_closed = (S(1) - A / (S(2) * B)) / theta2_safe;
+        const S D = Core::condexp_lt(theta2, eps2, D_series, D_closed);
 
         const Eigen::Matrix<S, 3, 3> I = Eigen::Matrix<S, 3, 3>::Identity();
         const Eigen::Matrix<S, 3, 3> W = Spatial::skew(w);
@@ -150,14 +150,15 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
     // -------------------------------------------------------------------------
     template <class S>
     [[nodiscard]] inline Eigen::Matrix<S, 3, 1>
-        Log_R(const Eigen::Matrix<S, 3, 3>& R)
+    Log_R(const Eigen::Matrix<S, 3, 3>& R)
     {
         using std::acos;
 
         const Eigen::Matrix<S, 3, 1> half_vee{
             S(0.5) * (R(2, 1) - R(1, 2)),
             S(0.5) * (R(0, 2) - R(2, 0)),
-            S(0.5) * (R(1, 0) - R(0, 1)) };  // = sin(theta) · axis
+            S(0.5) * (R(1, 0) - R(0, 1))
+        };  // = sin(theta) · axis
         const S s2 = half_vee.dot(half_vee);  // sin²(theta)
 
         // Clamp against round-off beyond [-1, 1] and away from the
@@ -168,7 +169,7 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         c = Core::condexp_lt(c, -c_max, -c_max, c);
         const S theta = acos(c);
 
-        const S eps2   = S(1e-8);
+        const S eps2 = S(1e-8);
         // sin(theta) as R carries it, not sin(acos(c)): theta / sin(theta)
         // grows like 1 / sin^2(theta) near pi, so the 1e-13 error acos(c)
         // has there was amplified a millionfold at pi - 1e-3 (seen on GCC,
@@ -176,9 +177,9 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         // only theta carries that error. The 1e-300 keeps the derivative of
         // the square root finite at the identity, in the branch CondExp
         // discards.
-        const S s      = Core::sqrt_s(s2 + S(1e-300));
+        const S s = Core::sqrt_s(s2 + S(1e-300));
         const S s_safe = Core::condexp_lt(s2, eps2, S(1), s);
-        const S k      = Core::condexp_lt(s2, eps2, S(1) + s2 / S(6), theta / s_safe);
+        const S k = Core::condexp_lt(s2, eps2, S(1) + s2 / S(6), theta / s_safe);
         const Eigen::Matrix<S, 3, 1> w_sin = k * half_vee;  // series near I, theta/sin(theta) elsewhere
 
         // sin²theta is also below eps2 within 1e-4 rad of theta = pi, where
@@ -196,14 +197,14 @@ namespace Aetherion::ODE::RKMK::Lie::SO3 {
         const Eigen::Matrix<S, 3, 3> B =
             R + R.transpose() - (S(2) * c) * Eigen::Matrix<S, 3, 3>::Identity();
         const auto pick = [](const S& lhs, const S& rhs,
-                             const Eigen::Matrix<S, 3, 1>& t, const Eigen::Matrix<S, 3, 1>& f) {
+                              const Eigen::Matrix<S, 3, 1>& t, const Eigen::Matrix<S, 3, 1>& f) {
             Eigen::Matrix<S, 3, 1> out;
             for (int i = 0; i < 3; ++i) out(i) = Core::condexp_ge(lhs, rhs, t(i), f(i));
             return out;
         };
         const Eigen::Matrix<S, 3, 1> col =
             pick(B(0, 0), B(1, 1), pick(B(0, 0), B(2, 2), B.col(0), B.col(2)),
-                                   pick(B(1, 1), B(2, 2), B.col(1), B.col(2)));
+                pick(B(1, 1), B(2, 2), B.col(1), B.col(2)));
         const Eigen::Matrix<S, 3, 1> axis = col / Core::sqrt_s(col.squaredNorm());
         const S sign = Core::condexp_lt(axis.dot(half_vee), S(0), S(-1), S(1));
         const S theta_pi = S(std::numbers::pi) - Core::sqrt_s(s2 + S(1e-300));

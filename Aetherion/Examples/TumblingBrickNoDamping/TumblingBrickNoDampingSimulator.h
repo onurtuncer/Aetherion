@@ -30,48 +30,48 @@
 
 namespace Aetherion::Examples::TumblingBrickNoDamping {
 
-class TumblingBrickNoDampingSimulator
-    : public Simulation::ISimulator<TumblingBrickNoDampingVF, Simulation::Snapshot1>
-{
-public:
-    static constexpr double kOmegaEarth_rad_s = 7.2921150e-5;
-
-    explicit TumblingBrickNoDampingSimulator(
-        const RigidBody::InertialParameters& ip,
-        RigidBody::StateD                    initialState,
-        double                               theta0_rad = 0.0,
-        ODE::RKMK::Core::NewtonOptions       opt = {})
-        : ISimulator<TumblingBrickNoDampingVF, Simulation::Snapshot1>(
-            TumblingBrickNoDampingVF(
-                ip,
-                FlightDynamics::J2GravityPolicy{},
-                FlightDynamics::ZeroAeroPolicy{}),
-            std::move(initialState), opt)
-        , m_Theta0(theta0_rad)
+    class TumblingBrickNoDampingSimulator
+        : public Simulation::ISimulator<TumblingBrickNoDampingVF, Simulation::Snapshot1>
     {
-    }
+    public:
+        static constexpr double kOmegaEarth_rad_s = 7.2921150e-5;
 
-    [[nodiscard]]
-    Simulation::Snapshot1 snapshot() const noexcept override
-    {
-        return Simulation::MakeSnapshot1(
-            time(),
-            state(),
-            currentTheta(),
-            vectorField().gravity);
-    }
+        explicit TumblingBrickNoDampingSimulator(
+            const RigidBody::InertialParameters& ip,
+            RigidBody::StateD initialState,
+            double theta0_rad = 0.0,
+            ODE::RKMK::Core::NewtonOptions opt = {})
+            : ISimulator<TumblingBrickNoDampingVF, Simulation::Snapshot1>(
+                  TumblingBrickNoDampingVF(
+                      ip,
+                      FlightDynamics::J2GravityPolicy{},
+                      FlightDynamics::ZeroAeroPolicy{}),
+                  std::move(initialState), opt)
+            , m_Theta0(theta0_rad)
+        {
+        }
 
-    [[nodiscard]]
-    double currentTheta() const noexcept
-    {
-        return m_Theta0 + kOmegaEarth_rad_s * time();
-    }
+        [[nodiscard]]
+        Simulation::Snapshot1 snapshot() const noexcept override
+        {
+            return Simulation::MakeSnapshot1(
+                time(),
+                state(),
+                currentTheta(),
+                vectorField().gravity);
+        }
 
-protected:
-    void validate() const override {}
+        [[nodiscard]]
+        double currentTheta() const noexcept
+        {
+            return m_Theta0 + kOmegaEarth_rad_s * time();
+        }
 
-private:
-    double m_Theta0;
-};
+    protected:
+        void validate() const override {}
+
+    private:
+        double m_Theta0;
+    };
 
 } // namespace Aetherion::Examples::TumblingBrickNoDamping

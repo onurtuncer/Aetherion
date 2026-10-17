@@ -10,7 +10,7 @@
 
 #include "Aetherion/Serialization/Json/ConfigNlohmannAdapter.h"
 
-namespace Aetherion::RigidBody{
+namespace Aetherion::RigidBody {
 
     struct GeodeticPoseNED;
 } // namespace Aetherion::RigidBody

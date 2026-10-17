@@ -39,7 +39,8 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
     // definition across the program. If you want strict ODR safety, move this
     // to a .cpp and compile once.
     //
-    struct Json {
+    struct Json
+    {
         // We hold a pointer-like view to a JSON node.
         // - If owner != nullptr, this Json owns the root document.
         // - node points into owner or to an external node.
@@ -49,14 +50,19 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
         Json() = default;
 
         explicit Json(std::shared_ptr<nlohmann::json> root_owner)
-            : owner(std::move(root_owner)), node(owner.get()) {
+            : owner(std::move(root_owner))
+            , node(owner.get())
+        {
         }
 
         explicit Json(const nlohmann::json* n, std::shared_ptr<nlohmann::json> root_owner = {})
-            : owner(std::move(root_owner)), node(n) {
+            : owner(std::move(root_owner))
+            , node(n)
+        {
         }
 
-        const nlohmann::json& j() const {
+        const nlohmann::json& j() const
+        {
             if (node == nullptr) throw ConfigError("Json adapter: null Json node.");
             return *node;
         }
@@ -81,15 +87,17 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
     // ============================================================================
     // Helpers
     // ============================================================================
-    inline std::string to_string(std::string_view sv) { return {sv.begin(), sv.end()}; }
+    inline std::string to_string(std::string_view sv) { return { sv.begin(), sv.end() }; }
 
-    inline void ensure_object(const Json& j, std::string_view what) {
+    inline void ensure_object(const Json& j, std::string_view what)
+    {
         if (!j.j().is_object()) {
             throw ConfigError("Json adapter: expected object for " + to_string(what) + ".");
         }
     }
 
-    inline void ensure_array(const Json& j, std::string_view what) {
+    inline void ensure_array(const Json& j, std::string_view what)
+    {
         if (!j.j().is_array()) {
             throw ConfigError("Json adapter: expected array for " + to_string(what) + ".");
         }
@@ -98,7 +106,8 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
     // ============================================================================
     // Required adapter API
     // ============================================================================
-    inline Json parse_json_file(const std::filesystem::path& path) {
+    inline Json parse_json_file(const std::filesystem::path& path)
+    {
         std::ifstream in(path);
         if (!in.is_open()) {
             throw ConfigError("Failed to open JSON file: " + path.string());
@@ -107,21 +116,22 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
         auto root = std::make_shared<nlohmann::json>();
         try {
             in >> *root;
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             throw ConfigError("Failed to parse JSON file '" + path.string() + "': " + std::string(e.what()));
         }
 
         return Json{ std::move(root) };
     }
 
-    inline bool json_has(const Json& j, std::string_view key) {
+    inline bool json_has(const Json& j, std::string_view key)
+    {
         ensure_object(j, "json_has()");
         const auto& obj = j.j();
         return obj.contains(to_string(key));
     }
 
-    inline Json json_at(const Json& j, std::string_view key) {
+    inline Json json_at(const Json& j, std::string_view key)
+    {
         ensure_object(j, "json_at()");
         const auto& obj = j.j();
         const std::string k = to_string(key);
@@ -134,7 +144,8 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
         return Json{ &obj.at(k), j.owner };
     }
 
-    inline double json_get_number(const Json& j) {
+    inline double json_get_number(const Json& j)
+    {
         const auto& v = j.j();
         if (!v.is_number()) {
             throw ConfigError("Json adapter: expected number.");
@@ -142,7 +153,8 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
         return v.get<double>();
     }
 
-    inline bool json_get_bool(const Json& j) {
+    inline bool json_get_bool(const Json& j)
+    {
         const auto& v = j.j();
         if (!v.is_boolean()) {
             throw ConfigError("Json adapter: expected boolean.");
@@ -150,7 +162,8 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
         return v.get<bool>();
     }
 
-    inline std::string json_get_string(const Json& j) {
+    inline std::string json_get_string(const Json& j)
+    {
         const auto& v = j.j();
         if (!v.is_string()) {
             throw ConfigError("Json adapter: expected string.");
@@ -158,7 +171,8 @@ namespace Aetherion::FlightDynamics::Serialization::Json {
         return v.get<std::string>();
     }
 
-    inline std::vector<Json> json_get_array(const Json& j) {
+    inline std::vector<Json> json_get_array(const Json& j)
+    {
         ensure_array(j, "json_get_array()");
         const auto& arr = j.j();
 

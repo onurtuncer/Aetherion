@@ -19,14 +19,14 @@
 #include <array>
 #include <cmath>
 
-#include "Aetherion/RigidBody/GravitationalWrench.h" 
+#include "Aetherion/RigidBody/GravitationalWrench.h"
 
 namespace {
 
-    template<class S>
+    template <class S>
     using Arr3 = std::array<S, 3>;
 
-    template<class S>
+    template <class S>
     using Vec3E = Eigen::Matrix<S, 3, 1>;
 
     constexpr double kMu_WGS84 = 3.986004418e14; // [m^3/s^2]

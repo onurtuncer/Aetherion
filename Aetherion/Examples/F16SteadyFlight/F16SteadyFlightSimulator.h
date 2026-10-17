@@ -29,11 +29,11 @@
 
 namespace Aetherion::Examples::F16SteadyFlight {
 
-class F16SteadyFlightSimulator
-    : public Simulation::ISimulator<F16VF, Simulation::Snapshot1>
-{
-public:
-    static constexpr double kOmegaEarth_rad_s = 7.2921150e-5;
+    class F16SteadyFlightSimulator
+        : public Simulation::ISimulator<F16VF, Simulation::Snapshot1>
+    {
+    public:
+        static constexpr double kOmegaEarth_rad_s = 7.2921150e-5;
 
     /// @param ip          Inertial parameters (mass, MOI) read from F16_inertia.dml.
     /// @param trim        Trim solution (alpha, elevator, throttle).
@@ -45,45 +45,45 @@ public:
     /// @param xcg_from_ac_m  CG distance aft of aerodynamic reference centre [m].
     ///                       Used in F16AeroPolicy to transfer moments from AC to CG.
     ///                       Must equal TrimSolver::xcg_from_ac_ft × kFt_m.
-    explicit F16SteadyFlightSimulator(
-        const RigidBody::InertialParameters&                      ip,
-        const FlightDynamics::TrimPoint&                          trim,
-        const std::shared_ptr<const Serialization::DAVEMLAeroModel>&     aero_model,
-        const std::shared_ptr<const Serialization::DAVEMLPropModel>&     prop_model,
-        RigidBody::StateD                                         x0,
-        double                                                    theta0,
-        double                                                    xcg_from_ac_m = 0.0,
-        ODE::RKMK::Core::NewtonOptions                            opt = {})
-        : ISimulator<F16VF, Simulation::Snapshot1>(
-            F16VF(
-                ip,
-                FlightDynamics::J2GravityPolicy{},
-                FlightDynamics::F16AeroPolicy(aero_model, trim.el_deg, 0.0, 0.0,
-                                              xcg_from_ac_m),
-                FlightDynamics::F16PropPolicy(prop_model, trim.pwr_pct)),
-            std::move(x0), opt)
-        , m_theta0(theta0)
-    {}
+        explicit F16SteadyFlightSimulator(
+            const RigidBody::InertialParameters& ip,
+            const FlightDynamics::TrimPoint& trim,
+            const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aero_model,
+            const std::shared_ptr<const Serialization::DAVEMLPropModel>& prop_model,
+            RigidBody::StateD x0,
+            double theta0,
+            double xcg_from_ac_m = 0.0,
+            ODE::RKMK::Core::NewtonOptions opt = {})
+            : ISimulator<F16VF, Simulation::Snapshot1>(
+                  F16VF(
+                      ip,
+                      FlightDynamics::J2GravityPolicy{},
+                      FlightDynamics::F16AeroPolicy(aero_model, trim.el_deg, 0.0, 0.0,
+                          xcg_from_ac_m),
+                      FlightDynamics::F16PropPolicy(prop_model, trim.pwr_pct)),
+                  std::move(x0), opt)
+            , m_theta0(theta0)
+        {}
 
-    [[nodiscard]]
-    Simulation::Snapshot1 snapshot() const noexcept override
-    {
-        return Simulation::MakeSnapshot1(
-            time(), state(), currentTheta(),
-            vectorField().gravity, vectorField().aero);
-    }
+        [[nodiscard]]
+        Simulation::Snapshot1 snapshot() const noexcept override
+        {
+            return Simulation::MakeSnapshot1(
+                time(), state(), currentTheta(),
+                vectorField().gravity, vectorField().aero);
+        }
 
-    [[nodiscard]]
-    double currentTheta() const noexcept
-    {
-        return m_theta0 + kOmegaEarth_rad_s * time();
-    }
+        [[nodiscard]]
+        double currentTheta() const noexcept
+        {
+            return m_theta0 + kOmegaEarth_rad_s * time();
+        }
 
-protected:
-    void validate() const override {}
+    protected:
+        void validate() const override {}
 
-private:
-    double m_theta0;
-};
+    private:
+        double m_theta0;
+    };
 
 } // namespace Aetherion::Examples::F16SteadyFlight

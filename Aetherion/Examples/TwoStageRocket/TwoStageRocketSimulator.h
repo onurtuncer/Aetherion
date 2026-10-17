@@ -71,38 +71,39 @@ namespace Aetherion::Examples::TwoStageRocket {
 //
 // Defined at namespace scope so it can be referenced in the default template
 // argument for IntegratorPolicy below.
-using TwoStageRocketVF = RigidBody::VectorField<
-    FlightDynamics::J2GravityPolicy,
-    RocketAeroPolicy,
-    FlightDynamics::AxialThrustPolicy,
-    FlightDynamics::LinearBurnPolicy
->;
+    using TwoStageRocketVF = RigidBody::VectorField<
+        FlightDynamics::J2GravityPolicy,
+        RocketAeroPolicy,
+        FlightDynamics::AxialThrustPolicy,
+        FlightDynamics::LinearBurnPolicy>;
 
 // ── TwoStageRocketSimulator<IntegratorPolicy> ─────────────────────────────────
 
-template<int EuclidDim = RigidBody::RigidBody6DoFEuclidDim,
-         class IntegratorPolicy =
-             ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
-                 RigidBody::KinematicsXiField,
-                 TwoStageRocketVF,
-                 EuclidDim>>
-    requires ODE::RKMK::IntegratorFor<IntegratorPolicy,
-                                       RigidBody::KinematicsXiField,
-                                       TwoStageRocketVF,
-                                       EuclidDim>
-class TwoStageRocketSimulator {
-public:
+    template <int EuclidDim = RigidBody::RigidBody6DoFEuclidDim,
+        class IntegratorPolicy =
+            ODE::RKMK::Integrators::RadauIIA_RKMK_ProductSE3<
+                RigidBody::KinematicsXiField,
+                TwoStageRocketVF,
+                EuclidDim>>
+        requires ODE::RKMK::IntegratorFor<IntegratorPolicy,
+            RigidBody::KinematicsXiField,
+            TwoStageRocketVF,
+            EuclidDim>
+    class TwoStageRocketSimulator
+    {
+    public:
     // ── Type aliases ──────────────────────────────────────────────────────────
-    using VF         = TwoStageRocketVF;
-    using Integrator = IntegratorPolicy;
-    using Stepper    = RigidBody::SixDoFStepper<VF, EuclidDim, Integrator>;
-    using StepResult = typename Stepper::StepResult;
+        using VF = TwoStageRocketVF;
+        using Integrator = IntegratorPolicy;
+        using Stepper = RigidBody::SixDoFStepper<VF, EuclidDim, Integrator>;
+        using StepResult = typename Stepper::StepResult;
 
     // ── Step observation ──────────────────────────────────────────────────────
-    struct StepObservation {
-        bool   converged     = true;
-        double residual_norm = 0.0;
-    };
+        struct StepObservation
+        {
+            bool converged = true;
+            double residual_norm = 0.0;
+        };
 
     // ── Construction ──────────────────────────────────────────────────────────
 
@@ -117,22 +118,22 @@ public:
     /// @param stg2IgnitionTime_s Absolute sim time at which S2 may ignite [s].
     ///                           Pass (endTime − S2_burn_duration) to match the
     ///                           NASA TM reference coast-then-fire sequencing.
-    explicit TwoStageRocketSimulator(
-        const RigidBody::InertialParameters&                  ip,
-        RigidBody::StateD                                     x0,
-        double                                                theta0,
-        std::shared_ptr<Serialization::DAVEMLAeroModel>       inertiaDml,
-        std::shared_ptr<Serialization::DAVEMLAeroModel>       propDml,
-        const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aeroDml,
-        double                                                stg2IgnitionTime_s = 0.0)
-        : m_stepper   (VF{ ip, FlightDynamics::J2GravityPolicy{}, RocketAeroPolicy{aeroDml} })
-        , m_state     (std::move(x0))
-        , m_theta0    (theta0)
-        , m_stageModel(std::move(inertiaDml), std::move(propDml))
-    {
-        m_stageModel.stg2IgnitionTime_s = stg2IgnitionTime_s;
-        updateVectorField();
-    }
+        explicit TwoStageRocketSimulator(
+            const RigidBody::InertialParameters& ip,
+            RigidBody::StateD x0,
+            double theta0,
+            std::shared_ptr<Serialization::DAVEMLAeroModel> inertiaDml,
+            std::shared_ptr<Serialization::DAVEMLAeroModel> propDml,
+            const std::shared_ptr<const Serialization::DAVEMLAeroModel>& aeroDml,
+            double stg2IgnitionTime_s = 0.0)
+            : m_stepper(VF{ ip, FlightDynamics::J2GravityPolicy{}, RocketAeroPolicy{ aeroDml } })
+            , m_state(std::move(x0))
+            , m_theta0(theta0)
+            , m_stageModel(std::move(inertiaDml), std::move(propDml))
+        {
+            m_stageModel.stg2IgnitionTime_s = stg2IgnitionTime_s;
+            updateVectorField();
+        }
 
     // ── Step ──────────────────────────────────────────────────────────────────
 
@@ -140,41 +141,41 @@ public:
     ///
     /// Performs the ZOH pre-step update (inertia, thrust, mdot), integrates,
     /// advances the fuel tracker, and applies any staging event.
-    StepObservation step(double h)
-    {
-        updateVectorField();
-        const double mdot_kgs = m_stageModel.propulsion(m_time).mdot_kgs;
-
-        auto res = m_stepper.step(m_time, m_state, h);
-
-        if (!res.converged)
-            return { false, res.residual_norm };
-
-        m_state  = Stepper::unpack(res);
-        m_time  += h;
-
-        const bool staged = m_stageModel.advance(h, mdot_kgs);
-
-        if (staged) {
-            m_state.m -= RocketStageModel::kStg1DryMass_kg;
+        StepObservation step(double h)
+        {
             updateVectorField();
-        }
+            const double mdot_kgs = m_stageModel.propulsion(m_time).mdot_kgs;
 
-        return { true, res.residual_norm };
-    }
+            auto res = m_stepper.step(m_time, m_state, h);
+
+            if (!res.converged)
+                return { false, res.residual_norm };
+
+            m_state = Stepper::unpack(res);
+            m_time += h;
+
+            const bool staged = m_stageModel.advance(h, mdot_kgs);
+
+            if (staged) {
+                m_state.m -= RocketStageModel::kStg1DryMass_kg;
+                updateVectorField();
+            }
+
+            return { true, res.residual_norm };
+        }
 
     // ── Snapshot ──────────────────────────────────────────────────────────────
 
     /// @brief Build a 31-column NASA-compatible snapshot of the current state.
-    [[nodiscard]] Simulation::Snapshot2 snapshot2() const
-    {
-        constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
-        const double theta_gst   = m_theta0 + m_time * kOmegaE;
+        [[nodiscard]] Simulation::Snapshot2 snapshot2() const
+        {
+            constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
+            const double theta_gst = m_theta0 + m_time * kOmegaE;
 
-        const auto& vf = m_stepper.vectorField();
-        return Simulation::MakeSnapshot2(m_time, m_state, theta_gst,
-                                         vf.gravity, vf.aero);
-    }
+            const auto& vf = m_stepper.vectorField();
+            return Simulation::MakeSnapshot2(m_time, m_state, theta_gst,
+                vf.gravity, vf.aero);
+        }
 
     // ── Derived quantities ────────────────────────────────────────────────────
 
@@ -186,26 +187,26 @@ public:
     /// the step just taken; on a step in which staging occurred, @c step() has
     /// already refreshed it to the post-separation stage, pairing correctly with
     /// the post-separation @c state().m.
-    [[nodiscard]] Eigen::Vector3d thrustBodyForce_N() const
-    {
-        return Simulation::PolicyBodyForce_N(m_time, m_state,
-                                             m_stepper.vectorField().thrust);
-    }
+        [[nodiscard]] Eigen::Vector3d thrustBodyForce_N() const
+        {
+            return Simulation::PolicyBodyForce_N(m_time, m_state,
+                m_stepper.vectorField().thrust);
+        }
 
     // ── Accessors ─────────────────────────────────────────────────────────────
-    [[nodiscard]] double                     time()       const noexcept { return m_time; }
-    [[nodiscard]] const RigidBody::StateD&   state()      const noexcept { return m_state; }
-    [[nodiscard]] const RocketStageModel&    stageModel() const noexcept { return m_stageModel; }
+        [[nodiscard]] double time() const noexcept { return m_time; }
+        [[nodiscard]] const RigidBody::StateD& state() const noexcept { return m_state; }
+        [[nodiscard]] const RocketStageModel& stageModel() const noexcept { return m_stageModel; }
 
     /// @brief Mutable accessor — used by callers (e.g. an FMU wrapper) that need
     /// to mutate stage-model tuning (e.g. @c stg2IgnitionTime_s) or restore a
     /// previously-saved fuel/staging checkpoint.
-    [[nodiscard]] RocketStageModel& stageModel() noexcept { return m_stageModel; }
+        [[nodiscard]] RocketStageModel& stageModel() noexcept { return m_stageModel; }
 
     /// @brief The aero policy the integrator holds, for setting the steady wind
     /// and the atmosphere offsets (see RocketAeroPolicy) before stepping.
-    [[nodiscard]] RocketAeroPolicy&       aero()       noexcept { return m_stepper.vectorField().aero; }
-    [[nodiscard]] const RocketAeroPolicy& aero() const noexcept { return m_stepper.vectorField().aero; }
+        [[nodiscard]] RocketAeroPolicy& aero() noexcept { return m_stepper.vectorField().aero; }
+        [[nodiscard]] const RocketAeroPolicy& aero() const noexcept { return m_stepper.vectorField().aero; }
 
     /// @brief Directly overwrite the integration state and elapsed time.
     ///
@@ -213,23 +214,23 @@ public:
     /// the normal @c step() ZOH sequence entirely -- callers are responsible for
     /// also restoring @c stageModel().fuelState() so that propulsion/inertia
     /// queries remain consistent with @p x.
-    void setState(const RigidBody::StateD& x, double t) noexcept
-    {
-        m_state = x;
-        m_time  = t;
-    }
+        void setState(const RigidBody::StateD& x, double t) noexcept
+        {
+            m_state = x;
+            m_time = t;
+        }
 
-private:
-    void updateVectorField()
-    {
-        auto& vf = m_stepper.vectorField();
+    private:
+        void updateVectorField()
+        {
+            auto& vf = m_stepper.vectorField();
 
-        const auto prop = m_stageModel.propulsion(m_time);
-        vf.thrust.thrust_N     =  prop.thrust_N;
-        vf.mass_model.mdot_kgs = -prop.mdot_kgs;
+            const auto prop = m_stageModel.propulsion(m_time);
+            vf.thrust.thrust_N = prop.thrust_N;
+            vf.mass_model.mdot_kgs = -prop.mdot_kgs;
 
-        rebuildSpatialInertia(m_stageModel.inertialParameters());
-    }
+            rebuildSpatialInertia(m_stageModel.inertialParameters());
+        }
 
     /// The DML inertia is about the centre of mass (AIAA S-119 standard
     /// variables) and DXCG is the centre of mass forward of the MRC, the body
@@ -239,17 +240,17 @@ private:
     /// the example's own RocketGravityPolicy). Zero-order hold over the step;
     /// omega is kept through the rebuild (see "Known Modelling Differences" in
     /// doc/examples.rst for what that means and what the NASA sims do).
-    void rebuildSpatialInertia(const RigidBody::InertialParameters& ip)
-    {
-        m_stepper.vectorField().setInertialParameters(ip);
-    }
+        void rebuildSpatialInertia(const RigidBody::InertialParameters& ip)
+        {
+            m_stepper.vectorField().setInertialParameters(ip);
+        }
 
-    Stepper           m_stepper;
-    RigidBody::StateD m_state;
-    double            m_time   = 0.0;
-    double            m_theta0 = 0.0;  ///< ERA at t=0 [rad].
+        Stepper m_stepper;
+        RigidBody::StateD m_state;
+        double m_time = 0.0;
+        double m_theta0 = 0.0;  ///< ERA at t=0 [rad].
 
-    RocketStageModel  m_stageModel;
-};
+        RocketStageModel m_stageModel;
+    };
 
 } // namespace Aetherion::Examples::TwoStageRocket

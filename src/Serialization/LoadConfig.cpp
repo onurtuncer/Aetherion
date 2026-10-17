@@ -28,8 +28,7 @@ namespace Aetherion::Serialization {
         RigidBody::Config cfg{};
         try {
             ::Aetherion::Serialization::Json::from_json(j, cfg);
-        }
-        catch (const std::exception& e) {
+        } catch (const std::exception& e) {
             throw std::runtime_error(
                 "Failed to deserialize config from '" + source + "': " + e.what());
         }
@@ -49,8 +48,7 @@ namespace Aetherion::Serialization {
         nlohmann::json j;
         try {
             f >> j;
-        }
-        catch (const nlohmann::json::parse_error& e) {
+        } catch (const nlohmann::json::parse_error& e) {
             throw std::runtime_error(
                 "JSON syntax error in '" + filename + "': " + e.what());
         }
@@ -71,4 +69,3 @@ namespace Aetherion::Serialization {
     }
 
 } // namespace Aetherion::Serialization
-

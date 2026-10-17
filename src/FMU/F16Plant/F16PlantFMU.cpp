@@ -179,110 +179,111 @@
 using namespace fmu4cpp;
 
 // ── Namespace aliases ─────────────────────────────────────────────────────────
-namespace AE_RB  = Aetherion::RigidBody;
-namespace AE_FD  = Aetherion::FlightDynamics;
-namespace AE_SR  = Aetherion::Serialization;
+namespace AE_RB = Aetherion::RigidBody;
+namespace AE_FD = Aetherion::FlightDynamics;
+namespace AE_SR = Aetherion::Serialization;
 namespace AE_SIM = Aetherion::Simulation;
-namespace AE_EX  = Aetherion::Examples::F16SteadyFlight;
+namespace AE_EX = Aetherion::Examples::F16SteadyFlight;
 namespace AE_ENV = Aetherion::Environment;
 
 // ── Type aliases ──────────────────────────────────────────────────────────────
-using F16VF      = AE_EX::F16VF;       // VectorField<J2Gravity, F16Aero, F16Prop, ConstMass>
+using F16VF = AE_EX::F16VF;       // VectorField<J2Gravity, F16Aero, F16Prop, ConstMass>
 using F16Stepper = AE_EX::F16Stepper;  // SixDoFStepper<F16VF>
 
 // ── Module-level constants ────────────────────────────────────────────────────
 namespace {
     constexpr double kOmegaEarth_rad_s = Aetherion::Environment::WGS84::kRotationRate_rad_s;
-    constexpr double kFt_m             = 0.3048;
-    constexpr double kDeg              = std::numbers::pi / 180.0;
-    constexpr double kRadToDeg         = 180.0 / std::numbers::pi;
+    constexpr double kFt_m = 0.3048;
+    constexpr double kDeg = std::numbers::pi / 180.0;
+    constexpr double kRadToDeg = 180.0 / std::numbers::pi;
 
     // Default initial conditions — NASA TM-2015-218675 Scenario 11 (Kitty Hawk, NC).
     // Settable via FMI PARAMETER before fmi2ExitInitializationMode.
-    constexpr double kDefault_vt0_fps        = 565.685;
-    constexpr double kDefault_alt0_ft        = 10013.0;
-    constexpr double kDefault_lat0_deg       =   36.01917;
-    constexpr double kDefault_lon0_deg       =  -75.67444;
-    constexpr double kDefault_heading0_deg   =   45.0;
-    constexpr double kDefault_roll0_deg      =    0.0;     // wings-level, as NASA sims 04/05
-    constexpr double kDefault_xcg_from_ac_ft =    1.132;   // (35%−25%) × 11.32 ft
+    constexpr double kDefault_vt0_fps = 565.685;
+    constexpr double kDefault_alt0_ft = 10013.0;
+    constexpr double kDefault_lat0_deg = 36.01917;
+    constexpr double kDefault_lon0_deg = -75.67444;
+    constexpr double kDefault_heading0_deg = 45.0;
+    constexpr double kDefault_roll0_deg = 0.0;     // wings-level, as NASA sims 04/05
+    constexpr double kDefault_xcg_from_ac_ft = 1.132;   // (35%−25%) × 11.32 ft
 
     // Default solver tuning — match NewtonOptions defaults so behaviour is
     // unchanged unless the FMI master overrides these parameters.
     constexpr double kDefault_newton_abs_tol = 1.0e-12;
     constexpr double kDefault_newton_rel_tol = 1.0e-10;
-    constexpr double kDefault_max_step_s     = 0.0;  // 0 → use the communication step directly
+    constexpr double kDefault_max_step_s = 0.0;  // 0 → use the communication step directly
 
     // Environment defaults: calm air on a standard day.
-    constexpr double kDefault_wind_mps       = 0.0;
+    constexpr double kDefault_wind_mps = 0.0;
     constexpr double kDefault_turb_sigma_mps = 0.0;    // all three zero = turbulence off
-    constexpr double kDefault_turb_L_m       = 533.4;  // 1750 ft, MIL-F-8785C above 2000 ft
-    constexpr double kDefault_turb_seed      = 1.0;
-    constexpr double kDefault_atm_deltaT_K   = 0.0;
-    constexpr double kDefault_atm_deltaP_Pa  = 0.0;
+    constexpr double kDefault_turb_L_m = 533.4;  // 1750 ft, MIL-F-8785C above 2000 ft
+    constexpr double kDefault_turb_seed = 1.0;
+    constexpr double kDefault_atm_deltaT_K = 0.0;
+    constexpr double kDefault_atm_deltaP_Pa = 0.0;
 }
 
 // ── FMU state (trivially copyable POD) ───────────────────────────────────────
 // Everything captured by getFMUState / setFMUState lives in this struct.
 // On setFMUState, the base class copies this back, then unpackState()
 // re-derives the Eigen types needed by the stepper.
-struct F16PlantState {
+struct F16PlantState
+{
     // ── Integration state ─────────────────────────────────────────────────────
-    std::array<double, 9> R   {};   // SO(3) rotation matrix, row-major (body → ECI)
-    std::array<double, 3> r_I {};   // ECI position [m]
+    std::array<double, 9> R{};   // SO(3) rotation matrix, row-major (body → ECI)
+    std::array<double, 3> r_I{};   // ECI position [m]
     std::array<double, 6> nu_B{};   // body twist: [wx, wy, wz (rad/s), vx, vy, vz (m/s)]
-    double mass_kg {};   // vehicle mass [kg]
+    double mass_kg{};   // vehicle mass [kg]
 
     // ── Control surface state (preserved across save/restore) ─────────────────
-    double el_deg  {};   // elevator  [deg]
-    double ail_deg {};   // aileron   [deg]
-    double rdr_deg {};   // rudder    [deg]
-    double pwr_pct {};   // throttle  [0–100]
+    double el_deg{};   // elevator  [deg]
+    double ail_deg{};   // aileron   [deg]
+    double rdr_deg{};   // rudder    [deg]
+    double pwr_pct{};   // throttle  [0–100]
 
     // ── Output cache (updated in do_step, registered by pointer) ─────────────
-    double alt_m       {};  // altitude above MSL [m]
-    double lat_deg     {};  // geodetic latitude [deg]
-    double lon_deg     {};  // geodetic longitude [deg]
-    double yaw_rad     {};  // ZYX Euler yaw   (body → NED) [rad]
-    double pitch_rad   {};  // ZYX Euler pitch (body → NED) [rad]
-    double roll_rad    {};  // ZYX Euler roll  (body → NED) [rad]
-    double p_rad_s     {};  // body roll  rate wrt ECI [rad/s]
-    double q_rad_s     {};  // body pitch rate wrt ECI [rad/s]
-    double r_rad_s     {};  // body yaw   rate wrt ECI [rad/s]
-    double v_north_m_s {};  // NED north velocity [m/s]
-    double v_east_m_s  {};  // NED east  velocity [m/s]
-    double v_down_m_s  {};  // NED down  velocity [m/s]
-    double alpha_deg   {};  // angle of attack [deg]
-    double beta_deg    {};  // sideslip angle  [deg]
-    double mach        {};  // Mach number [-]
-    double qbar_Pa     {};  // dynamic pressure [Pa]
-    double vt_m_s      {};  // true airspeed [m/s]
-    double aero_Fx_N   {};  // aero body-X force  [N]
-    double aero_Fy_N   {};  // aero body-Y force  [N]
-    double aero_Fz_N   {};  // aero body-Z force  [N]
-    double aero_Mx_Nm  {};  // aero roll  moment  [N·m]  (about AC)
-    double aero_My_Nm  {};  // aero pitch moment  [N·m]  (about AC)
-    double aero_Mz_Nm  {};  // aero yaw   moment  [N·m]
-    double rho_kg_m3   {};  // air density [kg/m³]
-    double T_K         {};  // ambient temperature [K]
-    double P_Pa        {};  // ambient pressure [Pa]
-    double a_m_s       {};  // speed of sound [m/s]
-    double g_m_s2      {};  // local gravity magnitude [m/s²]
+    double alt_m{};  // altitude above MSL [m]
+    double lat_deg{};  // geodetic latitude [deg]
+    double lon_deg{};  // geodetic longitude [deg]
+    double yaw_rad{};  // ZYX Euler yaw   (body → NED) [rad]
+    double pitch_rad{};  // ZYX Euler pitch (body → NED) [rad]
+    double roll_rad{};  // ZYX Euler roll  (body → NED) [rad]
+    double p_rad_s{};  // body roll  rate wrt ECI [rad/s]
+    double q_rad_s{};  // body pitch rate wrt ECI [rad/s]
+    double r_rad_s{};  // body yaw   rate wrt ECI [rad/s]
+    double v_north_m_s{};  // NED north velocity [m/s]
+    double v_east_m_s{};  // NED east  velocity [m/s]
+    double v_down_m_s{};  // NED down  velocity [m/s]
+    double alpha_deg{};  // angle of attack [deg]
+    double beta_deg{};  // sideslip angle  [deg]
+    double mach{};  // Mach number [-]
+    double qbar_Pa{};  // dynamic pressure [Pa]
+    double vt_m_s{};  // true airspeed [m/s]
+    double aero_Fx_N{};  // aero body-X force  [N]
+    double aero_Fy_N{};  // aero body-Y force  [N]
+    double aero_Fz_N{};  // aero body-Z force  [N]
+    double aero_Mx_Nm{};  // aero roll  moment  [N·m]  (about AC)
+    double aero_My_Nm{};  // aero pitch moment  [N·m]  (about AC)
+    double aero_Mz_Nm{};  // aero yaw   moment  [N·m]
+    double rho_kg_m3{};  // air density [kg/m³]
+    double T_K{};  // ambient temperature [K]
+    double P_Pa{};  // ambient pressure [Pa]
+    double a_m_s{};  // speed of sound [m/s]
+    double g_m_s2{};  // local gravity magnitude [m/s²]
     double specificForce_x_m_s2{};  // body-X specific force at the CG [m/s²]
     double specificForce_y_m_s2{};  // body-Y specific force at the CG [m/s²]
     double specificForce_z_m_s2{};  // body-Z specific force at the CG [m/s²]
-    double thrust_N    {};  // net propulsive force, body +X [N]
+    double thrust_N{};  // net propulsive force, body +X [N]
 
     // ── Environment outputs ───────────────────────────────────────────────────
     double wind_north_m_s{};  // total wind at the CG, NED north (steady + gust) [m/s]
-    double wind_east_m_s {};  // total wind at the CG, NED east  [m/s]
-    double wind_down_m_s {};  // total wind at the CG, NED down  [m/s]
-    double gust_u_m_s    {};  // Dryden gust, body x [m/s]
-    double gust_v_m_s    {};  // Dryden gust, body y [m/s]
-    double gust_w_m_s    {};  // Dryden gust, body z [m/s]
-    double gust_p_rad_s  {};  // angular velocity of the gust field, body x [rad/s]
-    double gust_q_rad_s  {};  // angular velocity of the gust field, body y [rad/s]
-    double gust_r_rad_s  {};  // angular velocity of the gust field, body z [rad/s]
+    double wind_east_m_s{};  // total wind at the CG, NED east  [m/s]
+    double wind_down_m_s{};  // total wind at the CG, NED down  [m/s]
+    double gust_u_m_s{};  // Dryden gust, body x [m/s]
+    double gust_v_m_s{};  // Dryden gust, body y [m/s]
+    double gust_w_m_s{};  // Dryden gust, body z [m/s]
+    double gust_p_rad_s{};  // angular velocity of the gust field, body x [rad/s]
+    double gust_q_rad_s{};  // angular velocity of the gust field, body y [rad/s]
+    double gust_r_rad_s{};  // angular velocity of the gust field, body z [rad/s]
 
     // ── Turbulence filter states (preserved across save/restore) ─────────────
     std::array<double, 8> turb_x{};
@@ -294,9 +295,9 @@ static_assert(std::is_trivially_copyable_v<F16PlantState>,
 // ─────────────────────────────────────────────────────────────────────────────
 // F16PlantFMU
 // ─────────────────────────────────────────────────────────────────────────────
-class F16PlantFMU : public fmu_base {
+class F16PlantFMU : public fmu_base
+{
 public:
-
     // ── Constructor: register all FMI variables ───────────────────────────────
     FMU4CPP_CTOR(F16PlantFMU)
     {
@@ -313,13 +314,13 @@ public:
     void exit_initialisation_mode() override
     {
         // 1. Build DML paths from the FMU resources/ folder
-        const std::string res         = resourceLocation().string();
+        const std::string res = resourceLocation().string();
         const std::string inertiaPath = res + "/F16_inertia.dml";
-        const std::string aeroPath    = res + "/F16_aero.dml";
-        const std::string propPath    = res + "/F16_prop.dml";
+        const std::string aeroPath = res + "/F16_aero.dml";
+        const std::string propPath = res + "/F16_prop.dml";
 
         // 2. Load inertia, aero, and propulsion models
-        m_ip        = AE_SR::LoadInertiaFromDAVEML(inertiaPath);
+        m_ip = AE_SR::LoadInertiaFromDAVEML(inertiaPath);
         m_aeroModel = std::make_shared<const AE_SR::DAVEMLAeroModel>(aeroPath);
         m_propModel = std::make_shared<const AE_SR::DAVEMLPropModel>(propPath);
 
@@ -338,22 +339,22 @@ public:
         //    that plus the steady wind: the aircraft crabs in a crosswind and
         //    its ground speed drops in a headwind, while the trim, which is
         //    air-relative, is unchanged.
-        const double vt_mps     = p_vt0_fps_ * kFt_m;
-        const double vNorthAir  = vt_mps * std::cos(p_heading0_deg_ * kDeg);
-        const double vEastAir   = vt_mps * std::sin(p_heading0_deg_ * kDeg);
+        const double vt_mps = p_vt0_fps_ * kFt_m;
+        const double vNorthAir = vt_mps * std::cos(p_heading0_deg_ * kDeg);
+        const double vEastAir = vt_mps * std::sin(p_heading0_deg_ * kDeg);
         const double vNorth_mps = vNorthAir + p_wind_north_mps_;
-        const double vEast_mps  = vEastAir  + p_wind_east_mps_;
-        const double vDown_mps  = p_wind_down_mps_;
+        const double vEast_mps = vEastAir + p_wind_east_mps_;
+        const double vDown_mps = p_wind_down_mps_;
 
         const double weight_lbf = AE_FD::LevelFlightTrimWeight_lbf(
             m_ip.mass_kg, p_lat0_deg_, p_alt0_ft_ * kFt_m, vNorth_mps, vEast_mps);
         AE_FD::TrimInputs tin{};
-        tin.vt_fps     = p_vt0_fps_;
-        tin.alt_ft     = p_alt0_ft_;
+        tin.vt_fps = p_vt0_fps_;
+        tin.alt_ft = p_alt0_ft_;
         tin.weight_lbf = weight_lbf;
         // Aero damping at the rate the aero policy will actually see: the
         // transport rate.  Pitch is not known yet and q does not depend on it.
-        tin.bodyRates  = AE_FD::LevelFlightBodyRates(
+        tin.bodyRates = AE_FD::LevelFlightBodyRates(
             p_lat0_deg_, p_alt0_ft_ * kFt_m, vNorth_mps, vEast_mps,
             p_heading0_deg_, 0.0, p_roll0_deg_);
 
@@ -364,33 +365,33 @@ public:
             throw std::runtime_error("F16PlantFMU: trim solver did not converge.");
 
         AE_RB::Config cfg{};
-        cfg.pose.lat_deg     = p_lat0_deg_;
-        cfg.pose.lon_deg     = p_lon0_deg_;
-        cfg.pose.alt_m       = p_alt0_ft_ * kFt_m;
+        cfg.pose.lat_deg = p_lat0_deg_;
+        cfg.pose.lon_deg = p_lon0_deg_;
+        cfg.pose.alt_m = p_alt0_ft_ * kFt_m;
         cfg.pose.azimuth_deg = p_heading0_deg_;
-        cfg.pose.zenith_deg  = 90.0 - trim.alpha_deg;   // nearly horizontal, nose-up by alpha
-        cfg.pose.roll_deg    = p_roll0_deg_;
+        cfg.pose.zenith_deg = 90.0 - trim.alpha_deg;   // nearly horizontal, nose-up by alpha
+        cfg.pose.roll_deg = p_roll0_deg_;
 
-        cfg.velocityNED.north_mps     = vNorth_mps;
-        cfg.velocityNED.east_mps      = vEast_mps;
-        cfg.velocityNED.down_mps      = vDown_mps;
+        cfg.velocityNED.north_mps = vNorth_mps;
+        cfg.velocityNED.east_mps = vEast_mps;
+        cfg.velocityNED.down_mps = vDown_mps;
         // Attitude held fixed against the local-level frame, which tips forward
         // at the transport rate as the vehicle moves over the curved Earth.
         cfg.bodyRates = AE_FD::LevelFlightBodyRates(
             p_lat0_deg_, p_alt0_ft_ * kFt_m, vNorth_mps, vEast_mps,
             p_heading0_deg_, trim.alpha_deg, p_roll0_deg_);
-        cfg.inertialParameters        = m_ip;
+        cfg.inertialParameters = m_ip;
 
         const auto x0vec = AE_RB::BuildInitialStateVector(cfg, m_theta0);
         using L = AE_RB::StateLayout;
 
-        m_state.g.p = Eigen::Vector3d(x0vec[L::IDX_P],   x0vec[L::IDX_P+1], x0vec[L::IDX_P+2]);
-        const Eigen::Quaterniond q0(x0vec[L::IDX_Q], x0vec[L::IDX_Q+1],
-                                    x0vec[L::IDX_Q+2], x0vec[L::IDX_Q+3]);
+        m_state.g.p = Eigen::Vector3d(x0vec[L::IDX_P], x0vec[L::IDX_P + 1], x0vec[L::IDX_P + 2]);
+        const Eigen::Quaterniond q0(x0vec[L::IDX_Q], x0vec[L::IDX_Q + 1],
+            x0vec[L::IDX_Q + 2], x0vec[L::IDX_Q + 3]);
         m_state.g.q = q0.normalized();
         m_state.g.R = m_state.g.q.toRotationMatrix();
-        m_state.nu_B << x0vec[L::IDX_W],   x0vec[L::IDX_W+1], x0vec[L::IDX_W+2],
-                        x0vec[L::IDX_V],   x0vec[L::IDX_V+1], x0vec[L::IDX_V+2];
+        m_state.nu_B << x0vec[L::IDX_W], x0vec[L::IDX_W + 1], x0vec[L::IDX_W + 2],
+            x0vec[L::IDX_V], x0vec[L::IDX_V + 1], x0vec[L::IDX_V + 2];
         m_state.m = x0vec[L::IDX_M];
 
         // 5. Build Newton options from the FMI solver parameters.
@@ -402,11 +403,10 @@ public:
         const double xcg_m = p_xcg_from_ac_ft_ * kFt_m;
         m_stepper.emplace(
             F16VF(m_ip,
-                  AE_FD::J2GravityPolicy{},
-                  AE_FD::F16AeroPolicy(m_aeroModel, trim.el_deg, 0.0, 0.0, xcg_m),
-                  AE_FD::F16PropPolicy(m_propModel, trim.pwr_pct)),
-            newton_opts
-        );
+                AE_FD::J2GravityPolicy{},
+                AE_FD::F16AeroPolicy(m_aeroModel, trim.el_deg, 0.0, 0.0, xcg_m),
+                AE_FD::F16PropPolicy(m_propModel, trim.pwr_pct)),
+            newton_opts);
 
         // 6b. Environment on the aero policy: steady wind (NED at the start
         //     point, converted to ECEF once), atmosphere offsets, and the Dryden
@@ -422,7 +422,7 @@ public:
             vf.thrust.setGust(AE_ENV::GustState{});
 
             m_turb.reset();
-            m_turbStep_s     = 0.0;
+            m_turbStep_s = 0.0;
             m_turbStepWarned = false;
             state_.turb_x.fill(0.0);
             const AE_ENV::DrydenParameters tp = turbulenceParameters();
@@ -432,7 +432,7 @@ public:
         }
 
         // 7. Seed control state from trim (written to state_ for fmu4cpp variable tracking)
-        state_.el_deg  = trim.el_deg;
+        state_.el_deg = trim.el_deg;
         state_.ail_deg = 0.0;
         state_.rdr_deg = 0.0;
         state_.pwr_pct = trim.pwr_pct;
@@ -452,10 +452,11 @@ public:
             return false;
 
         const double t0 = currentTime();
-        const double h  = (p_max_step_s_ > 0.0 && p_max_step_s_ < dt)
-                          ? p_max_step_s_ : dt;
+        const double h = (p_max_step_s_ > 0.0 && p_max_step_s_ < dt)
+                             ? p_max_step_s_
+                             : dt;
 
-        double t_local   = t0;
+        double t_local = t0;
         double remaining = dt;
 
         while (remaining > 1.0e-15) {
@@ -489,8 +490,8 @@ public:
                 debugLog(fmiWarning, "F16PlantFMU: Radau IIA Newton did not converge.");
                 return false;
             }
-            m_state   = F16Stepper::unpack(res);
-            t_local  += step;
+            m_state = F16Stepper::unpack(res);
+            t_local += step;
             remaining -= step;
         }
 
@@ -516,155 +517,176 @@ public:
         m_stepper.reset();
         m_aeroModel.reset();
         m_propModel.reset();
-        m_ip     = {};
+        m_ip = {};
         m_theta0 = 0.0;
-        m_state  = {};
-        state_   = F16PlantState{};
+        m_state = {};
+        state_ = F16PlantState{};
 
-        p_vt0_fps_        = kDefault_vt0_fps;
-        p_alt0_ft_        = kDefault_alt0_ft;
-        p_lat0_deg_       = kDefault_lat0_deg;
-        p_lon0_deg_       = kDefault_lon0_deg;
-        p_heading0_deg_   = kDefault_heading0_deg;
-        p_roll0_deg_      = kDefault_roll0_deg;
+        p_vt0_fps_ = kDefault_vt0_fps;
+        p_alt0_ft_ = kDefault_alt0_ft;
+        p_lat0_deg_ = kDefault_lat0_deg;
+        p_lon0_deg_ = kDefault_lon0_deg;
+        p_heading0_deg_ = kDefault_heading0_deg;
+        p_roll0_deg_ = kDefault_roll0_deg;
         p_xcg_from_ac_ft_ = kDefault_xcg_from_ac_ft;
 
         p_newton_abs_tol_ = kDefault_newton_abs_tol;
         p_newton_rel_tol_ = kDefault_newton_rel_tol;
-        p_max_step_s_     = kDefault_max_step_s;
+        p_max_step_s_ = kDefault_max_step_s;
 
         p_wind_north_mps_ = kDefault_wind_mps;
-        p_wind_east_mps_  = kDefault_wind_mps;
-        p_wind_down_mps_  = kDefault_wind_mps;
-        p_turb_sigma_u_   = kDefault_turb_sigma_mps;
-        p_turb_sigma_v_   = kDefault_turb_sigma_mps;
-        p_turb_sigma_w_   = kDefault_turb_sigma_mps;
-        p_turb_L_u_m_     = kDefault_turb_L_m;
-        p_turb_L_v_m_     = kDefault_turb_L_m;
-        p_turb_L_w_m_     = kDefault_turb_L_m;
-        p_turb_seed_      = kDefault_turb_seed;
-        p_atm_deltaT_K_   = kDefault_atm_deltaT_K;
-        p_atm_deltaP_Pa_  = kDefault_atm_deltaP_Pa;
+        p_wind_east_mps_ = kDefault_wind_mps;
+        p_wind_down_mps_ = kDefault_wind_mps;
+        p_turb_sigma_u_ = kDefault_turb_sigma_mps;
+        p_turb_sigma_v_ = kDefault_turb_sigma_mps;
+        p_turb_sigma_w_ = kDefault_turb_sigma_mps;
+        p_turb_L_u_m_ = kDefault_turb_L_m;
+        p_turb_L_v_m_ = kDefault_turb_L_m;
+        p_turb_L_w_m_ = kDefault_turb_L_m;
+        p_turb_seed_ = kDefault_turb_seed;
+        p_atm_deltaT_K_ = kDefault_atm_deltaT_K;
+        p_atm_deltaP_Pa_ = kDefault_atm_deltaP_Pa;
         m_turb.reset();
-        m_turbStep_s     = 0.0;
+        m_turbStep_s = 0.0;
         m_turbStepWarned = false;
     }
 
 private:
-
     // ── registerParameters ──────────────────────────────────────────────────────
     // Register the FMI parameters (fixed before exit_initialisation_mode).
     void registerParameters()
     {
         // ── Parameters ───────────────────────────────────────────────────────
         register_real("vt0_fps", &p_vt0_fps_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("True airspeed at trim [ft/s]");
 
         register_real("alt0_ft", &p_alt0_ft_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Altitude at trim [ft]");
 
         register_real("lat0_deg", &p_lat0_deg_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Initial geodetic latitude [deg]");
 
         register_real("lon0_deg", &p_lon0_deg_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Initial geodetic longitude [deg]");
 
         register_real("heading0_deg", &p_heading0_deg_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Initial heading (azimuth from North) [deg]");
 
         register_real("roll0_deg", &p_roll0_deg_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Initial pose roll angle [deg]");
 
         register_real("xcg_from_ac_ft", &p_xcg_from_ac_ft_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("CG offset aft of aerodynamic reference centre [ft]");
 
         register_real("solver.abs_tol", &p_newton_abs_tol_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Radau IIA Newton absolute residual tolerance [-]");
 
         register_real("solver.rel_tol", &p_newton_rel_tol_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Radau IIA Newton relative residual tolerance [-]");
 
         register_real("solver.max_step_s", &p_max_step_s_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Maximum internal integrator sub-step size [s] (0 = use communication step)");
 
         // ── Environment ──────────────────────────────────────────────────────
         register_real("wind.north_mps", &p_wind_north_mps_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Steady wind, NED north component at the initial position [m/s]. Positive = blowing northward. Fixed in NED at the start point and converted to ECEF once.");
 
         register_real("wind.east_mps", &p_wind_east_mps_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Steady wind, NED east component [m/s]. Positive = blowing eastward.");
 
         register_real("wind.down_mps", &p_wind_down_mps_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Steady wind, NED down component [m/s]. Positive = downward.");
 
         register_real("turb.sigma_u_mps", &p_turb_sigma_u_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Dryden turbulence RMS gust along body x [m/s]. All three sigmas zero = turbulence off. MIL-F-8785C spectra; see Aetherion/Environment/DrydenTurbulence.h.");
 
         register_real("turb.sigma_v_mps", &p_turb_sigma_v_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Dryden turbulence RMS gust along body y [m/s].");
 
         register_real("turb.sigma_w_mps", &p_turb_sigma_w_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Dryden turbulence RMS gust along body z (down) [m/s].");
 
         register_real("turb.L_u_m", &p_turb_L_u_m_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Dryden longitudinal scale length L_u [m]; MIL-F-8785C: 1750 ft above 2000 ft.");
 
         register_real("turb.L_v_m", &p_turb_L_v_m_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Dryden lateral scale length L_v [m] (MIL-F-8785C definition).");
 
         register_real("turb.L_w_m", &p_turb_L_w_m_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Dryden vertical scale length L_w [m] (MIL-F-8785C definition).");
 
         register_real("turb.seed", &p_turb_seed_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Seed of the turbulence noise stream (integer-valued). The same seed and parameters reproduce the same gust record.");
 
         register_real("atm.deltaT_K", &p_atm_deltaT_K_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("ISA temperature deviation [K], added uniformly to the US1976 profile. Shifts density, speed of sound and pressure consistently (hydrostatic re-integration) for the forces, the trim and out.P_Pa/out.T_K/out.rho_kg_m3/out.a_m_s. The propulsion table stays indexed on geometric altitude.");
 
         register_real("atm.deltaP_sl_Pa", &p_atm_deltaP_Pa_)
-            .setCausality(causality_t::PARAMETER).setVariability(variability_t::FIXED)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Sea-level pressure minus 101 325 Pa (QNH offset) [Pa]. A barometer inverting the standard ISA reads about 8.4 m per 100 Pa of offset at low altitude.");
     }
@@ -674,20 +696,24 @@ private:
     void registerInputs()
     {
         // ── Control inputs ────────────────────────────────────────────────────
-        register_real("ctrl.el_deg",  &state_.el_deg)
-            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
+        register_real("ctrl.el_deg", &state_.el_deg)
+            .setCausality(causality_t::INPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setDescription("Elevator deflection [deg]");
 
         register_real("ctrl.ail_deg", &state_.ail_deg)
-            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::INPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setDescription("Aileron deflection [deg]");
 
         register_real("ctrl.rdr_deg", &state_.rdr_deg)
-            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::INPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setDescription("Rudder deflection [deg]");
 
         register_real("ctrl.pwr_pct", &state_.pwr_pct)
-            .setCausality(causality_t::INPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::INPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setDescription("Throttle [0–100 %]");
     }
 
@@ -696,120 +722,177 @@ private:
     void registerOutputs()
     {
         // ── Outputs ───────────────────────────────────────────────────────────
-        register_real("out.alt_m",       &state_.alt_m)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Altitude above MSL [m]");
+        register_real("out.alt_m", &state_.alt_m)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Altitude above MSL [m]");
 
-        register_real("out.lat_deg",     &state_.lat_deg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic latitude [deg]");
+        register_real("out.lat_deg", &state_.lat_deg)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Geodetic latitude [deg]");
 
-        register_real("out.lon_deg",     &state_.lon_deg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Geodetic longitude [deg]");
+        register_real("out.lon_deg", &state_.lon_deg)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Geodetic longitude [deg]");
 
-        register_real("out.yaw_rad",     &state_.yaw_rad)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler yaw angle (body → NED) [rad]");
+        register_real("out.yaw_rad", &state_.yaw_rad)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("ZYX Euler yaw angle (body → NED) [rad]");
 
-        register_real("out.pitch_rad",   &state_.pitch_rad)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler pitch angle (body → NED) [rad]");
+        register_real("out.pitch_rad", &state_.pitch_rad)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("ZYX Euler pitch angle (body → NED) [rad]");
 
-        register_real("out.roll_rad",    &state_.roll_rad)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("ZYX Euler roll angle (body → NED) [rad]");
+        register_real("out.roll_rad", &state_.roll_rad)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("ZYX Euler roll angle (body → NED) [rad]");
 
-        register_real("out.p_rad_s",     &state_.p_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Body roll rate wrt ECI [rad/s]");
+        register_real("out.p_rad_s", &state_.p_rad_s)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body roll rate wrt ECI [rad/s]");
 
-        register_real("out.q_rad_s",     &state_.q_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Body pitch rate wrt ECI [rad/s]");
+        register_real("out.q_rad_s", &state_.q_rad_s)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body pitch rate wrt ECI [rad/s]");
 
-        register_real("out.r_rad_s",     &state_.r_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Body yaw rate wrt ECI [rad/s]");
+        register_real("out.r_rad_s", &state_.r_rad_s)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Body yaw rate wrt ECI [rad/s]");
 
         register_real("out.v_north_m_s", &state_.v_north_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("NED north velocity [m/s]");
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("NED north velocity [m/s]");
 
-        register_real("out.v_east_m_s",  &state_.v_east_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("NED east velocity [m/s]");
+        register_real("out.v_east_m_s", &state_.v_east_m_s)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("NED east velocity [m/s]");
 
-        register_real("out.v_down_m_s",  &state_.v_down_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("NED down velocity [m/s]");
+        register_real("out.v_down_m_s", &state_.v_down_m_s)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("NED down velocity [m/s]");
 
-        register_real("out.alpha_deg",   &state_.alpha_deg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Angle of attack [deg]");
+        register_real("out.alpha_deg", &state_.alpha_deg)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Angle of attack [deg]");
 
-        register_real("out.beta_deg",    &state_.beta_deg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Sideslip angle [deg]");
+        register_real("out.beta_deg", &state_.beta_deg)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Sideslip angle [deg]");
 
-        register_real("out.mach",        &state_.mach)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Mach number [-]");
+        register_real("out.mach", &state_.mach)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Mach number [-]");
 
-        register_real("out.qbar_Pa",     &state_.qbar_Pa)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Dynamic pressure [Pa]");
+        register_real("out.qbar_Pa", &state_.qbar_Pa)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Dynamic pressure [Pa]");
 
-        register_real("out.vt_m_s",      &state_.vt_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("True airspeed [m/s]");
+        register_real("out.vt_m_s", &state_.vt_m_s)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("True airspeed [m/s]");
 
-        register_real("out.aero_Fx_N",   &state_.aero_Fx_N)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-X force [N]");
+        register_real("out.aero_Fx_N", &state_.aero_Fx_N)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Aerodynamic body-X force [N]");
 
-        register_real("out.aero_Fy_N",   &state_.aero_Fy_N)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-Y force [N]");
+        register_real("out.aero_Fy_N", &state_.aero_Fy_N)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Aerodynamic body-Y force [N]");
 
-        register_real("out.aero_Fz_N",   &state_.aero_Fz_N)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic body-Z force [N]");
+        register_real("out.aero_Fz_N", &state_.aero_Fz_N)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Aerodynamic body-Z force [N]");
 
-        register_real("out.aero_Mx_Nm",  &state_.aero_Mx_Nm)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic roll moment (about AC) [N·m]");
+        register_real("out.aero_Mx_Nm", &state_.aero_Mx_Nm)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Aerodynamic roll moment (about AC) [N·m]");
 
-        register_real("out.aero_My_Nm",  &state_.aero_My_Nm)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic pitch moment (about AC) [N·m]");
+        register_real("out.aero_My_Nm", &state_.aero_My_Nm)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Aerodynamic pitch moment (about AC) [N·m]");
 
-        register_real("out.aero_Mz_Nm",  &state_.aero_Mz_Nm)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Aerodynamic yaw moment [N·m]");
+        register_real("out.aero_Mz_Nm", &state_.aero_Mz_Nm)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Aerodynamic yaw moment [N·m]");
 
-        register_real("out.rho_kg_m3",   &state_.rho_kg_m3)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Air density [kg/m³]");
+        register_real("out.rho_kg_m3", &state_.rho_kg_m3)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Air density [kg/m³]");
 
-        register_real("out.T_K",         &state_.T_K)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Ambient static temperature [K]");
+        register_real("out.T_K", &state_.T_K)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Ambient static temperature [K]");
 
-        register_real("out.P_Pa",        &state_.P_Pa)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Ambient static pressure [Pa]");
+        register_real("out.P_Pa", &state_.P_Pa)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Ambient static pressure [Pa]");
 
-        register_real("out.a_m_s",       &state_.a_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Speed of sound [m/s]");
+        register_real("out.a_m_s", &state_.a_m_s)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Speed of sound [m/s]");
 
-        register_real("out.g_m_s2",      &state_.g_m_s2)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Local gravitational acceleration [m/s²]");
+        register_real("out.g_m_s2", &state_.g_m_s2)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Local gravitational acceleration [m/s²]");
 
         register_real("out.specificForce_x_m_s2", &state_.specificForce_x_m_s2)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Body-X specific force at the CG: the non-gravitational acceleration an "
                             "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
@@ -817,7 +900,8 @@ private:
                             "(x forward). [m/s²]");
 
         register_real("out.specificForce_y_m_s2", &state_.specificForce_y_m_s2)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Body-Y specific force at the CG: the non-gravitational acceleration an "
                             "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
@@ -825,68 +909,81 @@ private:
                             "(y right). [m/s²]");
 
         register_real("out.specificForce_z_m_s2", &state_.specificForce_z_m_s2)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Body-Z specific force at the CG: the non-gravitational acceleration an "
                             "ideal accelerometer would sense, (F_aero + F_thrust)/m. "
                             "Excludes gravitation — zero in free fall. Same body axes as out.aero_F*_N "
                             "(z down). [m/s²]");
 
-        register_real("out.thrust_N",    &state_.thrust_N)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+        register_real("out.thrust_N", &state_.thrust_N)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Net propulsive force along body +X [N] "
                             "(the F-16 engine deck carries no body-Y/Z thrust component)");
 
         // ── Environment ──────────────────────────────────────────────────────
         register_real("out.wind_north_m_s", &state_.wind_north_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Total wind at the CG, NED north: steady wind plus gust [m/s]");
 
         register_real("out.wind_east_m_s", &state_.wind_east_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Total wind at the CG, NED east: steady wind plus gust [m/s]");
 
         register_real("out.wind_down_m_s", &state_.wind_down_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Total wind at the CG, NED down: steady wind plus gust [m/s]");
 
         register_real("out.gust_u_m_s", &state_.gust_u_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Dryden gust velocity along body x [m/s]");
 
         register_real("out.gust_v_m_s", &state_.gust_v_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Dryden gust velocity along body y [m/s]");
 
         register_real("out.gust_w_m_s", &state_.gust_w_m_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Dryden gust velocity along body z (down) [m/s]");
 
         register_real("out.gust_p_rad_s", &state_.gust_p_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Angular velocity of the gust field about body x [rad/s]; the aero sees p minus this");
 
         register_real("out.gust_q_rad_s", &state_.gust_q_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Angular velocity of the gust field about body y [rad/s]");
 
         register_real("out.gust_r_rad_s", &state_.gust_r_rad_s)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("Angular velocity of the gust field about body z [rad/s]");
 
-        register_real("out.mass_kg",     &state_.mass_kg)
-            .setCausality(causality_t::OUTPUT).setVariability(variability_t::CONTINUOUS)
-            .setInitial(initial_t::CALCULATED).setDescription("Vehicle mass [kg]");
+        register_real("out.mass_kg", &state_.mass_kg)
+            .setCausality(causality_t::OUTPUT)
+            .setVariability(variability_t::CONTINUOUS)
+            .setInitial(initial_t::CALCULATED)
+            .setDescription("Vehicle mass [kg]");
     }
 
     // ── packState ─────────────────────────────────────────────────────────────
@@ -905,7 +1002,7 @@ private:
         for (int i = 0; i < 6; ++i)
             state_.nu_B[i] = m_state.nu_B(i);
         state_.mass_kg = m_state.m;
-        state_.turb_x     = m_turb.has_value() ? m_turb->states() : std::array<double, 8>{};
+        state_.turb_x = m_turb.has_value() ? m_turb->states() : std::array<double, 8>{};
         state_.turb_noise = m_turb.has_value() ? m_turb->noiseState() : AE_ENV::DrydenTurbulence::NoiseState{};
     }
 
@@ -952,7 +1049,7 @@ private:
         if (!m_stepper.has_value()) return;
 
         const double theta_GST = m_theta0 + (kOmegaEarth_rad_s * t);
-        const auto&  vf        = m_stepper->vectorField();
+        const auto& vf = m_stepper->vectorField();
 
         // MakeSnapshot1 (two-policy overload) fills kinematics, atmosphere, and
         // aero forces/moments.  aero_bodyMoment_Nm_M is reported about the AC
@@ -960,38 +1057,38 @@ private:
         const AE_SIM::Snapshot1 snap =
             AE_SIM::MakeSnapshot1(t, m_state, theta_GST, vf.gravity, vf.aero);
 
-        state_.alt_m       = snap.altitudeMsl_m;
-        state_.lat_deg     = snap.latitude_rad  * kRadToDeg;
-        state_.lon_deg     = snap.longitude_rad * kRadToDeg;
+        state_.alt_m = snap.altitudeMsl_m;
+        state_.lat_deg = snap.latitude_rad * kRadToDeg;
+        state_.lon_deg = snap.longitude_rad * kRadToDeg;
 
-        state_.yaw_rad     = snap.eulerAngle_rad_Yaw;
-        state_.pitch_rad   = snap.eulerAngle_rad_Pitch;
-        state_.roll_rad    = snap.eulerAngle_rad_Roll;
+        state_.yaw_rad = snap.eulerAngle_rad_Yaw;
+        state_.pitch_rad = snap.eulerAngle_rad_Pitch;
+        state_.roll_rad = snap.eulerAngle_rad_Roll;
 
-        state_.p_rad_s     = snap.bodyAngularRateWrtEi_rad_s_Roll;
-        state_.q_rad_s     = snap.bodyAngularRateWrtEi_rad_s_Pitch;
-        state_.r_rad_s     = snap.bodyAngularRateWrtEi_rad_s_Yaw;
+        state_.p_rad_s = snap.bodyAngularRateWrtEi_rad_s_Roll;
+        state_.q_rad_s = snap.bodyAngularRateWrtEi_rad_s_Pitch;
+        state_.r_rad_s = snap.bodyAngularRateWrtEi_rad_s_Yaw;
 
         state_.v_north_m_s = snap.feVelocity_m_s.x();
-        state_.v_east_m_s  = snap.feVelocity_m_s.y();
-        state_.v_down_m_s  = snap.feVelocity_m_s.z();
+        state_.v_east_m_s = snap.feVelocity_m_s.y();
+        state_.v_down_m_s = snap.feVelocity_m_s.z();
 
-        state_.vt_m_s      = snap.trueAirspeed_m_s;
-        state_.mach        = snap.mach;
-        state_.qbar_Pa     = snap.dynamicPressure_Pa;
+        state_.vt_m_s = snap.trueAirspeed_m_s;
+        state_.mach = snap.mach;
+        state_.qbar_Pa = snap.dynamicPressure_Pa;
 
-        state_.aero_Fx_N   = snap.aero_bodyForce_N_X;
-        state_.aero_Fy_N   = snap.aero_bodyForce_N_Y;
-        state_.aero_Fz_N   = snap.aero_bodyForce_N_Z;
-        state_.aero_Mx_Nm  = snap.aero_bodyMoment_Nm_L;
-        state_.aero_My_Nm  = snap.aero_bodyMoment_Nm_M;
-        state_.aero_Mz_Nm  = snap.aero_bodyMoment_Nm_N;
+        state_.aero_Fx_N = snap.aero_bodyForce_N_X;
+        state_.aero_Fy_N = snap.aero_bodyForce_N_Y;
+        state_.aero_Fz_N = snap.aero_bodyForce_N_Z;
+        state_.aero_Mx_Nm = snap.aero_bodyMoment_Nm_L;
+        state_.aero_My_Nm = snap.aero_bodyMoment_Nm_M;
+        state_.aero_Mz_Nm = snap.aero_bodyMoment_Nm_N;
 
-        state_.rho_kg_m3   = snap.airDensity_kg_m3;
-        state_.T_K         = snap.ambientTemperature_K;
-        state_.P_Pa        = snap.ambientPressure_Pa;
-        state_.a_m_s       = snap.speedOfSound_m_s;
-        state_.g_m_s2      = snap.localGravity_m_s2;
+        state_.rho_kg_m3 = snap.airDensity_kg_m3;
+        state_.T_K = snap.ambientTemperature_K;
+        state_.P_Pa = snap.ambientPressure_Pa;
+        state_.a_m_s = snap.speedOfSound_m_s;
+        state_.g_m_s2 = snap.localGravity_m_s2;
 
         // Body-frame specific force at the CG — what an ideal accelerometer senses.
         // Deliberately built as a sum of the non-gravitational wrench forces, so no
@@ -1004,15 +1101,15 @@ private:
         // centre of mass — independent of where the body frame's origin sits.
         const Eigen::Vector3d F_thrust_B = AE_SIM::PolicyBodyForce_N(t, m_state, vf.thrust);
         const Eigen::Vector3d F_aero_B(snap.aero_bodyForce_N_X,
-                                       snap.aero_bodyForce_N_Y,
-                                       snap.aero_bodyForce_N_Z);
+            snap.aero_bodyForce_N_Y,
+            snap.aero_bodyForce_N_Z);
         const Eigen::Vector3d specificForce_B =
             AE_SIM::BodySpecificForce_m_s2(F_aero_B + F_thrust_B, m_state.m);
 
         state_.specificForce_x_m_s2 = specificForce_B.x();
         state_.specificForce_y_m_s2 = specificForce_B.y();
         state_.specificForce_z_m_s2 = specificForce_B.z();
-        state_.thrust_N     = F_thrust_B.x();
+        state_.thrust_N = F_thrust_B.x();
 
         // Alpha and beta from the same air-relative velocity the aero policy
         // formed its forces from (Earth-surface velocity, steady wind and gust
@@ -1020,10 +1117,8 @@ private:
         const Aetherion::ODE::RKMK::Lie::SE3<double> g_now(m_state.g.R, m_state.g.p);
         const Eigen::Vector3d v_rel = vf.aero.airRelativeVelocity_B<double>(g_now, m_state.nu_B, t);
         const double vt = std::sqrt(v_rel.squaredNorm() + 1.0e-30);
-        state_.alpha_deg = std::atan2(v_rel.z(), v_rel.x() + 1.0e-12)
-                           * (180.0 / std::numbers::pi);
-        state_.beta_deg  = std::asin(std::clamp(v_rel.y() / vt, -1.0, 1.0))
-                           * (180.0 / std::numbers::pi);
+        state_.alpha_deg = std::atan2(v_rel.z(), v_rel.x() + 1.0e-12) * (180.0 / std::numbers::pi);
+        state_.beta_deg = std::asin(std::clamp(v_rel.y() / vt, -1.0, 1.0)) * (180.0 / std::numbers::pi);
 
         // Environment outputs: the total wind at the CG in NED (steady wind
         // plus the gust rotated body → NED) and the gust itself in body axes.
@@ -1044,14 +1139,14 @@ private:
             const Eigen::Vector3d gust_ned = R_IN.transpose() * m_state.g.R * gust.linear();
 
             state_.wind_north_m_s = w_ned[0] + gust_ned.x();
-            state_.wind_east_m_s  = w_ned[1] + gust_ned.y();
-            state_.wind_down_m_s  = w_ned[2] + gust_ned.z();
-            state_.gust_u_m_s     = gust.u_mps;
-            state_.gust_v_m_s     = gust.v_mps;
-            state_.gust_w_m_s     = gust.w_mps;
-            state_.gust_p_rad_s   = gust.p_rad_s;
-            state_.gust_q_rad_s   = gust.q_rad_s;
-            state_.gust_r_rad_s   = gust.r_rad_s;
+            state_.wind_east_m_s = w_ned[1] + gust_ned.y();
+            state_.wind_down_m_s = w_ned[2] + gust_ned.z();
+            state_.gust_u_m_s = gust.u_mps;
+            state_.gust_v_m_s = gust.v_mps;
+            state_.gust_w_m_s = gust.w_mps;
+            state_.gust_p_rad_s = gust.p_rad_s;
+            state_.gust_q_rad_s = gust.q_rad_s;
+            state_.gust_r_rad_s = gust.r_rad_s;
         }
     }
 
@@ -1077,51 +1172,51 @@ private:
         tp.sigma_u_mps = p_turb_sigma_u_;
         tp.sigma_v_mps = p_turb_sigma_v_;
         tp.sigma_w_mps = p_turb_sigma_w_;
-        tp.L_u_m       = p_turb_L_u_m_;
-        tp.L_v_m       = p_turb_L_v_m_;
-        tp.L_w_m       = p_turb_L_w_m_;
-        tp.wingspan_m  = m_aeroModel ? m_aeroModel->bspanFt() * kFt_m : 9.144;
+        tp.L_u_m = p_turb_L_u_m_;
+        tp.L_v_m = p_turb_L_v_m_;
+        tp.L_w_m = p_turb_L_w_m_;
+        tp.wingspan_m = m_aeroModel ? m_aeroModel->bspanFt() * kFt_m : 9.144;
         return tp;
     }
 
     // ── Parameters ────────────────────────────────────────────────────────────
-    double p_vt0_fps_        { kDefault_vt0_fps        };
-    double p_alt0_ft_        { kDefault_alt0_ft        };
-    double p_lat0_deg_       { kDefault_lat0_deg       };
-    double p_lon0_deg_       { kDefault_lon0_deg       };
-    double p_heading0_deg_   { kDefault_heading0_deg   };
-    double p_roll0_deg_      { kDefault_roll0_deg      };
-    double p_xcg_from_ac_ft_ { kDefault_xcg_from_ac_ft };
+    double p_vt0_fps_{ kDefault_vt0_fps };
+    double p_alt0_ft_{ kDefault_alt0_ft };
+    double p_lat0_deg_{ kDefault_lat0_deg };
+    double p_lon0_deg_{ kDefault_lon0_deg };
+    double p_heading0_deg_{ kDefault_heading0_deg };
+    double p_roll0_deg_{ kDefault_roll0_deg };
+    double p_xcg_from_ac_ft_{ kDefault_xcg_from_ac_ft };
 
-    double p_newton_abs_tol_ { kDefault_newton_abs_tol };
-    double p_newton_rel_tol_ { kDefault_newton_rel_tol };
-    double p_max_step_s_     { kDefault_max_step_s     };
+    double p_newton_abs_tol_{ kDefault_newton_abs_tol };
+    double p_newton_rel_tol_{ kDefault_newton_rel_tol };
+    double p_max_step_s_{ kDefault_max_step_s };
 
-    double p_wind_north_mps_ { kDefault_wind_mps       };
-    double p_wind_east_mps_  { kDefault_wind_mps       };
-    double p_wind_down_mps_  { kDefault_wind_mps       };
-    double p_turb_sigma_u_   { kDefault_turb_sigma_mps };
-    double p_turb_sigma_v_   { kDefault_turb_sigma_mps };
-    double p_turb_sigma_w_   { kDefault_turb_sigma_mps };
-    double p_turb_L_u_m_     { kDefault_turb_L_m       };
-    double p_turb_L_v_m_     { kDefault_turb_L_m       };
-    double p_turb_L_w_m_     { kDefault_turb_L_m       };
-    double p_turb_seed_      { kDefault_turb_seed      };
-    double p_atm_deltaT_K_   { kDefault_atm_deltaT_K   };
-    double p_atm_deltaP_Pa_  { kDefault_atm_deltaP_Pa  };
+    double p_wind_north_mps_{ kDefault_wind_mps };
+    double p_wind_east_mps_{ kDefault_wind_mps };
+    double p_wind_down_mps_{ kDefault_wind_mps };
+    double p_turb_sigma_u_{ kDefault_turb_sigma_mps };
+    double p_turb_sigma_v_{ kDefault_turb_sigma_mps };
+    double p_turb_sigma_w_{ kDefault_turb_sigma_mps };
+    double p_turb_L_u_m_{ kDefault_turb_L_m };
+    double p_turb_L_v_m_{ kDefault_turb_L_m };
+    double p_turb_L_w_m_{ kDefault_turb_L_m };
+    double p_turb_seed_{ kDefault_turb_seed };
+    double p_atm_deltaT_K_{ kDefault_atm_deltaT_K };
+    double p_atm_deltaP_Pa_{ kDefault_atm_deltaP_Pa };
 
     // Dryden filter bank; engaged only when a gust intensity is non-zero.
     std::optional<AE_ENV::DrydenTurbulence> m_turb;
-    double m_turbStep_s     { 0.0 };
-    bool   m_turbStepWarned { false };
+    double m_turbStep_s{ 0.0 };
+    bool m_turbStepWarned{ false };
 
     // ── Runtime objects ───────────────────────────────────────────────────────
     // Models kept alive after exit_initialisation_mode so that setFmuState /
     // reset can rebuild the stepper without reloading DAVE-ML from disk.
     std::shared_ptr<const AE_SR::DAVEMLAeroModel> m_aeroModel;
     std::shared_ptr<const AE_SR::DAVEMLPropModel> m_propModel;
-    AE_RB::InertialParameters                     m_ip{};
-    double                                         m_theta0 { 0.0 };
+    AE_RB::InertialParameters m_ip{};
+    double m_theta0{ 0.0 };
 
     // Stepper is empty until exit_initialisation_mode; cleared on reset.
     std::optional<F16Stepper> m_stepper;
@@ -1139,13 +1234,13 @@ private:
 model_info fmu4cpp::get_model_info()
 {
     model_info info;
-    info.modelName            = "F16Plant";
+    info.modelName = "F16Plant";
     // Aetherion release version, injected by CMake from version.txt. Published as the
     // FMI `version` attribute so a consumer can enforce a version floor by reading the
     // shipped modelDescription.xml rather than trusting the build tree it was found in.
-    info.version              = AETHERION_VERSION;
-    info.description          = "Aetherion F-16 6-DoF plant "
-                                "(Radau IIA RKMK on SE(3), DAVE-ML aero/prop, J2 gravity)";
+    info.version = AETHERION_VERSION;
+    info.description = "Aetherion F-16 6-DoF plant "
+                       "(Radau IIA RKMK on SE(3), DAVE-ML aero/prop, J2 gravity)";
     info.canGetAndSetFMUstate = true;
     info.canSerializeFMUstate = true;
     return info;

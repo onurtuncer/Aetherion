@@ -9,10 +9,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <nlohmann/json.hpp>
 
-TEST_CASE("nlohmann::json vendored single-header integrates and instantiates", "[vendor][nlohmann][json]") {
+TEST_CASE("nlohmann::json vendored single-header integrates and instantiates", "[vendor][nlohmann][json]")
+{
     using Json = nlohmann::json;
 
-    SECTION("default construction and basic types") {
+    SECTION("default construction and basic types")
+    {
         Json j; // null
         REQUIRE(j.is_null());
 
@@ -29,7 +31,8 @@ TEST_CASE("nlohmann::json vendored single-header integrates and instantiates", "
         REQUIRE(s.get<std::string>() == "hello");
     }
 
-    SECTION("object and array composition") {
+    SECTION("object and array composition")
+    {
         Json obj = Json::object();
         obj["answer"] = 42;
         obj["pi"] = 3.14;
@@ -53,7 +56,8 @@ TEST_CASE("nlohmann::json vendored single-header integrates and instantiates", "
         REQUIRE(arr.at(2).get<bool>() == false);
     }
 
-    SECTION("parse + dump roundtrip") {
+    SECTION("parse + dump roundtrip")
+    {
         const char* text = R"({
             "x": 1,
             "y": [2, 3],
