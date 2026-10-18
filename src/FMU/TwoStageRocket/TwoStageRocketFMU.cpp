@@ -485,10 +485,16 @@ private:
     }
 
     // ── registerOutputs ─────────────────────────────────────────────────────────
-    // Register the output cache variables.
+    // Register the output cache variables, in two groups.
     void registerOutputs()
     {
-        // ── Outputs ───────────────────────────────────────────────────────────
+        registerKinematicOutputs();
+        registerAirDataAndPropulsionOutputs();
+    }
+
+    // Position, gravity, attitude, body rates and velocity.
+    void registerKinematicOutputs()
+    {
         register_real("out.alt_m", &state_.alt_m)
             .setCausality(causality_t::OUTPUT)
             .setVariability(variability_t::CONTINUOUS)
@@ -572,7 +578,11 @@ private:
             .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("NED down velocity [m/s]");
+    }
 
+    // Atmosphere, aerodynamic forces, air data, propulsion, mass and fuel.
+    void registerAirDataAndPropulsionOutputs()
+    {
         register_real("out.a_m_s", &state_.a_m_s)
             .setCausality(causality_t::OUTPUT)
             .setVariability(variability_t::CONTINUOUS)

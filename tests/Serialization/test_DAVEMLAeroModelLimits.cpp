@@ -56,6 +56,10 @@ namespace {
             f << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<DAVEfunc>\n"
               << body << "\n</DAVEfunc>\n";
         }
+        TempDML(const TempDML&) = delete;
+        TempDML& operator=(const TempDML&) = delete;
+        TempDML(TempDML&&) = delete;
+        TempDML& operator=(TempDML&&) = delete;
         ~TempDML()
         {
             std::error_code ec;

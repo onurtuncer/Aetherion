@@ -13,6 +13,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <format>
 #include <limits>
 #include <queue>
 #include <set>
@@ -459,7 +460,7 @@ namespace Aetherion::Serialization {
             const std::string fnName = fnode.attribute("name").as_string();
             auto dvr = fnode.child("dependentVarRef");
             if (!dvr || std::string(dvr.attribute("varID").as_string()).empty())
-                throw std::runtime_error("DAVEMLAeroModel: function '" + fnName + "' has no dependentVarRef varID");
+                throw std::runtime_error(std::format("DAVEMLAeroModel: function '{}' has no dependentVarRef varID", fnName));
             std::string depVarID = dvr.attribute("varID").as_string();
             const std::string where = "DAVEMLAeroModel: table for '" + depVarID + "'";
 
@@ -479,7 +480,9 @@ namespace Aetherion::Serialization {
                 auto exA = n.attribute("extrapolate");
                 const std::string ex = exA ? trimWS(exA.as_string()) : "neither";
                 if (ex != "neither" && ex != "min" && ex != "max" && ex != "both")
-                    throw std::runtime_error(where + ": independentVarRef '" + inputVarIDs.back() + "' has extrapolate=\"" + ex + "\"; expected neither, min, max or both");
+                    throw std::runtime_error(std::format(
+                        "{}: independentVarRef '{}' has extrapolate=\"{}\"; expected neither, min, max or both", where,
+                        inputVarIDs.back(), ex));
                 extrapBelow.push_back(ex == "min" || ex == "both");
                 extrapAbove.push_back(ex == "max" || ex == "both");
             }
@@ -496,7 +499,7 @@ namespace Aetherion::Serialization {
                 const std::string gtID = ref.attribute("gtID").as_string();
                 auto it = topLevelTableDefs.find(gtID);
                 if (it == topLevelTableDefs.end())
-                    throw std::runtime_error(where + " refers to griddedTableDef '" + gtID + "', which is not defined");
+                    throw std::runtime_error(std::format("{} refers to griddedTableDef '{}', which is not defined", where, gtID));
                 gdef = it->second;
             }
 
@@ -515,7 +518,8 @@ namespace Aetherion::Serialization {
             // finding N04), and the asserts that stood for this are gone in a
             // Release build.
             if (gt.bpIDs.size() != gt.inputVarIDs.size())
-                throw std::runtime_error(where + " has " + std::to_string(gt.inputVarIDs.size()) + " independentVarRef(s) but " + std::to_string(gt.bpIDs.size()) + " bpRef(s)");
+                throw std::runtime_error(std::format("{} has {} independentVarRef(s) but {} bpRef(s)", where,
+                    gt.inputVarIDs.size(), gt.bpIDs.size()));
             if (gt.bpIDs.empty())
                 throw std::runtime_error(where + " has no breakpoints");
 
@@ -523,20 +527,23 @@ namespace Aetherion::Serialization {
             for (const auto& bpID : gt.bpIDs) {
                 auto it = bps.find(bpID);
                 if (it == bps.end())
-                    throw std::runtime_error(where + " refers to breakpoint '" + bpID + "', which is not defined");
+                    throw std::runtime_error(std::format("{} refers to breakpoint '{}', which is not defined", where, bpID));
                 const auto& bp = it->second;
                 if (bp.size() < 2)
-                    throw std::runtime_error(where + ": breakpoint '" + bpID + "' has " + std::to_string(bp.size()) + " value(s); at least 2 are needed");
+                    throw std::runtime_error(std::format(
+                        "{}: breakpoint '{}' has {} value(s); at least 2 are needed", where, bpID, bp.size()));
                 for (std::size_t i = 1; i < bp.size(); ++i)
                     if (!(bp[i] > bp[i - 1]))
-                        throw std::runtime_error(where + ": breakpoint '" + bpID + "' is not strictly increasing at index " + std::to_string(i));
+                        throw std::runtime_error(
+                            std::format("{}: breakpoint '{}' is not strictly increasing at index {}", where, bpID, i));
                 if (expected > std::numeric_limits<std::size_t>::max() / bp.size())
                     throw std::runtime_error(where + ": the breakpoint grid is too large");
                 expected *= bp.size();
                 gt.dims.push_back(bp.size());
             }
             if (gt.data.size() != expected)
-                throw std::runtime_error(where + ": dataTable has " + std::to_string(gt.data.size()) + " value(s), the breakpoints need " + std::to_string(expected));
+                throw std::runtime_error(std::format(
+                    "{}: dataTable has {} value(s), the breakpoints need {}", where, gt.data.size(), expected));
 
             // The range each input is held to before the segment search: the
             // breakpoint range, unless extrapolation is allowed on that side, and
@@ -550,7 +557,8 @@ namespace Aetherion::Serialization {
                 if (!extrapBelow[d]) lo = std::max(lo, bp.front());
                 if (!extrapAbove[d]) hi = std::min(hi, bp.back());
                 if (lo > hi)
-                    throw std::runtime_error(where + ": independentVarRef '" + gt.inputVarIDs[d] + "' has min > max");
+                    throw std::runtime_error(
+                        std::format("{}: independentVarRef '{}' has min > max", where, gt.inputVarIDs[d]));
                 gt.lo.push_back(lo);
                 gt.hi.push_back(hi);
             }
