@@ -72,6 +72,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <format>
 #include <functional>
 #include <numbers>
 #include <ostream>
@@ -318,6 +319,48 @@ namespace Aetherion::Estimation::Replay {
                    std::isfinite(r.alt_m) && r.vNed_m_s.allFinite() && std::isfinite(r.yaw_rad) &&
                    std::isfinite(r.pitch_rad) && std::isfinite(r.roll_rad);
         }
+
+        struct ValidInputs
+        {
+            std::vector<ImuRecord> imu;
+            std::vector<TruthRecord> truth; ///< in time order
+        };
+
+        // Inputs are checked before anything uses them (second pre-DOI audit,
+        // N06): a NaN gyro reached the propagation and made every later
+        // estimate NaN, and a non-finite time would reach the clock fit and
+        // the event order. Rejected records are counted in the summary; none
+        // of them reaches the filter. The truth is put in time order, which
+        // interpolateTruth relies on.
+        [[nodiscard]] inline ValidInputs validInputs(const LogSet& logs, ReplaySummary& summary)
+        {
+            ValidInputs v;
+            v.imu.reserve(logs.imu.size());
+            for (const ImuRecord& r : logs.imu)
+            {
+                if (finite(r))
+                    v.imu.push_back(r);
+                else
+                    ++summary.rejectedImuSamples;
+            }
+            if (v.imu.size() < 2)
+                throw std::runtime_error(std::format(
+                    "replay: fewer than two valid IMU samples ({} rejected as not finite)", summary.rejectedImuSamples));
+
+            v.truth.reserve(logs.truth.size());
+            for (const TruthRecord& r : logs.truth)
+            {
+                if (finite(r))
+                    v.truth.push_back(r);
+                else
+                    ++summary.rejectedTruthRecords;
+            }
+            if (v.truth.empty())
+                throw std::runtime_error("replay: no valid truth record");
+            std::stable_sort(v.truth.begin(), v.truth.end(),
+                [](const TruthRecord& a, const TruthRecord& b) { return a.time < b.time; });
+            return v;
+        }
     } // namespace detail
 
     template <ErrorConvention C>
@@ -332,38 +375,9 @@ namespace Aetherion::Estimation::Replay {
         ReplayResult res;
         res.summary.convention = C;
 
-        // Inputs are checked before anything uses them (second pre-DOI audit,
-        // N06): a NaN gyro reached the propagation and made every later
-        // estimate NaN, and a non-finite time would reach the clock fit and
-        // the event order. Rejected records are counted in the summary; none
-        // of them reaches the filter. The truth is put in time order, which
-        // interpolateTruth relies on.
-        std::vector<ImuRecord> imu;
-        imu.reserve(logs.imu.size());
-        for (const ImuRecord& r : logs.imu)
-        {
-            if (detail::finite(r))
-                imu.push_back(r);
-            else
-                ++res.summary.rejectedImuSamples;
-        }
-        if (imu.size() < 2)
-            throw std::runtime_error("replay: fewer than two valid IMU samples (" +
-                                     std::to_string(res.summary.rejectedImuSamples) + " rejected as not finite)");
-
-        std::vector<TruthRecord> truth;
-        truth.reserve(logs.truth.size());
-        for (const TruthRecord& r : logs.truth)
-        {
-            if (detail::finite(r))
-                truth.push_back(r);
-            else
-                ++res.summary.rejectedTruthRecords;
-        }
-        if (truth.empty())
-            throw std::runtime_error("replay: no valid truth record");
-        std::stable_sort(truth.begin(), truth.end(),
-            [](const TruthRecord& a, const TruthRecord& b) { return a.time < b.time; });
+        const detail::ValidInputs valid = detail::validInputs(logs, res.summary);
+        const std::vector<ImuRecord>& imu = valid.imu;
+        const std::vector<TruthRecord>& truth = valid.truth;
 
         res.summary.timeBase = detail::fitImuTimeBase(imu);
         const TimeBaseFit& fit = res.summary.timeBase;

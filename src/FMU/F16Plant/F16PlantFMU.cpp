@@ -729,10 +729,17 @@ private:
     }
 
     // ── registerOutputs ─────────────────────────────────────────────────────────
-    // Register the output cache variables.
+    // Register the output cache variables, in three groups.
     void registerOutputs()
     {
-        // ── Outputs ───────────────────────────────────────────────────────────
+        registerKinematicOutputs();
+        registerAirDataOutputs();
+        registerEnvironmentOutputs();
+    }
+
+    // Position, attitude, body rates and NED velocity.
+    void registerKinematicOutputs()
+    {
         register_real("out.alt_m", &state_.alt_m)
             .setCausality(causality_t::OUTPUT)
             .setVariability(variability_t::CONTINUOUS)
@@ -804,7 +811,11 @@ private:
             .setVariability(variability_t::CONTINUOUS)
             .setInitial(initial_t::CALCULATED)
             .setDescription("NED down velocity [m/s]");
+    }
 
+    // Air data, atmosphere, aerodynamic and propulsive forces, specific force.
+    void registerAirDataOutputs()
+    {
         register_real("out.alpha_deg", &state_.alpha_deg)
             .setCausality(causality_t::OUTPUT)
             .setVariability(variability_t::CONTINUOUS)
@@ -934,8 +945,11 @@ private:
             .setInitial(initial_t::CALCULATED)
             .setDescription("Net propulsive force along body +X [N] "
                             "(the F-16 engine deck carries no body-Y/Z thrust component)");
+    }
 
-        // ── Environment ──────────────────────────────────────────────────────
+    // Wind, Dryden gust and vehicle mass.
+    void registerEnvironmentOutputs()
+    {
         register_real("out.wind_north_m_s", &state_.wind_north_m_s)
             .setCausality(causality_t::OUTPUT)
             .setVariability(variability_t::CONTINUOUS)

@@ -28,6 +28,7 @@
 #include <system_error>
 #include <tuple>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 using namespace Aetherion::Serialization;
@@ -45,6 +46,14 @@ namespace {
         struct TempFile
         {
             std::filesystem::path path;
+            explicit TempFile(std::filesystem::path p)
+                : path(std::move(p))
+            {
+            }
+            TempFile(const TempFile&) = delete;
+            TempFile& operator=(const TempFile&) = delete;
+            TempFile(TempFile&&) = delete;
+            TempFile& operator=(TempFile&&) = delete;
             ~TempFile()
             {
                 std::error_code ec;
