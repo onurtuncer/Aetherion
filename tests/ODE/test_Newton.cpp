@@ -492,3 +492,111 @@ TEST_CASE("NewtonSolve on a taped functor converges on the branch the root lies 
     CHECK(x(0) == Approx(1.5).margin(1e-10));
     CHECK(BranchFunctor{}.template operator()<double>(x)(0) == Approx(0.0).margin(1e-10));
 }
+
+// -----------------------------------------------------------------------------
+// Second pre-DOI audit, finding N08: a stale tape whose arithmetic is invalid
+// where it is asked about. sqrt(-x) for x < 0 and sqrt(x) otherwise is defined
+// everywhere, but its tape recorded at x = -1 evaluates sqrt(-1) at x = +1.
+// Without NDEBUG, CppAD's NaN check stopped that evaluation before
+// compare_change_number() could report the stale branch, so the evaluator never
+// re-recorded. These cases matter most in an assertion-enabled build (the
+// sanitizer and Debug configurations); in Release they pinned the result
+// already.
+// -----------------------------------------------------------------------------
+namespace {
+    struct SqrtBranches
+    {
+        template <class S>
+        Eigen::Matrix<S, Eigen::Dynamic, 1> operator()(const Eigen::Matrix<S, Eigen::Dynamic, 1>& x) const
+        {
+            using std::sqrt;
+            Eigen::Matrix<S, Eigen::Dynamic, 1> r(1);
+            r(0) = x(0) < S(0) ? S(sqrt(-x(0))) : S(sqrt(x(0)));
+            return r;
+        }
+    };
+    struct SqrtBranchesFixed
+    {
+        template <class S>
+        Eigen::Matrix<S, 1, 1> operator()(const Eigen::Matrix<S, 1, 1>& x) const
+        {
+            using std::sqrt;
+            Eigen::Matrix<S, 1, 1> r;
+            r(0) = x(0) < S(0) ? S(sqrt(-x(0))) : S(sqrt(x(0)));
+            return r;
+        }
+    };
+    struct SqrtEverywhere
+    {
+        template <class S>
+        Eigen::Matrix<S, 1, 1> operator()(const Eigen::Matrix<S, 1, 1>& x) const
+        {
+            using std::sqrt;
+            Eigen::Matrix<S, 1, 1> r;
+            r(0) = sqrt(x(0));
+            return r;
+        }
+    };
+}
+
+TEST_CASE("CppADResidualJacobian: a stale branch that is not defined at x does not stop the re-recording",
+    "[newton][cppad][regression]")
+{
+    Core::CppADResidualJacobian<SqrtBranches> eval(SqrtBranches{}, 1);
+    Eigen::VectorXd x(1), r;
+    Eigen::MatrixXd J;
+
+    x(0) = -1.0; // recorded here: sqrt(-x)
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+    CHECK(J(0, 0) == Approx(-0.5));
+
+    x(0) = 1.0; // the stale tape evaluates sqrt(-1); the function is sqrt(1)
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+    CHECK(J(0, 0) == Approx(0.5));
+    CHECK(eval.retape_count() == 1);
+
+    x(0) = 4.0; // same branch as the new tape
+    eval(x, r, J);
+    CHECK(r(0) == Approx(2.0));
+    CHECK(eval.retape_count() == 1);
+}
+
+TEST_CASE("FixedCppADResidualJacobian: a stale branch that is not defined at x does not stop the re-recording",
+    "[newton][cppad][regression]")
+{
+    // The audit's probe.
+    Core::FixedCppADResidualJacobian<1, SqrtBranchesFixed> eval(SqrtBranchesFixed{});
+    Eigen::Matrix<double, 1, 1> x, r, J;
+
+    x(0) = -1.0;
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+
+    x(0) = 1.0;
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+    CHECK(J(0, 0) == Approx(0.5));
+    CHECK(eval.retape_count() == 1);
+}
+
+#ifdef NDEBUG
+TEST_CASE("FixedCppADResidualJacobian: a NaN of the function itself is still returned, not hidden",
+    "[newton][cppad]")
+{
+    // No comparison, so no re-recording: sqrt(-1) is the function's own value.
+    // With NDEBUG it comes back as NaN; without it CppAD's NaN check reports it
+    // as it always did (the evaluator re-runs the evaluation with the check
+    // on), which a test cannot catch -- hence Release only.
+    Core::FixedCppADResidualJacobian<1, SqrtEverywhere> eval(SqrtEverywhere{});
+    Eigen::Matrix<double, 1, 1> x, r, J;
+    x(0) = 1.0;
+    eval(x, r, J);
+    CHECK(r(0) == Approx(1.0));
+    x(0) = -1.0;
+    eval(x, r, J);
+    CHECK(std::isnan(r(0)));
+    CHECK(eval.retape_count() == 0);
+}
+#endif
