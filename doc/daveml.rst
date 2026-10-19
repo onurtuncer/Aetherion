@@ -193,7 +193,16 @@ nothing: a tape kept across a breakpoint or a piecewise boundary silently
 evaluated the other region's expression, and an implicit step could report
 convergence on it (pre-DOI audit finding F01).  Arithmetic inside the
 selected region is carried out in ``S``, so first derivatives are exact
-inside a segment; at a boundary they are one-sided.
+inside a segment; at a boundary they are one-sided.  The kept tape's
+arithmetic is the old region's and need not be defined at the new ``x``
+(``sqrt(-x)`` recorded for ``x < 0`` and evaluated at ``x > 0``), so the
+evaluators run that first pass with CppAD's NaN check off; if a
+comparison changed, the result is discarded and the re-recorded tape is
+evaluated with the check as configured, and if none changed the tape is
+evaluated again with the check on, so a genuine invalid operation is
+still reported exactly as before.  (Until v0.17.4 a build without
+``NDEBUG`` aborted on the stale tape before the branch change could be
+seen; Release builds were unaffected -- second audit, N08.)
 
 *Generic access* via ``evaluateRaw``: accepts and returns a
 ``std::unordered_map<std::string, S>`` keyed by DAVE-ML variable

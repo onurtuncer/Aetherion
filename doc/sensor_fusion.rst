@@ -24,7 +24,7 @@ open, both options are given with their consequences.
 
 .. note::
 
-   **Status (v0.17.4).** Step 2 (block scheme, vehicle configuration, log
+   **Status (v0.18.0).** Step 2 (block scheme, vehicle configuration, log
    contract) is implemented in ``Aetherion/Estimation/Blocks.h``,
    ``Configuration.h`` and ``LogContract.h``. Step 5 is complete:
    ``SE23.h`` (the group), ``LciFrame.h`` (the navigation frame and
@@ -926,7 +926,18 @@ measurements.
 * ``Replay.h``: the loop. Each IMU interval is propagated with the readings
   held at the average of its two bounding samples; a measurement whose
   validity time falls inside an interval splits it -- predict to that
-  time, apply, predict the remainder. The clock conventions sit in one
+  time, apply, predict the remainder. Records are checked before anything
+  uses them: an IMU or truth row with a time or field that is not finite
+  is rejected, the truth is put in time order, a GNSS or barometer record
+  without a finite time is dropped, the clock fit uses the valid IMU
+  samples only, and each interval averages with the last *accepted*
+  sample. Fewer than two valid IMU samples, or no valid truth, is an
+  error. ``ReplaySummary`` counts every record that did not reach the
+  filter and ``writeSummary`` prints the counts. (Until v0.17.4 nothing
+  was checked: a repeated stamp averaged the skipped reading into the
+  next interval, turning the final attitude by 0.5 rad in the audit's
+  probe, and one NaN gyro sample made every later estimate NaN -- second
+  audit, N06.) The clock conventions sit in one
   ``ReplayTiming`` struct, set from a survey of Hemerion's writers
   (``origin/main`` 7da6057, 2026-10-13): IMU samples on their
   ``part_time_s`` (simulation time unless the FMU's clock skew and jitter
@@ -1035,7 +1046,13 @@ Reference filter (step 6)
 ``updateGnssPosition()``, ``updateGnssVelocity()``, ``updateBarometer()``
 through the measurement models, with the Joseph-form covariance update and
 the state corrected by ``retract<C>``. A measurement the configuration does
-not carry is skipped and the result says so. The covariance lives in the
+not carry is skipped and the result says so. An update whose ``R`` is not
+finite, symmetric and positive semi-definite is refused
+(``UpdateResult::rejected``) and changes nothing; a singular ``R`` -- a
+perfect measurement on one axis -- is still applied. (Until v0.17.4 only
+the innovation covariance :math:`S = H P H^T + R` was checked, so
+:math:`R = -0.5\,I` on :math:`P = I` passed and drove a posterior variance
+to -1 -- second audit, N06.) The covariance lives in the
 convention's error coordinates; ``covarianceFromPhysical()`` maps an
 initial covariance given in physical coordinates into them, so both
 conventions start equivalently. No covariance reset after updates, no

@@ -95,6 +95,15 @@ reports the version of the source it was configured from, while the ``.fmu`` on
 disk may still carry older ports.  The attribute above is written by the same
 build step that packages the archive, so the two cannot disagree.
 
+Every real in the description -- each ``start``, ``min`` and ``max``, and the
+``DefaultExperiment`` fields -- is written as the shortest text that reads back
+as the same ``double``, so a master that applies the description's start values
+begins from exactly the values the FMU itself holds, as FMI requires.  (Until
+v0.17.4 reals were written with six significant digits: ``F16Plant``'s
+``lat0_deg`` start value 36.01917 appeared as 36.0192 and ``lon0_deg``
+-75.67444 as -75.6744, so a master trusting the description would have started
+about 3 m from where the FMU did -- second audit.)
+
 .. note::
 
    Do not read ``generationTool`` for this.  It names the exporting library
