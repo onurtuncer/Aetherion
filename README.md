@@ -1,6 +1,7 @@
 # ΑETHERION — Flight Dynamics Library
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23479182.svg)](https://doi.org/10.5281/zenodo.23479182)
 [![Linux Build](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/linux.yml)
 [![Windows Build](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/windows.yml)
 [![codecov](https://codecov.io/gh/onurtuncer/Aetherion/branch/main/graph/badge.svg)](https://codecov.io/gh/onurtuncer/Aetherion)
@@ -278,6 +279,8 @@ ctest --test-dir build
 ## Citing
 
 If you use Aetherion in your research, please cite it using the metadata in [`CITATION.cff`](CITATION.cff) (GitHub's **Cite this repository** button generates BibTeX and APA from it).
+
+The software is archived on Zenodo under DOI [10.5281/zenodo.23479182](https://doi.org/10.5281/zenodo.23479182), which always resolves to the latest release; each release also has its own version DOI, listed on the Zenodo record.
 
 ---
 
