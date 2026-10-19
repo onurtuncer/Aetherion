@@ -83,6 +83,7 @@ See [`doc/sensor_fusion.rst`](doc/sensor_fusion.rst) and [`TODO-sensor-fusion.md
 
 ### Interoperability
 - **FMI/FMU export** via fmu4cpp — drop Aetherion plants into any FMI-compliant simulator. Shipped FMUs: `F16Plant`, `F16Autopilot`, `TwoStageRocket` (steady wind, Dryden turbulence and atmosphere offsets exposed as ports)
+- **`generateFMU()`** ([`cmake/generate_fmu.cmake`](cmake/generate_fmu.cmake)) packages your own model class as an FMI 2 or FMI 3 FMU — from Aetherion's build tree or from an installed Aetherion found with `find_package(Aetherion)`, which exports the fmu4cpp wrappers and the description generator it needs. [`tests/InstallConsumer`](tests/InstallConsumer) builds one against a relocated installation and steps it under FMPy in CI
 - **Simulink models** built from the FMUs by [`matlab/build_f16_simulink.m`](matlab/build_f16_simulink.m) (run in CI) and [`matlab/build_twostagerocket_simulink.m`](matlab/build_twostagerocket_simulink.m)
 - JSON configuration files for initial conditions and simulation parameters
 - CSV output compatible with NASA reference data formats
