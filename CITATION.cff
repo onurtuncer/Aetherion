@@ -21,9 +21,9 @@ authors:
     given-names: Onur
     affiliation: Istanbul Technical University
     orcid: "https://orcid.org/0000-0002-2803-1146"
-version: 0.18.0
+version: 0.18.1
 doi: 10.5281/zenodo.23479182
-date-released: 2026-10-19
+date-released: 2026-10-20
 license: MIT
 repository-code: https://github.com/onurtuncer/Aetherion
 url: https://onurtuncer.github.io/Aetherion/
