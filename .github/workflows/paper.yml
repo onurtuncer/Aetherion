@@ -1,0 +1,60 @@
+name: Paper Studies
+
+# The paper studies are Catch2 cases tagged [.paper]: the RKMK convergence
+# order against a 2.5e-4 s reference, the 600 s constraint-drift and manifold
+# factorial runs, and the Dryden spectra over 1e7 samples. Hidden from the
+# default suite (which runs their smoke versions), they run here nightly and
+# on demand, in Release, where they take minutes rather than the hours they
+# took under coverage instrumentation. The CSVs they write are uploaded so the
+# paper figures can be regenerated from a CI run.
+on:
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  paper:
+    name: paper studies (GCC Release)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Cache vcpkg dependencies
+        uses: ./.github/actions/vcpkg-cache
+
+      - name: Install dependencies
+        run: sudo apt update && sudo apt install -y gcc-13 g++-13 libtbb-dev unzip
+
+      - name: Configure compiler alternatives
+        run: |
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+      - name: Configure (GCC Release, paper studies registered)
+        run: |
+          mkdir -p "${{ runner.temp }}/paper-data"
+          cmake --preset=gcc-release \
+            -DAETHERION_PAPER_TESTS=ON \
+            -DAETHERION_PAPER_DATA_DIR="${{ runner.temp }}/paper-data" \
+            -DAETHERION_BUILD_EXAMPLES=OFF \
+            -DAETHERION_BUILD_FMUS=OFF
+
+      - name: Build the test targets that carry paper studies
+        run: cmake --build --preset=gcc-release --target test_rigidBody test_dryden_turbulence
+
+      - name: Run the paper studies
+        run: ctest --preset=gcc-release -L paper -j "$(nproc)"
+
+      - name: Upload the paper CSVs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: paper-data
+          path: ${{ runner.temp }}/paper-data/*.csv
+          if-no-files-found: warn

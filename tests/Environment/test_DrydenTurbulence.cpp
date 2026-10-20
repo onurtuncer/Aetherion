@@ -146,8 +146,43 @@ TEST_CASE("DrydenTurbulence: the same seed reproduces the same record", "[dryden
     CHECK(differsFromC);
 }
 
+// The three statistics cases below draw 1e7 samples or more: seconds in an
+// optimised build, minutes under coverage and sanitizers. Tagged [.paper],
+// they run in the nightly paper workflow (AETHERION_PAPER_TESTS); this smoke
+// case checks the same variances on a tenth of the record so every CI run
+// still sees a broken filter.
+TEST_CASE("DrydenTurbulence (smoke): channel variances on a short record", "[dryden][smoke]")
+{
+    const auto prm = testParams(1.0, 2.0, 3.0);
+    DrydenTurbulence t(prm, 1);
+    const double dt = 0.02;
+    const int N = 1'000'000; // 2e4 s: ~3.7e3 correlation times, variance standard error ~2.5 %
+
+    std::vector<double> u, v, w, p;
+    u.reserve(N);
+    v.reserve(N);
+    w.reserve(N);
+    p.reserve(N);
+    for (int i = 0; i < N; ++i) {
+        const GustState g = t.step(dt, kV);
+        u.push_back(g.u_mps);
+        v.push_back(g.v_mps);
+        w.push_back(g.w_mps);
+        p.push_back(g.p_rad_s);
+    }
+    const Stats su = meanVar(u), sv = meanVar(v), sw = meanVar(w), sp = meanVar(p);
+
+    // 15 % is about 6 standard errors at this length.
+    CHECK_THAT(su.var, WithinRel(1.0, 0.15));
+    CHECK_THAT(sv.var, WithinRel(4.0, 0.15));
+    CHECK_THAT(sw.var, WithinRel(9.0, 0.15));
+    const double b = prm.wingspan_m;
+    const double varP = 0.8 * 9.0 * kPi * kPi * std::cbrt(kPi * kL / (4.0 * b)) / (16.0 * b * kL);
+    CHECK_THAT(sp.var, WithinRel(varP, 0.15));
+}
+
 TEST_CASE("DrydenTurbulence: variance of every linear channel is sigma^2, p matches Phi_p",
-    "[dryden][statistics]")
+    "[dryden][statistics][.paper]")
 {
     const auto prm = testParams(1.0, 2.0, 3.0);
     DrydenTurbulence t(prm, 1);
@@ -182,7 +217,7 @@ TEST_CASE("DrydenTurbulence: variance of every linear channel is sigma^2, p matc
 }
 
 TEST_CASE("DrydenTurbulence: spectrum matches MIL-F-8785C, including the sqrt(3) zero",
-    "[dryden][statistics]")
+    "[dryden][statistics][.paper]")
 {
     const auto prm = testParams(1.0, 2.0, 3.0);
     DrydenTurbulence t(prm, 3);
@@ -216,7 +251,7 @@ TEST_CASE("DrydenTurbulence: spectrum matches MIL-F-8785C, including the sqrt(3)
     CHECK(shapeW > 2.0 * shapeU);
 }
 
-TEST_CASE("DrydenTurbulence: statistics do not depend on the step size", "[dryden][statistics]")
+TEST_CASE("DrydenTurbulence: statistics do not depend on the step size", "[dryden][statistics][.paper]")
 {
     const auto prm = testParams(1.0, 2.0, 3.0);
     const double T = 1.0e5;

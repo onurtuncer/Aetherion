@@ -36,14 +36,16 @@ jobs:
         sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
 
+    # Examples and FMUs are built and run only by the Release jobs (linux.yml,
+    # windows.yml); here they cost half the compile time and run nothing.
     - name: Configure
-      run: cmake --preset=gcc-asan
+      run: cmake --preset=gcc-asan -DAETHERION_BUILD_EXAMPLES=OFF -DAETHERION_BUILD_FMUS=OFF
 
     - name: Build
       run: cmake --build --preset=gcc-asan
 
     - name: Run tests
-      run: ctest --preset=gcc-asan
+      run: ctest --preset=gcc-asan -j "$(nproc)"
 
   ubsan:
     name: UndefinedBehaviorSanitizer
@@ -67,10 +69,10 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
 
     - name: Configure
-      run: cmake --preset=gcc-ubsan
+      run: cmake --preset=gcc-ubsan -DAETHERION_BUILD_EXAMPLES=OFF -DAETHERION_BUILD_FMUS=OFF
 
     - name: Build
       run: cmake --build --preset=gcc-ubsan
 
     - name: Run tests
-      run: ctest --preset=gcc-ubsan
+      run: ctest --preset=gcc-ubsan -j "$(nproc)"

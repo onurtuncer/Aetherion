@@ -175,47 +175,50 @@ namespace {
     };
 
     // Runs all three integrators once and returns the sampled defect traces.
-    const DriftTrace& drift_trace()
+    DriftTrace run_drift_trace(double T)
     {
-        static const DriftTrace trace = [] {
-            DriftTrace out;
+        DriftTrace out;
 
-            Core::NewtonOptions opt;
-            opt.abs_tol = 1e-12;
-            opt.rel_tol = 1e-12;
-            opt.max_iters = 30;
+        Core::NewtonOptions opt;
+        opt.abs_tol = 1e-12;
+        opt.rel_tol = 1e-12;
+        opt.max_iters = 30;
 
-            RadauStepper stepper{ asymmetric_body(), opt };
+        RadauStepper stepper{ asymmetric_body(), opt };
 
-            StateD s = initial_state();
-            Vec13 yPlain = quaternion_initial_state();
-            Vec13 yRenrm = quaternion_initial_state();
+        StateD s = initial_state();
+        Vec13 yPlain = quaternion_initial_state();
+        Vec13 yRenrm = quaternion_initial_state();
 
-            const int N = static_cast<int>(std::llround(kT / kH));
-            for (int k = 0; k < N; ++k) {
-                if (k % kSample == 0) {
-                    out.t.push_back(static_cast<double>(k) * kH);
-                    out.rkmk.push_back(orthonormality_defect(s.g.R));
-                    out.quat_plain.push_back(orthonormality_defect(rotation_from(yPlain)));
-                    out.quat_renorm.push_back(orthonormality_defect(rotation_from(yRenrm)));
-                }
-
-                const auto res = stepper.step(static_cast<double>(k) * kH, s, kH);
-                REQUIRE(res.converged);
-                s = RadauStepper::unpack(res);
-
-                yPlain = quaternion_rk4_step(yPlain, kH);
-
-                yRenrm = quaternion_rk4_step(yRenrm, kH);
-                yRenrm.segment<4>(0).normalize(); // ad hoc projection
+        const int N = static_cast<int>(std::llround(T / kH));
+        for (int k = 0; k < N; ++k) {
+            if (k % kSample == 0) {
+                out.t.push_back(static_cast<double>(k) * kH);
+                out.rkmk.push_back(orthonormality_defect(s.g.R));
+                out.quat_plain.push_back(orthonormality_defect(rotation_from(yPlain)));
+                out.quat_renorm.push_back(orthonormality_defect(rotation_from(yRenrm)));
             }
 
-            out.t.push_back(kT);
-            out.rkmk.push_back(orthonormality_defect(s.g.R));
-            out.quat_plain.push_back(orthonormality_defect(rotation_from(yPlain)));
-            out.quat_renorm.push_back(orthonormality_defect(rotation_from(yRenrm)));
-            return out;
-        }();
+            const auto res = stepper.step(static_cast<double>(k) * kH, s, kH);
+            REQUIRE(res.converged);
+            s = RadauStepper::unpack(res);
+
+            yPlain = quaternion_rk4_step(yPlain, kH);
+
+            yRenrm = quaternion_rk4_step(yRenrm, kH);
+            yRenrm.segment<4>(0).normalize(); // ad hoc projection
+        }
+
+        out.t.push_back(T);
+        out.rkmk.push_back(orthonormality_defect(s.g.R));
+        out.quat_plain.push_back(orthonormality_defect(rotation_from(yPlain)));
+        out.quat_renorm.push_back(orthonormality_defect(rotation_from(yRenrm)));
+        return out;
+    }
+
+    const DriftTrace& drift_trace()
+    {
+        static const DriftTrace trace = run_drift_trace(kT);
         return trace;
     }
 
@@ -225,7 +228,7 @@ namespace {
 // 1. The SE(3) RKMK pose stays on the manifold to rounding
 // ---------------------------------------------------------------------------
 TEST_CASE("SE(3) RKMK preserves SO(3) orthonormality over a 600 s trajectory",
-    "[drift][rkmk]")
+    "[drift][rkmk][.paper]")
 {
     const DriftTrace& d = drift_trace();
 
@@ -244,7 +247,7 @@ TEST_CASE("SE(3) RKMK preserves SO(3) orthonormality over a 600 s trajectory",
 // 2. The unconstrained quaternion baseline leaves the manifold
 // ---------------------------------------------------------------------------
 TEST_CASE("Unconstrained quaternion RK4 accumulates orthonormality error",
-    "[drift][quaternion]")
+    "[drift][quaternion][.paper]")
 {
     const DriftTrace& d = drift_trace();
 
@@ -272,7 +275,7 @@ TEST_CASE("Unconstrained quaternion RK4 accumulates orthonormality error",
 // Jacobian used by a filter.
 // ---------------------------------------------------------------------------
 TEST_CASE("Renormalised quaternion RK4 meets the constraint by projection",
-    "[drift][quaternion][renorm]")
+    "[drift][quaternion][renorm][.paper]")
 {
     const DriftTrace& d = drift_trace();
 
@@ -285,9 +288,35 @@ TEST_CASE("Renormalised quaternion RK4 meets the constraint by projection",
 }
 
 // ---------------------------------------------------------------------------
+// Smoke: the three claims above on a short trajectory
+// ---------------------------------------------------------------------------
+// The 600 s trajectory takes minutes under coverage instrumentation; tagged
+// [.paper], the cases above run in the nightly paper workflow
+// (AETHERION_PAPER_TESTS). This one makes the same claims at kSmokeT so every
+// CI run still checks them.
+// ---------------------------------------------------------------------------
+TEST_CASE("Constraint drift (smoke): RKMK on the manifold, quaternion RK4 off it, on a short trajectory",
+    "[drift][smoke]")
+{
+    constexpr double kSmokeT = 20.0;
+    const DriftTrace d = run_drift_trace(kSmokeT);
+
+    double worstRkmk = 0.0, worstRenorm = 0.0;
+    for (double v : d.rkmk) worstRkmk = std::max(worstRkmk, v);
+    for (double v : d.quat_renorm) worstRenorm = std::max(worstRenorm, v);
+    WARN("smoke drift: rkmk " << worstRkmk << ", plain " << d.quat_plain.back() << ", renorm " << worstRenorm);
+
+    REQUIRE(worstRkmk < 1e-12);
+    REQUIRE(d.quat_plain.back() > 1.0e3 * d.rkmk.back());
+    REQUIRE(d.quat_plain.back() > d.quat_plain[d.quat_plain.size() / 2]);
+    REQUIRE(worstRenorm < 1e-12);
+    REQUIRE(worstRenorm < 1e-6 * d.quat_plain.back());
+}
+
+// ---------------------------------------------------------------------------
 // 3. CSV export for the paper figure
 // ---------------------------------------------------------------------------
-TEST_CASE("Constraint drift: write CSV for paper figure", "[drift][csv]")
+TEST_CASE("Constraint drift: write CSV for paper figure", "[drift][csv][.paper]")
 {
     const DriftTrace& d = drift_trace();
 
