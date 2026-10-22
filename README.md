@@ -194,6 +194,8 @@ Each example below runs an atmospheric check case from **NASA TM-2015-218675** (
 
 ## Testing
 
+- **Mutation testing (opt-in):** [Mull replay pilot](tools/mutation/README.md), with survivor reports for CSV parsing, log loading and time-base fitting.
+
 - **Catch2 unit tests** covering every module
 - **Numerical validation** against the NASA TM-2015-218675 reference runs, scenario by scenario (see the validation chapter for the quantities, tolerances and reference spread)
 - **Estimator validation**: Jacobians against finite differences and CppAD; filter consistency (NEES/NIS) in both error conventions on an analytic manoeuvring truth
