@@ -1,0 +1,11 @@
+# SPDX-License-Identifier: MIT
+# Pilot: arithmetic, comparison and off-by-one errors in replay input handling.
+mutators:
+  - cxx_arithmetic
+  - cxx_arithmetic_assignment
+  - cxx_comparison
+  - cxx_boundary
+includePaths:
+  - '(^|/)Aetherion/Estimation/Replay/(Csv|Logs|TimeBase)\.h$'
+excludePaths:
+  - '(^|/)(vendor|tests|_deps)/'

@@ -72,6 +72,8 @@ to be installed and visible on PATH)" OFF)
 option(AETHERION_ENABLE_COVERAGE "Instrument the build for code coverage reporting (GCC/Clang only). \
 Used by the coverage CI workflow." OFF)
 
+option(AETHERION_ENABLE_MUTATION_TESTING "Enable the Clang 19/Mull replay mutation pilot" OFF)
+
 option(AETHERION_WARNINGS_AS_ERRORS "Treat all compiler warnings as errors (-Werror / /WX). \
 Recommended for CI; avoid enabling in end-user builds." OFF)
 
@@ -92,6 +94,10 @@ option(AETHERION_PAPER_TESTS "Register the [.paper] studies with CTest (label: p
 # cmake/Dependencies.cmake).
 set(FMU4CPP_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(FMU4CPP_TESTS OFF CACHE BOOL "" FORCE)
+
+if(AETHERION_ENABLE_MUTATION_TESTING AND (NOT AETHERION_BUILD_TESTS OR BUILD_DOCS))
+  message(FATAL_ERROR "Mutation testing requires AETHERION_BUILD_TESTS=ON and BUILD_DOCS=OFF.")
+endif()
 
 # Coverage instrumentation requires tests to be built.
 if(AETHERION_ENABLE_COVERAGE AND NOT AETHERION_BUILD_TESTS)
