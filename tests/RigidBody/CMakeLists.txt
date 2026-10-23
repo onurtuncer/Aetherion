@@ -37,3 +37,12 @@ target_compile_definitions(test_rigidBody PRIVATE AETHERION_PAPER_DATA_DIR="${AE
 
 include(Catch)
 catch_discover_tests(test_rigidBody)
+if(AETHERION_PAPER_TESTS)
+  catch_discover_tests(
+    test_rigidBody
+    TEST_SPEC
+    "[paper]"
+    PROPERTIES
+    LABELS
+    "paper")
+endif()

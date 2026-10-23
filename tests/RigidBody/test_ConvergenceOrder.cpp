@@ -227,6 +227,20 @@ namespace {
         return ref;
     }
 
+    // Order by self-convergence: the differences between runs at h, h/2 and
+    // h/4 shrink by 2^p, so no reference solution is needed. Returns the
+    // rotation and position orders.
+    template <class Stepper>
+    std::array<double, 2> self_order(Stepper& stepper, double h)
+    {
+        std::array<StateD, 3> s{};
+        for (int k = 0; k < 3; ++k)
+            s[k] = integrate(stepper, asymmetric_initial_state(), kT, h / static_cast<double>(1 << k));
+        const double dR1 = (s[0].g.R - s[1].g.R).norm(), dR2 = (s[1].g.R - s[2].g.R).norm();
+        const double dp1 = (s[0].g.p - s[1].g.p).norm(), dp2 = (s[1].g.p - s[2].g.p).norm();
+        return { std::log2(dR1 / dR2), std::log2(dp1 / dp2) };
+    }
+
     template <class Stepper>
     ErrorSeries error_series(Stepper& stepper, const StateD& ref)
     {
@@ -272,6 +286,32 @@ TEST_CASE("RKMK on SE(3) is exact for a constant body twist (symmetric sphere)",
 }
 
 // ---------------------------------------------------------------------------
+// 1b. Smoke: both orders by self-convergence
+// ---------------------------------------------------------------------------
+// The order study below integrates a 2.5e-4 s reference (8000 Radau steps) in
+// every case, which takes minutes in an optimised build and hours under
+// coverage instrumentation; tagged [.paper], it runs in the nightly paper
+// workflow (AETHERION_PAPER_TESTS). This case measures both orders from runs
+// at h, h/2 and h/4 alone, so every CI run still checks them.
+// ---------------------------------------------------------------------------
+TEST_CASE("Convergence order (smoke): Radau IIA order 5 and RK4 order 4 by self-convergence",
+    "[convergence][smoke]")
+{
+    RadauStepper radau{ asymmetric_body(), tight_newton() };
+    RK4Stepper rk4{ asymmetric_body() };
+    const auto pRadau = self_order(radau, 0.1);
+    const auto pRk4 = self_order(rk4, 0.1);
+    WARN("self-convergence orders: Radau rot " << pRadau[0] << " pos " << pRadau[1] << ", RK4 rot " << pRk4[0]
+                                               << " pos " << pRk4[1]);
+
+    REQUIRE(pRadau[0] > 4.5);
+    REQUIRE(pRadau[1] > 4.5);
+    REQUIRE(pRk4[0] > 3.5);
+    REQUIRE(pRk4[0] < 4.6); // must be clearly separated from the order-5 scheme
+    REQUIRE(pRk4[1] > 3.5);
+}
+
+// ---------------------------------------------------------------------------
 // 2. Reference-solution sanity check
 // ---------------------------------------------------------------------------
 // The order tests below compare against a Radau IIA solution at kHRef.  If that
@@ -280,7 +320,7 @@ TEST_CASE("RKMK on SE(3) is exact for a constant body twist (symmetric sphere)",
 // at the same fine step.
 // ---------------------------------------------------------------------------
 TEST_CASE("Convergence reference is method-independent",
-    "[convergence][reference]")
+    "[convergence][reference][.paper]")
 {
     RK4Stepper rk4{ asymmetric_body() };
     const StateD ref_rk4 = integrate(rk4, asymmetric_initial_state(), kT, kHRef);
@@ -302,7 +342,7 @@ TEST_CASE("Convergence reference is method-independent",
 // 3. Radau IIA RKMK -- expected order 5
 // ---------------------------------------------------------------------------
 TEST_CASE("Convergence order: Radau IIA RKMK on SE(3) attains order 5",
-    "[convergence][radau]")
+    "[convergence][radau][.paper]")
 {
     RadauStepper stepper{ asymmetric_body(), tight_newton() };
     const ErrorSeries e = error_series(stepper, asymmetric_reference());
@@ -323,7 +363,7 @@ TEST_CASE("Convergence order: Radau IIA RKMK on SE(3) attains order 5",
 // 4. Explicit RK4 RKMK -- expected order 4
 // ---------------------------------------------------------------------------
 TEST_CASE("Convergence order: explicit RK4 RKMK on SE(3) attains order 4",
-    "[convergence][rk4]")
+    "[convergence][rk4][.paper]")
 {
     RK4Stepper stepper{ asymmetric_body() };
     const ErrorSeries e = error_series(stepper, asymmetric_reference());
@@ -345,7 +385,7 @@ TEST_CASE("Convergence order: explicit RK4 RKMK on SE(3) attains order 4",
 // 5. CSV export for the paper figure
 // ---------------------------------------------------------------------------
 TEST_CASE("Convergence order: write CSV for paper figure",
-    "[convergence][csv]")
+    "[convergence][csv][.paper]")
 {
     const StateD& ref = asymmetric_reference();
 

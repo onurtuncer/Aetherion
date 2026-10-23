@@ -145,77 +145,81 @@ namespace {
         std::vector<double> tr_flat_gauss, tr_flat_rk4, tr_flat_renrm;
     };
 
-    const DriftResult& drift_result()
+    // The study over [0, T]: the paper runs kDriftT, the smoke test a short T.
+    DriftResult run_drift(double T)
     {
-        static const DriftResult r = [] {
-            DriftResult out;
+        DriftResult out;
 
-            RadauStepper radau{ asymmetric_body(), tight_newton() };
-            RK4Stepper rk4mk{ asymmetric_body() };
+        RadauStepper radau{ asymmetric_body(), tight_newton() };
+        RK4Stepper rk4mk{ asymmetric_body() };
 
-            StateD sA = se3_initial_state();
-            StateD sD = se3_initial_state();
+        StateD sA = se3_initial_state();
+        StateD sD = se3_initial_state();
 
-            Flat::Vec13 yRadau = Flat::initial_state(kOmega0, kV0);
-            Flat::Vec13 yGauss = Flat::initial_state(kOmega0, kV0);
-            Flat::Vec13 yRK4 = Flat::initial_state(kOmega0, kV0);
-            Flat::Vec13 yRenrm = Flat::initial_state(kOmega0, kV0);
+        Flat::Vec13 yRadau = Flat::initial_state(kOmega0, kV0);
+        Flat::Vec13 yGauss = Flat::initial_state(kOmega0, kV0);
+        Flat::Vec13 yRK4 = Flat::initial_state(kOmega0, kV0);
+        Flat::Vec13 yRenrm = Flat::initial_state(kOmega0, kV0);
 
-            const auto tabRadau = Flat::radau_iia_5();
-            const auto tabGauss = Flat::gauss_6();
+        const auto tabRadau = Flat::radau_iia_5();
+        const auto tabGauss = Flat::gauss_6();
 
-            const int N = static_cast<int>(std::llround(kDriftT / kDriftH));
-            for (int k = 0; k < N; ++k) {
-                const double t = static_cast<double>(k) * kDriftH;
+        const int N = static_cast<int>(std::llround(T / kDriftH));
+        for (int k = 0; k < N; ++k) {
+            const double t = static_cast<double>(k) * kDriftH;
 
-                if (k % kDriftSample == 0) {
-                    out.t.push_back(t);
-                    out.tr_rkmk_radau.push_back(Flat::orthonormality_defect(sA.g.R));
-                    out.tr_rkmk_rk4.push_back(Flat::orthonormality_defect(sD.g.R));
-                    out.tr_flat_radau.push_back(Flat::orthonormality_defect(Flat::rotation_from(yRadau)));
-                    out.tr_flat_gauss.push_back(Flat::orthonormality_defect(Flat::rotation_from(yGauss)));
-                    out.tr_flat_rk4.push_back(Flat::orthonormality_defect(Flat::rotation_from(yRK4)));
-                    out.tr_flat_renrm.push_back(Flat::orthonormality_defect(Flat::rotation_from(yRenrm)));
-                }
-
-                auto ra = radau.step(t, sA, kDriftH);
-                REQUIRE(ra.converged);
-                sA = RadauStepper::unpack(ra);
-
-                auto rd = rk4mk.step(t, sD, kDriftH);
-                sD = RK4Stepper::unpack(rd);
-
-                const auto fr = Flat::implicit_rk_step(tabRadau, kFlatBody, yRadau, kDriftH);
-                REQUIRE(fr.converged);
-                yRadau = fr.y;
-                out.worst_iters = std::max(out.worst_iters, fr.iters);
-
-                const auto fg = Flat::implicit_rk_step(tabGauss, kFlatBody, yGauss, kDriftH);
-                REQUIRE(fg.converged);
-                yGauss = fg.y;
-
-                yRK4 = Flat::explicit_rk4_step(kFlatBody, yRK4, kDriftH);
-
-                yRenrm = Flat::explicit_rk4_step(kFlatBody, yRenrm, kDriftH);
-                yRenrm.segment<4>(0).normalize();
+            if (k % kDriftSample == 0) {
+                out.t.push_back(t);
+                out.tr_rkmk_radau.push_back(Flat::orthonormality_defect(sA.g.R));
+                out.tr_rkmk_rk4.push_back(Flat::orthonormality_defect(sD.g.R));
+                out.tr_flat_radau.push_back(Flat::orthonormality_defect(Flat::rotation_from(yRadau)));
+                out.tr_flat_gauss.push_back(Flat::orthonormality_defect(Flat::rotation_from(yGauss)));
+                out.tr_flat_rk4.push_back(Flat::orthonormality_defect(Flat::rotation_from(yRK4)));
+                out.tr_flat_renrm.push_back(Flat::orthonormality_defect(Flat::rotation_from(yRenrm)));
             }
 
-            out.rkmk_radau = Flat::orthonormality_defect(sA.g.R);
-            out.rkmk_rk4 = Flat::orthonormality_defect(sD.g.R);
-            out.flat_radau = Flat::orthonormality_defect(Flat::rotation_from(yRadau));
-            out.flat_gauss = Flat::orthonormality_defect(Flat::rotation_from(yGauss));
-            out.flat_rk4 = Flat::orthonormality_defect(Flat::rotation_from(yRK4));
-            out.flat_renrm = Flat::orthonormality_defect(Flat::rotation_from(yRenrm));
+            auto ra = radau.step(t, sA, kDriftH);
+            REQUIRE(ra.converged);
+            sA = RadauStepper::unpack(ra);
 
-            out.t.push_back(kDriftT);
-            out.tr_rkmk_radau.push_back(out.rkmk_radau);
-            out.tr_rkmk_rk4.push_back(out.rkmk_rk4);
-            out.tr_flat_radau.push_back(out.flat_radau);
-            out.tr_flat_gauss.push_back(out.flat_gauss);
-            out.tr_flat_rk4.push_back(out.flat_rk4);
-            out.tr_flat_renrm.push_back(out.flat_renrm);
-            return out;
-        }();
+            auto rd = rk4mk.step(t, sD, kDriftH);
+            sD = RK4Stepper::unpack(rd);
+
+            const auto fr = Flat::implicit_rk_step(tabRadau, kFlatBody, yRadau, kDriftH);
+            REQUIRE(fr.converged);
+            yRadau = fr.y;
+            out.worst_iters = std::max(out.worst_iters, fr.iters);
+
+            const auto fg = Flat::implicit_rk_step(tabGauss, kFlatBody, yGauss, kDriftH);
+            REQUIRE(fg.converged);
+            yGauss = fg.y;
+
+            yRK4 = Flat::explicit_rk4_step(kFlatBody, yRK4, kDriftH);
+
+            yRenrm = Flat::explicit_rk4_step(kFlatBody, yRenrm, kDriftH);
+            yRenrm.segment<4>(0).normalize();
+        }
+
+        out.rkmk_radau = Flat::orthonormality_defect(sA.g.R);
+        out.rkmk_rk4 = Flat::orthonormality_defect(sD.g.R);
+        out.flat_radau = Flat::orthonormality_defect(Flat::rotation_from(yRadau));
+        out.flat_gauss = Flat::orthonormality_defect(Flat::rotation_from(yGauss));
+        out.flat_rk4 = Flat::orthonormality_defect(Flat::rotation_from(yRK4));
+        out.flat_renrm = Flat::orthonormality_defect(Flat::rotation_from(yRenrm));
+
+        out.t.push_back(T);
+        out.tr_rkmk_radau.push_back(out.rkmk_radau);
+        out.tr_rkmk_rk4.push_back(out.rkmk_rk4);
+        out.tr_flat_radau.push_back(out.flat_radau);
+        out.tr_flat_gauss.push_back(out.flat_gauss);
+        out.tr_flat_rk4.push_back(out.flat_rk4);
+        out.tr_flat_renrm.push_back(out.flat_renrm);
+        return out;
+    }
+
+    const DriftResult& drift_result()
+    {
+        static const DriftResult r = run_drift(kDriftT);
         return r;
     }
 
@@ -289,6 +293,31 @@ namespace {
             rot.push_back((Flat::rotation_from(y) - ref.g.R).norm());
             pos.push_back((y.segment<3>(4) - ref.g.p).norm());
         }
+    }
+
+    // Order by self-convergence: the differences between runs at h, h/2 and
+    // h/4 shrink by 2^p, so no reference solution is needed. Returns the
+    // attitude and position orders. Cheap enough for the smoke test; the
+    // paper study measures against the kOrderHRef reference instead.
+    template <int S>
+    std::array<double, 2> flat_self_order(const Core::ButcherTableau<double, S>& tab, double h)
+    {
+        std::array<Flat::Vec13, 3> y{};
+        for (int k = 0; k < 3; ++k) {
+            const double hk = h / static_cast<double>(1 << k);
+            y[k] = Flat::initial_state(kOmega0, kV0);
+            const int N = static_cast<int>(std::llround(kOrderT / hk));
+            for (int i = 0; i < N; ++i) {
+                const auto r = Flat::implicit_rk_step(tab, kFlatBody, y[k], hk);
+                REQUIRE(r.converged);
+                y[k] = r.y;
+            }
+        }
+        const double dR1 = (Flat::rotation_from(y[0]) - Flat::rotation_from(y[1])).norm();
+        const double dR2 = (Flat::rotation_from(y[1]) - Flat::rotation_from(y[2])).norm();
+        const double dp1 = (y[0].segment<3>(4) - y[1].segment<3>(4)).norm();
+        const double dp2 = (y[1].segment<3>(4) - y[2].segment<3>(4)).norm();
+        return { std::log2(dR1 / dR2), std::log2(dp1 / dp2) };
     }
 
     const OrderResult& order_result()
@@ -397,109 +426,112 @@ namespace {
         return n / d;
     }
 
-    const StiffResult& stiff_result()
+    StiffResult run_stiff(double T)
     {
-        static const StiffResult r = [] {
-            StiffResult out;
+        StiffResult out;
 
-            const double c = kStiffRate * 1.0; // mass = 1 kg
+        const double c = kStiffRate * 1.0; // mass = 1 kg
 
-            StiffVF vf{ asymmetric_body(), FlightDynamics::ZeroGravityPolicy{},
-                LinearDampingAero{ c } };
+        StiffVF vf{ asymmetric_body(), FlightDynamics::ZeroGravityPolicy{},
+            LinearDampingAero{ c } };
 
-            StiffRadauStepper mkRadau{ vf, tight_newton() };
-            StiffRK4Stepper mkRK4{ vf };
+        StiffRadauStepper mkRadau{ vf, tight_newton() };
+        StiffRK4Stepper mkRK4{ vf };
 
-            const Flat::Body fb{ kIxx, kIyy, kIzz, 1.0, c };
-            const auto tabRadau = Flat::radau_iia_5();
-            const auto tabGauss = Flat::gauss_6();
+        const Flat::Body fb{ kIxx, kIyy, kIzz, 1.0, c };
+        const auto tabRadau = Flat::radau_iia_5();
+        const auto tabGauss = Flat::gauss_6();
 
-            StateD sR = se3_initial_state();
-            StateD sE = se3_initial_state();
+        StateD sR = se3_initial_state();
+        StateD sE = se3_initial_state();
 
-            Flat::Vec13 yRadau = Flat::initial_state(kOmega0, kV0);
-            Flat::Vec13 yGauss = Flat::initial_state(kOmega0, kV0);
+        Flat::Vec13 yRadau = Flat::initial_state(kOmega0, kV0);
+        Flat::Vec13 yGauss = Flat::initial_state(kOmega0, kV0);
 
-            const int N = static_cast<int>(std::llround(kStiffT / kStiffH));
-            for (int k = 0; k < N; ++k) {
+        const int N = static_cast<int>(std::llround(T / kStiffH));
+        for (int k = 0; k < N; ++k) {
+            const double t = static_cast<double>(k) * kStiffH;
+
+            auto ra = mkRadau.step(t, sR, kStiffH);
+            REQUIRE(ra.converged);
+            sR = StiffRadauStepper::unpack(ra);
+
+            // The explicit tableau is expected to blow up here; keep the
+            // first offending step rather than propagating NaNs.
+            if (out.mk_rk4.diverged_at < 0) {
+                auto re = mkRK4.step(t, sE, kStiffH);
+                sE = StiffRK4Stepper::unpack(re);
+                if (!sE.g.R.allFinite() || !sE.nu_B.allFinite())
+                    out.mk_rk4.diverged_at = k;
+            }
+
+            const auto fr = Flat::implicit_rk_step(tabRadau, fb, yRadau, kStiffH);
+            REQUIRE(fr.converged);
+            yRadau = fr.y;
+
+            const auto fg = Flat::implicit_rk_step(tabGauss, fb, yGauss, kStiffH);
+            REQUIRE(fg.converged);
+            yGauss = fg.y;
+        }
+
+        out.mk_radau.speed = sR.nu_B.tail<3>().norm();
+        out.mk_radau.defect = Flat::orthonormality_defect(sR.g.R);
+
+        out.flat_radau.speed = yRadau.segment<3>(10).norm();
+        out.flat_radau.defect = Flat::orthonormality_defect(Flat::rotation_from(yRadau));
+
+        out.flat_gauss.speed = yGauss.segment<3>(10).norm();
+        out.flat_gauss.defect = Flat::orthonormality_defect(Flat::rotation_from(yGauss));
+
+        // -------------------------------------------------------------
+        // Stiffness sweep at fixed h: transient damping vs |h lambda|
+        // -------------------------------------------------------------
+        const double v0 = kV0.norm();
+        const double Tw = kSweepSteps * kStiffH;
+
+        for (double rate : kSweepRates) {
+            SweepRow row;
+            row.rate = rate;
+            row.exact = std::exp(-rate * Tw);
+
+            StiffVF vfk{ asymmetric_body(), FlightDynamics::ZeroGravityPolicy{},
+                LinearDampingAero{ rate } };
+            StiffRadauStepper mk{ vfk, tight_newton() };
+
+            const Flat::Body fbk{ kIxx, kIyy, kIzz, 1.0, rate };
+
+            StateD sk = se3_initial_state();
+            Flat::Vec13 yr = Flat::initial_state(kOmega0, kV0);
+            Flat::Vec13 yg = Flat::initial_state(kOmega0, kV0);
+
+            for (int k = 0; k < kSweepSteps; ++k) {
                 const double t = static_cast<double>(k) * kStiffH;
 
-                auto ra = mkRadau.step(t, sR, kStiffH);
-                REQUIRE(ra.converged);
-                sR = StiffRadauStepper::unpack(ra);
+                auto rk = mk.step(t, sk, kStiffH);
+                REQUIRE(rk.converged);
+                sk = StiffRadauStepper::unpack(rk);
 
-                // The explicit tableau is expected to blow up here; keep the
-                // first offending step rather than propagating NaNs.
-                if (out.mk_rk4.diverged_at < 0) {
-                    auto re = mkRK4.step(t, sE, kStiffH);
-                    sE = StiffRK4Stepper::unpack(re);
-                    if (!sE.g.R.allFinite() || !sE.nu_B.allFinite())
-                        out.mk_rk4.diverged_at = k;
-                }
+                const auto a = Flat::implicit_rk_step(tabRadau, fbk, yr, kStiffH);
+                REQUIRE(a.converged);
+                yr = a.y;
 
-                const auto fr = Flat::implicit_rk_step(tabRadau, fb, yRadau, kStiffH);
-                REQUIRE(fr.converged);
-                yRadau = fr.y;
-
-                const auto fg = Flat::implicit_rk_step(tabGauss, fb, yGauss, kStiffH);
-                REQUIRE(fg.converged);
-                yGauss = fg.y;
+                const auto b = Flat::implicit_rk_step(tabGauss, fbk, yg, kStiffH);
+                REQUIRE(b.converged);
+                yg = b.y;
             }
 
-            out.mk_radau.speed = sR.nu_B.tail<3>().norm();
-            out.mk_radau.defect = Flat::orthonormality_defect(sR.g.R);
+            row.mk_radau = sk.nu_B.tail<3>().norm() / v0;
+            row.flat_radau = yr.segment<3>(10).norm() / v0;
+            row.flat_gauss = yg.segment<3>(10).norm() / v0;
+            out.sweep.push_back(row);
+        }
 
-            out.flat_radau.speed = yRadau.segment<3>(10).norm();
-            out.flat_radau.defect = Flat::orthonormality_defect(Flat::rotation_from(yRadau));
+        return out;
+    }
 
-            out.flat_gauss.speed = yGauss.segment<3>(10).norm();
-            out.flat_gauss.defect = Flat::orthonormality_defect(Flat::rotation_from(yGauss));
-
-            // -------------------------------------------------------------
-            // Stiffness sweep at fixed h: transient damping vs |h lambda|
-            // -------------------------------------------------------------
-            const double v0 = kV0.norm();
-            const double Tw = kSweepSteps * kStiffH;
-
-            for (double rate : kSweepRates) {
-                SweepRow row;
-                row.rate = rate;
-                row.exact = std::exp(-rate * Tw);
-
-                StiffVF vfk{ asymmetric_body(), FlightDynamics::ZeroGravityPolicy{},
-                    LinearDampingAero{ rate } };
-                StiffRadauStepper mk{ vfk, tight_newton() };
-
-                const Flat::Body fbk{ kIxx, kIyy, kIzz, 1.0, rate };
-
-                StateD sk = se3_initial_state();
-                Flat::Vec13 yr = Flat::initial_state(kOmega0, kV0);
-                Flat::Vec13 yg = Flat::initial_state(kOmega0, kV0);
-
-                for (int k = 0; k < kSweepSteps; ++k) {
-                    const double t = static_cast<double>(k) * kStiffH;
-
-                    auto rk = mk.step(t, sk, kStiffH);
-                    REQUIRE(rk.converged);
-                    sk = StiffRadauStepper::unpack(rk);
-
-                    const auto a = Flat::implicit_rk_step(tabRadau, fbk, yr, kStiffH);
-                    REQUIRE(a.converged);
-                    yr = a.y;
-
-                    const auto b = Flat::implicit_rk_step(tabGauss, fbk, yg, kStiffH);
-                    REQUIRE(b.converged);
-                    yg = b.y;
-                }
-
-                row.mk_radau = sk.nu_B.tail<3>().norm() / v0;
-                row.flat_radau = yr.segment<3>(10).norm() / v0;
-                row.flat_gauss = yg.segment<3>(10).norm() / v0;
-                out.sweep.push_back(row);
-            }
-
-            return out;
-        }();
+    const StiffResult& stiff_result()
+    {
+        static const StiffResult r = run_stiff(kStiffT);
         return r;
     }
 
@@ -526,7 +558,7 @@ TEST_CASE("Cooper condition separates Radau IIA from Gauss", "[factorial][tablea
 // ---------------------------------------------------------------------------
 // 1. Constraint drift, full 2x2 plus the symplectic cell
 // ---------------------------------------------------------------------------
-TEST_CASE("Constraint drift: MK isolated at fixed tableau", "[factorial][drift]")
+TEST_CASE("Constraint drift: MK isolated at fixed tableau", "[factorial][drift][.paper]")
 {
     const DriftResult& d = drift_result();
 
@@ -553,7 +585,7 @@ TEST_CASE("Constraint drift: MK isolated at fixed tableau", "[factorial][drift]"
 // ---------------------------------------------------------------------------
 // 2. Convergence order of the non-MK implicit control
 // ---------------------------------------------------------------------------
-TEST_CASE("Convergence order: flat implicit controls", "[factorial][convergence]")
+TEST_CASE("Convergence order: flat implicit controls", "[factorial][convergence][.paper]")
 {
     const OrderResult& r = order_result();
 
@@ -586,7 +618,7 @@ TEST_CASE("Convergence order: flat implicit controls", "[factorial][convergence]
 // 2b. Stiff regime: no single non-MK method gives both properties
 // ---------------------------------------------------------------------------
 TEST_CASE("Stiff regime: manifold membership and L-stability are exclusive without MK",
-    "[factorial][stiff]")
+    "[factorial][stiff][.paper]")
 {
     const StiffResult& s = stiff_result();
 
@@ -643,9 +675,52 @@ TEST_CASE("Stiff regime: manifold membership and L-stability are exclusive witho
 }
 
 // ---------------------------------------------------------------------------
+// 2c. Smoke: the same claims on a short horizon
+// ---------------------------------------------------------------------------
+// The studies above integrate 600 s and measure order against a 2.5e-4 s
+// reference, which takes minutes in an optimised build and hours under
+// coverage instrumentation; tagged [.paper], they run in the nightly paper
+// workflow (AETHERION_PAPER_TESTS). This case makes the same structural
+// claims on a kSmokeT horizon, and measures the flat Radau order by
+// self-convergence, so every CI run still checks them.
+TEST_CASE("Manifold factorial (smoke): drift, stiff and order claims on a short horizon",
+    "[factorial][smoke]")
+{
+    // Measured at 20 s (Release): flat Radau drift 1.9e-6 against 2e-15 for
+    // both MK cells, and the same 1.9e-6 flat Radau defect in the stiff run,
+    // so 10 s leaves the thresholds several orders of magnitude clear.
+    constexpr double kSmokeT = 10.0;
+
+    const DriftResult d = run_drift(kSmokeT);
+    WARN("smoke drift: rkmk_radau " << sci(d.rkmk_radau) << " rkmk_rk4 " << sci(d.rkmk_rk4)
+                                    << " flat_radau " << sci(d.flat_radau));
+    REQUIRE(d.flat_radau > 1.0e3 * d.rkmk_radau);
+    REQUIRE(d.rkmk_rk4 < 1e-12);
+    REQUIRE(d.rkmk_radau < 1e-12);
+
+    const StiffResult s = run_stiff(kSmokeT);
+    WARN("smoke stiff: mk_radau " << sci(s.mk_radau.defect) << " flat_radau " << sci(s.flat_radau.defect)
+                                  << " flat_gauss " << sci(s.flat_gauss.defect) << " rk4 diverged at "
+                                  << s.mk_rk4.diverged_at);
+    const SweepRow& stiffest = s.sweep.back();
+    REQUIRE(stiffest.mk_radau < 1e-6);
+    REQUIRE(stiffest.flat_radau < 1e-6);
+    REQUIRE(stiffest.flat_gauss > 0.5);
+    REQUIRE(s.flat_gauss.defect < 1e-12);
+    REQUIRE(s.flat_radau.defect > 1e-9);
+    REQUIRE(s.mk_radau.defect < 1e-12);
+    REQUIRE(s.mk_rk4.diverged_at > 0);
+
+    const auto p = flat_self_order(Flat::radau_iia_5(), 0.1);
+    WARN("smoke flat Radau self-convergence order: attitude " << p[0] << ", position " << p[1]);
+    REQUIRE(p[0] > 4.5);
+    REQUIRE(p[1] > 4.5);
+}
+
+// ---------------------------------------------------------------------------
 // 3. CSV export
 // ---------------------------------------------------------------------------
-TEST_CASE("Manifold factorial: write CSV", "[factorial][csv]")
+TEST_CASE("Manifold factorial: write CSV", "[factorial][csv][.paper]")
 {
 #ifdef AETHERION_PAPER_DATA_DIR
     const DriftResult& d = drift_result();
