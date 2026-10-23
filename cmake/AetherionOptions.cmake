@@ -75,6 +75,11 @@ Used by the coverage CI workflow." OFF)
 option(AETHERION_WARNINGS_AS_ERRORS "Treat all compiler warnings as errors (-Werror / /WX). \
 Recommended for CI; avoid enabling in end-user builds." OFF)
 
+# The paper studies (RKMK convergence order against a fine reference, 600 s constraint drift, the manifold factorial,
+# the Dryden spectra) are Catch2 cases tagged [.paper]: hidden, so the default suite runs only their short smoke
+# versions. ON registers them with CTest under the label "paper"; the nightly paper workflow runs them in Release.
+option(AETHERION_PAPER_TESTS "Register the [.paper] studies with CTest (label: paper). Slow; use a Release build." OFF)
+
 # ==============================================================================
 # Derived / Enforced Constraints
 # ==============================================================================
@@ -120,6 +125,7 @@ message(STATUS "  Developer options")
 message(STATUS "    Static analysis        : ${ENABLE_STATIC_ANALYSIS}")
 message(STATUS "    Coverage               : ${AETHERION_ENABLE_COVERAGE}")
 message(STATUS "    Warnings as errors     : ${AETHERION_WARNINGS_AS_ERRORS}")
+message(STATUS "    Paper studies in CTest : ${AETHERION_PAPER_TESTS}")
 message(STATUS "")
 message(STATUS "  Dependencies")
 message(STATUS "    vcpkg                  : ${AETHERION_USE_VCPKG}")

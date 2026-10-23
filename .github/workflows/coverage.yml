@@ -1,11 +1,11 @@
 name: Coverage
 
 # Coverage runs on main only (and on demand). It builds Debug with coverage
-# instrumentation and runs the whole suite, slow convergence tests included:
-# 2-4 hours a run, holding a runner throughout. On pull requests that cost
-# more than it told: the GCC, Windows and sanitizer jobs already gate
-# correctness there, and the coverage figure that matters (the Codecov badge)
-# is main's.
+# instrumentation and runs the suite in parallel. The paper studies (tagged
+# [.paper], run nightly by paper.yml) are not in it -- their smoke versions
+# are -- and the examples and FMUs are not built: Codecov ignores src/Examples
+# and src/FMU. Before both changes a run took about 3 hours, 140 minutes of it
+# in twelve paper studies run serially at -O0 under instrumentation.
 on:
   push:
     branches: [ main ]
@@ -40,13 +40,13 @@ jobs:
         sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
 
     - name: Configure (GCC Debug + coverage flags)
-      run: cmake --preset=gcc-debug
+      run: cmake --preset=gcc-debug -DAETHERION_BUILD_EXAMPLES=OFF -DAETHERION_BUILD_FMUS=OFF
 
     - name: Build
       run: cmake --build --preset=gcc-debug
 
     - name: Run tests
-      run: ctest --preset=gcc-test
+      run: ctest --preset=gcc-test -j "$(nproc)"
 
     - name: Generate coverage report (Cobertura XML)
       if: ${{ !cancelled() }}

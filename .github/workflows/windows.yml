@@ -38,4 +38,4 @@ jobs:
         run: cmake --build --preset release
 
       - name: Run tests
-        run: ctest --preset release
+        run: ctest --preset release -j $env:NUMBER_OF_PROCESSORS

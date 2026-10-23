@@ -61,3 +61,12 @@ target_link_libraries(
 
 include(Catch)
 catch_discover_tests(test_dryden_turbulence)
+if(AETHERION_PAPER_TESTS)
+  catch_discover_tests(
+    test_dryden_turbulence
+    TEST_SPEC
+    "[paper]"
+    PROPERTIES
+    LABELS
+    "paper")
+endif()

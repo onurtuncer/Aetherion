@@ -48,7 +48,7 @@ jobs:
         run: cmake --build --preset=gcc-release
 
       - name: Run tests
-        run: ctest --preset=gcc-release
+        run: ctest --preset=gcc-release -j "$(nproc)"
 
   # The installed SDK, consumed on its own (pre-DOI audit F07): configure with
   # install rules and without tests (so also without the ecos submodule, R01),
