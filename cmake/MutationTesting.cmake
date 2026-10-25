@@ -34,7 +34,7 @@ find_package(Python3 REQUIRED COMPONENTS Interpreter)
 set(_mutation_config "${PROJECT_SOURCE_DIR}/tools/mutation/mull.yml")
 # Set the config for compilation too, independent of the build working directory.
 set_property(TARGET test_estimation PROPERTY CXX_COMPILER_LAUNCHER
-                                            "${CMAKE_COMMAND};-E;env;MULL_CONFIG=${_mutation_config}")
+                                             "${CMAKE_COMMAND};-E;env;MULL_CONFIG=${_mutation_config}")
 target_compile_options(
   test_estimation
   PRIVATE -O0
