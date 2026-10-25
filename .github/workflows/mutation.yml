@@ -10,6 +10,10 @@ on:
       - 'tools/mutation/**'
       - 'cmake/MutationTesting.cmake'
       - 'cmake/AetherionOptions.cmake'
+      - 'CMakeLists.txt'
+      - 'tests/CMakeLists.txt'
+      - 'src/**'
+      - 'Aetherion/Estimation/**'
       - 'tests/Estimation/**'
       - 'Aetherion/Estimation/Replay/**'
 
@@ -44,6 +48,27 @@ jobs:
           sudo apt-get install -y "$RUNNER_TEMP/mull.deb"
           clang++-19 --version
           mull-runner-19 --version
+      - name: Configure uninstrumented Clang 19 diagnostic build
+        run: >
+          cmake -S . -B build/mutation-control -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++-19
+          -DAETHERION_ENABLE_MUTATION_TESTING=OFF
+          -DAETHERION_BUILD_TESTS=ON
+          -DAETHERION_BUILD_FMUS=OFF -DAETHERION_BUILD_EXAMPLES=OFF
+          -DAETHERION_BUILD_SIMULATION=OFF
+      - name: Build uninstrumented estimation tests
+        run: cmake --build build/mutation-control --target test_estimation --parallel 2
+      - name: Record uninstrumented EKF baseline
+        shell: bash
+        run: |
+          mkdir -p build/mutation-control/diagnostics
+          set +e
+          build/mutation-control/tests/Estimation/test_estimation "[estimation][ekf]" > build/mutation-control/diagnostics/ekf-baseline.log 2>&1
+          result=$?
+          set -e
+          cat build/mutation-control/diagnostics/ekf-baseline.log
+          echo "Uninstrumented EKF baseline exit code: $result" | tee build/mutation-control/diagnostics/status.txt
+          # Diagnostic only: never mask the instrumented baseline gate.
       - name: Configure isolated mutation build
         run: >
           cmake -S . -B build/mutation -G Ninja
@@ -54,6 +79,14 @@ jobs:
           -DAETHERION_BUILD_SIMULATION=OFF
       - name: Build, validate baseline and run mutants
         run: cmake --build build/mutation --target mutation --parallel 2
+      - name: Upload uninstrumented control diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-control-${{ github.sha }}
+          path: build/mutation-control/diagnostics/
+          if-no-files-found: warn
+          retention-days: 30
       - name: Upload mutation diagnostics
         if: always()
         uses: actions/upload-artifact@v4
