@@ -20,3 +20,7 @@ target_link_libraries(test_estimation PRIVATE Aetherion Catch2::Catch2WithMain)
 
 include(Catch)
 catch_discover_tests(test_estimation)
+
+if(AETHERION_ENABLE_MUTATION_TESTING)
+  include(MutationTesting)
+endif()

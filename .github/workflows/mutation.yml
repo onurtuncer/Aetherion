@@ -1,0 +1,97 @@
+name: Mutation testing (replay pilot)
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 2 * * 1'
+  pull_request:
+    paths:
+      - '.github/workflows/mutation.yml'
+      - 'tools/mutation/**'
+      - 'cmake/MutationTesting.cmake'
+      - 'cmake/AetherionOptions.cmake'
+      - 'CMakeLists.txt'
+      - 'tests/CMakeLists.txt'
+      - 'src/**'
+      - 'Aetherion/Estimation/**'
+      - 'tests/Estimation/**'
+      - 'Aetherion/Estimation/Replay/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  replay:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Test mutation runner safeguards
+        run: python -m unittest discover -s tools/mutation -p 'test_*.py' -v
+      - uses: ./.github/actions/vcpkg-cache
+      - name: Install Clang and pinned Mull
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang-19 libtbb-dev ninja-build unzip
+          curl --fail --location --retry 3 --output "$RUNNER_TEMP/mull.deb" \
+            https://github.com/mull-project/mull/releases/download/0.28.0/Mull-19-0.28.0-LLVM-19.1.1-ubuntu-amd64-24.04.deb
+          echo "bf68439baa9295bbf0e21541f5439f19f975abcdb8f8290a0ac39bf481144320  $RUNNER_TEMP/mull.deb" | sha256sum --check
+          sudo apt-get install -y "$RUNNER_TEMP/mull.deb"
+          clang++-19 --version
+          mull-runner-19 --version
+      - name: Configure uninstrumented Clang 19 diagnostic build
+        run: >
+          cmake -S . -B build/mutation-control -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++-19
+          -DAETHERION_ENABLE_MUTATION_TESTING=OFF
+          -DAETHERION_BUILD_TESTS=ON
+          -DAETHERION_BUILD_FMUS=OFF -DAETHERION_BUILD_EXAMPLES=OFF
+          -DAETHERION_BUILD_SIMULATION=OFF
+      - name: Build uninstrumented estimation tests
+        run: cmake --build build/mutation-control --target test_estimation --parallel 2
+      - name: Record uninstrumented EKF baseline
+        shell: bash
+        run: |
+          mkdir -p build/mutation-control/diagnostics
+          set +e
+          build/mutation-control/tests/Estimation/test_estimation "[estimation][ekf]" > build/mutation-control/diagnostics/ekf-baseline.log 2>&1
+          result=$?
+          set -e
+          cat build/mutation-control/diagnostics/ekf-baseline.log
+          echo "Uninstrumented EKF baseline exit code: $result" | tee build/mutation-control/diagnostics/status.txt
+          # Diagnostic only: never mask the instrumented baseline gate.
+      - name: Configure isolated mutation build
+        run: >
+          cmake -S . -B build/mutation -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=clang++-19
+          -DAETHERION_ENABLE_MUTATION_TESTING=ON
+          -DAETHERION_BUILD_TESTS=ON
+          -DAETHERION_BUILD_FMUS=OFF -DAETHERION_BUILD_EXAMPLES=OFF
+          -DAETHERION_BUILD_SIMULATION=OFF
+      - name: Build, validate baseline and run mutants
+        run: cmake --build build/mutation --target mutation --parallel 2
+      - name: Upload uninstrumented control diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-control-${{ github.sha }}
+          path: build/mutation-control/diagnostics/
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Upload mutation diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutation-replay-${{ github.sha }}
+          path: build/mutation/mutation-report/
+          if-no-files-found: warn
+          retention-days: 30
