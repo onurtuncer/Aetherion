@@ -67,6 +67,17 @@ namespace Aetherion::Estimation::Testing {
             return r * std::cos(2.0 * std::numbers::pi * u2);
         }
 
+        // Preserve the z/y/x draw order of the established GCC fixtures.
+        // Constructor argument evaluation order is unspecified: drawing inside
+        // Vector3d(...) assigned a different noise history to each axis on Clang.
+        [[nodiscard]] Eigen::Vector3d vector(double sigmaX, double sigmaY, double sigmaZ)
+        {
+            const double z = sigmaZ * (*this)();
+            const double y = sigmaY * (*this)();
+            const double x = sigmaX * (*this)();
+            return { x, y, z };
+        }
+
     private:
         double uniform() { return static_cast<double>(rng_() >> 11) * 0x1.0p-53; } // [0, 1), 53 bits
 
