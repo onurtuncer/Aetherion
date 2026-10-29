@@ -284,9 +284,9 @@ namespace {
             // IMU: the instantaneous reading at t (no mid-step trick: that is the harness's job).
             const ImuSample<double> ideal = truth.imu(t, frame);
             const Eigen::Vector3d g =
-                ideal.gyro_rad_s + gyroBias + Eigen::Vector3d(N01(), N01(), N01()) * gyroNd / std::sqrt(dt);
+                ideal.gyro_rad_s + gyroBias + N01.vector(1.0, 1.0, 1.0) * gyroNd / std::sqrt(dt);
             const Eigen::Vector3d a =
-                ideal.accel_m_s2 + accelBias + Eigen::Vector3d(N01(), N01(), N01()) * accelNd / std::sqrt(dt);
+                ideal.accel_m_s2 + accelBias + N01.vector(1.0, 1.0, 1.0) * accelNd / std::sqrt(dt);
             imu << k << ',' << t << ',' << host(t) << ',' << a[0] << ',' << a[1] << ',' << a[2] << ',' << g[0] << ',' << g[1]
                 << ',' << g[2] << '\n';
 
@@ -301,7 +301,7 @@ namespace {
                 const bool noFix = (fixIndex % 50 == 7); // the occasional dropout: Hemerion writes the epoch with empty fields
                 const double latN = lat + (sigH * N01()) / 6371e3, lonN = lon + (sigH * N01()) / (6371e3 * std::cos(lat));
                 const double hN = h + sigV * N01();
-                const Eigen::Vector3d vN = vNed + Eigen::Vector3d(N01(), N01(), N01()) * sigVel;
+                const Eigen::Vector3d vN = vNed + N01.vector(1.0, 1.0, 1.0) * sigVel;
                 if (noFix)
                     gps << fixIndex++ << ',' << t << ",,,,,,,,,,,,,,\n";
                 else
