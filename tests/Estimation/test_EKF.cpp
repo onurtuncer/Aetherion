@@ -86,7 +86,7 @@ namespace {
         ekf.initialise(x0, ekf.covarianceFromPhysical(x0, P0_phys));
 
         PortableGaussian N01(seed);
-        auto noise3 = [&](double s) { return Vec3(s * N01(), s * N01(), s * N01()); };
+        auto noise3 = [&](double s) { return N01.vector(s, s, s); };
 
         const double dt = 0.01;
         const int n = static_cast<int>(std::lround(T / dt));
@@ -115,7 +115,7 @@ namespace {
             const EstimationState<double> xt1 = truth.at(t1);
             if ((k + 1) % gnssEvery == 0)
             {
-                const Vec3 yp = xt1.X.p + Vec3(sn.gnssPosSigmaH * N01(), sn.gnssPosSigmaH * N01(), sn.gnssPosSigmaV * N01());
+                const Vec3 yp = xt1.X.p + N01.vector(sn.gnssPosSigmaH, sn.gnssPosSigmaH, sn.gnssPosSigmaV);
                 const Vec3 yv = xt1.X.v + noise3(sn.gnssVelSigma);
                 const auto rp = ekf.updateGnssPosition(yp, SigmaPos);
                 const auto rv = ekf.updateGnssVelocity(yv, SigmaVel);
@@ -216,6 +216,28 @@ namespace {
 } // namespace
 
 // ---------------------------------------------------------------------------
+TEST_CASE("Synthetic Gaussian vectors preserve the reference axis draw order", "[estimation][ekf][noise]")
+{
+    // Unequal scales expose axis swaps; consecutive vectors exercise both
+    // cached and fresh Box-Muller samples, including a preceding scalar draw.
+    for (const unsigned seed : { 1U, 3U, 7U })
+    {
+        PortableGaussian vectors(seed), scalars(seed);
+        CHECK(vectors() == scalars());
+        for (int i = 0; i < 8; ++i)
+        {
+            const double z = 3.0 * scalars();
+            const double y = 2.0 * scalars();
+            const double x = scalars();
+            const Vec3 sample = vectors.vector(1.0, 2.0, 3.0);
+            CHECK(sample[0] == x);
+            CHECK(sample[1] == y);
+            CHECK(sample[2] == z);
+        }
+        CHECK(vectors() == scalars());
+    }
+}
+
 TEST_CASE("Exact sensors and exact start: the filter stays on the truth", "[estimation][ekf]")
 {
     const Truth truth;
