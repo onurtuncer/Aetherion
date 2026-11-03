@@ -1,0 +1,45 @@
+name: Draft PDF
+
+# Compiles the JOSS paper (joss/paper.md) with the Open Journals PDF generator,
+# the same inara toolchain JOSS uses at review, and uploads the draft PDF.
+# https://joss.readthedocs.io/en/latest/paper.html#github-action
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'joss/**'
+      - '.github/workflows/draft-pdf.yml'
+  pull_request:
+    paths:
+      - 'joss/**'
+      - '.github/workflows/draft-pdf.yml'
+  workflow_dispatch:
+
+# A newer push to the same branch or PR cancels this run; runs on main are
+# never cancelled, so every merge is checked.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  paper:
+    name: Paper Draft
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build draft PDF
+        uses: openjournals/openjournals-draft-action@master
+        with:
+          journal: joss
+          paper-path: joss/paper.md
+
+      # Pandoc writes the PDF next to paper.md. A missing PDF fails the job.
+      - name: Upload
+        uses: actions/upload-artifact@v7
+        with:
+          name: paper
+          path: joss/paper.pdf
+          archive: false
+          if-no-files-found: error
