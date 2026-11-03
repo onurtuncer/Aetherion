@@ -81,7 +81,7 @@ jobs:
         run: cmake --build build/mutation --target mutation --parallel 2
       - name: Upload uninstrumented control diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mutation-control-${{ github.sha }}
           path: build/mutation-control/diagnostics/
@@ -89,7 +89,7 @@ jobs:
           retention-days: 30
       - name: Upload mutation diagnostics
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mutation-replay-${{ github.sha }}
           path: build/mutation/mutation-report/
