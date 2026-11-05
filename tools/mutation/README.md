@@ -48,8 +48,13 @@ No coverage filtering is enabled: uncovered mutants remain visible in the report
 
 ## CI and reports
 
-`.github/workflows/mutation.yml` runs on relevant pull requests, weekly on main,
-and on manual dispatch. It is separate from the regular builds. Survivors are
+`.github/workflows/mutation.yml` runs on relevant pull requests, on pushes to
+main that touch the same paths, weekly on main, and on manual dispatch. It is
+separate from the regular builds. On main, a successful run publishes the score
+as `mutation.json` (shields.io endpoint format, written by `run.py` as
+`badge.json`) to the orphan `badges` branch, which the top-level README's badge
+reads; pull requests never publish. Only the separate `publish-badge` job has
+write access. Survivors are
 advisory during rollout; baseline failures, runner failures, missing reports,
 empty reports, and reports with no executed mutants fail the job. Do not mark
 this job as a required score gate until the baseline has been reviewed.

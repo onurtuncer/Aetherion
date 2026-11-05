@@ -12,6 +12,7 @@
 [![Clang-Tidy](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_tidy.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/clang_tidy.yml)
 [![Metrix++](https://github.com/onurtuncer/Aetherion/actions/workflows/metrixpp.yml/badge.svg)](https://onurtuncer.github.io/Aetherion/metrics/)
 [![Sanitizers](https://github.com/onurtuncer/Aetherion/actions/workflows/sanitizers.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/sanitizers.yml)
+[![Mutation score](https://img.shields.io/endpoint?url=https%3A%2F%2Fraw.githubusercontent.com%2Fonurtuncer%2FAetherion%2Fbadges%2Fmutation.json)](https://github.com/onurtuncer/Aetherion/actions/workflows/mutation.yml)
 [![Simulink](https://github.com/onurtuncer/Aetherion/actions/workflows/simulink.yml/badge.svg)](https://github.com/onurtuncer/Aetherion/actions/workflows/simulink.yml)
 [![Documentation](https://img.shields.io/badge/docs-GitHub%20Pages-blue)](https://onurtuncer.github.io/Aetherion/)
 

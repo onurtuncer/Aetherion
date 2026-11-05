@@ -32,12 +32,26 @@ def run_logged(command, env, path, timeout):
         raise
 
 
-def summarize(report):
+def count(report):
     counts = Counter(m['status'] for f in report['files'].values() for m in f['mutants'])
     if not counts or not (counts['Killed'] + counts['Survived']):
         raise ValueError('No executed mutants: check instrumentation and includePaths')
     if counts.keys() - {'Killed', 'Survived', 'NoCoverage'}:
         raise ValueError(f'Unexpected Mull statuses: {dict(counts)}')
+    return counts
+
+
+def badge(report):
+    """shields.io endpoint JSON for the README; same score as the summary."""
+    counts = count(report)
+    score = 100 * counts['Killed'] / sum(counts.values())
+    color = 'brightgreen' if score >= 80 else 'yellow' if score >= 60 else 'red'
+    return {'schemaVersion': 1, 'label': 'mutation score', 'message': f'{score:.1f}%',
+            'color': color}
+
+
+def summarize(report):
+    counts = count(report)
     total = sum(counts.values())
     return (
         '# Aetherion mutation pilot\n\n'
@@ -60,7 +74,7 @@ def main():
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     # A failed run must never reuse a previous successful result.
-    for name in ('estimation.json', 'summary.md'):
+    for name in ('estimation.json', 'summary.md', 'badge.json'):
         (output / name).unlink(missing_ok=True)
     env = dict(os.environ, MULL_CONFIG=str(Path(__file__).with_name('mull.yml').resolve()))
     run_logged([str(binary), TEST_FILTER], env, output / 'baseline.log', BASELINE_TIMEOUT_SECONDS)
@@ -76,8 +90,10 @@ def main():
                f'--report-dir={output}', '--report-name=estimation',
                str(binary), TEST_FILTER]
     run_logged(command, env, output / 'mull.log', CAMPAIGN_TIMEOUT_SECONDS)
-    summary = summarize(json.loads((output / 'estimation.json').read_text()))
+    report = json.loads((output / 'estimation.json').read_text())
+    summary = summarize(report)
     (output / 'summary.md').write_text(summary)
+    (output / 'badge.json').write_text(json.dumps(badge(report)) + '\n')
     print(summary)
     if os.environ.get('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as stream:

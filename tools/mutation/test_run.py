@@ -28,6 +28,20 @@ class SummaryTests(unittest.TestCase):
             with self.subTest(data=data), self.assertRaises(ValueError):
                 run.summarize(data)
 
+    def test_badge_matches_summary_score_and_colour_bands(self):
+        cases = ((report('Killed', 'Survived', 'NoCoverage', 'Killed'), '50.0%', 'red'),
+                 (report('Killed', 'Killed', 'Survived'), '66.7%', 'yellow'),
+                 (report(*['Killed'] * 36, *['Survived'] * 3), '92.3%', 'brightgreen'))
+        for data, message, color in cases:
+            with self.subTest(message=message):
+                result = run.badge(data)
+                self.assertEqual(result['schemaVersion'], 1)
+                self.assertEqual(result['message'], message)
+                self.assertEqual(result['color'], color)
+                self.assertIn(message, run.summarize(data))
+        with self.assertRaises(ValueError):
+            run.badge(report('NoCoverage'))
+
     def test_unknown_status_fails(self):
         with self.assertRaises(ValueError):
             run.summarize(report('Killed', 'Unexpected'))
@@ -37,6 +51,7 @@ class SummaryTests(unittest.TestCase):
             output = Path(tmp)
             (output / 'estimation.json').write_text(json.dumps(report('Killed')))
             (output / 'summary.md').write_text('old success')
+            (output / 'badge.json').write_text('{"message": "99.9%"}')
             args = ['run.py', '--binary', 'test_estimation', '--output', tmp]
             with patch('sys.argv', args), patch.object(run.subprocess, 'run') as execute:
                 execute.side_effect = subprocess.CalledProcessError(1, 'baseline')
@@ -45,6 +60,7 @@ class SummaryTests(unittest.TestCase):
                 self.assertEqual(execute.call_count, 1)
             self.assertFalse((output / 'estimation.json').exists())
             self.assertFalse((output / 'summary.md').exists())
+            self.assertFalse((output / 'badge.json').exists())
 
     def test_success_uses_serial_mutants_and_explicit_config(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -75,6 +91,7 @@ class SummaryTests(unittest.TestCase):
                 self.assertEqual(mocked.call_count, 2)
                 self.assertIn('--allow-surviving', mocked.call_args.args[0])
             self.assertTrue((output / 'summary.md').is_file())
+            self.assertEqual(json.loads((output / 'badge.json').read_text())['message'], '50.0%')
 
     def test_filter_keeps_replay_tests_and_drops_the_long_e2e_run(self):
         self.assertIn('[replay]', run.TEST_FILTER)
