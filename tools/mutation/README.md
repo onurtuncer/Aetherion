@@ -8,8 +8,12 @@ normal regression/sanitizer jobs; it does not change release builds.
 
 The initial scope is `Aetherion/Estimation/Replay/{Csv,Logs,TimeBase}.h`.
 Arithmetic (including compound assignment), comparisons and boundary operators
-are mutated. All existing `test_estimation` tests run against each mutant;
-test code, Eigen and other dependencies are excluded. These three headers are
+are mutated. Each mutant runs the `test_estimation` cases that include those
+headers, selected by the Catch2 filter `[replay]~[e2e]` (`TEST_FILTER` in
+`run.py`); test code, Eigen and other dependencies are excluded. The EKF,
+process- and measurement-model tests cannot see these mutants, and the 20-seed
+`[e2e]` replay, half of the suite's runtime, exercises the same readers that the
+other `[replay]` cases test directly. These three headers are
 implemented inline, so instrumentation belongs on `test_estimation`, not on the
 Aetherion library. Expanding to compiled implementation files requires instrumenting
 their owning targets too.
@@ -44,8 +48,13 @@ No coverage filtering is enabled: uncovered mutants remain visible in the report
 
 ## CI and reports
 
-`.github/workflows/mutation.yml` runs on relevant pull requests, weekly on main,
-and on manual dispatch. It is separate from the regular builds. Survivors are
+`.github/workflows/mutation.yml` runs on relevant pull requests, on pushes to
+main that touch the same paths, weekly on main, and on manual dispatch. It is
+separate from the regular builds. On main, a successful run publishes the score
+as `mutation.json` (shields.io endpoint format, written by `run.py` as
+`badge.json`) to the orphan `badges` branch, which the top-level README's badge
+reads; pull requests never publish. Only the separate `publish-badge` job has
+write access. Survivors are
 advisory during rollout; baseline failures, runner failures, missing reports,
 empty reports, and reports with no executed mutants fail the job. Do not mark
 this job as a required score gate until the baseline has been reviewed.
@@ -60,7 +69,11 @@ unmutated warm-up/baseline each have a 5-minute timeout. Mull 0.28's `--timeout`
 controls these unmutated runs too: a 30-second value aborts a healthy full
 estimation suite before mutants start. Individual covered mutants use Mull
 0.28's baseline-derived limit (`max(30 ms, 10 * baseline runtime)`), not a fixed
-30-second cap. The entire Mull process has a 90-minute timeout; the CI job has
+30-second cap — so the filtered test set *is* the per-mutant timeout. With the
+whole suite (~70 s at `-O0`) a looping mutant ran for ~12 minutes while Mull
+buffered its output, and the hosted runner lost contact (November 2026); with
+the filter it is a few seconds. `--no-output` keeps Mull from buffering mutant
+output at all. The entire Mull process has a 90-minute timeout; the CI job has
 a 120-minute cap including dependency installation and compilation. A timeout
 or nonzero subprocess exit remains a failure. On failure, the runner prints the
 last 40 log lines to the CI console and retains the complete log in the artifact.
