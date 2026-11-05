@@ -3,7 +3,8 @@
 Drafted 2026-10-08 against `main` at `9a80aac` (v0.16.0) and Hemerion `main` at
 `55a95ce`. The Hemerion half is `TODO-sensor-fusion.md` in that repo; the step
 numbers below are shared between the two files so the cross-repo order is
-readable from either.
+readable from either. Brought in line with Hemerion `main` at `be5a19a`
+(PR #56, its steps 1–4 closed) on 2026-11-05.
 
 ## Where things stand
 
@@ -98,9 +99,24 @@ readable from either.
       Jacobians and constant bias coupling (−I), and avoids the [p̂]× terms
       (‖p̂‖ up to ~1e5 m in LCI); RI gives constant navigation error dynamics
       and a constant magnetometer Jacobian, but bias coupling −Ad_X̂.
-- [ ] **Rates.** Hemerion's README intends 500 Hz predict / 18 Hz GPS; its
-      examples run a 100 Hz IMU and 10 Hz GPS. Hemerion's decision (its
-      step 4), but the process-noise tuning here depends on it.
+- [x] **Rates.** Decided by Hemerion (its step 4, 2026-10-19, Hemerion
+      `main` be5a19a): **IMU 100 Hz, GNSS 10 Hz**, barometer at its programmed
+      ODR; the READMEs moved to the examples, not the other way round. The
+      FMUs zero-order-hold the plant between communication points, so an IMU
+      faster than 1/step only repeats held truth with fresh noise. Noise is
+      specified as densities, 5e-3 m/s²/√Hz and 2e-4 rad/s/√Hz (the 100 Hz
+      per-sample defaults 0.05 m/s² and 0.002 rad/s); tune Q in continuous
+      time against those. A 400–500 Hz target rate needs sub-step emission in
+      the FMUs first and is a later step.
+
+## Baseline (2026-11-05)
+
+Initial baseline for step 7 and every later comparison: **IMU 100 Hz, GNSS
+10 Hz, co-simulation step 0.01 s** (`--step 0.01`; the GPS stays at 10 Hz
+through `--gps-period 0.1`). At that step the IMU is exactly one sample per
+step from that step's plant state, which removes the 0.055 s hold lag the
+replay measured at the 0.1 s step. Runs at other settings are not compared
+against it.
 
 ## To do, in order
 
@@ -120,20 +136,20 @@ readable from either.
       name, all missing ones reported at once; required columns depend on
       the configuration. Tested against the header lines Hemerion `c4a3178`
       writes.
-- [ ] **Hemerion: log GNSS velocity.** `GpsFix` decodes only `gSpeed` and
-      course, although `UbxEmitter` already encodes velN/E/D and sAcc. Until
-      `gps_fixes.csv` carries `vel_north_mps`, `vel_east_mps`,
-      `vel_down_mps`, `speed_accuracy_mps` (names proposed here),
-      `kNavBaroGnss16` does not bind; the contract test asserts that failure.
-      Ground speed and course are not a substitute (singular at low speed,
-      no vertical component).
-- [ ] **Hemerion: GPS altitude datum.** `GpsFix::altitude_m` is documented as
-      MSL, but `ubxParser` reads NAV-PVT `height` (offset 32, ellipsoidal),
-      and the FMU is driven with Aetherion's geodetic altitude. The
-      measurement model assumes ellipsoidal; fix the comment on that side.
-- [ ] **Hemerion: rocket truth log has no attitude.** `rocket_gps_ecos` logs
-      no Euler angles at all (besides the plant only publishing Euler
-      angles). Needed before the rocket configuration.
+- [x] **Hemerion: log GNSS velocity.** Done in Hemerion be5a19a (PR #56,
+      2026-10-19): `GpsFix` carries velN/E/D, `sAcc` and a validity flag, and
+      `gps_fixes.csv` appends `vel_north_mps`, `vel_east_mps`,
+      `vel_down_mps`, `speed_accuracy_mps`; velD is truth plus its own noise
+      (it was a hard-coded 0). `kNavBaroGnss16` binds and has been replayed
+      (GNSS velocity NIS 1.004). Caveat: `sAcc` comes from a speed/course
+      error model, ~1.7 m/s at F-16 speeds, so the velocity update is weak;
+      a per-axis Doppler model is open on Hemerion's side.
+- [x] **Hemerion: GPS altitude datum.** Done in be5a19a: `altitude_m` is
+      documented as ellipsoidal from UBX (`height`), MSL from NMEA. Comments
+      only; the measurement model's ellipsoidal assumption holds.
+- [x] **Hemerion: rocket truth log has no attitude.** Done in be5a19a:
+      `rocket_truth.csv` logs ZYX Euler angles. The quaternion truth output
+      needed for a vertical launch is still on this side (Things to check).
 
 ### Step 5 — Process and measurement models
 
@@ -194,8 +210,9 @@ readable from either.
       both conventions; the test's bounds hold on every seed (checked
       2026-10-14, closing the "e2e bounds to verify" note). **Not yet run on real Hemerion
       logs** — none exist on this machine; generating a set needs the
-      Hemerion co-sim example built against the Aetherion FMUs. First real
-      replay must use `--config nav-baro-gnss` until GNSS velocity is logged.
+      Hemerion co-sim example built against the Aetherion FMUs. (GNSS
+      velocity is logged since Hemerion be5a19a; `--config nav-baro-gnss16`
+      binds on logs written after it.)
 - [x] Time base. Surveyed Hemerion's writers at `origin/main` 7da6057
       (2026-10-13; the local clone was 193 commits behind): IMU
       `part_time_s` is simulation time unless `--sensor-clock` skew/jitter
@@ -234,9 +251,12 @@ readable from either.
       at zero shift. As logged: ANEES ~1300 with GNSS NIS at 1 (the
       truth/measurement-disagreement signature) and 17 m position RMS. With
       the stamps moved back 0.1 s: ANEES 1.76 RI / 0.74 LI (calm), 1.17 /
-      1.31 (turbulence), GNSS NIS 0.98 / 1.03, position 0.44 m. **To do on
-      the Hemerion side:** stamp `(fix_count - 1) * fix_period_s` in both
-      flight computers; logs written before that fix need the −0.1 s.
+      1.31 (turbulence), GNSS NIS 0.98 / 1.03, position 0.44 m. **Fixed on
+      the Hemerion side** in be5a19a (2026-10-19): both flight computers
+      stamp `(fix_index − 1) × period`, the validity time; replayed as
+      written, without correction, case 11 gives ANEES 1.28 RI / 0.75 LI and
+      position 0.40 m (`nav-baro-gnss16`). Logs written before be5a19a still
+      need the −0.1 s.
       Other findings: the IMU stamps are consistent, but its samples in
       (t, t + 0.1] see the plant input held from t (best shift −0.055 s
       in turbulence: a co-sim step artefact, not a stamp bug; use
@@ -249,8 +269,16 @@ readable from either.
       cross-check, but the burst timing is worth a look before Hemerion
       step 10 relies on arrival stamps.
 - [x] NEES and NIS against truth, in the filter's own coordinates. NEES is
-      over the navigation core only until the realized biases are published
-      (Hemerion step 3); the summary says so.
+      over the navigation core only; the summary says so.
+- [x] **Hemerion: publish the realized error states** (its step 3). Done in
+      be5a19a: the IMU FMU publishes 18 drawn terms (accel/gyro bias, which
+      walk, scale error and misalignment), the BMP390 `pressure_bias_pa` and
+      `temperature_bias_c` (in pascals; the conversion to metres of pressure
+      altitude is on this side), logged every step as truth columns under
+      the names in Hemerion's `drawn_error_variables()`. Hemerion's check:
+      the filter's baro-bias estimate +5.05 ± 0.23 m against the drawn
+      −44.7 Pa (+5.04 m).
+- [ ] Extend NEES to the bias blocks using those columns.
 - [ ] UKF as a cross-check, after the EKF is consistent.
 
 ### Step 7 — Tuning and observability
