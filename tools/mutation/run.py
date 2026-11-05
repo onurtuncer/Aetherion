@@ -10,6 +10,22 @@ import subprocess
 import sys
 
 
+BASELINE_TIMEOUT_SECONDS = 300
+CAMPAIGN_TIMEOUT_SECONDS = 5400
+
+
+def run_logged(command, env, path, timeout):
+    try:
+        with path.open('w') as log:
+            subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT,
+                           check=True, timeout=timeout)
+    except subprocess.SubprocessError:
+        # The artifact retains the full log; expose the failure in CI too.
+        print(f'Last lines of {path.name}:', file=sys.stderr)
+        print('\n'.join(path.read_text(errors='replace').splitlines()[-40:]), file=sys.stderr)
+        raise
+
+
 def summarize(report):
     counts = Counter(m['status'] for f in report['files'].values() for m in f['mutants'])
     if not counts or not (counts['Killed'] + counts['Survived']):
@@ -41,16 +57,15 @@ def main():
     for name in ('estimation.json', 'summary.md'):
         (output / name).unlink(missing_ok=True)
     env = dict(os.environ, MULL_CONFIG=str(Path(__file__).with_name('mull.yml').resolve()))
-    with (output / 'baseline.log').open('w') as log:
-        subprocess.run([str(binary)], env=env, stdout=log, stderr=subprocess.STDOUT,
-                       check=True, timeout=300)
+    run_logged([str(binary)], env, output / 'baseline.log', BASELINE_TIMEOUT_SECONDS)
     # Tests use shared temporary filenames. Parallel mutant processes would race.
-    command = [args.runner, str(binary), '--workers=1', '--timeout=30000',
+    # Mull 0.28 uses --timeout for its unmutated warm-up and baseline too.
+    # A healthy full estimation suite takes longer than the old 30-second cap.
+    command = [args.runner, str(binary), '--workers=1',
+               f'--timeout={BASELINE_TIMEOUT_SECONDS * 1000}',
                '--allow-surviving', '--reporters=IDE', '--reporters=Elements', '--reporters=SQLite',
                f'--report-dir={output}', '--report-name=estimation']
-    with (output / 'mull.log').open('w') as log:
-        subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT,
-                       check=True, timeout=5400)
+    run_logged(command, env, output / 'mull.log', CAMPAIGN_TIMEOUT_SECONDS)
     summary = summarize(json.loads((output / 'estimation.json').read_text()))
     (output / 'summary.md').write_text(summary)
     print(summary)

@@ -55,9 +55,15 @@ JSON/HTML, SQLite details and a Markdown summary. CI uploads these even after a
 failure. The HTML viewer may require internet access to load its viewer script.
 The score is for the three pilot headers only. Mull's Elements reporter groups
 crashes and timeouts under `Killed`; inspect SQLite execution details before
-crediting those as useful detections. Baseline timeout is 5 minutes, each mutant
-has 30 seconds, and the campaign has a 90-minute process timeout. The CI job has
-a 120-minute cap including dependency installation and compilation.
+crediting those as useful detections. The external baseline and Mull's own
+unmutated warm-up/baseline each have a 5-minute timeout. Mull 0.28's `--timeout`
+controls these unmutated runs too: a 30-second value aborts a healthy full
+estimation suite before mutants start. Individual covered mutants use Mull
+0.28's baseline-derived limit (`max(30 ms, 10 * baseline runtime)`), not a fixed
+30-second cap. The entire Mull process has a 90-minute timeout; the CI job has
+a 120-minute cap including dependency installation and compilation. A timeout
+or nonzero subprocess exit remains a failure. On failure, the runner prints the
+last 40 log lines to the CI console and retains the complete log in the artifact.
 
 Mutants run with **one worker** because existing tests use fixed temporary file
 names. Run only one campaign at a time on a shared machine. Do not change this
