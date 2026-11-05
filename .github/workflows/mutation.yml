@@ -4,6 +4,20 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '23 2 * * 1'
+  # main keeps the README's score badge current; same paths as pull requests.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/mutation.yml'
+      - 'tools/mutation/**'
+      - 'cmake/MutationTesting.cmake'
+      - 'cmake/AetherionOptions.cmake'
+      - 'CMakeLists.txt'
+      - 'tests/CMakeLists.txt'
+      - 'src/**'
+      - 'Aetherion/Estimation/**'
+      - 'tests/Estimation/**'
+      - 'Aetherion/Estimation/Replay/**'
   pull_request:
     paths:
       - '.github/workflows/mutation.yml'
@@ -95,3 +109,45 @@ jobs:
           path: build/mutation/mutation-report/
           if-no-files-found: warn
           retention-days: 30
+
+  # README badge: shields.io reads badges/mutation.json on the orphan `badges`
+  # branch. Only main publishes, and only this job may write: the job above runs
+  # mutated binaries and keeps the read-only token.
+  publish-badge:
+    needs: replay
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    concurrency:
+      group: mutation-badge
+      cancel-in-progress: false
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: mutation-replay-${{ github.sha }}
+          path: report
+      - name: Push badge JSON to the badges branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          test -s report/badge.json
+          git init -q badges && cd badges
+          git remote add origin "https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          if git fetch -q --depth 1 origin badges; then
+            git checkout -q -b badges FETCH_HEAD
+          else
+            git symbolic-ref HEAD refs/heads/badges   # first publish: orphan branch
+          fi
+          cp ../report/badge.json mutation.json
+          cat mutation.json
+          git add mutation.json
+          if git diff --cached --quiet; then
+            echo "Score unchanged."
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -q -m "mutation score from ${GITHUB_SHA::7}"
+          git push -q origin HEAD:badges
