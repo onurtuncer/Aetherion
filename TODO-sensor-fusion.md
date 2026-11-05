@@ -118,6 +118,30 @@ step from that step's plant state, which removes the 0.055 s hold lag the
 replay measured at the 0.1 s step. Runs at other settings are not compared
 against it.
 
+**Plant build.** The baseline runs against one plant build, made 2026-11-05
+from a clean checkout of `main` at
+`49e75b814534e6d58c9216a52df2fb7151dfd2f9` (v0.18.2) and installed to
+`D:/dev/aetherion-install-0.18.2` (`BUILDINFO.txt` there repeats this). Point
+Hemerion's `AETHERION_ROOT` at that prefix; its
+`aetherion_plant_version.cmake` reads 0.18.2 from the install.
+
+- Configure: Ninja, `CMAKE_BUILD_TYPE=Release`, C++23 (no extensions),
+  vcpkg toolchain, triplet `x64-windows-static-md`, `AETHERION_BUILD_FMUS=ON`,
+  `AETHERION_INSTALL=ON`, `AETHERION_BUILD_{TESTS,EXAMPLES,SIMULATION}=OFF`,
+  `FMU4CPP_MSVC_STATIC_CRT=ON`. Release flags `/O2 /Ob2 /DNDEBUG`; the FMU
+  target adds `/utf-8 /bigobj`.
+- Toolchain: MSVC 19.50.35728 x64, CMake 4.4.3, Ninja; vcpkg baseline
+  `00d899c4`, cppad 20250000.3#2.
+- `F16Plant.fmu` SHA-256
+  `f11235a1af0b5d4e1313e9903c5375f02e35960b5bb1a82615fb6bfc3f5a96ed`
+  (FMI 2.0, `version="0.18.2"`, guid 10750628031577592617). The hash names
+  this file only: `modelDescription.xml` carries the generation time, so a
+  rebuild of the same commit differs; the commit and settings name the build.
+- [ ] Noticed in passing: the archive's `binaries/win64/` also carries
+      `Aetherion.lib` (26 MB) and `cppad_lib.lib` beside `F16Plant_fmi2.dll`.
+      Static libraries are not needed at run time; `generateFMU()`'s
+      `_bundle_link_libraries` should skip them.
+
 ## To do, in order
 
 ### Step 2 — Block scheme and log contract (shared; this repo is the source of truth)
