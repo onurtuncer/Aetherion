@@ -59,15 +59,28 @@ class SummaryTests(unittest.TestCase):
                     self.assertGreaterEqual(timeout_ms, 90000)
                     self.assertEqual(timeout_ms, run.BASELINE_TIMEOUT_SECONDS * 1000)
                     self.assertEqual(kwargs['timeout'], run.CAMPAIGN_TIMEOUT_SECONDS)
+                    # Mutant output is not buffered, and the mutants run the
+                    # replay tests only: the binary and its filter come last.
+                    self.assertIn('--no-output', command)
+                    self.assertEqual(Path(command[-2]).name, 'test_estimation')
+                    self.assertEqual(command[-1], run.TEST_FILTER)
                     (output / 'estimation.json').write_text(json.dumps(report('Killed', 'Survived')))
                 else:
                     self.assertEqual(kwargs['timeout'], run.BASELINE_TIMEOUT_SECONDS)
+                    # The external baseline gates the same tests Mull runs.
+                    self.assertEqual(command[1:], [run.TEST_FILTER])
             with patch('sys.argv', args), patch.dict('os.environ', {}, clear=True), \
                     patch.object(run.subprocess, 'run', side_effect=execute) as mocked:
                 run.main()
                 self.assertEqual(mocked.call_count, 2)
                 self.assertIn('--allow-surviving', mocked.call_args.args[0])
             self.assertTrue((output / 'summary.md').is_file())
+
+    def test_filter_keeps_replay_tests_and_drops_the_long_e2e_run(self):
+        self.assertIn('[replay]', run.TEST_FILTER)
+        self.assertIn('~[e2e]', run.TEST_FILTER)
+        # LLVM's option parser would take a leading '-' as a mull-runner option.
+        self.assertFalse(run.TEST_FILTER.startswith('-'))
 
     def test_runner_failure_still_fails_after_a_passing_baseline(self):
         with tempfile.TemporaryDirectory() as tmp:
