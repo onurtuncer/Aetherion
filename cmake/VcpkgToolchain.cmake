@@ -26,8 +26,18 @@ option(AETHERION_USE_VCPKG "Resolve third-party dependencies through vcpkg" ON)
 set(AETHERION_VCPKG_ROOT ""
     CACHE PATH "vcpkg clone to use (overrides the VCPKG_ROOT / VCPKG_INSTALLATION_ROOT environment variables)")
 
+# CppADCodeGen is a host-side tool: it generates C source from the estimator models and is never linked into the
+# library, the examples or the FMUs. Declared here rather than in AetherionOptions.cmake because the manifest feature
+# that installs it has to be selected before project() runs the vcpkg toolchain. Without vcpkg, CppADCodeGen must be
+# discoverable on CMAKE_PREFIX_PATH (see cmake/Dependencies.cmake).
+option(AETHERION_WITH_CPPADCG "Build the CppADCodeGen code-generation tests (host-side; vcpkg feature 'codegen')" OFF)
+
 if(NOT AETHERION_USE_VCPKG OR BUILD_DOCS)
   return()
+endif()
+
+if(AETHERION_WITH_CPPADCG)
+  list(APPEND VCPKG_MANIFEST_FEATURES codegen)
 endif()
 
 # Quoted rather than `DEFINED ENV{CMAKE_TOOLCHAIN_FILE}` so that an env var set to the empty string does not count as a

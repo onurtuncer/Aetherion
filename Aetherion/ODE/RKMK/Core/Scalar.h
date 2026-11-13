@@ -22,8 +22,12 @@ namespace Aetherion::ODE::RKMK::Core {
     struct is_cppad_ad : std::false_type
     {};
 
-    template <>
-    struct is_cppad_ad<CppAD::AD<double>> : std::true_type
+    // Every CppAD::AD<Base>, not only AD<double>: the code generator tapes
+    // with AD<CppAD::cg::CG<double>>, for which a trait limited to AD<double>
+    // sent sqrt_s/sin_s/cos_s/abs_s to std:: (a compile error) and every
+    // condexp_* to a C++ ternary -- a branch frozen at the taping point.
+    template <class Base>
+    struct is_cppad_ad<CppAD::AD<Base>> : std::true_type
     {};
 
     template <class T>

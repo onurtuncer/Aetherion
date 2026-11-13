@@ -8,5 +8,13 @@
   "builtin-baseline": "00d899c410b31467733472fc3a83a25729046b13",
   "dependencies": [
     "cppad"
-  ]
+  ],
+  "features": {
+    "codegen": {
+      "description": "CppADCodeGen: host-side source generation for the estimator models (tests and the step-8 generator only; never linked into the library or the FMUs)",
+      "dependencies": [
+        "cppadcodegen"
+      ]
+    }
+  }
 }
