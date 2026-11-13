@@ -90,6 +90,17 @@ readable from either. Brought in line with Hemerion `main` at `be5a19a`
   - The generator executable is not shipped. A compiled generator contains
     the header-only CppADCodeGen, so shipping one would first need a choice
     of its licence (EPL-1.0 keeps the source MIT).
+- **Barometer-bias truth for NEES is the sum: sensor plus atmosphere.** The
+  single barometer state absorbs everything that separates the barometer's
+  pressure altitude from geometric truth. That is (1) the sensor's pressure
+  offset converted to metres, h_p(P + dp) − h_p(P), and (2) the day's
+  atmosphere, h_p(P) − h with P the plant's true ambient pressure
+  (`out.P_Pa`). The random-walk model was chosen for exactly that second
+  term (see "Barometer bias" above). Judging the state against the sensor
+  term alone would report a definition mismatch as inconsistency: on the
+  +20 K hot day, about −193 m against +5 m. The replay reports both terms
+  separately as diagnostics. The pressure altitude is converted to
+  geometric height, as `MeasurementModels.h` does.
 
 ## Still open
 
