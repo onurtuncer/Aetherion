@@ -302,7 +302,59 @@ Hemerion's `AETHERION_ROOT` at that prefix; its
       the names in Hemerion's `drawn_error_variables()`. Hemerion's check:
       the filter's baro-bias estimate +5.05 ± 0.23 m against the drawn
       −44.7 Pa (+5.04 m).
-- [ ] Extend NEES to the bias blocks using those columns.
+- [x] Extend NEES to the bias blocks using those columns (2026-11-13,
+      branch `feat/nees-bias-blocks`). The harness binds the drawn-error
+      truth columns and the plant's `out.P_Pa`/`out.T_K` as **optional**
+      groups (`LogContract::OptionalTruth`, a sibling of `Truth` so Hemerion's
+      `check_log_contract.py` does not read them as required; never in
+      `requiredColumns()`): a
+      log without them replays as before, NEES over the nav core only, and
+      the summary says which NEES it reports. With them: NEES per block (nav
+      core 9, gyro bias 3, accel bias 3, baro bias 1) and over all 16 states,
+      each block against its own marginal of P, in the filter's coordinates
+      (bias errors are additive, truth − estimate, in both conventions), in
+      the summary (second-half ANEES/dim) and per step (`nees_gyro_bias`,
+      `nees_accel_bias`, `nees_baro_bias`, `nees_full`, the truth biases and
+      the leak appended to the states CSV; an unsupported cell is empty,
+      never NaN, for Hemerion's finite-output check). Conventions checked
+      by reading Hemerion's models (`imu_noise_model.h`,
+      `bmp390_measurement_model.h`, the `f16_trim_ecos` connections): each
+      IMU axis reads scale·((I + skew m)·truth) + bias in the plant's body
+      axes (x nose, no mounting rotation; gyro truth is `out.p_rad_s`, the
+      body rate wrt ECI), so the drawn bias is the filter's bias state with
+      the same sign and frame (w = w̃ − b_g); `scale_error` is scale − 1. The
+      BMP390 reads ambient pressure (`out.P_Pa`) + `pressure_bias_pa`; the
+      temperature bias shifts only the reported temperature. Baro truth in
+      metres is h_p(P + δp) − h_p(P) through the filter's own inversion,
+      equal to −δp/(ρg) at the flight's P, T to 0.1 % (tested); Hemerion's
+      −44.7 Pa at case 11 is +5.04 m (tested; +5.047 m in the smoke run).
+      Scale error and misalignment stay unmodelled; their equivalent bias
+      (M − I)M⁻¹(y − b), M = diag(1 + s)(I + skew m), is reported per step
+      and in the summary (rms, max, and the bias NEES with it added to the
+      truth), so a bias NEES above 1 can be attributed. Synthetic logs
+      (`test_Replay.cpp`: biases drawn per seed from the filter's prior and
+      walking at its densities, a constant pressure bias in Pa, every drawn
+      column logged; 120 s; the test runs seeds 1–20 in both conventions,
+      44 s on MSVC Release): mean ANEES RI nav 1.25, gyro bias 1.71, accel
+      bias 1.21, baro bias 0.70, full 1.30; LI 1.05, 1.05, 1.13, 0.70, 1.09.
+      Baro below 1 by design (constant drawn bias, walking state). Worst
+      seeds: gyro 7.0 (RI, seed 17, nav 2.6 on the same seed), accel 5.8
+      (LI, seed 6). The test fails on a flipped IMU-bias sign (126 failed
+      assertions, block NEES 1e4–1e6) and on a wrong-signed pressure
+      conversion (baro ANEES ~400, 38 of 40 runs); both reverted. **Smoke
+      reading, not a result:** Hemerion's Windows run
+      `build/integration-case11-pinned` (seed 11, 20 s, calm),
+      `--config nav-baro-gnss16`: second-half ANEES RI/LI nav 0.45/0.44,
+      gyro bias 0.34/0.31, accel bias 0.18/0.17, baro bias 1.33/1.34, full
+      0.48/0.48; accel z bias −0.037 ± 0.013 against drawn −0.039 m/s² (x, y
+      and gyro z barely move from their priors in 20 s of calm trim); baro
+      bias +5.37 ± 0.26 m against +5.05 m — a Windows log, whose barometer
+      is starved (122 updates in 20 s, NIS 0.11), which is why step-7 logs
+      come from Linux. Scale and misalignment were zero in that run
+      (Hemerion's defaults), so the leak is zero; the truth atmosphere
+      offset h_p(P) − altitude is 0 (standard day). Noted for step 7, not a
+      convention claim: on these seeds RI's gyro-bias ANEES (1.71) is above
+      LI's (1.05).
 - [ ] UKF as a cross-check, after the EKF is consistent.
 
 ### Step 7 — Tuning and observability

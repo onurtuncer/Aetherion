@@ -955,8 +955,15 @@ measurements.
   (Hemerion step 10) and is judged against the reference by the golden
   vectors. Output: one row per IMU sample (estimate, truth, error in the
   filter's coordinates, NEES, sigmas), one per update (NIS), and a
-  summary. NEES is over the navigation core only until the sensor FMUs
-  publish their realised biases (Hemerion step 3).
+  summary. When the truth log carries the sensors' drawn errors (optional
+  columns, published since Hemerion be5a19a), NEES is reported per block
+  -- navigation core (9), gyro bias (3), accelerometer bias (3), barometer
+  bias (1) -- and over the full state; without them, over the navigation
+  core only. The summary says which. The drawn pressure bias is converted
+  to metres of pressure altitude at the flight's ambient pressure,
+  :math:`h_p(P + \delta p) - h_p(P) \approx -\delta p / (\rho g)`; the
+  unmodelled IMU scale-factor error and misalignment are reported as the
+  equivalent bias they put on the readings, beside the bias NEES.
 
 Other facts of the logs the harness relies on, from the same survey: the
 truth CSV is written by the host at one row per communication step (0.1 s
@@ -1092,7 +1099,9 @@ convention's own coordinates (``x.error<C>(truth)``, as ``EKF.h`` does),
 because that is what :math:`P` describes; a physical difference
 :math:`p - \hat p` scored against an RI covariance is not a consistency
 test. Bias-state NEES needs the realised bias values, which the sensor FMUs
-will publish (Hemerion step 3).
+publish as optional truth columns (Hemerion step 3); the bias errors are
+additive, truth minus estimate, in both conventions, and each block is
+scored against its own marginal covariance.
 
 Tuning and observability (step 7) use the F-16 check cases with turbulence
 on (in calm air every body rate on case 11 stays below one gyro count):
