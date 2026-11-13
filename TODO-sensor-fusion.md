@@ -70,6 +70,27 @@ readable from either. Brought in line with Hemerion `main` at `be5a19a`
     C_ECEF←LCI(t); heading/yaw covariance reported via rotation into the
     current local NED.
 
+## Decided (2026-11-13)
+
+- **Generated filter C is never published from this repository.**
+  CppADCodeGen is dual-licensed EPL-1.0 or GPL-3.0 and makes no statement
+  about the code it generates. Rather than rely on the reading that the
+  output is this project's own work, generated C and headers are not
+  committed here, not installed, and not part of a release. They exist
+  only in build trees, including the generator's tests, and are delivered
+  to Hemerion, where they are checked in under GPL-3.0-only (Hemerion's
+  `TODO-sensor-fusion.md`, "Decided (2026-11-13)"). What stays here, under
+  MIT: the generator source and the golden vectors, which are data.
+  - The generator takes the file banner (project, copyright, SPDX
+    identifier) as input instead of hard-coding one; Hemerion supplies its
+    own. The banner also names the generator's commit, CppADCodeGen's
+    version and the configuration hash.
+  - Install rules and CI must not pick up generated sources. A check for
+    that belongs with the generator tool.
+  - The generator executable is not shipped. A compiled generator contains
+    the header-only CppADCodeGen, so shipping one would first need a choice
+    of its licence (EPL-1.0 keeps the source MIT).
+
 ## Still open
 
 - [ ] **Error convention: left- or right-invariant.** Not decided, and no
@@ -342,7 +363,9 @@ reproducible there (Hemerion `TODO-sensor-fusion.md`, "Decided
       and the configuration hash.
 - [ ] Golden vectors: recorded inputs and outputs of the reference filter with
       tolerances, carrying the same hash.
-- [ ] Hand both to Hemerion; they are checked in there.
+- [ ] Hand both to Hemerion; they are checked in there. The generated C goes
+      to Hemerion only and is never committed or installed here (Decided
+      2026-11-13).
 
 ## Things to check
 
