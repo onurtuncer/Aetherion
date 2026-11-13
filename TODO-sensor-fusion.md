@@ -310,6 +310,14 @@ Hemerion's `AETHERION_ROOT` at that prefix; its
 Run on the cases Hemerion's TODO already names, with turbulence on (calm air
 leaves every body rate below one gyro count on case 11).
 
+Decided 2026-11-13: the tuning logs are written on **Linux**, at the
+baseline settings, against the pinned plant build. On Windows the polled
+BMP390 is starved (101–122 barometer updates in 20 s of case 11, against
+999 on Linux), its log differs from run to run at the same seed, and
+`host_time_s` runs 1.16–1.24× simulation time; GPS and IMU values are
+reproducible there (Hemerion `TODO-sensor-fusion.md`, "Decided
+(2026-11-13)").
+
 - [ ] Case 11: baseline for position, velocity, tilt and bias consistency.
 - [ ] Case 12: degraded mode (no GPS fix, barometer below its rated floor).
 - [ ] Case 13.1: barometer bias drift in the climb.
