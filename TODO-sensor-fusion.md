@@ -70,6 +70,38 @@ readable from either. Brought in line with Hemerion `main` at `be5a19a`
     C_ECEF←LCI(t); heading/yaw covariance reported via rotation into the
     current local NED.
 
+## Decided (2026-11-13)
+
+- **Generated filter C is never published from this repository.**
+  CppADCodeGen is dual-licensed EPL-1.0 or GPL-3.0 and makes no statement
+  about the code it generates. Rather than rely on the reading that the
+  output is this project's own work, generated C and headers are not
+  committed here, not installed, and not part of a release. They exist
+  only in build trees, including the generator's tests, and are delivered
+  to Hemerion, where they are checked in under GPL-3.0-only (Hemerion's
+  `TODO-sensor-fusion.md`, "Decided (2026-11-13)"). What stays here, under
+  MIT: the generator source and the golden vectors, which are data.
+  - The generator takes the file banner (project, copyright, SPDX
+    identifier) as input instead of hard-coding one; Hemerion supplies its
+    own. The banner also names the generator's commit, CppADCodeGen's
+    version and the configuration hash.
+  - Install rules and CI must not pick up generated sources. A check for
+    that belongs with the generator tool.
+  - The generator executable is not shipped. A compiled generator contains
+    the header-only CppADCodeGen, so shipping one would first need a choice
+    of its licence (EPL-1.0 keeps the source MIT).
+- **Barometer-bias truth for NEES is the sum: sensor plus atmosphere.** The
+  single barometer state absorbs everything that separates the barometer's
+  pressure altitude from geometric truth. That is (1) the sensor's pressure
+  offset converted to metres, h_p(P + dp) − h_p(P), and (2) the day's
+  atmosphere, h_p(P) − h with P the plant's true ambient pressure
+  (`out.P_Pa`). The random-walk model was chosen for exactly that second
+  term (see "Barometer bias" above). Judging the state against the sensor
+  term alone would report a definition mismatch as inconsistency: on the
+  +20 K hot day, about −193 m against +5 m. The replay reports both terms
+  separately as diagnostics. The pressure altitude is converted to
+  geometric height, as `MeasurementModels.h` does.
+
 ## Still open
 
 - [ ] **Error convention: left- or right-invariant.** Not decided, and no
@@ -310,6 +342,56 @@ Hemerion's `AETHERION_ROOT` at that prefix; its
 Run on the cases Hemerion's TODO already names, with turbulence on (calm air
 leaves every body rate below one gyro count on case 11).
 
+Decided 2026-11-13: the tuning logs are written on **Linux**, at the
+baseline settings, against the pinned plant build. On Windows the polled
+BMP390 is starved (101–122 barometer updates in 20 s of case 11, against
+999 on Linux), its log differs from run to run at the same seed, and
+`host_time_s` runs 1.16–1.24× simulation time; GPS and IMU values are
+reproducible there (Hemerion `TODO-sensor-fusion.md`, "Decided
+(2026-11-13)").
+
+**First Linux batch (2026-11-14), the starting point for tuning.**
+- Source: Hemerion's `step7-log-batch.yml`,
+  [run 43482563098](https://github.com/onurtuncer/Hemerion/actions/runs/43482563098)
+  (Hemerion `3b85d6f`, plant 0.18.2 `49e75b8`, ubuntu runner).
+- Run: case 11, W20 8 m/s, seeds 1–20 with turbulence seed = seed, 200 s,
+  IMU 100 Hz / GNSS 10 Hz / step 0.01 s. All 20 seeds passed every check:
+  2000 GNSS position and 2000 velocity updates, 9998–9999 barometer updates.
+- Replay: `EkfReplay --config nav-baro-gnss16` from `feat/nees-bias-blocks`
+  (`fea6876`, MSVC Release), with per-block NEES against the drawn errors
+  and baro truth = sensor + atmosphere.
+
+Second-half ANEES (/dim), mean ± sd over the 20 seeds, default tuning:
+
+| Block | RI | LI |
+|---|---|---|
+| Nav core (9) | 0.83 ± 0.19 | 0.75 ± 0.11 |
+| Gyro bias (3) | 0.71 ± 0.42 | 0.71 ± 0.39 |
+| Accel bias (3) | 0.68 ± 0.59 | 0.46 ± 0.41 |
+| Baro bias (1) | 0.51 ± 0.22 | 0.51 ± 0.22 |
+| Full (16) | 0.78 ± 0.18 | 0.73 ± 0.14 |
+
+Other second-half figures:
+- NIS/dim: GNSS position 1.00 ± 0.02, GNSS velocity 1.00 ± 0.04,
+  barometer 0.114 ± 0.003.
+- RMS: position 0.43 m and velocity 0.084 m/s, both conventions; tilt
+  0.16° RI / 0.13° LI; yaw 2.08° RI / 2.18° LI (up to 4.4°).
+
+Reading:
+- Consistent and conservative everywhere; no block is overconfident.
+- First changes for step 7: the barometer measurement sigma (NIS 0.114
+  says about 0.34 m, not 1 m), then the baro-bias walk and the accel-bias
+  prior.
+- Neither convention is better here: LI is tighter on tilt and nav ANEES,
+  RI has the lower yaw RMS on 11 of 20 seeds. Evidence for "Still open",
+  not a decision.
+- Open from the non-standard-day test (step 6): the 0.05 m/√s baro walk
+  tracks only ~0.01 m/s of atmosphere-term change, so a climb on a
+  non-standard day needs a larger walk or a height-scaled model.
+- Note for Hemerion step 10: on the CI runner, too, host time fits
+  1.30 × part time with a 307 ms rms residual (seed 1), so arrival stamps
+  are not usable as a clock there either.
+
 - [ ] Case 11: baseline for position, velocity, tilt and bias consistency.
 - [ ] Case 12: degraded mode (no GPS fix, barometer below its rated floor).
 - [ ] Case 13.1: barometer bias drift in the climb.
@@ -334,7 +416,9 @@ leaves every body rate below one gyro count on case 11).
       and the configuration hash.
 - [ ] Golden vectors: recorded inputs and outputs of the reference filter with
       tolerances, carrying the same hash.
-- [ ] Hand both to Hemerion; they are checked in there.
+- [ ] Hand both to Hemerion; they are checked in there. The generated C goes
+      to Hemerion only and is never committed or installed here (Decided
+      2026-11-13).
 
 ## Things to check
 
