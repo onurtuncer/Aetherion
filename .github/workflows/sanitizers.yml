@@ -15,7 +15,7 @@ concurrency:
 jobs:
   asan:
     name: AddressSanitizer
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       ASAN_OPTIONS: check_initialization_order=1:detect_stack_use_after_return=1
 
@@ -49,7 +49,7 @@ jobs:
 
   ubsan:
     name: UndefinedBehaviorSanitizer
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout repo
