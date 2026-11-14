@@ -17,6 +17,27 @@ find_package(CppAD MODULE REQUIRED)
 message(STATUS "Using CppAD ${CppAD_VERSION}: ${CppAD_LIBRARY}")
 
 # ------------------------------------------------------------------------------
+# CppADCodeGen -- host-side only (AETHERION_WITH_CPPADCG, vcpkg feature "codegen"). Header-only and shipped without a
+# CMake package configuration. CppADCodeGen::cppadcg is linked by the code-generation tests and nothing else: never by
+# the Aetherion library, the examples or the FMUs.
+# ------------------------------------------------------------------------------
+if(AETHERION_WITH_CPPADCG)
+  find_path(CppADCodeGen_INCLUDE_DIR NAMES cppad/cg.hpp DOC "Directory containing cppad/cg.hpp")
+  if(NOT CppADCodeGen_INCLUDE_DIR)
+    message(FATAL_ERROR "AETHERION_WITH_CPPADCG=ON but cppad/cg.hpp was not found. With vcpkg the 'codegen' manifest "
+                        "feature installs it; otherwise put CppADCodeGen on CMAKE_PREFIX_PATH.")
+  endif()
+  add_library(
+    CppADCodeGen::cppadcg
+    INTERFACE
+    IMPORTED
+    GLOBAL)
+  target_include_directories(CppADCodeGen::cppadcg INTERFACE "${CppADCodeGen_INCLUDE_DIR}")
+  target_link_libraries(CppADCodeGen::cppadcg INTERFACE CppAD::cppad)
+  message(STATUS "Using CppADCodeGen (host-side, tests only): ${CppADCodeGen_INCLUDE_DIR}")
+endif()
+
+# ------------------------------------------------------------------------------
 # Eigen3 (vendored headers)
 # ------------------------------------------------------------------------------
 set(EIGEN3_VENDOR_DIR "${PROJECT_SOURCE_DIR}/vendor/eigen")
