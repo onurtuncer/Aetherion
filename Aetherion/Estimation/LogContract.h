@@ -135,6 +135,49 @@ namespace Aetherion::Estimation::LogContract {
         inline constexpr std::string_view kRoll = "out.roll_rad";
     } // namespace Truth
 
+    // Optional truth columns, normalised like the ones above. Never in
+    // requiredColumns(): a truth log without them still replays, with NEES
+    // over the navigation core only. A sibling of Truth, not inside it:
+    // Hemerion's scripts/check_log_contract.py reads every name in
+    // `namespace Truth { ... }` as required.
+    namespace OptionalTruth {
+        // The plant's static pressure and temperature at the aircraft, which
+        // Hemerion feeds to the barometer FMU (f16_trim_ecos: f16::out.P_Pa ->
+        // baro::p_Pa). Used to convert the drawn pressure bias to metres of
+        // pressure altitude; without them the standard atmosphere at out.alt_m
+        // stands in.
+        inline constexpr std::string_view kStaticPressure = "out.P_Pa";
+        inline constexpr std::string_view kStaticTemperature = "out.T_K";
+
+        // The sensor FMUs' realised error terms (Hemerion be5a19a, its step 3;
+        // names from its drawn_error_variables()), logged every step. Each IMU
+        // axis, in the body frame (x nose), reads
+        //   scale * ((I + skew(misalignment)) * truth) + bias + noise,
+        // scale = 1 + scale_error. The biases walk; the rest are drawn once.
+        // The barometer reads ambient pressure + pressure_bias_pa; the
+        // temperature bias shifts only the reported temperature.
+        inline constexpr std::string_view kAccelBiasX = "accel_bias_x_mps2";
+        inline constexpr std::string_view kAccelBiasY = "accel_bias_y_mps2";
+        inline constexpr std::string_view kAccelBiasZ = "accel_bias_z_mps2";
+        inline constexpr std::string_view kGyroBiasX = "gyro_bias_x_rad_s";
+        inline constexpr std::string_view kGyroBiasY = "gyro_bias_y_rad_s";
+        inline constexpr std::string_view kGyroBiasZ = "gyro_bias_z_rad_s";
+        inline constexpr std::string_view kAccelScaleErrorX = "accel_scale_error_x";
+        inline constexpr std::string_view kAccelScaleErrorY = "accel_scale_error_y";
+        inline constexpr std::string_view kAccelScaleErrorZ = "accel_scale_error_z";
+        inline constexpr std::string_view kGyroScaleErrorX = "gyro_scale_error_x";
+        inline constexpr std::string_view kGyroScaleErrorY = "gyro_scale_error_y";
+        inline constexpr std::string_view kGyroScaleErrorZ = "gyro_scale_error_z";
+        inline constexpr std::string_view kAccelMisalignmentX = "accel_misalignment_x_rad";
+        inline constexpr std::string_view kAccelMisalignmentY = "accel_misalignment_y_rad";
+        inline constexpr std::string_view kAccelMisalignmentZ = "accel_misalignment_z_rad";
+        inline constexpr std::string_view kGyroMisalignmentX = "gyro_misalignment_x_rad";
+        inline constexpr std::string_view kGyroMisalignmentY = "gyro_misalignment_y_rad";
+        inline constexpr std::string_view kGyroMisalignmentZ = "gyro_misalignment_z_rad";
+        inline constexpr std::string_view kPressureBias = "pressure_bias_pa";
+        inline constexpr std::string_view kTemperatureBias = "temperature_bias_c";
+    } // namespace OptionalTruth
+
     // Run-configuration sidecar keys. lat0/lon0/alt0 define the LCI origin.
     namespace Sidecar {
         inline constexpr std::string_view kLat0 = "lat0_deg";
