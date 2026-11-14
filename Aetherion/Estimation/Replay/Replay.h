@@ -82,10 +82,25 @@
 //         uses w = w~ - b_g, a = a~ - b_a in the same body frame, so the
 //         drawn bias *is* the bias state, same sign, same frame.
 //   baro  pressure = ambient + pressure_bias_pa. The filter reads pressure
-//         altitude y = h_p(p) and models y = h + b_p, so the bias state in
-//         metres is h_p(P + dp) - h_p(P) at the flight's ambient pressure P:
-//         -dp / (rho g) to first order (pressureBiasToMetres). A negative
-//         pressure bias is a positive altitude bias.
+//         altitude y = h_p(p) (pressureAltitude_m: the standard atmosphere
+//         inverted, geopotential converted to geometric height) and models
+//         y = h + b_p, so b_p absorbs everything that separates the noise-free
+//         reading h_p(P + dp) from the geometric height h. Its NEES truth
+//         (maintainer decision 2026-11-13) is the sum of two terms, both in
+//         metres of geometric height:
+//           sensor      h_p(P + dp) - h_p(P)   the drawn pressure bias at the
+//                       flight's ambient pressure P; -dp / (rho g) to first
+//                       order (pressureBiasToMetres). A negative pressure bias
+//                       is a positive altitude bias.
+//           atmosphere  h_p(P) - h             the day's atmosphere, with P the
+//                       plant's out.P_Pa and h its out.alt_m; zero to
+//                       round-off on a standard day. It is what the random
+//                       walk on b_p is for: it grows with height on a
+//                       non-standard day.
+//         truth b_p = sensor + atmosphere = h_p(P + dp) - h. Both terms are
+//         reported as diagnostics. Without out.P_Pa the atmosphere term is
+//         unknown: the standard atmosphere at h stands in for P, the truth is
+//         the sensor term only, and the summary says so.
 // Scale-factor error and misalignment are not modelled. The equivalent bias
 // they put on each reading, (M - I) M^-1 (y - b) with M = diag(1 + s)
 // (I + skew(m)), is computed per step from the logged readings and reported
@@ -182,16 +197,26 @@ namespace Aetherion::Estimation::Replay {
     {
         bool imuBias = false;              ///< gyro and accel bias known
         bool imuScaleMisalignment = false; ///< scale-factor error and misalignment known
-        bool baroBias = false;             ///< pressure bias known
+        bool baroBias = false;             ///< pressure bias known: baroBiasTruth_m and baroSensorTerm_m are valid
         Eigen::Vector3d gyroBias_rad_s = Eigen::Vector3d::Zero();
         Eigen::Vector3d accelBias_m_s2 = Eigen::Vector3d::Zero();
         Eigen::Vector3d gyroScaleError = Eigen::Vector3d::Zero(), accelScaleError = Eigen::Vector3d::Zero();
         Eigen::Vector3d gyroMisalignment_rad = Eigen::Vector3d::Zero(), accelMisalignment_rad = Eigen::Vector3d::Zero();
         double pressureBias_Pa = 0.0;
-        double staticPressure_Pa = 0.0; ///< the flight's ambient pressure the conversion used
+        double staticPressure_Pa = 0.0; ///< the flight's ambient pressure P the sensor term used
+        /// out.P_Pa logged: P is the plant's, and baroAtmosphereTerm_m is valid and part of baroBiasTruth_m.
+        /// Otherwise P is the standard atmosphere at the truth altitude and the truth is the sensor term only.
         bool staticPressureLogged = false;
-        double baroBias_m = 0.0;         ///< pressure bias in metres of pressure altitude (pressureBiasToMetres)
-        double atmosphereOffset_m = 0.0; ///< h_p(P) - altitude; valid only if staticPressureLogged
+        /// Sensor term, h_p(P + dp) - h_p(P) [m of geometric height]: the drawn pressure bias at P
+        /// (pressureBiasToMetres).
+        double baroSensorTerm_m = 0.0;
+        /// Atmosphere term, h_p(P) - h [m of geometric height], with h the truth's out.alt_m: the day's
+        /// atmosphere, zero to round-off on a standard day. Valid only if staticPressureLogged.
+        double baroAtmosphereTerm_m = 0.0;
+        /// The baro-bias block's NEES truth: baroSensorTerm_m + baroAtmosphereTerm_m = h_p(P + dp) - h, what
+        /// separates the noise-free pressure altitude from the geometric height (maintainer decision
+        /// 2026-11-13). Sensor term only when !staticPressureLogged.
+        double baroBiasTruth_m = 0.0;
     };
 
     struct StateRow
@@ -204,7 +229,7 @@ namespace Aetherion::Estimation::Replay {
         double neesNav = 0.0;          ///< navigation core only (9 dof)
         OptionalNees neesGyroBias;     ///< 3 dof, against the drawn gyro bias
         OptionalNees neesAccelBias;    ///< 3 dof, against the drawn accel bias
-        OptionalNees neesBaroBias;     ///< 1 dof, against the converted pressure bias
+        OptionalNees neesBaroBias;     ///< 1 dof, against BiasTruth::baroBiasTruth_m (sensor + atmosphere)
         OptionalNees neesFull;         ///< every block the configuration carries
         BiasTruth biasTruth;
         bool hasLeak = false;                                     ///< scale/misalignment known: the two below are meaningful
@@ -255,6 +280,8 @@ namespace Aetherion::Estimation::Replay {
         bool hasFinalBaro = false;
         double finalBaroEstimate_m = 0.0, finalBaroSigma_m = 0.0;
         BiasTruth finalBiasTruth;
+        /// Second-half rows with a baro-bias truth, and those of them whose truth includes the atmosphere term.
+        std::size_t baroTruthRows = 0, baroTruthRowsWithAtmosphere = 0;
     };
 
     struct ReplayResult
@@ -267,8 +294,9 @@ namespace Aetherion::Estimation::Replay {
     /// A barometer pressure bias as the filter's bias state sees it: metres of
     /// pressure altitude, h_p(P + dp) - h_p(P) at the flight's ambient pressure
     /// P, through the same inversion the filter applies to the reading
-    /// (pressureAltitude_m). To first order -dp / (rho g) with rho and g of the
-    /// standard atmosphere at P; a negative dp reads high.
+    /// (pressureAltitude_m, geometric height). To first order -dp / (rho g) with
+    /// rho and g of the standard atmosphere at P; a negative dp reads high. This
+    /// is the sensor term of the baro-bias truth only (BiasTruth::baroBiasTruth_m).
     [[nodiscard]] inline double pressureBiasToMetres(double pressureBias_Pa, double staticPressure_Pa)
     {
         return pressureAltitude_m(staticPressure_Pa + pressureBias_Pa) - pressureAltitude_m(staticPressure_Pa);
@@ -345,10 +373,20 @@ namespace Aetherion::Estimation::Replay {
                 out.staticPressure_Pa =
                     out.staticPressureLogged ? pa + w * (pb - pa) : Environment::US1976Atmosphere(alt).p;
                 out.pressureBias_Pa = A.pressureBias_Pa + w * (B.pressureBias_Pa - A.pressureBias_Pa);
-                out.baroBias_m = pressureBiasToMetres(out.pressureBias_Pa, out.staticPressure_Pa);
-                out.baroBias = std::isfinite(out.baroBias_m);
+                out.baroSensorTerm_m = pressureBiasToMetres(out.pressureBias_Pa, out.staticPressure_Pa);
+                out.baroBiasTruth_m = out.baroSensorTerm_m;
                 if (out.staticPressureLogged)
-                    out.atmosphereOffset_m = pressureAltitude_m(out.staticPressure_Pa) - alt;
+                {
+                    // Per row, then interpolated: each row's P and altitude are
+                    // one plant evaluation, so on a standard day each row's
+                    // term is zero to round-off and so is the interpolant
+                    // (interpolating P itself would leave its curvature).
+                    const double atmA = pressureAltitude_m(pa) - br.a->alt_m;
+                    const double atmB = pressureAltitude_m(pb) - br.b->alt_m;
+                    out.baroAtmosphereTerm_m = atmA + w * (atmB - atmA);
+                    out.baroBiasTruth_m += out.baroAtmosphereTerm_m;
+                }
+                out.baroBias = std::isfinite(out.baroBiasTruth_m);
             }
             return out;
         }
@@ -538,6 +576,15 @@ namespace Aetherion::Estimation::Replay {
                 L.accelBiasSigma_m_s2 /= c;
             }
 
+            for (const StateRow& r : res.states)
+            {
+                if (r.t < tHalf || !r.biasTruth.baroBias)
+                    continue;
+                ++S.baroTruthRows;
+                if (r.biasTruth.staticPressureLogged)
+                    ++S.baroTruthRowsWithAtmosphere;
+            }
+
             if (const int bp = cfg.offset(BlockId::BaroBias); bp >= 0 && !res.states.empty())
             {
                 const StateRow& last = res.states.back();
@@ -670,7 +717,7 @@ namespace Aetherion::Estimation::Replay {
                 row.truth.accelBias = bt.accelBias_m_s2;
             }
             if (bt.baroBias)
-                row.truth.baroBias = bt.baroBias_m;
+                row.truth.baroBias = bt.baroBiasTruth_m; // sensor + atmosphere terms
             if (bt.imuScaleMisalignment)
             {
                 row.hasLeak = true;
@@ -892,10 +939,14 @@ namespace Aetherion::Estimation::Replay {
             out << ",sigma_" << i;
         // Appended after the original columns so positional readers keep working.
         // A NEES or truth the log cannot support is an empty cell, never NaN.
+        // truth_bp is the baro-bias NEES truth, sensor + atmosphere terms (sensor
+        // only without out.P_Pa); the two terms follow at the end, the
+        // atmosphere's empty without out.P_Pa.
         out << ",est_bg_x,est_bg_y,est_bg_z,est_ba_x,est_ba_y,est_ba_z,est_bp"
                ",nees_gyro_bias,nees_accel_bias,nees_baro_bias,nees_full"
                ",truth_bg_x,truth_bg_y,truth_bg_z,truth_ba_x,truth_ba_y,truth_ba_z,truth_bp,truth_bp_pa"
-               ",leak_bg_x,leak_bg_y,leak_bg_z,leak_ba_x,leak_ba_y,leak_ba_z,nees_gyro_bias_leak,nees_accel_bias_leak\n";
+               ",leak_bg_x,leak_bg_y,leak_bg_z,leak_ba_x,leak_ba_y,leak_ba_z,nees_gyro_bias_leak,nees_accel_bias_leak"
+               ",truth_bp_sensor_m,truth_bp_atmosphere_m\n";
         auto opt = [&out](const OptionalNees& n) {
             out << ',';
             if (n.valid)
@@ -943,12 +994,14 @@ namespace Aetherion::Estimation::Replay {
             opt(s.neesFull);
             vec(s.biasTruth.imuBias, s.biasTruth.gyroBias_rad_s);
             vec(s.biasTruth.imuBias, s.biasTruth.accelBias_m_s2);
-            scalar(s.biasTruth.baroBias, s.biasTruth.baroBias_m);
+            scalar(s.biasTruth.baroBias, s.biasTruth.baroBiasTruth_m);
             scalar(s.biasTruth.baroBias, s.biasTruth.pressureBias_Pa);
             vec(s.hasLeak, s.gyroLeak_rad_s);
             vec(s.hasLeak, s.accelLeak_m_s2);
             opt(s.neesGyroBiasLeak);
             opt(s.neesAccelBiasLeak);
+            scalar(s.biasTruth.baroBias, s.biasTruth.baroSensorTerm_m);
+            scalar(s.biasTruth.baroBias && s.biasTruth.staticPressureLogged, s.biasTruth.baroAtmosphereTerm_m);
             out << '\n';
         }
     }
@@ -958,6 +1011,37 @@ namespace Aetherion::Estimation::Replay {
         out << "t_s,measurement,dim,nis\n";
         for (const UpdateRow& u : r.updates)
             out << u.t << ',' << measurementSpec(u.id).name << ',' << u.dim << ',' << u.nis << '\n';
+    }
+
+    /// What the baro-bias NEES was taken against (BiasTruth::baroBiasTruth_m),
+    /// and its two terms at the end of the run.
+    inline void writeBaroTruthSummary(std::ostream& out, const ReplaySummary& s)
+    {
+        if (!s.aneesBaroBias.valid)
+            return;
+        const std::size_t all = s.baroTruthRows, withAtm = s.baroTruthRowsWithAtmosphere;
+        if (withAtm == all)
+            out << "baro-bias truth: sensor + atmosphere terms, h_p(P + dp) - h = [h_p(P + dp) - h_p(P)] + [h_p(P) - "
+                   "h], P the plant's out.P_Pa, h its out.alt_m, geometric height\n";
+        else if (withAtm == 0)
+            out << "baro-bias truth: sensor term only, h_p(P + dp) - h_p(P) with P the standard atmosphere at out.alt_m; "
+                   "out.P_Pa not logged, so the atmosphere term h_p(P) - h is unknown and left out\n";
+        else
+            out << "baro-bias truth: sensor + atmosphere terms on " << withAtm << " of " << all
+                << " second-half rows; sensor term only on the rest, where out.P_Pa is not logged\n";
+
+        const BiasTruth& b = s.finalBiasTruth;
+        if (!s.hasFinalBaro || !b.baroBias)
+            return;
+        out << "baro bias at the end: estimate " << s.finalBaroEstimate_m << " +- " << s.finalBaroSigma_m
+            << " m, truth " << b.baroBiasTruth_m << " m = sensor " << b.baroSensorTerm_m << " m (drawn "
+            << b.pressureBias_Pa << " Pa at " << b.staticPressure_Pa << " Pa, "
+            << (b.staticPressureLogged ? "plant's pressure" : "standard atmosphere") << ")";
+        if (b.staticPressureLogged)
+            out << " + atmosphere " << b.baroAtmosphereTerm_m << " m (h_p(P) - h)";
+        else
+            out << "; atmosphere term unknown without out.P_Pa";
+        out << '\n';
     }
 
     /// Which NEES the summary reports, and the bias blocks' figures when the
@@ -1017,17 +1101,7 @@ namespace Aetherion::Estimation::Replay {
             anees("accel bias", L.accelBias);
             out << '\n';
         }
-        const BiasTruth& b = s.finalBiasTruth;
-        if (s.hasFinalBaro && b.baroBias)
-        {
-            out << "baro bias at the end: estimate " << s.finalBaroEstimate_m << " +- " << s.finalBaroSigma_m
-                << " m, drawn " << b.pressureBias_Pa << " Pa = " << b.baroBias_m << " m of pressure altitude at "
-                << b.staticPressure_Pa << " Pa (" << (b.staticPressureLogged ? "plant's pressure" : "standard atmosphere")
-                << ")";
-            if (b.staticPressureLogged)
-                out << "; truth atmosphere offset h_p(P) - altitude " << b.atmosphereOffset_m << " m";
-            out << '\n';
-        }
+        writeBaroTruthSummary(out, s);
     }
 
     inline void writeSummary(std::ostream& out, const ReplaySummary& s)

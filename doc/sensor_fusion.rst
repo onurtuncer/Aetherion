@@ -959,11 +959,29 @@ measurements.
   columns, published since Hemerion be5a19a), NEES is reported per block
   -- navigation core (9), gyro bias (3), accelerometer bias (3), barometer
   bias (1) -- and over the full state; without them, over the navigation
-  core only. The summary says which. The drawn pressure bias is converted
-  to metres of pressure altitude at the flight's ambient pressure,
-  :math:`h_p(P + \delta p) - h_p(P) \approx -\delta p / (\rho g)`; the
-  unmodelled IMU scale-factor error and misalignment are reported as the
-  equivalent bias they put on the readings, beside the bias NEES.
+  core only. The summary says which. The barometer-bias truth is the sum
+  of everything that separates the noise-free pressure altitude from the
+  geometric height (decided 2026-11-13): a *sensor term*, the drawn
+  pressure bias in metres at the flight's ambient pressure,
+  :math:`h_p(P + \delta p) - h_p(P) \approx -\delta p / (\rho g)`, and an
+  *atmosphere term*, :math:`h_p(P) - h` with :math:`P` the plant's
+  ``out.P_Pa`` and :math:`h` its ``out.alt_m``, so that
+  :math:`b_p = h_p(P + \delta p) - h`. :math:`h_p` is ``pressureAltitude_m``,
+  the inversion the filter applies to the reading, geopotential converted
+  to geometric height, so the atmosphere term is zero to round-off on a
+  standard day; on a non-standard day it is what the random walk on
+  :math:`b_p` is for. Both terms are reported separately (summary,
+  ``truth_bp_sensor_m`` and ``truth_bp_atmosphere_m`` in the states CSV);
+  without ``out.P_Pa`` the truth is the sensor term only and the summary
+  says so. On synthetic logs (2026-11-14, seeds 1--20, both conventions)
+  the standard-day results are unchanged by the atmosphere term to
+  3.4e-9 relative; on an ISA + 15 K day with the truth climbing 0.15 m/s
+  (atmosphere term −175.85 to −176.74 m over 120 s) the barometer-bias
+  ANEES is 0.99 mean (0.12 to 3.69), against 5.7e5 on every run with the
+  sensor term alone. A faster climb outruns the 0.05 m/√s bias walk (one
+  seed at 4.37 for 0.2 m/s), which is for step 7's tuning. The unmodelled IMU scale-factor error and misalignment are
+  reported as the equivalent bias they put on the readings, beside the bias
+  NEES.
 
 Other facts of the logs the harness relies on, from the same survey: the
 truth CSV is written by the host at one row per communication step (0.1 s

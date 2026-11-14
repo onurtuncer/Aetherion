@@ -355,6 +355,39 @@ Hemerion's `AETHERION_ROOT` at that prefix; its
       offset h_p(P) − altitude is 0 (standard day). Noted for step 7, not a
       convention claim: on these seeds RI's gyro-bias ANEES (1.71) is above
       LI's (1.05).
+- [x] Baro-bias truth = sensor + atmosphere (2026-11-13, maintainer
+      decision; implemented 2026-11-14 on `feat/nees-bias-blocks`). The
+      single baro state absorbs everything between the barometer's pressure
+      altitude and geometric truth, so its NEES truth is
+      `BiasTruth::baroBiasTruth_m` = sensor term h_p(P + δp) − h_p(P)
+      (`baroSensorTerm_m`) + atmosphere term h_p(P) − h (`baroAtmosphereTerm_m`)
+      = h_p(P + δp) − h, with P the plant's `out.P_Pa` and h its `out.alt_m`;
+      before, the truth was the sensor term only and the atmosphere offset a
+      side note. h_p is `pressureAltitude_m`, the filter's own inversion
+      including geopotential → geometric; it inverts the plant's standard
+      atmosphere to < 1e-9 relative at 0–84 km (tested per layer), and the
+      atmosphere term of the standard-day synthetic logs is < 1e-6 m on every
+      row (the truth log's 12 digits). The term is interpolated per row, not
+      through an interpolated P. Without `out.P_Pa` the truth falls back to
+      the sensor term (standard atmosphere for P) and the summary line
+      "baro-bias truth: …" says which. Both terms are diagnostics: summary
+      end-of-run line and `truth_bp_sensor_m`, `truth_bp_atmosphere_m`
+      appended to the states CSV (empty, never NaN, when unavailable);
+      `truth_bp` is now the sum. No change to `LogContract.h`, the blocks or
+      the hash. Standard day, seeds 1–20, both conventions: every per-block
+      ANEES and the final baro estimate unchanged to 3.4e-9 relative
+      (7.3e-10 absolute). New test, non-standard day: ISA + 15 K, the
+      synthetic truth climbing 0.15 m/s (`SyntheticTruth::climbRate`, default
+      0), atmosphere term −175.85 → −176.74 m over 120 s; seeds 1–20, baro
+      ANEES RI 0.99 mean (0.12–3.69), LI 0.99 (0.13–3.69), nav 1.29/1.09,
+      full 1.33/1.12, within the standard-day bounds. With the sum reverted
+      to the sensor term the same test fails: baro ANEES 5.7e5 on all 40
+      runs, 82 failed assertions. **For step 7:** the 0.05 m/√s walk lags a
+      drifting atmosphere term — at a 0.2 m/s climb (−0.010 m/s of drift)
+      one seed reaches 4.37 (bound 4), at 1 m/s the mean is about 14 — so a
+      climbing non-standard-day flight needs a larger baro walk than these
+      tests use, or a height-proportional model. A tuning question, not
+      settled here.
 - [ ] UKF as a cross-check, after the EKF is consistent.
 
 ### Step 7 — Tuning and observability
