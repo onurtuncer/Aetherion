@@ -11,7 +11,8 @@
 // The analytic truth the estimator tests share: a level circle in the LCI
 // frame at speed V and yaw rate psi_dot, with the bank swinging about the
 // coordinated value and the pitch oscillating, so that the attitude is
-// observable. In a *steady* coordinated turn the specific force sits along
+// observable. An optional constant climb rate (default zero, level) makes it
+// a helix, for tests that need the altitude to change. In a *steady* coordinated turn the specific force sits along
 // body -z and every tilt error is indistinguishable from a body-frame
 // accelerometer bias -- the filter then drifts along that direction with
 // NEES growing while GNSS keeps position and velocity perfect. Any
@@ -93,7 +94,8 @@ namespace Aetherion::Estimation::Testing {
 
         double V = 120.0;
         double psiDot = 0.05;                             // rad/s: a 126 s circle, V*psiDot = 6 m/s^2 (0.6 g) lateral
-        double h = 500.0;                                 // m above the LCI origin
+        double h = 500.0;                                 // m above the LCI origin at t = 0
+        double climbRate = 0.0;                           // m/s, constant; zero keeps every number of the level circle
         double bank0 = std::atan2(120.0 * 0.05, 9.80665); // coordinated: ~31.5 deg
         double bankAmp = 15.0 * kDeg, bankRate = 0.3;
         double pitchAmp = 8.0 * kDeg, pitchRate = 0.5;
@@ -109,8 +111,9 @@ namespace Aetherion::Estimation::Testing {
             EstimationState<double> x;
             x.X.R =
                 SO3::Exp_R(Vec3(0.0, 0.0, psi)) * SO3::Exp_R(Vec3(bank(t), 0.0, 0.0)) * SO3::Exp_R(Vec3(0.0, theta(t), 0.0));
-            x.X.v = Vec3(V * std::cos(psi), V * std::sin(psi), 0.0);
-            x.X.p = Vec3(V / psiDot * std::sin(psi), V / psiDot * (1.0 - std::cos(psi)), -h);
+            // 0.0 - climbRate, not -climbRate: +0.0 when level, as before the climb was added.
+            x.X.v = Vec3(V * std::cos(psi), V * std::sin(psi), 0.0 - climbRate);
+            x.X.p = Vec3(V / psiDot * std::sin(psi), V / psiDot * (1.0 - std::cos(psi)), -(h + climbRate * t));
             return x;
         }
 
