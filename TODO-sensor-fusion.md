@@ -10,8 +10,8 @@ readable from either. Brought in line with Hemerion `main` at `be5a19a`
 
 - `Aetherion/Estimation/{EKF,EstimationState,MeasurementModels,ProcessModel}.h`
   are four 15-line placeholders. There is no filter in the tree.
-- `vcpkg.json` lists `cppad` only. CppADCodeGen is not a dependency and nothing
-  generates C.
+- `vcpkg.json` lists `cppad`; CppADCodeGen is an optional host-side feature
+  (`codegen`, 2026-11-13) used only by a test fixture. No generator tool yet.
 - Truth and environment are done: `F16Plant`, `F16Autopilot`, `TwoStageRocket`
   FMUs with steady wind, Dryden turbulence and atmosphere offsets (v0.16.0).
 - Sensor models are **not** here and are not going to be. Hemerion owns all
@@ -328,7 +328,14 @@ leaves every body rate below one gyro count on case 11).
 
 ### Step 8 — Code generation and golden vectors
 
-- [ ] Add CppADCodeGen as a dependency (host-side generator only).
+- [x] Add CppADCodeGen as a dependency (host-side generator only). Done
+      2026-11-13 (branch `feat/cppadcg-compat`): vcpkg port `cppadcodegen`
+      2.5.0 at the pinned baseline, header-only, built against the pinned
+      `cppad` 20250000.3, as the manifest feature `codegen`. Selected by
+      `AETHERION_WITH_CPPADCG` (default OFF; ON in the `windows-base` and
+      `linux-base` presets); `CppADCodeGen::cppadcg` is linked only by
+      `tests/Estimation` targets, never by `Aetherion`, the examples or the
+      FMUs. Licence EPL-1.0 OR GPL-3.0 (tool only; see Things to check).
 - [ ] Generator tool: emits plain C for f, h and their Jacobians for one
       configuration, plus a generated header with the dimension, block offsets
       and the configuration hash.
@@ -347,9 +354,56 @@ leaves every body rate below one gyro count on case 11).
 - [x] `README.md` listed the EKF (and the auto-Jacobian EKF/UKF pipeline) as
       existing features; both now marked *(Planned)*.
 - [x] `vcpkg.json` version bumped from 0.12.0 to 0.16.0.
-- [ ] CppAD code-generation compatibility: build the dynamics templates with
+- [x] CppAD code-generation compatibility: build the dynamics templates with
       `CppAD::cg::CG<double>` early (before step 8) to surface `CondExp` or
-      Eigen interop problems. Half done 2026-10-13: the estimator templates
+      Eigen interop problems. Done 2026-11-13 (`feat/cppadcg-compat`):
+      `tests/Estimation/codegen/` tapes `propagate`/`error<C>`, `step<C>` and
+      the GNSS position, GNSS velocity and barometer models of
+      kNavBaroGnss16 with `AD<CG<double>>` in both conventions, writes plain
+      C for each map and its dense Jacobian at build time
+      (`generate_estimation_cg`, 10 maps, 2.5 MB of C, 0.3 s), compiles it
+      with the C compiler into `test_estimation_codegen`, and compares at two
+      points chosen so that every CondExp on the path takes both sides
+      (A: |w dt| ~ 1e-3, Logs at identity; B: |w dt| ~ 2e-6, a 0.25 rad
+      delta). Worst per-block relative difference, MSVC Release: values
+      1.4e-13 against double, Jacobians 1.1e-13 against `AD<double>` tapes
+      (bound 1e-12); d/d delta of the generated Jacobians reproduces H to
+      1.3e-16 and Phi to 2.8e-7 (RI) / 9.1e-7 (LI), the discretisation
+      order test_ProcessModel.cpp already established. Scaling one generated
+      Jacobian entry by 1 + 1e-10 fails 7 of the 40 checks. Generated code
+      has no NaN at either point, including the dead-branch derivative
+      terms, which the generated Jacobian evaluates and multiplies by a 0/1
+      indicator: the CondExp lesson below holds for the C as well.
+      Problems found and fixed:
+      (1) `Core::is_cppad_ad` matched `AD<double>` only, so `sqrt_s` etc.
+      called `std::` (compile error) and every `condexp_*` became a C++
+      ternary; it now matches every `AD<Base>`. With the ternary forced back
+      for AD<CG>, generation fails loudly (CppADCodeGen refuses the recorded
+      comparison: "GreaterThanOrZero cannot be called for non-parameters"),
+      it does not freeze a branch silently.
+      (2) `Spatial::skew` filled the matrix with the int literal 0, which
+      converts to `AD<CG<double>>` only through two user conversions; now
+      `S(0)`.
+      (3) `<cppad/cg.hpp>` 2.5.0 does not compile with MSVC 19.50: friend
+      template-ids of `CppAD::` functions inside `CppAD::cg::CG` (C2672),
+      `this->`-less dependent-base use in the gcc/clang compiler drivers
+      (C2065) and a raw string over MSVC's literal limit in the pthread pool
+      source (C2026). `tests/Estimation/codegen/CppADCodeGenCore.h` includes
+      the source-generation subset only, with using-declarations for the
+      friends; the model/dynamic-library part (Linux-only anyway) is left
+      out. The generator must keep this include, or a fixed upstream.
+      (4) CppADCodeGen must be included before any CppAD header, then
+      `cppad_eigen.hpp`, then `cppadcg_eigen.hpp` (NumTraits for AD<CG>).
+      (5) `LanguageC` prints constants with digits10 (15) by default; set to
+      17. With 15 the barometer maps lose an order (4e-17 to 6e-16); nothing
+      failed, but the generator should keep 17.
+      (6) `LanguageC` emits statements only; the temporaries array is
+      declared by the caller (`CodeHandler::getTemporaryVariableCount`).
+      Not hit: `ECEFToGeodeticWGS84` (double-only) is not on the h(x) path;
+      the models use `GeometricAltitude_m`, which tapes. Not verified on
+      Linux gcc. Open: the licence of CppADCodeGen output (tool is EPL-1.0 OR
+      GPL-3.0) before generated C goes to Hemerion.
+      Earlier record, 2026-10-13: the estimator templates
       tape with `CppAD::AD<double>` through Eigen (test_ProcessModel.cpp);
       `CG<double>` itself still untried (CppADCodeGen is not a dependency
       yet). One AD trap found and documented in `SO3::Log_R`: `acos` has an
