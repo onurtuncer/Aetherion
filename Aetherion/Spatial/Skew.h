@@ -21,10 +21,14 @@ namespace Aetherion::Spatial {
     template <class S>
     Eigen::Matrix<S, 3, 3> skew(const Eigen::Matrix<S, 3, 1>& v)
     {
+        // S(0), not 0: an int converts to CppAD::AD<double> through one
+        // user-defined conversion, but to AD<CppAD::cg::CG<double>> only
+        // through two, which the comma initialiser cannot take.
+        const S zero(0);
         Eigen::Matrix<S, 3, 3> M;
-        M << 0, -v(2), v(1),
-            v(2), 0, -v(0),
-            -v(1), v(0), 0;
+        M << zero, -v(2), v(1),
+            v(2), zero, -v(0),
+            -v(1), v(0), zero;
         return M;
     }
 
