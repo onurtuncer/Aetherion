@@ -19,13 +19,20 @@
 // imu_samples.csv and baro_samples.csv, plus the truth CSV and its
 // `.config` sidecar, or from streams (tests). Logs the configuration does
 // not use are not required to exist.
+//
+// The truth log's drawn sensor errors and the plant's static pressure and
+// temperature are optional (LogContract::OptionalTruth, kStaticPressure):
+// bound in groups when every column of a group is in the header, otherwise
+// absent, and the replay then reports NEES over the navigation core only.
 // ------------------------------------------------------------------------------
 
 #pragma once
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <filesystem>
+#include <initializer_list>
 #include <fstream>
 #include <istream>
 #include <limits>
@@ -73,12 +80,36 @@ namespace Aetherion::Estimation::Replay {
         double temperature_C = 0.0;
     };
 
+    /// The sensor FMUs' realised error terms on one truth row (optional truth
+    /// columns, LogContract::OptionalTruth). A group is present only when the
+    /// log has all of its columns and every one of them is a number on this
+    /// row; an absent group leaves its members at zero.
+    struct DrawnErrors
+    {
+        bool hasImuBias = false;
+        Eigen::Vector3d gyroBias_rad_s = Eigen::Vector3d::Zero(); ///< body (= sensor) frame
+        Eigen::Vector3d accelBias_m_s2 = Eigen::Vector3d::Zero(); ///< body (= sensor) frame
+
+        bool hasImuScaleMisalignment = false;
+        Eigen::Vector3d gyroScaleError = Eigen::Vector3d::Zero();        ///< scale - 1, per axis
+        Eigen::Vector3d accelScaleError = Eigen::Vector3d::Zero();       ///< scale - 1, per axis
+        Eigen::Vector3d gyroMisalignment_rad = Eigen::Vector3d::Zero();  ///< the triad reads (I + skew(m)) truth
+        Eigen::Vector3d accelMisalignment_rad = Eigen::Vector3d::Zero(); ///< likewise
+
+        bool hasPressureBias = false;
+        double pressureBias_Pa = 0.0;     ///< added to the ambient pressure
+        double temperatureBias_C = 0.0;   ///< reported temperature only; not used by the filter
+        double staticPressure_Pa = 0.0;   ///< plant's ambient pressure; NaN if not logged
+        double staticTemperature_K = 0.0; ///< plant's ambient temperature; NaN if not logged
+    };
+
     struct TruthRecord
     {
         double time = 0.0; ///< simulation time [s]
         double lat_deg = 0.0, lon_deg = 0.0, alt_m = 0.0;
         Eigen::Vector3d vNed_m_s;
         double yaw_rad = 0.0, pitch_rad = 0.0, roll_rad = 0.0;
+        DrawnErrors drawn; ///< optional columns; see DrawnErrors
     };
 
     struct RunConfiguration
@@ -170,9 +201,83 @@ namespace Aetherion::Estimation::Replay {
         return out;
     }
 
+    namespace detail {
+        /// The optional drawn-error columns, bound once per table: each group is
+        /// read only when every one of its columns is in the header.
+        struct DrawnColumns
+        {
+            bool imuBias = false, imuScaleMisalignment = false, pressureBias = false, staticAir = false;
+
+            explicit DrawnColumns(const CsvTable& t)
+            {
+                namespace D = LogContract::OptionalTruth;
+                auto all = [&t](std::initializer_list<std::string_view> names) {
+                    return std::all_of(names.begin(), names.end(), [&t](std::string_view n) { return t.has(n); });
+                };
+                imuBias = all({ D::kAccelBiasX, D::kAccelBiasY, D::kAccelBiasZ, D::kGyroBiasX, D::kGyroBiasY, D::kGyroBiasZ });
+                imuScaleMisalignment = all({ D::kAccelScaleErrorX, D::kAccelScaleErrorY, D::kAccelScaleErrorZ,
+                    D::kGyroScaleErrorX, D::kGyroScaleErrorY, D::kGyroScaleErrorZ, D::kAccelMisalignmentX,
+                    D::kAccelMisalignmentY, D::kAccelMisalignmentZ, D::kGyroMisalignmentX, D::kGyroMisalignmentY,
+                    D::kGyroMisalignmentZ });
+                pressureBias = all({ D::kPressureBias, D::kTemperatureBias });
+                staticAir = all({ D::kStaticPressure, D::kStaticTemperature });
+            }
+
+            [[nodiscard]] DrawnErrors read(const CsvTable& t, std::size_t i) const
+            {
+                namespace D = LogContract::OptionalTruth;
+                auto vec = [&](std::string_view x, std::string_view y, std::string_view z) {
+                    return Eigen::Vector3d(t.at(i, x), t.at(i, y), t.at(i, z));
+                };
+                DrawnErrors d;
+                if (imuBias)
+                {
+                    d.accelBias_m_s2 = vec(D::kAccelBiasX, D::kAccelBiasY, D::kAccelBiasZ);
+                    d.gyroBias_rad_s = vec(D::kGyroBiasX, D::kGyroBiasY, D::kGyroBiasZ);
+                    d.hasImuBias = d.accelBias_m_s2.allFinite() && d.gyroBias_rad_s.allFinite();
+                    if (!d.hasImuBias)
+                    {
+                        d.accelBias_m_s2.setZero();
+                        d.gyroBias_rad_s.setZero();
+                    }
+                }
+                if (imuScaleMisalignment)
+                {
+                    d.accelScaleError = vec(D::kAccelScaleErrorX, D::kAccelScaleErrorY, D::kAccelScaleErrorZ);
+                    d.gyroScaleError = vec(D::kGyroScaleErrorX, D::kGyroScaleErrorY, D::kGyroScaleErrorZ);
+                    d.accelMisalignment_rad = vec(D::kAccelMisalignmentX, D::kAccelMisalignmentY, D::kAccelMisalignmentZ);
+                    d.gyroMisalignment_rad = vec(D::kGyroMisalignmentX, D::kGyroMisalignmentY, D::kGyroMisalignmentZ);
+                    d.hasImuScaleMisalignment = d.accelScaleError.allFinite() && d.gyroScaleError.allFinite() &&
+                                                d.accelMisalignment_rad.allFinite() && d.gyroMisalignment_rad.allFinite();
+                    if (!d.hasImuScaleMisalignment)
+                    {
+                        d.accelScaleError.setZero();
+                        d.gyroScaleError.setZero();
+                        d.accelMisalignment_rad.setZero();
+                        d.gyroMisalignment_rad.setZero();
+                    }
+                }
+                if (pressureBias)
+                {
+                    d.pressureBias_Pa = t.at(i, D::kPressureBias);
+                    d.temperatureBias_C = t.at(i, D::kTemperatureBias);
+                    d.hasPressureBias = std::isfinite(d.pressureBias_Pa);
+                    if (!d.hasPressureBias)
+                        d.pressureBias_Pa = 0.0;
+                    if (!std::isfinite(d.temperatureBias_C))
+                        d.temperatureBias_C = 0.0;
+                }
+                d.staticPressure_Pa = staticAir ? t.at(i, D::kStaticPressure) : std::numeric_limits<double>::quiet_NaN();
+                d.staticTemperature_K = staticAir ? t.at(i, D::kStaticTemperature) : std::numeric_limits<double>::quiet_NaN();
+                return d;
+            }
+        };
+    } // namespace detail
+
     [[nodiscard]] inline std::vector<TruthRecord> truthRecords(const CsvTable& t)
     {
         namespace C = LogContract::Truth;
+        const detail::DrawnColumns drawn(t);
         std::vector<TruthRecord> out;
         out.reserve(t.rows.size());
         for (std::size_t i = 0; i < t.rows.size(); ++i)
@@ -186,6 +291,7 @@ namespace Aetherion::Estimation::Replay {
             r.yaw_rad = t.at(i, C::kYaw);
             r.pitch_rad = t.at(i, C::kPitch);
             r.roll_rad = t.at(i, C::kRoll);
+            r.drawn = drawn.read(t, i);
             out.push_back(r);
         }
         return out;

@@ -15,7 +15,9 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 
+#include <algorithm>
 #include <cmath>
+#include <limits>
 #include <numbers>
 #include <random>
 #include <sstream>
@@ -229,24 +231,76 @@ namespace {
         double hostOffset = 1000.0, hostScale = 1.0 + 2e-5, gpsLatency = 0.2;
     };
 
-    SyntheticLogs writeSyntheticLogs(double T, unsigned seed)
+    /// Hemerion's drawn sensor errors (its step 3) in the synthetic logs: the
+    /// IMU biases are drawn per seed from the filter's prior and walk at the
+    /// filter's densities, the barometer carries a constant pressure bias in
+    /// pascals added to the pressure (Hemerion's BMP390 model), and the truth
+    /// log carries every drawn-error column plus the plant's static pressure
+    /// and temperature, as Hemerion writes them. Scale error and misalignment
+    /// are logged as zero; their equivalent bias is tested on its own.
+    ///
+    /// The day: the plant's atmosphere (the truth log's P and T, and the
+    /// pressure the barometer reads) may be offset from the standard one, and
+    /// the truth may climb, so that the atmosphere term of the baro-bias truth,
+    /// h_p(P) - h, is not zero and changes along the flight. The defaults are a
+    /// standard day on the level circle.
+    struct DrawnSpec
+    {
+        double gyroBiasSigma = 0.005, accelBiasSigma = 0.1, pressureBiasSigma_Pa = 100.0;
+        double gyroBiasWalk = 2e-6, accelBiasWalk = 2e-5;         ///< [unit/sqrt(s)], as ProcessNoise
+        Aetherion::Environment::AtmosphereOffsets day{};          ///< the plant's atmosphere
+        double climbRate_m_s = 0.0;                               ///< SyntheticTruth::climbRate
+        std::string_view dirName = "aetherion_replay_test_drawn"; ///< under the temp directory; one per test case
+    };
+
+    constexpr std::string_view kDrawnTruthColumns =
+        ", f16::out.P_Pa[REAL], f16::out.T_K[REAL], imu::accel_bias_x_mps2[REAL], imu::accel_bias_y_mps2[REAL], "
+        "imu::accel_bias_z_mps2[REAL], imu::gyro_bias_x_rad_s[REAL], imu::gyro_bias_y_rad_s[REAL], "
+        "imu::gyro_bias_z_rad_s[REAL], imu::accel_scale_error_x[REAL], imu::accel_scale_error_y[REAL], "
+        "imu::accel_scale_error_z[REAL], imu::gyro_scale_error_x[REAL], imu::gyro_scale_error_y[REAL], "
+        "imu::gyro_scale_error_z[REAL], imu::accel_misalignment_x_rad[REAL], imu::accel_misalignment_y_rad[REAL], "
+        "imu::accel_misalignment_z_rad[REAL], imu::gyro_misalignment_x_rad[REAL], imu::gyro_misalignment_y_rad[REAL], "
+        "imu::gyro_misalignment_z_rad[REAL], baro::pressure_bias_pa[REAL], baro::temperature_bias_c[REAL]";
+
+    SyntheticLogs writeSyntheticLogs(double T, unsigned seed, const DrawnSpec* drawn = nullptr)
     {
         using Aetherion::Estimation::Testing::SyntheticTruth;
         const double lat0 = 36.0192 * kDeg, lon0 = -75.6744 * kDeg, alt0_ft = 10013.0;
         const LciFrame<double> frame = LciFrame<double>::FromGeodetic(lat0, lon0, alt0_ft * 0.3048, 0.0);
         const MeasurementModels<double> meas(frame);
-        const SyntheticTruth truth;
+        SyntheticTruth truth;
+        if (drawn)
+            truth.climbRate = drawn->climbRate_m_s;
 
         SyntheticLogs out;
-        out.dir = std::filesystem::temp_directory_path() / "aetherion_replay_test";
+        // Separate directories: CTest runs the test cases as separate processes, possibly at once.
+        out.dir = std::filesystem::temp_directory_path() / (drawn ? drawn->dirName : "aetherion_replay_test");
         std::filesystem::create_directories(out.dir);
         out.truth = out.dir / "f16_truth.csv";
 
         Aetherion::Estimation::Testing::PortableGaussian N01(seed);
-        const Eigen::Vector3d gyroBias(0.002, -0.001, 0.0015), accelBias(0.05, -0.02, 0.03);
-        const double baroBias = 12.0, gyroNd = 5e-5, accelNd = 7e-4, sigH = 1.5, sigV = 3.0, sigVel = 0.1, sigBaro = 1.0;
+        Eigen::Vector3d gyroBias(0.002, -0.001, 0.0015), accelBias(0.05, -0.02, 0.03);
+        double baroBias = 12.0;
+        const double gyroNd = 5e-5, accelNd = 7e-4, sigH = 1.5, sigV = 3.0, sigVel = 0.1, sigBaro = 1.0;
         const double dt = 0.01;
+        // The drawn errors come from their own stream, so the sensor noise of a
+        // seed is the same sequence with or without them.
+        Aetherion::Estimation::Testing::PortableGaussian D01(seed + 7919U);
+        double pressureBias_Pa = 0.0;
+        if (drawn)
+        {
+            gyroBias = D01.vector(drawn->gyroBiasSigma, drawn->gyroBiasSigma, drawn->gyroBiasSigma);
+            accelBias = D01.vector(drawn->accelBiasSigma, drawn->accelBiasSigma, drawn->accelBiasSigma);
+            pressureBias_Pa = drawn->pressureBiasSigma_Pa * D01();
+            baroBias = 0.0; // the bias is in the pressure instead
+        }
         auto host = [&](double t) { return out.hostOffset + out.hostScale * t + 20e-6 * N01(); };
+        // The plant's atmosphere: the standard one through the one-argument
+        // form (bit-identical to the logs written before the day was added).
+        auto atmosphere = [drawn](double alt) {
+            namespace Env = Aetherion::Environment;
+            return (drawn && !drawn->day.isStandard()) ? Env::US1976Atmosphere(alt, drawn->day) : Env::US1976Atmosphere(alt);
+        };
 
         // Geodetic view of the LCI truth at t.
         auto geodetic = [&](double t, double& lat, double& lon, double& h, Eigen::Vector3d& vNed, Eigen::Vector3d& euler) {
@@ -272,7 +326,7 @@ namespace {
                "horizontal_accuracy_m,vertical_accuracy_m,num_satellites,fix_type,vel_north_mps,vel_east_mps,vel_down_mps,"
                "speed_accuracy_mps\n";
         baro << std::setprecision(12) << kBaroHeader << "\n";
-        tr << std::setprecision(12) << kTruthHeader << "\n";
+        tr << std::setprecision(12) << kTruthHeader << (drawn ? kDrawnTruthColumns : std::string_view{}) << "\n";
         sc << "check_case=11\nlat0_deg=" << std::setprecision(12) << lat0 / kDeg << "\nlon0_deg=" << lon0 / kDeg
            << "\nalt0_ft=" << alt0_ft << "\ngps_latency_s=" << out.gpsLatency << "\nrealtime_factor=0\n";
 
@@ -281,6 +335,11 @@ namespace {
         for (int k = 0; k <= n; ++k)
         {
             const double t = k * dt;
+            if (drawn && k > 0) // the biases walk; the truth row logs the value this step's sample uses
+            {
+                gyroBias += D01.vector(1.0, 1.0, 1.0) * drawn->gyroBiasWalk * std::sqrt(dt);
+                accelBias += D01.vector(1.0, 1.0, 1.0) * drawn->accelBiasWalk * std::sqrt(dt);
+            }
             // IMU: the instantaneous reading at t (no mid-step trick: that is the harness's job).
             const ImuSample<double> ideal = truth.imu(t, frame);
             const Eigen::Vector3d g =
@@ -294,7 +353,15 @@ namespace {
             Eigen::Vector3d vNed, euler;
             geodetic(t, lat, lon, h, vNed, euler);
             tr << k << ", " << t << ", " << h << ", " << lat / kDeg << ", " << lon / kDeg << ", " << vNed[0] << ", " << vNed[1]
-               << ", " << vNed[2] << ", " << euler[0] << ", " << euler[1] << ", " << euler[2] << ", 0.0, false\n";
+               << ", " << vNed[2] << ", " << euler[0] << ", " << euler[1] << ", " << euler[2] << ", 0.0, false";
+            if (drawn)
+            {
+                const auto air = atmosphere(h);
+                tr << ", " << air.p << ", " << air.T << ", " << accelBias[0] << ", " << accelBias[1] << ", " << accelBias[2]
+                   << ", " << gyroBias[0] << ", " << gyroBias[1] << ", " << gyroBias[2]
+                   << ", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, " << pressureBias_Pa << ", 0.25";
+            }
+            tr << "\n";
 
             if (k % 20 == 0) // 5 Hz fix, delivered gpsLatency later on the host clock
             {
@@ -312,7 +379,7 @@ namespace {
             }
             if (k % 10 == 0) // 10 Hz barometer: pressure of (h + bias + noise)
             {
-                const double p = Aetherion::Environment::US1976Atmosphere(h + baroBias + sigBaro * N01()).p;
+                const double p = atmosphere(h + baroBias + sigBaro * N01()).p + pressureBias_Pa;
                 baro << baroIndex++ << ',' << t << ',' << host(t) << ',' << p << ",15.0\n";
             }
         }
@@ -381,6 +448,14 @@ TEST_CASE("Replay: synthetic Hemerion logs through the harness, both conventions
         CHECK(s.tiltRms_deg < 1.5);
         CHECK(s.yawRms_deg < 3.0);
 
+        // This truth log has no drawn-error columns: nav-core NEES only, and the summary says so.
+        CHECK_FALSE(s.aneesGyroBias.valid);
+        CHECK_FALSE(s.aneesAccelBias.valid);
+        CHECK_FALSE(s.aneesBaroBias.valid);
+        CHECK_FALSE(s.aneesFull.valid);
+        CHECK_FALSE(s.leak.valid);
+        CHECK(text.str().find("navigation core only") != std::string::npos);
+
         // The output writers run and agree with the rows.
         std::ostringstream states, updates;
         writeStates(states, r, kNavBaroGnss16);
@@ -389,4 +464,355 @@ TEST_CASE("Replay: synthetic Hemerion logs through the harness, both conventions
         CHECK(updates.str().find("gnss_position") != std::string::npos);
         CHECK(r.states.size() == 12001);
     }
+}
+
+TEST_CASE("Drawn errors: pressure bias in metres, unmodelled IMU terms as equivalent bias", "[estimation][replay][bias]")
+{
+    namespace Env = Aetherion::Environment;
+    // Hemerion's check (its step 3): -44.7 Pa drawn at case 11's altitude
+    // (alt0 10013 ft) read as +5.04 m by the filter's bias state. A negative
+    // pressure bias is a positive pressure-altitude bias.
+    const double h = 10013.0 * 0.3048;
+    const auto air = Env::US1976Atmosphere(h);
+    const double db = pressureBiasToMetres(-44.7, air.p);
+    CHECK(db == Catch::Approx(5.04).margin(0.01));
+    // and it is -dp / (rho g) at the flight's pressure, rho = P / (R T), g at h.
+    constexpr double R = 287.05287, g0 = 9.80665, Re = 6356766.0;
+    const double g = g0 * (Re / (Re + h)) * (Re / (Re + h));
+    CHECK(db == Catch::Approx(44.7 / (air.p / (R * air.T) * g)).epsilon(1e-3));
+    CHECK(pressureBiasToMetres(30.0, air.p) < 0.0);
+    CHECK(pressureBiasToMetres(0.0, air.p) == 0.0);
+
+    // h_p is the exact inverse of the plant's standard atmosphere, geopotential
+    // to geometric included, in every layer: a perfect sensor on a standard day
+    // has an atmosphere term h_p(P) - h of zero to round-off.
+    for (const double alt : { 0.0, 500.0, h, 11000.0, 15000.0, 20000.0, 32000.0, 47000.0, 51000.0, 71000.0, 84000.0 })
+    {
+        INFO("altitude " << alt << " m");
+        CHECK(std::abs(pressureAltitude_m(Env::US1976Atmosphere(alt).p) - alt) < 1e-9 * std::max(1.0, alt));
+    }
+    // Dropping the geopotential-to-geometric step would be off by about h^2 / Re:
+    // 1.5 m at case 11's altitude, 63 m at 20 km, far outside that tolerance.
+
+    // The baro-bias truth from two truth rows: sensor term + atmosphere term,
+    // h_p(P + dp) - h_p(P) + h_p(P) - h = h_p(P + dp) - h. On an ISA + 15 K day
+    // at h the plant's pressure is higher than standard, so the barometer reads
+    // low: a negative atmosphere term, some 2 % of the height above sea level.
+    {
+        const Env::AtmosphereOffsets hot{ .deltaT_K = 15.0, .deltaP_sl_Pa = 0.0 };
+        auto row = [&](double t, double alt, const Env::AtmosphereOffsets& day, bool logP) {
+            TruthRecord r;
+            r.time = t;
+            r.alt_m = alt;
+            r.drawn.hasPressureBias = true;
+            r.drawn.pressureBias_Pa = -44.7;
+            r.drawn.staticPressure_Pa = logP ? Env::US1976Atmosphere(alt, day).p : std::numeric_limits<double>::quiet_NaN();
+            return r;
+        };
+        const std::vector<TruthRecord> hotDay{ row(0.0, h, hot, true), row(1.0, h + 10.0, hot, true) };
+        const BiasTruth a = detail::interpolateBiasTruth(hotDay, 0.0);
+        REQUIRE(a.baroBias);
+        CHECK(a.staticPressureLogged);
+        CHECK(a.baroSensorTerm_m == pressureBiasToMetres(-44.7, a.staticPressure_Pa));
+        CHECK(a.baroAtmosphereTerm_m == Catch::Approx(pressureAltitude_m(a.staticPressure_Pa) - h).margin(1e-12));
+        CHECK(a.baroBiasTruth_m == a.baroSensorTerm_m + a.baroAtmosphereTerm_m);
+        CHECK(a.baroBiasTruth_m == Catch::Approx(pressureAltitude_m(a.staticPressure_Pa - 44.7) - h).margin(1e-9));
+        CHECK(a.baroAtmosphereTerm_m < -0.03 * h);
+        CHECK(a.baroAtmosphereTerm_m > -0.08 * h);
+        // Halfway, the two rows' terms interpolated.
+        const BiasTruth m = detail::interpolateBiasTruth(hotDay, 0.5);
+        const double atm1 = pressureAltitude_m(Env::US1976Atmosphere(h + 10.0, hot).p) - (h + 10.0);
+        CHECK(m.baroAtmosphereTerm_m == Catch::Approx(0.5 * (a.baroAtmosphereTerm_m + atm1)).margin(1e-12));
+
+        // Standard day: the atmosphere term is zero to round-off and the truth is the sensor term.
+        const std::vector<TruthRecord> stdDay{ row(0.0, h, Env::AtmosphereOffsets{}, true) };
+        const BiasTruth s = detail::interpolateBiasTruth(stdDay, 0.0);
+        CHECK(std::abs(s.baroAtmosphereTerm_m) < 1e-9);
+        CHECK(s.baroBiasTruth_m == Catch::Approx(5.04).margin(0.01));
+
+        // Without out.P_Pa: the sensor term at the standard atmosphere's pressure, nothing else.
+        const std::vector<TruthRecord> noP{ row(0.0, h, hot, false) };
+        const BiasTruth n = detail::interpolateBiasTruth(noP, 0.0);
+        REQUIRE(n.baroBias);
+        CHECK_FALSE(n.staticPressureLogged);
+        CHECK(n.staticPressure_Pa == Env::US1976Atmosphere(h).p);
+        CHECK(n.baroAtmosphereTerm_m == 0.0);
+        CHECK(n.baroBiasTruth_m == n.baroSensorTerm_m);
+    }
+
+    // y = diag(1 + s) (I + skew(m)) x + b: the equivalent bias is exactly y - b - x.
+    const Eigen::Vector3d s(2e-3, -1e-3, 3e-3), m(1e-3, -2e-3, 0.5e-3), x(3.0, -1.0, -9.5), b(0.02, -0.01, 0.03);
+    Eigen::Matrix3d K;
+    K << 1.0, -m.z(), m.y(), m.z(), 1.0, -m.x(), -m.y(), m.x(), 1.0;
+    const Eigen::Vector3d y = (Eigen::Vector3d::Ones() + s).asDiagonal() * (K * x) + b;
+    CHECK((equivalentImuBias(s, m, y, b) - (y - b - x)).norm() < 1e-12);
+    // First order: s .* x + m x x. Misalignment about z couples x into y with
+    // the skew's sign; what is left on x is second order, m_z^2 |x|.
+    const Eigen::Vector3d onlyMz = equivalentImuBias(Eigen::Vector3d::Zero(), Eigen::Vector3d(0.0, 0.0, 1e-3),
+        Eigen::Vector3d(10.0, 0.0, 0.0), Eigen::Vector3d::Zero());
+    CHECK(onlyMz[1] == Catch::Approx(1e-2).epsilon(1e-5));
+    CHECK(std::abs(onlyMz[0]) < 2e-5);
+    CHECK(onlyMz[2] == 0.0);
+    CHECK(equivalentImuBias(Eigen::Vector3d::Zero(), Eigen::Vector3d::Zero(), y, b).norm() == 0.0);
+}
+
+TEST_CASE("Truth log: drawn-error columns are optional and bound as groups", "[estimation][replay][logs][bias]")
+{
+    const std::string header = std::string(kTruthHeader) + std::string(kDrawnTruthColumns);
+    std::stringstream full;
+    full << header << "\n"
+         << "0, 0.0, 3052.0, 36.0192, -75.6744, 121.9, 121.9, 0.0, 0.7854, 0.046, 0.0, 0.0, false, 69650.0, 268.3, "
+            "0.01, -0.02, 0.03, 1e-3, -2e-3, 3e-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -44.7, 0.2\n";
+    const std::vector<TruthRecord> r = truthRecords(readCsv(full, LogContract::Log::Truth, kGnssPosBaro, "truth"));
+    REQUIRE(r.size() == 1);
+    CHECK(r[0].drawn.hasImuBias);
+    CHECK(r[0].drawn.accelBias_m_s2[1] == Catch::Approx(-0.02));
+    CHECK(r[0].drawn.gyroBias_rad_s[2] == Catch::Approx(3e-3));
+    CHECK(r[0].drawn.hasImuScaleMisalignment);
+    CHECK(r[0].drawn.hasPressureBias);
+    CHECK(r[0].drawn.pressureBias_Pa == Catch::Approx(-44.7));
+    CHECK(r[0].drawn.staticPressure_Pa == Catch::Approx(69650.0));
+
+    // One column of the IMU bias group missing: the group is absent, the log still loads.
+    std::string partial = header;
+    partial.replace(partial.find("imu::gyro_bias_z_rad_s"), std::string_view("imu::gyro_bias_z_rad_s").size(), "imu::other");
+    std::stringstream p;
+    p << partial << "\n"
+      << "0, 0.0, 3052.0, 36.0192, -75.6744, 121.9, 121.9, 0.0, 0.7854, 0.046, 0.0, 0.0, false, 69650.0, 268.3, "
+         "0.01, -0.02, 0.03, 1e-3, -2e-3, 3e-3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -44.7, 0.2\n";
+    const std::vector<TruthRecord> q = truthRecords(readCsv(p, LogContract::Log::Truth, kGnssPosBaro, "truth"));
+    CHECK_FALSE(q[0].drawn.hasImuBias);
+    CHECK(q[0].drawn.gyroBias_rad_s.isZero());
+    CHECK(q[0].drawn.hasPressureBias);
+
+    // Without any of them: nothing drawn, the plant's pressure not logged.
+    std::stringstream none;
+    none << kTruthHeader << "\n0, 0.0, 3052.0, 36.0192, -75.6744, 121.9, 121.9, 0.0, 0.7854, 0.046, 0.0, 0.0, false\n";
+    const std::vector<TruthRecord> n = truthRecords(readCsv(none, LogContract::Log::Truth, kGnssPosBaro, "truth"));
+    CHECK_FALSE(n[0].drawn.hasImuBias);
+    CHECK_FALSE(n[0].drawn.hasImuScaleMisalignment);
+    CHECK_FALSE(n[0].drawn.hasPressureBias);
+    CHECK(std::isnan(n[0].drawn.staticPressure_Pa));
+}
+
+namespace {
+    /// The filter set-up of the per-block cases.
+    ReplayOptions drawnReplayOptions(const DrawnSpec& spec)
+    {
+        ReplayOptions opt;
+        opt.noise = ProcessNoise<double>{ 5e-5, 7e-4, 2e-6, 2e-5, 0.05 };
+        opt.initialError = Eigen::VectorXd::Zero(16);
+        opt.initialError.segment<3>(0) = Eigen::Vector3d(0.1 * kDeg, -0.1 * kDeg, 0.2 * kDeg);
+        opt.initialError.segment<3>(6) = Eigen::Vector3d(5.0, -4.0, 3.0);
+        opt.initialSigma = Eigen::VectorXd(16);
+        // Same as the nav-core test; the bias priors are the sigmas the biases are drawn with
+        // (the baro prior, 20 m, is wider than the 100 Pa ~ 12 m draw).
+        opt.initialSigma << 2.0 * kDeg, 2.0 * kDeg, 5.0 * kDeg, 2.0, 2.0, 2.0, 30.0, 30.0, 30.0, spec.gyroBiasSigma,
+            spec.gyroBiasSigma, spec.gyroBiasSigma, spec.accelBiasSigma, spec.accelBiasSigma, spec.accelBiasSigma, 20.0;
+        return opt;
+    }
+} // namespace
+
+TEST_CASE("Replay: NEES per block against the drawn errors, seeds 1-20, both conventions", "[estimation][replay][e2e][bias]")
+{
+    const DrawnSpec spec;
+    const ReplayOptions opt = drawnReplayOptions(spec);
+
+    // Over seeds 1-20 (2026-11-13, MSVC 19.50 Release), second-half ANEES / dim:
+    //                 nav core     gyro bias    accel bias   baro bias    full (16)
+    //   RI  mean      1.25         1.71         1.21         0.70         1.30
+    //       range     0.52-2.71    0.32-7.03    0.16-5.52    0.12-2.26    0.73-3.59
+    //   LI  mean      1.05         1.05         1.13         0.70         1.09
+    //       range     0.38-2.12    0.22-3.63    0.16-5.82    0.12-2.29    0.51-2.26
+    // One seed's time average of a slowly varying 3-dof error is close to one
+    // chi-square draw, so the per-seed bounds are loose and the mean over the
+    // seeds carries the claim. The baro block sits below 1 by design: the
+    // drawn pressure bias is constant, the filter's bias walks (0.05 m/sqrt(s)).
+    // A flipped IMU-bias sign or a wrong-signed pressure conversion puts the
+    // affected block in the hundreds (checked when this test was written).
+    for (const ErrorConvention c : { ErrorConvention::RightInvariant, ErrorConvention::LeftInvariant })
+    {
+        double sumG = 0.0, sumA = 0.0, sumB = 0.0, sumFull = 0.0;
+        for (unsigned seed = 1; seed <= 20; ++seed)
+        {
+            const SyntheticLogs files = writeSyntheticLogs(120.0, seed, &spec);
+            const LogSet logs = loadLogs(files.dir, files.truth, kNavBaroGnss16);
+            const ReplayResult r = replay(c, logs, kNavBaroGnss16, opt);
+            const ReplaySummary& s = r.summary;
+            std::ostringstream text;
+            writeSummary(text, s);
+            INFO("seed " << seed << ", " << toString(c) << "\n"
+                         << text.str());
+
+            REQUIRE(s.aneesGyroBias.valid);
+            REQUIRE(s.aneesAccelBias.valid);
+            REQUIRE(s.aneesBaroBias.valid);
+            REQUIRE(s.aneesFull.valid);
+            CHECK(text.str().find("navigation core (9), gyro bias (3), accel bias (3), baro bias (1), full state") !=
+                  std::string::npos);
+
+            // The nav-core bound of the test above, unchanged, on every seed.
+            CHECK(s.aneesNav > 0.3);
+            CHECK(s.aneesNav < 3.0);
+            CHECK(s.aneesGyroBias.anees < 10.0);
+            CHECK(s.aneesAccelBias.anees < 8.0);
+            CHECK(s.aneesBaroBias.anees < 4.0);
+            CHECK(s.aneesFull.anees > 0.3);
+            CHECK(s.aneesFull.anees < 5.0);
+
+            // Scale and misalignment are logged as zero: no leak, and the NEES
+            // with the leak added is the NEES.
+            CHECK(s.leak.valid);
+            CHECK(s.leak.gyroMax_rad_s.norm() == 0.0);
+            CHECK(s.leak.accelMax_m_s2.norm() == 0.0);
+            CHECK(s.leak.gyroBias.anees == Catch::Approx(s.aneesGyroBias.anees));
+            CHECK(s.leak.accelBias.anees == Catch::Approx(s.aneesAccelBias.anees));
+
+            sumG += s.aneesGyroBias.anees;
+            sumA += s.aneesAccelBias.anees;
+            sumB += s.aneesBaroBias.anees;
+            sumFull += s.aneesFull.anees;
+
+            if (seed == 1)
+            {
+                // Per-step output: every block's NEES and the truth it was taken against.
+                std::ostringstream states;
+                writeStates(states, r, kNavBaroGnss16);
+                const std::string csv = states.str();
+                CHECK(csv.find(",nees_gyro_bias,nees_accel_bias,nees_baro_bias,nees_full,") != std::string::npos);
+                CHECK(csv.find(",nees_accel_bias_leak,truth_bp_sensor_m,truth_bp_atmosphere_m\n") != std::string::npos);
+                CHECK(csv.find("nan") == std::string::npos);
+                CHECK(r.states.back().neesFull.valid);
+                // The sensor term is the drawn pressure bias at the flight's pressure, in metres.
+                const BiasTruth& bt = r.states.back().biasTruth;
+                CHECK(bt.staticPressureLogged);
+                CHECK(bt.baroSensorTerm_m == Catch::Approx(pressureBiasToMetres(bt.pressureBias_Pa, bt.staticPressure_Pa)));
+                CHECK(bt.baroSensorTerm_m * bt.pressureBias_Pa < 0.0);
+                // A standard day: the atmosphere term is zero to round-off on every
+                // row (the truth log's 12 significant digits), so the truth is the
+                // sensor term.
+                double maxAtmosphere = 0.0;
+                for (const StateRow& row : r.states)
+                    maxAtmosphere = std::max(maxAtmosphere, std::abs(row.biasTruth.baroAtmosphereTerm_m));
+                CHECK(maxAtmosphere < 1e-6);
+                CHECK(bt.baroBiasTruth_m == bt.baroSensorTerm_m + bt.baroAtmosphereTerm_m);
+                CHECK(r.states.back().truth.baroBias == bt.baroBiasTruth_m);
+                CHECK(text.str().find("baro-bias truth: sensor + atmosphere terms") != std::string::npos);
+            }
+        }
+        INFO(toString(c) << " mean ANEES over seeds 1-20: gyro " << sumG / 20.0 << ", accel " << sumA / 20.0
+                         << ", baro " << sumB / 20.0 << ", full " << sumFull / 20.0);
+        CHECK(sumG / 20.0 > 0.4);
+        CHECK(sumG / 20.0 < 2.5);
+        CHECK(sumA / 20.0 > 0.4);
+        CHECK(sumA / 20.0 < 2.5);
+        CHECK(sumB / 20.0 > 0.3);
+        CHECK(sumB / 20.0 < 2.5);
+        CHECK(sumFull / 20.0 > 0.5);
+        CHECK(sumFull / 20.0 < 2.0);
+    }
+}
+
+TEST_CASE("Replay: baro-bias NEES on a non-standard day, climbing, seeds 1-20, both conventions",
+    "[estimation][replay][e2e][bias]")
+{
+    // The step-6 per-block case on a day the truth atmosphere is not the
+    // standard one: the plant's P and T, and the pressure the barometer reads,
+    // come from ISA + dT, and the truth climbs, so the atmosphere term of the
+    // baro-bias truth, h_p(P) - h, is far from zero and changes along the
+    // flight. The baro-bias block must be consistent against sensor +
+    // atmosphere (the maintainer's decision of 2026-11-13) within the bounds
+    // of the standard-day case.
+    //
+    // ISA + 15 K, climbing at 0.15 m/s from 3552 m: the atmosphere term is
+    // -175.85 m at the start and -176.74 m after 120 s (about -0.05 m per
+    // metre climbed). Over seeds 1-20 (2026-11-14, MSVC 19.50 Release),
+    // second-half ANEES / dim against sensor + atmosphere:
+    //                 nav core     baro bias    full (16)
+    //   RI  mean      1.29         0.99         1.33
+    //       range     0.67-2.55    0.12-3.69
+    //   LI  mean      1.09         0.99         1.12
+    //       range     0.47-2.00    0.13-3.69
+    // Against the sensor term alone (the definition before 2026-11-13) the
+    // baro block is 5.7e5 on every seed in both conventions (82 failed
+    // assertions; checked by reverting the sum, then restored). The climb is slow because the
+    // filter's bias walk (0.05 m/sqrt(s)) lags a drifting term: at 0.2 m/s
+    // (-0.010 m/s of drift) one seed reaches 4.37, at 1 m/s the mean is ~14.
+    // That is a step-7 tuning observation, not a fault of the truth.
+    DrawnSpec spec;
+    spec.day.deltaT_K = 15.0;
+    spec.climbRate_m_s = 0.15;
+    spec.dirName = "aetherion_replay_test_hot_day";
+    const ReplayOptions opt = drawnReplayOptions(spec);
+
+    for (const ErrorConvention c : { ErrorConvention::RightInvariant, ErrorConvention::LeftInvariant })
+    {
+        double sumB = 0.0, sumNav = 0.0;
+        for (unsigned seed = 1; seed <= 20; ++seed)
+        {
+            const SyntheticLogs files = writeSyntheticLogs(120.0, seed, &spec);
+            const LogSet logs = loadLogs(files.dir, files.truth, kNavBaroGnss16);
+            const ReplayResult r = replay(c, logs, kNavBaroGnss16, opt);
+            const ReplaySummary& s = r.summary;
+            std::ostringstream text;
+            writeSummary(text, s);
+            const BiasTruth& first = r.states.front().biasTruth;
+            const BiasTruth& last = r.states.back().biasTruth;
+            INFO("seed " << seed << ", " << toString(c) << "\n"
+                         << text.str());
+
+            REQUIRE(s.aneesBaroBias.valid);
+            REQUIRE(last.staticPressureLogged);
+            CHECK(s.baroTruthRowsWithAtmosphere == s.baroTruthRows);
+            CHECK(text.str().find("baro-bias truth: sensor + atmosphere terms") != std::string::npos);
+            // The atmosphere term is large and changes along the flight.
+            CHECK(first.baroAtmosphereTerm_m < -50.0);
+            CHECK(last.baroAtmosphereTerm_m - first.baroAtmosphereTerm_m < -0.5);
+            CHECK(last.baroBiasTruth_m == last.baroSensorTerm_m + last.baroAtmosphereTerm_m);
+
+            // The bounds of the standard-day case.
+            CHECK(s.aneesNav > 0.3);
+            CHECK(s.aneesNav < 3.0);
+            CHECK(s.aneesBaroBias.anees < 4.0);
+            sumB += s.aneesBaroBias.anees;
+            sumNav += s.aneesNav;
+        }
+        INFO(toString(c) << " mean ANEES over seeds 1-20: nav " << sumNav / 20.0 << ", baro " << sumB / 20.0);
+        CHECK(sumB / 20.0 > 0.3);
+        CHECK(sumB / 20.0 < 2.5);
+    }
+
+    // The same log without the plant's pressure (out.P_Pa and out.T_K renamed
+    // out of the contract): the truth falls back to the sensor term, the
+    // summary says so, and the atmosphere cells of the states CSV are empty.
+    const SyntheticLogs files = writeSyntheticLogs(120.0, 1, &spec);
+    {
+        std::ifstream in(files.truth);
+        std::stringstream all;
+        all << in.rdbuf();
+        std::string csv = all.str();
+        for (const std::string_view col : { "f16::out.P_Pa", "f16::out.T_K" })
+            csv.replace(csv.find(col), col.size(), std::string(col) + "_unused");
+        in.close();
+        std::ofstream(files.truth, std::ios::trunc) << csv;
+    }
+    const LogSet logs = loadLogs(files.dir, files.truth, kNavBaroGnss16);
+    const ReplayResult r = replay(ErrorConvention::RightInvariant, logs, kNavBaroGnss16, opt);
+    std::ostringstream text, states;
+    writeSummary(text, r.summary);
+    writeStates(states, r, kNavBaroGnss16);
+    INFO(text.str());
+    REQUIRE(r.summary.aneesBaroBias.valid);
+    CHECK(r.summary.baroTruthRowsWithAtmosphere == 0);
+    CHECK(text.str().find("baro-bias truth: sensor term only") != std::string::npos);
+    CHECK(text.str().find("atmosphere term unknown without out.P_Pa") != std::string::npos);
+    const BiasTruth& bt = r.states.back().biasTruth;
+    CHECK_FALSE(bt.staticPressureLogged);
+    CHECK(bt.baroBiasTruth_m == bt.baroSensorTerm_m);
+    const std::string csv = states.str();
+    CHECK(csv.find("nan") == std::string::npos);
+    // Every data row ends in the sensor term and an empty atmosphere cell.
+    const std::string lastRow = csv.substr(csv.rfind('\n', csv.size() - 2) + 1);
+    CHECK(lastRow.back() == '\n');
+    CHECK(lastRow[lastRow.size() - 2] == ',');
 }

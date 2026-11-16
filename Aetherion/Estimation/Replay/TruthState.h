@@ -81,8 +81,8 @@ namespace Aetherion::Estimation::Replay {
     };
 
     /// The navigation core of the truth in LCI; the bias members are left at
-    /// zero (the sensor FMUs do not publish their realised biases yet, Hemerion
-    /// step 3).
+    /// zero. The replay fills them from the optional drawn-error columns when
+    /// the truth log has them (Replay.h, recordRow).
     [[nodiscard]] inline EstimationState<double> truthToState(const GeodeticTruth& g, const LciFrame<double>& frame)
     {
         const double era = frame.earthRotationAngle(g.t);
