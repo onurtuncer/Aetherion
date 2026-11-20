@@ -1265,7 +1265,8 @@ computer, a host-side generator (CppADCodeGen, step 8) emits plain C for
 with a header that carries the dimension, block offsets and configuration
 hash. Golden vectors (recorded inputs and outputs of the reference filter,
 with tolerances and the same hash) let Hemerion verify the embedded filter
-by replay (step 9). Both are checked in on the Hemerion side.
+by replay (step 9). Both are checked in on the Hemerion side. The
+generator, the file format and a worked case study are in :doc:`codegen`.
 
 
 Deferred
