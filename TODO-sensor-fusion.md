@@ -11,7 +11,8 @@ readable from either. Brought in line with Hemerion `main` at `be5a19a`
 - `Aetherion/Estimation/{EKF,EstimationState,MeasurementModels,ProcessModel}.h`
   are four 15-line placeholders. There is no filter in the tree.
 - `vcpkg.json` lists `cppad`; CppADCodeGen is an optional host-side feature
-  (`codegen`, 2026-11-13) used only by a test fixture. No generator tool yet.
+  (`codegen`, 2026-11-13) used only by the code-generation tests and the
+  step-8 generator tool `generate_ekf_c` (2026-11-20, `doc/codegen.rst`).
 - Truth and environment are done: `F16Plant`, `F16Autopilot`, `TwoStageRocket`
   FMUs with steady wind, Dryden turbulence and atmosphere offsets (v0.16.0).
 - Sensor models are **not** here and are not going to be. Hemerion owns all
@@ -503,11 +504,66 @@ Reading:
       `linux-base` presets); `CppADCodeGen::cppadcg` is linked only by
       `tests/Estimation` targets, never by `Aetherion`, the examples or the
       FMUs. Licence EPL-1.0 OR GPL-3.0 (tool only; see Things to check).
-- [ ] Generator tool: emits plain C for f, h and their Jacobians for one
+- [x] Generator tool: emits plain C for f, h and their Jacobians for one
       configuration, plus a generated header with the dimension, block offsets
-      and the configuration hash.
-- [ ] Golden vectors: recorded inputs and outputs of the reference filter with
-      tolerances, carrying the same hash.
+      and the configuration hash. Done 2026-11-20 (branch
+      `feat/ekf-codegen-golden-vectors`); tutorial and case study in
+      `doc/codegen.rst`. The existing `generate_estimation_cg` fixture (dense
+      Jacobians of error maps, a table of functions, no hash or offsets) was
+      the compatibility check and is kept as is; the tool is new:
+      `tests/Estimation/codegen/generate_ekf_c.cpp` over the maps of
+      `EkfMaps.h`, which call the reference filter's own model code.
+      `generate_ekf_c --out --banner --generator-commit --cppadcg-version
+      [--config nav-baro-gnss16] [--convention ri|li] [--stem]` writes
+      `<stem>.c` (C99, `<math.h>` only, no heap) with `propagate` (f),
+      `transition` (Phi, Qd of `step<C>`), `gnss_position`, `gnss_velocity`,
+      `barometer` (z, H, R; only measurements the configuration carries) and
+      `retract`; and `<stem>.h` with the hash, convention, `ERROR_DIM`,
+      `NOISE_DIM`, every block's offset and dimension, the noise, state and
+      frame packing and every function's input/output segment offsets, all
+      read from the configuration. Banner from the caller (never hard-coded),
+      then a marker line, the generator commit, CppADCodeGen's version and the
+      hash. Frame is an input (r_W0, R_WL), so no site is frozen into the C.
+      Generated only into the build tree (`generated_ekf/`, both conventions)
+      and compiled into `test_estimation_codegen`; the not-published check is
+      the CTest `estimation_generated_code_not_published`
+      (`cmake/CheckGeneratedEstimatorCodeNotPublished.cmake`: marker in the
+      git index, generated names in install scripts/manifests; fails on a
+      staged generated header and on a fake install script, both tried).
+      Measured, MSVC 19.50 Release (`release` preset), kNavBaroGnss16: hash RI
+      0x1e59a990edd19e83 (the pinned one), LI 0x9055067ccc7acb60; C 44 246 B
+      (RI) / 38 110 B (LI), 0.21 / 0.06 s, byte-identical on rerun; compiles
+      with arm-none-eabi-gcc 14.2.1 `-std=c99 -Wall -Wextra -Wpedantic
+      -Wconversion -Wdouble-promotion` for Cortex-M7 with no warning.
+      Values against double at two CondExp-covering points in two frames:
+      worst 2.4e-16 per output segment (bound 1e-12; the innovation is taken
+      relative to the inputs: the barometer z differs by 9.3e-10 m, one ulp
+      of the 6.4e6 m ECI radius h(x) goes through). A 1e-10 change to one
+      Phi entry fails. Generated H against `AD<double>` dz/d delta: ≤ 1.3e-16;
+      Phi against the AD derivative of the nonlinear error map: 2.8e-7 RI /
+      9.1e-7 LI, the trapezoidal discretisation (`test_CodeGen.cpp` had
+      2.8e-7 / 9.1e-7 for its own Phi too). Not verified on Linux gcc; the
+      clang-tidy gate on the new test sources not run locally.
+- [x] Golden vectors: recorded inputs and outputs of the reference filter with
+      tolerances, carrying the same hash. Done 2026-11-20 (same branch):
+      `data/Estimation/GoldenVectors/nav-baro-gnss16_{right,left}-invariant.txt`
+      (text, 17 digits; format, reference run and comparison in
+      `tests/Estimation/golden/GoldenVectors.h`, written by
+      `generate_golden_vectors`). 1 s of the banking SyntheticTruth with a
+      large initial error, IMU 100 Hz with bias and noise, GNSS pos/vel
+      10 Hz with a full covariance and validity times inside an IMU interval
+      (split predicts), baro 25 Hz: 155 records (110 predicts, 20 partial;
+      10 + 10 GNSS; 25 baro), state and upper-triangle P after every call,
+      z and NIS per update. `float64` tolerances (abs + rel·r per state block,
+      P entry-wise against sqrt(P_ii P_jj), z, NIS) in the file; no float32
+      set before step 7b. `test_GoldenVectors.cpp` (in `test_estimation`,
+      no CppADCodeGen needed): the reference reproduces both files exactly;
+      the LI filter on RI vectors fails at 2.7e6–6.4e8× tolerance, a 1e-6
+      rad/s gyro change at 88× (attitude). `test_EkfCodeGen.cpp`: a filter made
+      only of the generated C with its own covariance algebra (explicit
+      inverse, not LDLT) passes at worst 0.10 of tolerance (RI innovation
+      0.092, LI 0.10); dt × (1 + 1e-6) fails every quantity at 9.6–4232×;
+      a hash mismatch is refused. Regenerating gives byte-identical files.
 - [ ] Hand both to Hemerion; they are checked in there. The generated C goes
       to Hemerion only and is never committed or installed here (Decided
       2026-11-13).
