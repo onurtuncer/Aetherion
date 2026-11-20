@@ -8,8 +8,15 @@ readable from either. Brought in line with Hemerion `main` at `be5a19a`
 
 ## Where things stand
 
-- `Aetherion/Estimation/{EKF,EstimationState,MeasurementModels,ProcessModel}.h`
-  are four 15-line placeholders. There is no filter in the tree.
+- The filter is in the tree (updated 2026-11-20; the "four 15-line
+  placeholders" of the 2026-10-08 draft are gone). Steps 2 and 5 are done,
+  and step 6 apart from the UKF cross-check: `Blocks.h`, `Configuration.h`,
+  `LogContract.h`, `SE23.h`, `LciFrame.h`, `EstimationState.h`,
+  `ProcessModel.h`, `MeasurementModels.h`, the reference filter `EKF.h`
+  (`InvariantEKF<S, C>`, both conventions) and the replay harness (`Replay/`,
+  `EkfReplay`). Step 8's generator and golden vectors are done; their hand-off
+  to Hemerion, and steps 7 and 7b, are open. The theory is written out in
+  `doc/sensor_fusion.rst` ("Filter equations").
 - `vcpkg.json` lists `cppad`; CppADCodeGen is an optional host-side feature
   (`codegen`, 2026-11-13) used only by the code-generation tests and the
   step-8 generator tool `generate_ekf_c` (2026-11-20, `doc/codegen.rst`).
