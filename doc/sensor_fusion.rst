@@ -106,6 +106,8 @@ repositories' TODO files:
      - Replay equivalence of the embedded filter against the golden vectors.
 
 
+.. _sensor-fusion-filter-form:
+
 Filter form
 -----------
 
@@ -253,7 +255,9 @@ To first order, the right-invariant components are world-frame quantities,
 :math:`v - \hat v = \hat R\,\nu`.
 
 **Propagation.** With :math:`\hat\omega = \tilde\omega - \hat b_g` and
-:math:`\hat a = \tilde a - \hat b_a`, and constant gravity:
+:math:`\hat a = \tilde a - \hat b_a`, and constant gravity (the full form,
+with the gravity gradient, every bias block and the noise input, is under
+:ref:`sensor-fusion-filter-equations`):
 
 .. math::
 
@@ -543,6 +547,8 @@ single-precision robustness (LI)**:
 
 Step 5 keeps both conventions behind the template parameter until these are
 done.
+
+.. _sensor-fusion-step5:
 
 Implementation (step 5)
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -863,6 +869,588 @@ barometer's again through CppAD, in
 ``tests/Estimation/test_MeasurementModels.cpp``.
 
 
+.. _sensor-fusion-filter-equations:
+
+Filter equations
+----------------
+
+This section collects the complete filter: noise model, error dynamics with
+every block, discretisation, update, initialisation, and the consistency
+and observability arguments the validation relies on. Every matrix is the
+one the code evaluates (``ProcessModel.h``, ``MeasurementModels.h``,
+``EKF.h``, ``EstimationState.h``). The block matrices are written for
+``kNavBaroGnss16``, with the error vector ordered by rank,
+
+.. math::
+
+   \xi = (\phi,\ \nu,\ \rho,\ \zeta_g,\ \zeta_a,\ \zeta_p) \in \R^{16},
+   \qquad \zeta_\bullet = b_\bullet - \hat b_\bullet,
+
+that is, offsets 0, 3, 6, 9, 12, 15. Another configuration drops the rows
+and columns of the blocks it does not carry. The code never hard-codes
+these offsets; it reads them from ``Configuration::offset``.
+
+The filter cycle
+^^^^^^^^^^^^^^^^
+
+The estimate is :math:`\hat x = (\hat X, \hat b_g, \hat b_a, \hat b_p)` and
+:math:`P` is the covariance of :math:`\xi` in the chosen convention
+:math:`C`:
+
+1. **Predict** over each IMU interval :math:`h` with the readings
+   :math:`u = (\tilde\omega, \tilde a)`:
+   :math:`\hat x \leftarrow \mathrm{propagate}(\hat x, u, h)`,
+   :math:`P \leftarrow \Phi P \Phi^{\mathsf T} + Q_d`.
+2. **Update** for each measurement at its validity time:
+   :math:`z, H, R` from the measurement model;
+   :math:`S = H P H^{\mathsf T} + R`, :math:`K = P H^{\mathsf T} S^{-1}`;
+   :math:`\hat x \leftarrow \hat x \boxplus_C K z`;
+   :math:`P \leftarrow (I - KH) P (I - KH)^{\mathsf T} + K R K^{\mathsf T}`.
+3. **Score** against truth, where it is available:
+   NEES :math:`= e^{\mathsf T} P^{-1} e` with :math:`e = \hat x \boxminus_C x`,
+   and NIS :math:`= z^{\mathsf T} S^{-1} z` from each update.
+
+The retraction :math:`\boxplus_C` and its inverse :math:`\boxminus_C` are
+the only places where the convention touches the state (``retract<C>``,
+``error<C>``):
+
+.. math::
+
+   \hat x \boxplus_R \delta = \big(\Exp(\delta_{\mathrm{nav}})\,\hat X,\ \hat b + \delta_b\big),
+   \qquad
+   \hat x \boxplus_L \delta = \big(\hat X\,\Exp(\delta_{\mathrm{nav}}),\ \hat b + \delta_b\big),
+
+.. math::
+
+   \hat x \boxminus_R x = \big(\Log(X \hat X^{-1}),\ b - \hat b\big),
+   \qquad
+   \hat x \boxminus_L x = \big(\Log(\hat X^{-1} X),\ b - \hat b\big).
+
+They are exact inverses of each other, and the code tests that they are.
+
+Noise model
+^^^^^^^^^^^
+
+The IMU readings are the true inertial rate and specific force (body frame)
+plus a bias and white noise. Each bias is a random walk:
+
+.. math::
+
+   \tilde\omega = \omega + b_g + n_g, \qquad
+   \tilde a = a + b_a + n_a, \qquad
+   \dot b_g = w_g, \quad \dot b_a = w_a, \quad \dot b_p = w_p .
+
+The noise vector :math:`n = (n_g, n_a, w_g, w_a, w_p) \in \R^{13}` has the
+diagonal power spectral density
+
+.. math::
+
+   Q_c = \operatorname{diag}\big(\sigma_g^2 I_3,\ \sigma_a^2 I_3,\
+         \sigma_{bg}^2 I_3,\ \sigma_{ba}^2 I_3,\ \sigma_{bp}^2\big),
+
+with the densities of ``ProcessNoise``: :math:`\sigma_g` in
+rad/s/√Hz, :math:`\sigma_a` in m/s²/√Hz, :math:`\sigma_{bg}` in rad/s²/√Hz,
+:math:`\sigma_{ba}` in m/s³/√Hz and :math:`\sigma_{bp}` in m/s/√Hz. The noise
+layout follows the configuration: the IMU white noise comes first, then one
+random-walk driver per carried bias block in rank order
+(``noiseDimension``, ``noiseOffset``).
+
+The bias random walks model slow drift, not a constant offset that is
+merely unknown. A bias that really is constant gives a bias-block NEES
+below its dimension: the walk keeps the filter's variance above the true
+error variance. The barometer block shows exactly this on synthetic logs,
+where the drawn pressure bias is constant. Its ANEES per dimension is 0.70,
+the mean over seeds 1--20 in both conventions, as recorded in
+``test_Replay.cpp`` (2026-11-13).
+
+Error dynamics
+^^^^^^^^^^^^^^
+
+**Why the navigation error is autonomous.** Write the navigation
+kinematics of :ref:`sensor-fusion-filter-form` as a vector field on the
+group, with :math:`\omega, a` the true rate and specific force:
+
+.. math::
+
+   f_u(X) =
+   \begin{bmatrix}
+     R\,[\omega]_\times & R\,a + g & v \\
+     0 & 0 & 0 \\
+     0 & 0 & 0
+   \end{bmatrix} .
+
+Substituting :math:`X = \eta\hat X` (right-invariant) or
+:math:`X = \hat X\eta` (left-invariant) into
+:math:`\dot X = f_u(X)`, :math:`\dot{\hat X} = f_{\hat u}(\hat X)`, the
+group-affine identity removes :math:`\hat X` from the error dynamics. With
+:math:`u = \hat u` (no bias error, no noise) they reduce to
+
+.. math::
+
+   \text{RI:}\quad \dot\eta = f_u(\eta) - \eta\, f_u(I)
+   \quad\Longrightarrow\quad
+   \dot R_\eta = 0,\quad
+   \dot v_\eta = g - R_\eta\, g,\quad
+   \dot p_\eta = v_\eta,
+
+.. math::
+
+   \text{LI:}\quad \dot\eta = f_u(\eta) - f_u(I)\,\eta .
+
+The RI error does not depend on the estimate or on the IMU readings. The LI
+error depends on the readings but not on the estimate. For group-affine
+dynamics :cite:`barrau2017iekf` the error obeys the
+**log-linear property**: if :math:`\eta_0 = \Exp(\xi_0)` and
+:math:`\dot\xi = A\,\xi` with the :math:`A` obtained by linearising these
+equations, then :math:`\eta_t = \Exp(\xi_t)` exactly, for errors of any
+size. The linearised propagation of the navigation error is therefore not
+an approximation. Gravity that varies with position and the bias
+couplings below are what make it one, in this filter: they are the
+"imperfect" part of the imperfect IEKF.
+
+**Full first-order dynamics.** Expanding about the estimate with
+:math:`\hat\omega = \tilde\omega - \hat b_g`,
+:math:`\hat a = \tilde a - \hat b_a`, :math:`g = g_L(\hat p)`,
+:math:`G = \partial g_L/\partial p\,(\hat p)` and
+
+.. math::
+
+   \Ad_{\hat X} =
+   \begin{bmatrix}
+     \hat R & 0 & 0 \\
+     [\hat v]_\times \hat R & \hat R & 0 \\
+     [\hat p]_\times \hat R & 0 & \hat R
+   \end{bmatrix},
+
+the error obeys :math:`\dot\xi = F\,\xi + \Gamma\,n` (:math:`\Gamma` is
+``G`` in the code). Rows and columns are ordered
+:math:`(\phi, \nu, \rho, \zeta_g, \zeta_a, \zeta_p)` and the noise columns
+:math:`(n_g, n_a, w_g, w_a, w_p)`:
+
+.. math::
+
+   F_R =
+   \begin{bmatrix}
+     0 & 0 & 0 & -\hat R & 0 & 0 \\
+     [g]_\times - G[\hat p]_\times & 0 & G & -[\hat v]_\times \hat R & -\hat R & 0 \\
+     0 & I & 0 & -[\hat p]_\times \hat R & 0 & 0 \\
+     0 & 0 & 0 & 0 & 0 & 0 \\
+     0 & 0 & 0 & 0 & 0 & 0 \\
+     0 & 0 & 0 & 0 & 0 & 0
+   \end{bmatrix},
+   \qquad
+   \Gamma_R =
+   \begin{bmatrix}
+     \hat R & 0 & 0 & 0 & 0 \\
+     [\hat v]_\times \hat R & \hat R & 0 & 0 & 0 \\
+     [\hat p]_\times \hat R & 0 & 0 & 0 & 0 \\
+     0 & 0 & I & 0 & 0 \\
+     0 & 0 & 0 & I & 0 \\
+     0 & 0 & 0 & 0 & 1
+   \end{bmatrix},
+
+.. math::
+
+   F_L =
+   \begin{bmatrix}
+     -[\hat\omega]_\times & 0 & 0 & -I & 0 & 0 \\
+     -[\hat a]_\times & -[\hat\omega]_\times & \hat R^{\mathsf T} G \hat R & 0 & -I & 0 \\
+     0 & I & -[\hat\omega]_\times & 0 & 0 & 0 \\
+     0 & 0 & 0 & 0 & 0 & 0 \\
+     0 & 0 & 0 & 0 & 0 & 0 \\
+     0 & 0 & 0 & 0 & 0 & 0
+   \end{bmatrix},
+   \qquad
+   \Gamma_L =
+   \begin{bmatrix}
+     I & 0 & 0 & 0 & 0 \\
+     0 & I & 0 & 0 & 0 \\
+     0 & 0 & 0 & 0 & 0 \\
+     0 & 0 & I & 0 & 0 \\
+     0 & 0 & 0 & I & 0 \\
+     0 & 0 & 0 & 0 & 1
+   \end{bmatrix}.
+
+In the RI form the bias coupling and the noise input are the first two
+column blocks of :math:`\Ad_{\hat X}`. The barometer bias couples to
+nothing in propagation; it enters only through the barometer's :math:`H`.
+
+*Derivation of the RI rows.* With :math:`\eta = X\hat X^{-1} \approx
+I + \xi^\wedge`, the physical errors are
+:math:`\delta v = \nu - [\hat v]_\times\phi` and
+:math:`\delta p = \rho - [\hat p]_\times\phi`, and the true inputs are
+:math:`\omega = \hat\omega - \zeta_g - n_g`,
+:math:`a = \hat a - \zeta_a - n_a`. Differentiating
+:math:`R\hat R^{\mathsf T}` gives
+:math:`\dot\phi = -\hat R(\zeta_g + n_g)`. The velocity component of
+:math:`\eta` is :math:`v - R\hat R^{\mathsf T}\hat v`, whose derivative is
+
+.. math::
+
+   \dot\nu = R(a - \hat a) + g_L(p) - (I + [\phi]_\times)\,g_L(\hat p)
+             + [\hat v]_\times\dot\phi
+           = \big([g]_\times - G[\hat p]_\times\big)\phi + G\rho
+             - [\hat v]_\times\hat R\,\zeta_g - \hat R\,\zeta_a + \text{noise},
+
+and :math:`\dot\rho = \nu + [\hat p]_\times\dot\phi` in the same way.
+*LI rows.* With :math:`\eta = \hat X^{-1}X`, the physical errors are
+:math:`\delta v = \hat R\nu` and :math:`\delta p = \hat R\rho`.
+Differentiating :math:`\hat R^{\mathsf T}R` and using
+:math:`[\phi]_\times[\hat\omega]_\times - [\hat\omega]_\times[\phi]_\times
+= -[\hat\omega\times\phi]_\times` gives the
+:math:`-[\hat\omega]_\times` diagonal. The specific-force term
+:math:`\hat R^{\mathsf T}R\,a - \hat a \approx -[\hat a]_\times\phi -
+\zeta_a` gives the :math:`(\nu, \phi)` block, and
+:math:`\hat R^{\mathsf T}G\,\delta p` gives :math:`\hat R^{\mathsf T}G\hat R`.
+
+The noise enters with a minus sign in the derivation and with a plus sign
+in :math:`\Gamma`. The sign does not matter: :math:`n` is zero-mean and
+white, so only :math:`\Gamma Q_c \Gamma^{\mathsf T}` reaches the
+covariance. Both :math:`F` matrices were checked entry by entry against
+central differences of the full nonlinear step, first in the prototype and
+again in ``test_ProcessModel.cpp`` (:ref:`sensor-fusion-step5`).
+
+**The gravity gradient.** In the LCI frame,
+:math:`G \approx (\mu/r^3)\,(3\hat r\hat r^{\mathsf T} - I)` (central
+term; ``LciFrame::gravityGradient`` omits J2 in the gradient, though not in
+:math:`g` itself). Its largest eigenvalue, :math:`2\mu/r^3 \approx
+3\times10^{-6}\,\mathrm{s^{-2}}`, belongs to the vertical direction and is
+positive: a height error feeds a growing velocity error, the classical
+vertical-channel instability, with a time constant of about 10 min. GNSS
+and the barometer bound it long before that. The negative horizontal
+eigenvalues give the Schuler oscillation (84 min period). Over the
+flights considered here both are small. They are kept because they cost
+nothing and because the RI :math:`(\nu, \phi)` block
+:math:`-G[\hat p]_\times` grows with distance from the origin.
+
+Discretisation
+^^^^^^^^^^^^^^
+
+Over an IMU interval of length :math:`h`, with the readings held at the
+average of the two bounding samples, the code uses
+
+.. math::
+
+   \bar F = \tfrac12\big(F(\hat x_k, u) + F(\hat x_{k+1}, u)\big), \qquad
+   \bar\Gamma = \tfrac12\big(\Gamma(\hat x_k) + \Gamma(\hat x_{k+1})\big),
+
+.. math::
+
+   \Phi = I + \bar F h + \tfrac12(\bar F h)^2, \qquad
+   Q_d = \bar\Gamma\, Q_c\, \bar\Gamma^{\mathsf T} h .
+
+Averaging :math:`F` over the step is required for RI, not optional (see
+:ref:`sensor-fusion-convention-evidence`). :math:`\Phi` is then a
+second-order one-step map, consistent with the second-order nonlinear
+step. ``test_ProcessModel.cpp`` verifies this as a convergence order, not
+as a tolerance.
+
+:math:`Q_d` is the rectangle rule. The exact discrete noise is
+
+.. math::
+
+   Q_d^{\mathrm{exact}} = \int_0^h e^{\bar F s}\, \bar\Gamma Q_c \bar\Gamma^{\mathsf T}\,
+                          e^{\bar F^{\mathsf T} s}\, ds
+   = \bar\Gamma Q_c \bar\Gamma^{\mathsf T} h
+     + \tfrac12\big(\bar F \bar\Gamma Q_c \bar\Gamma^{\mathsf T}
+                    + \bar\Gamma Q_c \bar\Gamma^{\mathsf T} \bar F^{\mathsf T}\big) h^2
+     + O(h^3) .
+
+The dropped :math:`h^2` term is mostly the cross-covariance that the
+attitude noise builds in velocity (through :math:`[g]_\times` or
+:math:`-[\hat a]_\times`) and that the velocity noise builds in position
+(through :math:`I`) within one step. It affects consistency only, not the
+mean. Unlike :math:`\Phi`, :math:`Q_d` is not covered by the convergence
+test. Van Loan's method :cite:`vanloan1978` would give the exact integral
+for constant :math:`\bar F` if step 7 shows the difference matters.
+
+Update
+^^^^^^
+
+Each measurement model returns the innovation :math:`z`, the Jacobian
+:math:`H` on the full error vector and the measurement covariance
+:math:`R`, all in the convention's innovation coordinates (table in
+:ref:`sensor-fusion-filter-form`). Written on the 16-dimensional error
+vector:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 18 18 64
+
+   * - Measurement
+     - Conv.
+     - :math:`z`; :math:`H` on :math:`(\phi, \nu, \rho, \zeta_g, \zeta_a, \zeta_p)`; :math:`R`
+   * - GNSS position
+     - RI
+     - :math:`y - \hat p`;
+       :math:`[\,-[\hat p]_\times,\ 0,\ I,\ 0,\ 0,\ 0\,]`;
+       :math:`\Sigma_L`
+   * -
+     - LI
+     - :math:`\hat R^{\mathsf T}(y - \hat p)`;
+       :math:`[\,0,\ 0,\ I,\ 0,\ 0,\ 0\,]`;
+       :math:`\hat R^{\mathsf T}\Sigma_L\hat R`
+   * - GNSS velocity
+     - RI
+     - :math:`y - \hat v`;
+       :math:`[\,-[\hat v]_\times,\ I,\ 0,\ 0,\ 0,\ 0\,]`;
+       :math:`\Sigma_L`
+   * -
+     - LI
+     - :math:`\hat R^{\mathsf T}(y - \hat v)`;
+       :math:`[\,0,\ I,\ 0,\ 0,\ 0,\ 0\,]`;
+       :math:`\hat R^{\mathsf T}\Sigma_L\hat R`
+   * - Barometer
+     - RI
+     - :math:`y - h(\hat p) - \hat b_p`;
+       :math:`[\,-\nabla h^{\mathsf T}[\hat p]_\times,\ 0,\ \nabla h^{\mathsf T},\ 0,\ 0,\ 1\,]`;
+       :math:`\sigma_b^2`
+   * -
+     - LI
+     - same :math:`z`;
+       :math:`[\,0,\ 0,\ \nabla h^{\mathsf T}\hat R,\ 0,\ 0,\ 1\,]`;
+       :math:`\sigma_b^2`
+
+:math:`\Sigma_L` is the receiver's NED covariance rotated into LCI
+(``nedToLci``). :math:`\nabla h` is the analytic gradient of the
+ellipsoidal height (``ellipsoidalHeightGradient``). The rows follow from
+the first-order physical errors given above:
+:math:`\delta p = \rho - [\hat p]_\times\phi` (RI) or :math:`\hat R\rho`
+(LI). For LI the GNSS innovation and its covariance are both rotated by
+:math:`\hat R^{\mathsf T}`. This is the same information as the
+world-frame innovation, and the NIS
+:math:`z^{\mathsf T}S^{-1}z` is unchanged by the rotation. The rotation is
+what makes :math:`H` constant.
+
+The gain and covariance update are the standard ones,
+
+.. math::
+
+   S = H P H^{\mathsf T} + R, \qquad K = P H^{\mathsf T} S^{-1}, \qquad
+   \delta = K z,
+
+.. math::
+
+   \hat x^+ = \hat x \boxplus_C \delta, \qquad
+   P^+ = (I - KH)\,P\,(I - KH)^{\mathsf T} + K R K^{\mathsf T}.
+
+The Joseph form is algebraically equal to :math:`(I - KH)P` for the
+optimal gain. It stays symmetric and positive semi-definite for *any*
+:math:`K`, including one perturbed by rounding, which is why it was chosen
+and why it is the baseline for the float32 question of step 7b. :math:`S`
+is factorised once (LDLᵀ) and reused for :math:`K` and the NIS. The
+guards against a non-finite or indefinite :math:`R`, and against an
+:math:`S` that does not factorise, are described under
+:ref:`sensor-fusion-reference-filter`.
+
+The correction is applied through the group, not added. For RI it
+multiplies on the left, :math:`\hat X^+ = \Exp(\delta_{\mathrm{nav}})\hat
+X`. A large correction (a heading error tens of degrees wide becoming
+observable) is therefore applied as a rotation of the whole extended pose,
+which carries velocity and position with it. This, together with the
+missing covariance reset below, is where the two conventions part company
+(:ref:`sensor-fusion-convention-evidence`).
+
+Initial covariance
+^^^^^^^^^^^^^^^^^^
+
+Initial uncertainty is naturally stated in physical coordinates: a
+world-frame attitude error :math:`\delta\theta` (with
+:math:`R = \Exp(\delta\theta)\hat R`), :math:`\delta v`, :math:`\delta p`
+and the biases. ``covarianceFromPhysical`` maps it to first order,
+:math:`P = J P_{\mathrm{phys}} J^{\mathsf T}`, with
+
+.. math::
+
+   J_R =
+   \begin{bmatrix}
+     I & 0 & 0 & 0 \\
+     [\hat v]_\times & I & 0 & 0 \\
+     [\hat p]_\times & 0 & I & 0 \\
+     0 & 0 & 0 & I_7
+   \end{bmatrix},
+   \qquad
+   J_L = \operatorname{blockdiag}\big(\hat R^{\mathsf T},\ \hat R^{\mathsf T},\
+                                      \hat R^{\mathsf T},\ I_7\big).
+
+:math:`J_R` follows from :math:`\nu = \delta v + [\hat v]_\times\delta\theta`
+and :math:`\rho = \delta p + [\hat p]_\times\delta\theta`. :math:`J_L`
+follows from :math:`\phi = \hat R^{\mathsf T}\delta\theta`,
+:math:`\nu = \hat R^{\mathsf T}\delta v` and
+:math:`\rho = \hat R^{\mathsf T}\delta p`. Starting both conventions from
+the same :math:`P_{\mathrm{phys}}` is what makes paired comparisons fair.
+At the origin of LCI with :math:`\hat v = 0`, :math:`J_R = I`. At
+:math:`\lVert\hat p\rVert = 10^5` m, the :math:`[\hat p]_\times` block
+turns 1 mrad of attitude uncertainty into 100 m of :math:`\rho`
+uncertainty. That is the conditioning cost of RI in single precision.
+
+Covariance reset (not applied)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+After an update the estimate moves by :math:`\delta`, but :math:`P^+` still
+describes the error about the *prior* estimate's linearisation. The
+error about the new estimate is, to first order in :math:`\delta` and in
+the residual error :math:`e`,
+
+.. math::
+
+   \text{RI:}\quad \xi^+ = \Log\big(\Exp(\delta + e)\Exp(-\delta)\big)
+                  \approx \big(I + \tfrac12\ad_\delta\big)\,e,
+   \qquad
+   \text{LI:}\quad \xi^+ \approx \big(I - \tfrac12\ad_\delta\big)\,e,
+
+with the adjoint of :math:`\Lie{se}_2(3)` (from the bracket given under
+:ref:`sensor-fusion-filter-form`)
+
+.. math::
+
+   \ad_\delta =
+   \begin{bmatrix}
+     [\delta_\phi]_\times & 0 & 0 \\
+     [\delta_\nu]_\times & [\delta_\phi]_\times & 0 \\
+     [\delta_\rho]_\times & 0 & [\delta_\phi]_\times
+   \end{bmatrix}
+
+acting on the navigation block. The bias blocks need no reset, because
+their correction is additive. A reset would apply
+:math:`P^+ \leftarrow J_\delta P^+ J_\delta^{\mathsf T}`. The two
+conventions' resets differ by :math:`\ad_\delta`, the same second-order
+difference found under :ref:`sensor-fusion-convention-evidence`.
+``EKF.h`` does not reset (standard IEKF practice), so the difference
+stays in the filters. Testing the reset is the first of the remaining
+experiments listed there.
+
+.. _sensor-fusion-consistency:
+
+Consistency statistics
+^^^^^^^^^^^^^^^^^^^^^^
+
+If the filter is consistent and the errors are Gaussian, the NEES of a
+block of dimension :math:`n` at one instant is a draw from
+:math:`\chi^2_n`, and the NIS of a measurement of dimension :math:`m` is a
+draw from :math:`\chi^2_m`. Dividing by the dimension (as the replay
+summary does) puts both around 1. Two facts decide how such numbers can be
+read.
+
+**Innovations are white; estimation errors are not.** For an optimal
+filter the innovation sequence is white, so the average NIS over :math:`K`
+updates satisfies
+:math:`K m\,\overline{\mathrm{NIS}}/m \sim \chi^2_{Km}` and has a tight
+interval. Consecutive estimation errors are strongly correlated (a
+slowly varying tilt or bias error stays the same for many IMU steps). The
+time average of one run's NEES is therefore much closer to *one*
+:math:`\chi^2_n` draw than to :math:`K` of them. For a 3-dof block the
+two-sided 95 % interval of one draw divided by 3 is
+:math:`[0.07,\ 3.12]`; for the 9-dof navigation core it is
+:math:`[0.30,\ 2.11]`.
+
+**So a claim is carried by the mean over seeds.** With :math:`N`
+independent runs (seeds), :math:`N n\,\mathrm{ANEES} \sim
+\chi^2_{Nn}` in the conservative one-draw-per-run reading, and the 95 %
+interval is
+
+.. math::
+
+   \Big[\ \tfrac{1}{Nn}\,\chi^2_{Nn}(0.025),\ \
+          \tfrac{1}{Nn}\,\chi^2_{Nn}(0.975)\ \Big],
+   \qquad
+   N = 20,\ n = 9:\ [0.80,\ 1.22].
+
+This is why the evidence here is quoted over seeds and the tests put loose
+bounds on each seed (``test_Replay.cpp``). A single seed's ANEES
+distinguishes neither a consistent filter from a slightly inconsistent
+one, nor one convention from the other.
+
+**The signature table.** Read together, the two statistics locate a fault:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 22 22 56
+
+   * - NEES
+     - NIS
+     - Reading
+   * - ≈ 1
+     - ≈ 1
+     - Consistent.
+   * - ≫ 1
+     - ≈ 1
+     - Filter and measurements agree with each other but not with truth:
+       a time-stamp or frame mismatch between truth and measurements
+       (both real-log incidents above), or an unobservable direction
+       drifting.
+   * - ≫ 1
+     - ≫ 1
+     - Filter overconfident: :math:`Q` or :math:`R` too small, or a model
+       error.
+   * - ≪ 1
+     - ≪ 1
+     - Filter pessimistic: :math:`Q` or :math:`R` too large (barometer NIS
+       0.11 at :math:`\sigma_b = 1` m, first real replay).
+
+NEES must be computed in the filter's own coordinates,
+:math:`e = \hat x \boxminus_C x`, and each block scored against its own
+marginal of :math:`P` (see :ref:`sensor-fusion-validation`).
+
+.. _sensor-fusion-observability:
+
+Observability
+^^^^^^^^^^^^^
+
+Observability does not depend on the coordinates, so it is clearest in
+physical ones. To first order, with :math:`f_L = \hat R\hat a` the
+specific force in LCI,
+
+.. math::
+
+   \dot{\delta\theta} = -\hat R\,\zeta_g, \qquad
+   \dot{\delta v} = -[f_L]_\times\,\delta\theta - \hat R\,\zeta_a
+                    + G\,\delta p, \qquad
+   \dot{\delta p} = \delta v .
+
+(In RI coordinates the attitude-velocity block reads :math:`[g]_\times`
+rather than :math:`-[f_L]_\times`. The reason is that
+:math:`\nu = \delta v + [\hat v]_\times\phi`, and differentiating
+:math:`[\hat v]_\times\phi` returns :math:`[f_L + g]_\times\phi`, which
+cancels the specific-force term. The unobservable subspace is the same one,
+written in different coordinates.)
+
+GNSS position and velocity measure :math:`\delta p` and :math:`\delta v`.
+Attitude and biases are seen only through how they drive
+:math:`\delta v`. In flight with a constant specific force (straight,
+unaccelerated, wings level) two combinations leave :math:`\delta v`
+untouched:
+
+* **Rotation about the specific force.** :math:`[f_L]_\times\,\delta\theta
+  = 0` for :math:`\delta\theta \parallel f_L`. In level flight
+  :math:`f_L` is vertical, so this is yaw. The gyro-bias component that
+  integrates into it is unobservable with it. This is the yaw drift seen
+  in calm, trimmed flight (case 11, calm) and in 300 s of straight flight
+  in the prototype.
+* **Tilt against accelerometer bias.** A tilt error
+  :math:`\delta\theta \perp f_L` produces
+  :math:`-[f_L]_\times\delta\theta`, which a body-frame accelerometer
+  bias :math:`\zeta_a = -\hat R^{\mathsf T}[f_L]_\times\delta\theta`
+  cancels exactly. Only the sum is observable. This is the failure of the
+  first, unbanked synthetic truth (:ref:`sensor-fusion-reference-filter`).
+
+Both directions become observable when :math:`f_L` changes direction
+relative to the body and to LCI: banked turns, pull-ups and turbulence
+(case 11 in turbulence gives a yaw RMS of 4–5° against 9–23° in calm
+air). This is why the step-7 cases manoeuvre and why a synthetic truth
+must bank in its turns. The barometer bias is observable through the
+difference between barometric and GNSS height. Without GNSS (case 12),
+the barometer measures only :math:`h + b_p` and the two cannot be
+separated, so :math:`\sigma_{bp}` sets how fast height uncertainty grows.
+
+Heading is not taken from GNSS course, because course differs from yaw by
+the sideslip and wind angle (2.28° in a 10 m/s crosswind,
+:ref:`sensor-fusion-validation`). A magnetometer (deferred) would make yaw
+observable in straight flight. That measurement is a right-invariant
+observation, the one place where RI's constant :math:`H` would pay off
+(:ref:`sensor-fusion-filter-form`).
+
+
 Replay and log contract
 -----------------------
 
@@ -1063,6 +1651,8 @@ publishes only Euler angles, which are singular at the 90° pitch of a
 vertical launch; the rocket configuration needs a quaternion truth output.
 
 
+.. _sensor-fusion-reference-filter:
+
 Reference filter (step 6)
 -------------------------
 
@@ -1098,6 +1688,8 @@ body-frame accelerometer bias, and the filter drifts along that direction
 with NEES growing while GNSS keeps position and velocity perfect. The
 check cases of step 7 bank in their turns; a synthetic truth must too.
 
+.. _sensor-fusion-validation:
+
 Validation plan
 ---------------
 
@@ -1116,7 +1708,9 @@ measurement dimensions. The error :math:`e` must be taken in the
 convention's own coordinates (``x.error<C>(truth)``, as ``EKF.h`` does),
 because that is what :math:`P` describes; a physical difference
 :math:`p - \hat p` scored against an RI covariance is not a consistency
-test. Bias-state NEES needs the realised bias values, which the sensor FMUs
+test. How to read these statistics, single runs against means over seeds,
+is set out under :ref:`sensor-fusion-consistency`. Bias-state NEES needs
+the realised bias values, which the sensor FMUs
 publish as optional truth columns (Hemerion step 3); the bias errors are
 additive, truth minus estimate, in both conventions, and each block is
 scored against its own marginal covariance.
