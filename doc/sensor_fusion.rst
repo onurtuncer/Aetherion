@@ -24,7 +24,7 @@ open, both options are given with their consequences.
 
 .. note::
 
-   **Status (v0.18.2).** Step 2 (block scheme, vehicle configuration, log
+   **Status (v0.19.0).** Step 2 (block scheme, vehicle configuration, log
    contract) is implemented in ``Aetherion/Estimation/Blocks.h``,
    ``Configuration.h`` and ``LogContract.h``. Step 5 is complete:
    ``SE23.h`` (the group), ``LciFrame.h`` (the navigation frame and
@@ -1859,7 +1859,8 @@ computer, a host-side generator (CppADCodeGen, step 8) emits plain C for
 with a header that carries the dimension, block offsets and configuration
 hash. Golden vectors (recorded inputs and outputs of the reference filter,
 with tolerances and the same hash) let Hemerion verify the embedded filter
-by replay (step 9). Both are checked in on the Hemerion side.
+by replay (step 9). Both are checked in on the Hemerion side. The
+generator, the file format and a worked case study are in :doc:`codegen`.
 
 
 Deferred

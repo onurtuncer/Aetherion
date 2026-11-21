@@ -1,0 +1,3 @@
+Project: Aetherion -- build-tree test output of generate_ekf_c
+This banner is the test fixture's. A recipient of generated code supplies its own.
+SPDX-License-Identifier: LicenseRef-Aetherion-BuildTreeOnly
