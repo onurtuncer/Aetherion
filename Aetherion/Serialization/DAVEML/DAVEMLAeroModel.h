@@ -40,6 +40,7 @@
 #pragma once
 
 #include <limits>
+#include <memory>
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -172,6 +173,14 @@ namespace Aetherion::Serialization {
         std::unordered_map<std::string, BpVec> m_bps;        ///< bpID → breakpoints
         std::unordered_map<std::string, GridTable> m_tables; ///< varID → table
         std::vector<EvalStep> m_steps;                       ///< topo-sorted graph
+
+        /// The MathML of every calculated step, parsed once when the file is
+        /// loaded (one document per entry of @c m_steps, none where the step
+        /// has no calculation). evaluate() walks these trees; it used to parse
+        /// each step's @c mathmlXml again on every call. Never modified after
+        /// construction, so copies of the model share it.
+        struct ParsedMath;
+        std::shared_ptr<const ParsedMath> m_math;
     };
 
 } // namespace Aetherion::Serialization
