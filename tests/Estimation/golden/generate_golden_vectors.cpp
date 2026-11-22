@@ -215,7 +215,7 @@ int main(int argc, char** argv)
         std::map<std::string, std::string> args;
         for (int i = 1; i + 1 < argc; i += 2) {
             const std::string key = argv[i];
-            if (key.rfind("--", 0) != 0) throw std::invalid_argument("expected '--option value', got '" + key + "'");
+            if (!key.starts_with("--")) throw std::invalid_argument("expected '--option value', got '" + key + "'");
             args[key.substr(2)] = argv[i + 1];
         }
         if (argc % 2 == 0) throw std::invalid_argument("an option has no value");
