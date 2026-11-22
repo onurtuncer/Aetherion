@@ -155,13 +155,23 @@ namespace Aetherion::RigidBody {
             // The Integrator stores f_field_ as a value-copy of vf_ taken at
             // construction time.  If vf_ was mutated since then (closed-loop
             // simulators call mutableVectorField() between steps to update
-            // el_deg / pwr_pct), the stored copy is stale.
-            // Building a fresh Integrator from the current vf_ ensures every
-            // step evaluates the up-to-date policies.  For open-loop
-            // simulations vf_ is never mutated, so this is a no-op copy with
-            // negligible overhead relative to the Newton solve.
-            Integrator current(KinematicsField{}, vf_);
-            return current.step(t0, s.g, pack(s), h, opt_);
+            // el_deg / pwr_pct), the stored copy is stale, so every step hands
+            // the integrator the current vf_.
+            //
+            // An integrator that can be handed a field (setVectorField) is the
+            // one kept in integrator_: what it keeps between steps -- the AD
+            // tape of the stage residual, see RadauIIA_RKMK_ProductSE3.h --
+            // then survives from one step to the next. Any other integrator
+            // policy is built afresh from vf_, as before. The kept integrator
+            // makes step() unsafe to call on one stepper from two threads at
+            // once.
+            if constexpr (requires(Integrator& i, const VectorField& vf) { i.setVectorField(vf); }) {
+                integrator_.setVectorField(vf_);
+                return integrator_.step(t0, s.g, pack(s), h, opt_);
+            } else {
+                Integrator current(KinematicsField{}, vf_);
+                return current.step(t0, s.g, pack(s), h, opt_);
+            }
         }
 
         // ------------------------------------------------------------------
@@ -236,7 +246,7 @@ namespace Aetherion::RigidBody {
         // vectorField() can return a stable reference without requiring an
         // accessor on the deeper integrator internals.
         VectorField vf_;
-        Integrator integrator_;
+        mutable Integrator integrator_;
         ODE::RKMK::Core::NewtonOptions opt_;
     };
 

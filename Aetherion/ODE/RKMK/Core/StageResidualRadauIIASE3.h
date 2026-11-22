@@ -52,18 +52,22 @@ namespace Aetherion::ODE::RKMK::Core {
         template <class S>
         using Mat6 = Eigen::Matrix<S, 6, 6>;
 
-        // Construct SE3<S> from stored double pose (q0_, p0_).
+        // Construct SE3<S> from stored double pose (q0_, p0_). The seven
+        // doubles are read as tape parameters (TapeParameters.h): constants on
+        // an ordinary tape, as they always were, and dynamic parameters on a
+        // tape that is kept from one step to the next.
         template <class S>
         [[nodiscard]] inline auto make_se3_from_qp(const Eigen::Quaterniond& qd,
             const Eigen::Vector3d& pd)
         {
             using G = Aetherion::ODE::RKMK::Lie::SE3<S>;
 
-            const Eigen::Quaternion<S> q(static_cast<S>(qd.w()),
-                static_cast<S>(qd.x()),
-                static_cast<S>(qd.y()),
-                static_cast<S>(qd.z()));
-            const auto& p = pd.template cast<S>();
+            // Eigen stores the coefficients as (x, y, z, w).
+            const Eigen::Quaternion<S> q(TapeParameter<S>(qd.coeffs()(3)),
+                TapeParameter<S>(qd.coeffs()(0)),
+                TapeParameter<S>(qd.coeffs()(1)),
+                TapeParameter<S>(qd.coeffs()(2)));
+            const Eigen::Matrix<S, 3, 1> p(TapeParameter<S>(pd(0)), TapeParameter<S>(pd(1)), TapeParameter<S>(pd(2)));
 
             if constexpr (requires { G{ q, p }; }) {
                 return G{ q, p };

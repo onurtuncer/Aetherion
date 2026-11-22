@@ -266,3 +266,82 @@ with no Aetherion dynamics in it, so they should be unrelated — but verify on
       cl's `/showIncludes` output before reaching for `--clean-first`.
       `VSLANG=1033` has been in the `windows-base` preset since August; it
       changes nothing here because the prefix was detected in Turkish.
+
+### 7. F16Plant step cost (Hemerion handoff 2026-11-21, Task B)
+
+Hemerion needs the plant to step faster than real time at a 0.01 s
+communication step; proposed target p99 <= 5 ms and max <= 10 ms per step on a
+GitHub `ubuntu-24.04` runner. Work of 2026-11-22 on `perf/f16plant-step-cost`
+(cut from `feba806`), **in the working tree, not committed**.
+
+Measured on Windows 11, MSVC 19.50 `/O2 /Ob2 /DNDEBUG`, CppAD 20250000.3,
+Intel i5-10210U laptop; case 11 = FMU defaults, 200 s at 0.01 s (20 000
+steps), controls held at trim, turbulence W20 = 8 m/s mapped as Hemerion's
+host does (`dryden_low_altitude`, Hemerion `c16a575`), seed 1.
+
+Where a step went at `feba806` (instrumented copy of the integrator, 2 000
+steps, 44.7 ms per step): dense Jacobians 41.3 ms (5.654 per step at 7.30 ms),
+tape recording 1.10 ms (one per step), zero-order sweeps 0.92 ms, QR 0.41 ms,
+real-residual check 0.57 ms, initial guess 0.16 ms, outputs 0.20 ms, Dryden
+0.012 ms. Newton took 2.827 iterations per step and called the evaluator
+5.654 times: once at the start, 2.827 times at the top of the loop, 1.827
+times in the line search (every trial accepted at the first try).
+
+- [x] Newton loop evaluates each point once (`detail::newton_loop`). Evaluator
+      calls 5.654 -> 2.827 per step, 44.7 -> 24.4 ms. Bit-identical.
+- [x] Evaluators offer `residual()` / `jacobian()` separately; the line search
+      judges a trial on its residual. No rejected trial occurs on this
+      trajectory, so this alone saves nothing here (24.4 -> 24.1 ms); it is
+      what allows `NewtonOptions::report_step_norm = false` (the FMU sets it),
+      which drops the Jacobian taken at the converged iterate only to report
+      `dx_norm`: Jacobians 2.827 -> 1.976 per step, 24.1 -> 16.5 ms.
+      Bit-identical.
+- [x] Tape kept across steps (`ParametricCppADResidualJacobian`,
+      `TapeParameters.h`): the start pose, start state, time, step length,
+      controls, throttle and gust are CppAD dynamic parameters; everything
+      else is compared bit for bit and re-records on a difference; a
+      comparison that changes re-records as before (F01, N08). Tapes recorded
+      1.000 -> 0.0685 per step (0.049 over 20 000 steps), 16.5 -> 12.0 ms (the
+      recording was 1.1 ms; the rest is the Taylor memory no longer being
+      allocated afresh on every step). Bit-identical.
+- [x] Jacobian in one first-order sweep carrying all directions
+      (`NewtonOptions::jacobian_single_sweep`, off in the library, on in the
+      FMU through the new parameter `solver.jacobian_single_sweep`, default
+      1): 12.0 -> 3.4 ms. Bit-identical to CppAD's dense driver on this build;
+      asserted in `tests/ODE/test_NewtonEvaluations.cpp`. **Not checked with
+      GCC**: if that test fails there, the two drivers differ in round-off on
+      that compiler and the FMU default needs a decision.
+- [x] DAVE-ML MathML parsed once at load instead of on every evaluation:
+      aero policy 0.118 -> 0.05-0.07 ms per call, 3.4 -> 2.9 ms. Bit-identical.
+
+Result, `fmi2DoStep` through FMPy, same machine (`bench_fmu.py`, scratch):
+
+| | mean | p50 | p99 | max |
+|---|---|---|---|---|
+| `feba806`, turbulence | 43.06 | 42.38 | 73.26 | 273.7 |
+| now, turbulence, run 1 | 3.95 | 3.80 | 10.03 | 53.0 |
+| now, turbulence, run 2 | 3.29 | 3.08 | 6.74 | 49.1 |
+| now, calm | 1.98 | 1.91 | 4.51 | 54.8 |
+| now, `solver.jacobian_single_sweep` = 0 | 13.86 | 13.27 | 32.96 | 301.0 |
+
+All in ms. The machine stalls for tens of milliseconds on its own (a 0.2 ms
+output block took 48 ms once in the baseline run), so p99 and max here say
+more about the laptop than about the plant. **The target is not met on this
+machine and nothing was measured on Linux.**
+
+Verified: all 42 outputs at all 20 001 points bit-identical to the `feba806`
+FMU in turbulence, calm, and with `solver.jacobian_single_sweep` = 0; the same
+over 60 s (6 001 points) with turbulence seed 7 and all four controls moved on
+every step. `F16SteadyFlight` (30 s, dt 0.01) and `F16AltitudeChange` (20 s,
+dt 0.02) write byte-identical CSVs before and after, so the NESC tables are
+untouched. ctest in `out/build/windows-release`: 760/760.
+
+- [ ] Measure on a GitHub `ubuntu-24.04` runner (GCC 13) and run the test
+      suite there; see the GCC caveat above.
+- [ ] If the target is still missed: the next step changes the arithmetic --
+      reuse the Jacobian across Newton iterations or steps (1.98 Jacobians at
+      about 0.9 ms each and 2.83 zero-order sweeps at 0.17 ms are what is left
+      of a 2.9 ms step). A Jacobian kept across steps would have to be part of
+      the FMU state for a restored run to replay bit for bit.
+- [ ] `RadauIIA_RKMK_SE3` (no FMU uses it) still records its tape on every
+      step; it got the loop changes only.

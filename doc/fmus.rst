@@ -284,6 +284,15 @@ Parameters
      - s
      - 0
      - Maximum internal sub-step.  0 uses the communication step directly.
+   * - ``solver.jacobian_single_sweep``
+     - –
+     - 1
+     - How the Newton Jacobian is taken from the AD tape of the stage
+       residual: 1 carries all 39 directions through one first-order sweep,
+       0 makes one sweep per unknown (CppAD's dense driver, the only way up
+       to 0.19.0).  The two give the same matrix and the same trajectory bit
+       for bit on the build they were compared on; see
+       :ref:`fmu_f16plant_step_cost`.
    * - ``wind.north_mps``
      - m/s
      - 0
@@ -513,6 +522,46 @@ Outputs
    * - ``out.gust_r_rad_s``
      - rad/s
      - Angular velocity of the gust field about body z.
+
+.. _fmu_f16plant_step_cost:
+
+Cost of a step
+~~~~~~~~~~~~~~
+
+A step solves the 39 stage equations of Radau IIA by Newton's method, the
+Jacobian coming from a CppAD tape of the stage residual (J2 gravity, the
+atmosphere and the DAVE-ML aero and engine tables, three times over).  Up to
+0.19.0 nearly all of a step went into Jacobians: the residual was recorded on
+a tape on every step, the Newton loop evaluated residual and Jacobian twice at
+each iterate, and each Jacobian was 39 sweeps of the tape.  Since then:
+
+* the tape is **kept from step to step**.  The start state, the start time,
+  the step length, the three control deflections, the throttle and the gust
+  are *dynamic parameters* of the tape and are set on it at the start of a
+  step; the model object, the CG offset, the steady wind, the atmosphere
+  offsets and the mass properties are constants, compared bit for bit with
+  those the tape was recorded with.  The tape is recorded again when a
+  constant differs, and when a comparison recorded on it -- a table segment, a
+  ``<piecewise>`` branch, "is there a gust" -- goes the other way at the point
+  being evaluated, whether the comparison is on an unknown or on a parameter
+  (the rule of :ref:`the DAVE-ML chapter <daveml>`, now applied across steps);
+* each iterate is evaluated once, and a Jacobian is taken only where a Newton
+  step is computed from it;
+* the Jacobian is taken in one sweep that carries all 39 directions
+  (``solver.jacobian_single_sweep``);
+* the MathML of the DAVE-ML files is parsed when the file is loaded, not on
+  every evaluation.
+
+None of this changes a number: over case 11 (200 s at a 0.01 s step, calm and
+in MIL-F-8785C turbulence with :math:`W_{20}` = 8 m/s) and over 60 s with the
+controls moving on every step, every output of the FMU is bit for bit that of
+0.19.0 at ``feba806`` (Windows, MSVC 19.50 ``/O2``, CppAD 20250000.3).  On that
+build and machine (Intel i5-10210U laptop) the mean cost of ``fmi2DoStep`` at a
+0.01 s step in turbulence fell from 43 ms to between 3.3 and 4.0 ms (median
+42 ms to 3.1--3.8 ms); the 99th percentile was 6.7--10 ms over two runs on a
+machine whose background load alone stalls a step for tens of milliseconds
+now and then.  These figures are for that machine only; nothing was measured
+on Linux.
 
 .. _fmu_f16autopilot:
 

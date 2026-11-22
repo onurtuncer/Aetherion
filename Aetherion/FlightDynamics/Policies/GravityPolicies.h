@@ -12,6 +12,7 @@
 #include <Aetherion/Environment/Gravity.h>
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Spatial/Wrench.h>
+#include <Aetherion/ODE/RKMK/Core/TapeParameters.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
 namespace Aetherion::FlightDynamics {
@@ -93,6 +94,18 @@ namespace Aetherion::FlightDynamics {
                     g_arr[1] * mass,
                     g_arr[2] * mass };
             return w;
+        }
+
+        /// @brief Tape parameters (ODE/RKMK/Core/TapeParameters.h): none, the three constants are fixed.
+        template <class Visitor>
+        void forEachTapeParameter(Visitor&& /*visit*/) const noexcept
+        {}
+
+        /// @brief True when @p other has the same three constants, bit for bit.
+        [[nodiscard]] bool tapeConstantsIdentical(const J2GravityPolicy& other) const noexcept
+        {
+            using ODE::RKMK::Core::BitIdentical;
+            return BitIdentical(mu, other.mu) && BitIdentical(Re, other.Re) && BitIdentical(J2, other.J2);
         }
     };
 

@@ -96,7 +96,7 @@ catch_discover_tests(test_trim_solver)
 # F-16 aero policy in wind, gusts and on a non-standard day (DAVE-ML required)
 # --------------------------------------------------------------------------
 
-add_executable(test_f16_environment test_F16Environment.cpp)
+add_executable(test_f16_environment test_F16Environment.cpp test_F16KeptTape.cpp)
 
 target_compile_definitions(test_f16_environment PRIVATE "DAVEML_F16_AERO_FILE=\"${DAVEML_F16_AERO}\""
                                                         "DAVEML_F16_PROP_FILE=\"${DAVEML_F16_PROP}\"")

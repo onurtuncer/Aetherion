@@ -54,6 +54,7 @@
 #include <Aetherion/FlightDynamics/Policies/AeroPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/PropulsionPolicies.h>
 #include <Aetherion/FlightDynamics/Policies/MassPolicies.h>
+#include <Aetherion/ODE/RKMK/Core/TapeParameters.h>
 #include <Aetherion/RigidBody/KinematicsXiField.h>
 #include <Aetherion/RigidBody/InertialParameters.h>
 #include <Aetherion/Spatial/Adjoint.h>
@@ -226,6 +227,30 @@ namespace Aetherion::RigidBody {
             xdot.template head<6>() = dnu;
             xdot(6) = dm;
             return xdot;
+        }
+
+        // Tape parameters (ODE/RKMK/Core/TapeParameters.h): offered when all
+        // four policies offer them. The field has none of its own; the
+        // inertia, its inverse, the mass and the centre of mass are constants
+        // of a tape, so a tape is not kept across a change of mass properties.
+
+        /// @brief Visits the doubles of the policies that may change between steps.
+        template <class Visitor>
+        void forEachTapeParameter(Visitor&& visit) const
+            requires ODE::RKMK::Core::TapeParameterised<Gravity> && ODE::RKMK::Core::TapeParameterised<Aero> && ODE::RKMK::Core::TapeParameterised<Thrust> && ODE::RKMK::Core::TapeParameterised<MassMdot>
+        {
+            gravity.forEachTapeParameter(visit);
+            aero.forEachTapeParameter(visit);
+            thrust.forEachTapeParameter(visit);
+            mass_model.forEachTapeParameter(visit);
+        }
+
+        /// @brief True when @p other would put the same constants on a tape, bit for bit.
+        [[nodiscard]] bool tapeConstantsIdentical(const VectorField& other) const
+            requires ODE::RKMK::Core::TapeParameterised<Gravity> && ODE::RKMK::Core::TapeParameterised<Aero> && ODE::RKMK::Core::TapeParameterised<Thrust> && ODE::RKMK::Core::TapeParameterised<MassMdot>
+        {
+            using ODE::RKMK::Core::BitIdentical;
+            return BitIdentical(M, other.M) && BitIdentical(M_inv, other.M_inv) && BitIdentical(mass_kg, other.mass_kg) && BitIdentical(com_m, other.com_m) && gravity.tapeConstantsIdentical(other.gravity) && aero.tapeConstantsIdentical(other.aero) && thrust.tapeConstantsIdentical(other.thrust) && mass_model.tapeConstantsIdentical(other.mass_model);
         }
     };
 

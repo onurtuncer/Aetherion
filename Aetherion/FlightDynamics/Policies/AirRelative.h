@@ -22,6 +22,13 @@
 // Calm air is bit-identical to a policy without the wind and gust terms: the
 // subtractions are skipped when the vectors are zero, so nothing changes
 // numerically and nothing extra lands on an AD tape.
+//
+// The six gust components are read as tape parameters
+// (ODE/RKMK/Core/TapeParameters.h), and the "is there a gust" test is made on
+// the scalar type. On an ordinary tape that is the constant and the plain
+// comparison it always was. On a tape kept from one step to the next the gust
+// is a dynamic parameter and the test is recorded, so a gust that appears or
+// vanishes re-records the tape instead of going unnoticed.
 // ------------------------------------------------------------------------------
 
 #pragma once
@@ -29,6 +36,7 @@
 #include <Aetherion/Environment/DrydenTurbulence.h> // GustState
 #include <Aetherion/Environment/WGS84.h>
 #include <Aetherion/Environment/detail/MathWrappers.h>
+#include <Aetherion/ODE/RKMK/Core/TapeParameters.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 
 #include <Eigen/Dense>
@@ -66,10 +74,13 @@ namespace Aetherion::FlightDynamics {
                 S(windECEF.z()));
             v_rel -= g.R.transpose() * v_wind_eci;
         }
-        if (gust.u_mps != 0.0 || gust.v_mps != 0.0 || gust.w_mps != 0.0) {
-            v_rel(0) -= S(gust.u_mps);
-            v_rel(1) -= S(gust.v_mps);
-            v_rel(2) -= S(gust.w_mps);
+        const S gust_u = ODE::RKMK::Core::TapeParameter<S>(gust.u_mps);
+        const S gust_v = ODE::RKMK::Core::TapeParameter<S>(gust.v_mps);
+        const S gust_w = ODE::RKMK::Core::TapeParameter<S>(gust.w_mps);
+        if (gust_u != S(0.0) || gust_v != S(0.0) || gust_w != S(0.0)) {
+            v_rel(0) -= gust_u;
+            v_rel(1) -= gust_v;
+            v_rel(2) -= gust_w;
         }
         return v_rel;
     }
@@ -86,10 +97,13 @@ namespace Aetherion::FlightDynamics {
         constexpr double kOmegaE = Environment::WGS84::kRotationRate_rad_s;
         const Eigen::Matrix<S, 3, 1> omega_E(S(0), S(0), S(kOmegaE));
         Eigen::Matrix<S, 3, 1> omega_B = nu_B.template head<3>() - g.R.transpose() * omega_E;
-        if (gust.p_rad_s != 0.0 || gust.q_rad_s != 0.0 || gust.r_rad_s != 0.0) {
-            omega_B(0) -= S(gust.p_rad_s);
-            omega_B(1) -= S(gust.q_rad_s);
-            omega_B(2) -= S(gust.r_rad_s);
+        const S gust_p = ODE::RKMK::Core::TapeParameter<S>(gust.p_rad_s);
+        const S gust_q = ODE::RKMK::Core::TapeParameter<S>(gust.q_rad_s);
+        const S gust_r = ODE::RKMK::Core::TapeParameter<S>(gust.r_rad_s);
+        if (gust_p != S(0.0) || gust_q != S(0.0) || gust_r != S(0.0)) {
+            omega_B(0) -= gust_p;
+            omega_B(1) -= gust_q;
+            omega_B(2) -= gust_r;
         }
         return omega_B;
     }

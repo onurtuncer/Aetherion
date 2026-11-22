@@ -202,9 +202,9 @@ namespace Aetherion::FlightDynamics {
             in.p_rps = omega_B(0);
             in.q_rps = omega_B(1);
             in.r_rps = omega_B(2);
-            in.el_deg = S(m_elDeg);
-            in.ail_deg = S(m_ailDeg);
-            in.rdr_deg = S(m_rdrDeg);
+            in.el_deg = ODE::RKMK::Core::TapeParameter<S>(m_elDeg);
+            in.ail_deg = ODE::RKMK::Core::TapeParameter<S>(m_ailDeg);
+            in.rdr_deg = ODE::RKMK::Core::TapeParameter<S>(m_rdrDeg);
             const auto c = m_model->evaluate<S>(in);
 
             // ── Reference geometry ────────────────────────────────────────────────
@@ -225,6 +225,34 @@ namespace Aetherion::FlightDynamics {
             wrench.f(1) = c.cm * qS * S(cbar) * S(kFtLbf_Nm)   // CM×qS×c̄  [N·m]
                           + S(m_xcgFromAcM) * wrench.f(5);     // x_cg_ac × FZ [N·m]
             return wrench;
+        }
+
+        // ── Tape parameters (ODE/RKMK/Core/TapeParameters.h) ──────────────────────
+
+        /// @brief What changes between integration steps: the three control
+        /// deflections and the six gust components. Each is read through
+        /// TapeParameter in operator() and in AirRelative.h.
+        template <class Visitor>
+        void forEachTapeParameter(Visitor&& visit) const
+        {
+            visit(m_elDeg);
+            visit(m_ailDeg);
+            visit(m_rdrDeg);
+            visit(m_gust.u_mps);
+            visit(m_gust.v_mps);
+            visit(m_gust.w_mps);
+            visit(m_gust.p_rad_s);
+            visit(m_gust.q_rad_s);
+            visit(m_gust.r_rad_s);
+        }
+
+        /// @brief True when @p other puts the same constants on a tape: the
+        /// same model object, CG offset, steady wind and atmosphere offsets,
+        /// bit for bit.
+        [[nodiscard]] bool tapeConstantsIdentical(const F16AeroPolicy& other) const noexcept
+        {
+            using ODE::RKMK::Core::BitIdentical;
+            return m_model == other.m_model && BitIdentical(m_xcgFromAcM, other.m_xcgFromAcM) && BitIdentical(m_windECEF, other.m_windECEF) && BitIdentical(m_atm.deltaT_K, other.m_atm.deltaT_K) && BitIdentical(m_atm.deltaP_sl_Pa, other.m_atm.deltaP_sl_Pa);
         }
 
     private:

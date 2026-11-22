@@ -101,7 +101,7 @@ namespace Aetherion::FlightDynamics {
 
             // ── Evaluate propulsion model ─────────────────────────────────────────
             Serialization::DAVEMLPropModel::Inputs<S> in{};
-            in.pwr_pct = S(pwr_pct);
+            in.pwr_pct = ODE::RKMK::Core::TapeParameter<S>(pwr_pct);
             in.alt_ft = alt_ft;
             in.mach = mach;
             const auto out = m_model->evaluate<S>(in);
@@ -117,6 +117,28 @@ namespace Aetherion::FlightDynamics {
             wrench.f(4) = out.fy_N;  // body Y thrust   [N]
             wrench.f(5) = out.fz_N;  // body Z thrust   [N]
             return wrench;
+        }
+
+        // ── Tape parameters (ODE/RKMK/Core/TapeParameters.h) ──────────────────────
+
+        /// @brief What changes between integration steps: the throttle and the
+        /// linear gust (the propulsion model has no use for the angular one).
+        template <class Visitor>
+        void forEachTapeParameter(Visitor&& visit) const
+        {
+            visit(pwr_pct);
+            visit(m_gust.u_mps);
+            visit(m_gust.v_mps);
+            visit(m_gust.w_mps);
+        }
+
+        /// @brief True when @p other puts the same constants on a tape: the
+        /// same model object, steady wind and atmosphere offsets, bit for bit.
+        /// The angular gust is neither: the propulsion model never reads it.
+        [[nodiscard]] bool tapeConstantsIdentical(const F16PropPolicy& other) const noexcept
+        {
+            using ODE::RKMK::Core::BitIdentical;
+            return m_model == other.m_model && BitIdentical(m_windECEF, other.m_windECEF) && BitIdentical(m_atm.deltaT_K, other.m_atm.deltaT_K) && BitIdentical(m_atm.deltaP_sl_Pa, other.m_atm.deltaP_sl_Pa);
         }
 
     private:
