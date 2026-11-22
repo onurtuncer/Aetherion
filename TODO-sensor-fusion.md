@@ -630,10 +630,18 @@ prior):
   on 0.7 of 20 seeds, so one seed is what the arithmetic allows, and the
   rule read literally is still missed on those two cases.
 
-**Open, for the maintainer:**
-1. Hemerion fixes the IMU stamp (written up in
-   `HANDOFF-to-Hemerion-2026-11-22.md`, an untracked note); table B stands
-   on that fix.
+- IMU stamp: Hemerion stamps each IMU sample with its validity time, as it
+  does the GNSS fix since be5a19a. The replay keeps reading `part_time_s`
+  as written and gets no correction; `--imu-time-shift` stays a diagnostic.
+
+**Waiting on Hemerion, then to do here:**
+- [ ] A batch flown with the corrected IMU stamp (and after its #76): redo
+      the direct check (residual minimum at zero shift), then tables A and B
+      without `--imu-time-shift`.
+- [ ] The case-12 log that loses GNSS after 60–100 s, 20 seeds.
+- [ ] If table B holds on the new batch: make barometer sigma 0.34 m and
+      the bias priors 1 mrad/s and 0.02 m/s² the defaults in `Replay.h`,
+      and state the stamp convention in `LogContract.h`.
 The defaults in `Replay.h` are unchanged until then, so the step-8 golden
 vectors, which do not use them, are untouched either way.
 
