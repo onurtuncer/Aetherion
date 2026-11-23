@@ -1744,6 +1744,352 @@ is still available. The choice is an input to the embedded implementation.
 A UKF is run as a cross-check once the EKF is consistent.
 
 
+.. _sensor-fusion-tuning:
+
+Tuning and observability (step 7)
+---------------------------------
+
+This section records how the reference filter is tuned on Hemerion's logs,
+the theory each step rests on, and what the first full batch showed
+(2026-11-22). The tables with every figure, and the decisions still open,
+are in step 7 of ``TODO-sensor-fusion.md``; this is the reasoning.
+
+Procedure
+^^^^^^^^^
+
+The data are Hemerion's co-simulation logs of cases 11, 12, 13.1, 13.3 and
+13.4, twenty seeds each, with MIL-F-8785C turbulence at
+:math:`W_{20} = 8` m/s. A seed fixes every random draw: sensor noise,
+turn-on biases and the gust sequence. Each log set is replayed by
+``EkfReplay`` in both error conventions, and
+``scripts/step7_replay_batch.py`` gathers the second-half statistics over
+seeds. Four rules keep the result honest:
+
+1. **A table before any change.** The logs are first replayed at default
+   tuning. Every later figure is compared with that table, not with memory.
+2. **Over seeds, never one realisation.** One run's time-averaged NEES is
+   close to a single :math:`\chi^2` draw
+   (:ref:`sensor-fusion-consistency`), so a change is judged on the mean
+   over the twenty seeds.
+3. **Every change on every case.** A setting that repairs one case is
+   replayed on the other four, so it cannot cost them unseen.
+4. **One command per table.** A tuning is the option list after ``--`` on
+   the batch script's command line, and the table prints it.
+
+Before any tuning, the measurements are checked against the truth log
+directly, without the filter. A sensor's residual against truth shows its
+noise level, its whiteness and its time alignment far more sharply than a
+NIS does, and a fault found there is a fault in the log, not something for
+:math:`Q` or :math:`R` to absorb.
+
+What each statistic tunes
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**NIS sets R.** The innovation covariance is
+:math:`S = H P H^{\mathsf T} + R`. When a measurement arrives much faster
+than the state it observes changes, :math:`H P H^{\mathsf T} \ll R` and the
+mean NIS per dimension is the ratio of the actual to the assumed noise
+variance. The corrected sigma is then
+
+.. math::
+
+   \sigma_{\text{new}} = \sigma_{\text{old}}\,
+       \sqrt{\overline{\mathrm{NIS}}/m}\,, \qquad
+   1\ \text{m} \times \sqrt{0.115} = 0.34\ \text{m}
+
+for the barometer, which updates at 50 Hz. The direct check agrees: the
+BMP390 samples minus the plant's static pressure and the drawn bias are
+white with a standard deviation of 3.0 Pa. Height follows from pressure by
+the hydrostatic relation, so
+
+.. math::
+
+   \sigma_h = \frac{\sigma_P}{\rho\,g}: \qquad
+   0.34\ \text{m at 10 000 ft}, \qquad 0.67\ \text{m at 30 000 ft}.
+
+A barometer sigma in metres is therefore right at one altitude only. Case
+12 at 30 000 ft has a NIS of 0.45 with the 1 m default, where the cases at
+10 000 ft have 0.115.
+
+**Priors set the NEES of what is barely observed.** A state the
+measurements hardly touch keeps its initial covariance. If the prior sigma
+is :math:`k` times the spread the errors are really drawn from, that
+block's NEES sits near :math:`1/k^2` however long the run. Accelerometer
+bias x and y in trimmed flight are such states (the tilt ambiguity of
+:ref:`sensor-fusion-observability`). The priors are therefore the sensor
+model's turn-on sigmas, 1 mrad/s and 0.02 m/s², not round numbers above
+them.
+
+**Process noise sets the NEES of what is observed.** For a state the
+measurements do reach, the steady covariance balances :math:`Q` against the
+information arriving, and a NEES persistently above 1 with NIS at 1 asks
+for more :math:`Q`. Nothing in this batch asked for it once the logs were
+right.
+
+**How many seeds may exceed a bound.** A bias error is one constant per
+run, so its time-averaged NEES is one :math:`\chi^2_n` draw and
+
+.. math::
+
+   P\!\left(\chi^2_n / n > 2\right) =
+   0.157\ (n = 1), \quad 0.112\ (n = 3), \quad 0.035\ (n = 9),
+   \quad 0.010\ (n = 16).
+
+Of twenty seeds a consistent filter is expected to show about three above
+2 on the 1-dof barometer bias, two on each 3-dof block and fewer than one
+on the 9-dof navigation core. "No seed above 2" is a fair test of the
+navigation core and of the full state, and not of the small blocks.
+
+A time-stamp offset on the IMU
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The first table had every 13.x seed at a full-state ANEES near 5 while
+each block alone read 1–3, with every NIS at 1. In the signature table of
+:ref:`sensor-fusion-consistency` that is "filter and measurements agree
+with each other but not with truth". The direct check found the cause: an
+IMU sample stamped :math:`t` is the plant's specific force and angular
+rate at :math:`t - \tau`, with :math:`\tau` one co-simulation step, 10 ms.
+
+.. figure:: _static/sensor_fusion/step7_imu_stamp.png
+   :width: 100%
+   :align: center
+
+   Left: standard deviation of the IMU samples minus the truth log's own
+   specific force and body rate, against a shift added to the IMU stamp,
+   normalised by its minimum (case 13.4, seed 2). The minimum is the
+   sensor's white noise, and it is at −10 ms. Right: accelerometer-bias x
+   error and the filter's ±3σ on the same run, replayed as written and
+   with the stamps moved back 10 ms.
+
+*Why a delay matters.* To first order, a sample taken late by
+:math:`\tau` differs from the right one by :math:`\tau` times the
+signal's rate of change,
+
+.. math::
+
+   \tilde\omega(t) - \omega(t) \approx -\tau\,\dot\omega(t), \qquad
+   \tilde a(t) - a(t) \approx -\tau\,\dot a(t),
+
+so the attitude the filter integrates lags by
+:math:`\delta\theta \approx \tau\,\omega` and its velocity by
+:math:`\tau\,\dot v`. In case 11 the roll rate is 0.013 rad/s rms, the lag
+is 0.13 mrad, and nothing shows. In case 13.4 the closed loop drives the
+roll rate to 0.30 rad/s rms, changing by 0.15 rad/s from one sample to the
+next; the lag is 3 mrad (0.17°), more than the filter's tilt sigma.
+
+*Why it becomes a bias.* A delay alone only shifts the dead-reckoned
+trajectory in time and cannot bias it. The GNSS and barometer stamps are
+right, though, so each update compares a current measurement with a
+delayed prediction. The innovations then carry terms in
+:math:`\tau\,\omega` and :math:`\tau\,\dot v` that are correlated with the
+body's own motion, and the body-frame bias states, the only constants the
+model offers, collect their mean. In 13.4 this is −0.052 m/s² on
+accelerometer bias x with a matching 0.3° of pitch, three sigma each. The
+mechanism is stated here as a reading; the evidence is the experiment.
+With the stamps moved back 10 ms and nothing else changed, the three 13.x
+cases return to nav ANEES 0.79–0.91 and full-state ANEES 0.82–0.90, no
+seed above 1.7, and tilt RMS falls by a third to a half.
+
+The remedy belongs in the log, as it did for the GNSS stamp: the sample
+should carry its validity time. The replay is not changed;
+``--imu-time-shift`` is a diagnostic whose default is zero.
+
+Barometer-only flight at Mach 2 (case 12)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Case 12 has no GNSS fix for its whole 200 s, because the receiver's
+velocity limit is exceeded, and the biases start at their turn-on values.
+Its ANEES is in the hundreds to millions under every :math:`Q`,
+:math:`R` and initial covariance tried. Three replays separate the
+possible causes:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 46 54
+
+   * - Replay (seed 2)
+     - Result
+   * - Noise-free IMU built from the truth columns, no updates
+     - Position drift under 1 m in 200 s: the process model matches the
+       plant.
+   * - Same IMU, barometer on, default priors
+     - Nav ANEES 149 (RI), 57 (LI).
+   * - Same, priors 10 times tighter; 100 times tighter
+     - 1.0 (RI), 4.6 (LI); 0.07, 0.08.
+
+Consistency fails with the *size* of the error, which marks a
+linearisation limit and not a wrong Jacobian. The limit can be written
+down.
+
+*What the barometer can see.* Tilt does not reach the vertical channel to
+first order: a tilt error :math:`\theta` misdirects gravity sideways, by
+:math:`g\,\theta`. The horizontal velocity error that follows does reach
+it, because flight over a round, rotating Earth needs a centripetal
+acceleration. In a local-level description the vertical acceleration
+contains :math:`v^2/R` and the Coriolis term, so an along-track velocity
+error :math:`\delta v` changes it by
+
+.. math::
+
+   \delta a_U = \kappa\,\delta v, \qquad
+   \kappa = \frac{2v}{R} + 2\,\Omega\cos\varphi\,\sin\psi
+   \approx \frac{2 \times 609}{6.37\times10^{6}}
+   = 1.9\times10^{-4}\ \text{s}^{-1}
+
+(the Eötvös effect; the launch-centred inertial frame carries the same
+physics in its gravity term). A gyro-bias error :math:`b` therefore shows
+in height through the chain
+
+.. math::
+
+   \theta = b\,t, \qquad
+   \delta v = \tfrac12\,g\,b\,t^{2}, \qquad
+   \delta a_U = \tfrac12\,\kappa\,g\,b\,t^{2}, \qquad
+   \delta h = \tfrac{1}{24}\,\kappa\,g\,b\,t^{4}.
+
+For :math:`b = 1` mrad/s this is 0.5 m at 50 s and 8 m at 100 s, against a
+barometer averaged to centimetres. So at Mach 2 the barometer does observe
+tilt and gyro bias, weakly, and the filter is right to use it.
+
+*What the linearisation drops.* The same tilt shortens the vertical
+component of the specific force, :math:`g\cos\theta \approx
+g\,(1 - \theta^2/2)`. That term is second order and is absent from
+:math:`F`:
+
+.. math::
+
+   \delta a_U^{(2)} = \tfrac12\,g\,\theta^{2} = \tfrac12\,g\,b^{2}t^{2},
+   \qquad
+   \frac{\delta a_U^{(2)}}{\delta a_U} = \frac{b}{\kappa}.
+
+The ratio does not depend on time. The neglected term is smaller than the
+signal only while the gyro-bias error is well below
+:math:`\kappa \approx 2\times10^{-4}` rad/s; for an initial tilt
+:math:`\theta_0` the corresponding ratio is
+:math:`\theta_0 / (2\kappa t)`. Hemerion's turn-on bias is 1 mrad/s, five
+times :math:`\kappa`. The filter then reads a second-order effect as
+first-order information, and its tilt sigma falls while the tilt error
+grows.
+
+.. figure:: _static/sensor_fusion/step7_case12.png
+   :width: 100%
+   :align: center
+
+   Left: tilt error and the filter's own 1σ on case 12, seed 2. After
+   about 80 s the filter claims a tilt it does not have. Right: the
+   first-order vertical acceleration the barometer can use and the
+   second-order one the filter neglects, for three gyro-bias errors. They
+   are equal at :math:`b = \kappa`; at the turn-on bias the neglected term
+   is five times the signal.
+
+The criterion agrees with the three replays above: priors of 2 mrad/s and
+1 mrad/s fail, 0.2 mrad/s is marginal, 0.02 mrad/s is consistent. It also
+says what degraded mode needs. With GNSS, the filter knows gyro bias x and
+y to :math:`2\times10^{-5}` rad/s within a minute, a tenth of
+:math:`\kappa`. An outage that begins after that is inside the linear
+range; an outage from the first sample is not, whatever :math:`Q` and
+:math:`R` are. The left-invariant filter is 10 to 1000 times less wrong
+than the right-invariant one on this case (median nav ANEES 140 against
+912 at default tuning), the largest difference between the conventions on
+real logs so far.
+
+Result and weakly observable states
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+With the IMU stamps corrected, two changes are proposed, in the plan's
+order. Neither is the default yet.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 50
+
+   * - Setting
+     - Change
+     - Reason
+   * - Barometer sigma
+     - 1 → 0.34 m
+     - NIS 0.115 → 0.97–1.00; the sensor's 3.0 Pa at 10 000 ft.
+   * - Gyro and accelerometer bias priors
+     - 2 → 1 mrad/s, 0.05 → 0.02 m/s²
+     - The sensor model's turn-on sigmas. Tilt RMS falls 30–40 %.
+   * - IMU densities, bias walks, GNSS :math:`R`
+     - none
+     - NIS at 1.00 for position and velocity. The logged biases do not
+       walk; the walks stay as an allowance for a real part.
+
+Mean second-half ANEES over twenty seeds, right-invariant, with those
+settings (left-invariant figures differ by at most 0.03 on the navigation
+core):
+
+.. list-table::
+   :header-rows: 1
+   :widths: 10 10 10 10 10 10 10 10 10 10
+
+   * - Case
+     - nav /9
+     - b_g /3
+     - b_a /3
+     - b_p /1
+     - full /16
+     - NIS baro
+     - pos [m]
+     - tilt [°]
+     - yaw [°]
+   * - 11
+     - 0.97
+     - 0.77
+     - 1.06
+     - 1.11
+     - 0.88
+     - 0.97
+     - 0.19
+     - 0.10
+     - 1.03
+   * - 13.1
+     - 0.88
+     - 1.02
+     - 1.34
+     - 0.95
+     - 0.99
+     - 1.00
+     - 0.19
+     - 0.06
+     - 0.71
+   * - 13.3
+     - 0.94
+     - 0.55
+     - 1.33
+     - 1.16
+     - 0.91
+     - 0.98
+     - 0.18
+     - 0.08
+     - 0.30
+   * - 13.4
+     - 0.88
+     - 0.62
+     - 1.08
+     - 1.17
+     - 0.86
+     - 0.98
+     - 0.18
+     - 0.07
+     - 0.35
+
+Where the states are weakly observable, from the filter's own second-half
+sigma against its prior:
+
+* **Accelerometer bias x, y.** 0.019 m/s² against the 0.02 prior on case
+  11: not observable in trimmed flight. 0.014–0.015 on the 13.x cases:
+  still weak. Accelerometer bias z is known to 1 mm/s² everywhere.
+* **Gyro bias z and yaw.** :math:`2.6\times10^{-4}` rad/s on case 11 and
+  yaw RMS 1.0° (worst seed 4°); :math:`7\times10^{-5}` rad/s and 0.30–0.35°
+  on 13.3 and 13.4, where the heading changes. Gyro bias x and y are known
+  to :math:`2`–:math:`5\times10^{-5}` rad/s on every case with GNSS.
+* **Barometer bias.** 0.15 m with GNSS; 9 m on case 12, where nothing
+  separates it from height.
+
+
 Closed-loop use (planned)
 -------------------------
 

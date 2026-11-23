@@ -485,6 +485,166 @@ Reading:
   1.30 × part time with a 307 ms rms residual (seed 1), so arrival stamps
   are not usable as a clock there either.
 
+**All five cases, 20 seeds each (2026-11-22). Not settled: three decisions
+are open, listed at the end.**
+- Source: Hemerion's 2026-11-19 batch (runs 44517640931, 44530268940,
+  44532755317, 44534486143, 44535799287, 44537264437; Hemerion `85d3052` /
+  `1927309`, plant 0.18.2 `49e75b8`, Doppler GNSS velocity, W20 8 m/s).
+  Flown before Hemerion #76, so the barometer phase is not bit-reproducible.
+  Copied to `C:\Users\otunc\step7-logs\2026-11-19\case<c>\seed-<n>`; the
+  tables' per-run CSVs are in `_tables` there.
+- Replay: `EkfReplay` from `main` `feba806` plus the uncommitted working tree
+  of branch `feat/step7-tuning` (MSVC Release), which adds the tuning options,
+  `--imu-time-shift`, `--csv off` and the ANEES of the nav core's three parts.
+  Default tuning reproduces the pinned 0.18.2 figures digit for digit (case
+  11 seed 5: nav ANEES 0.813587).
+- Command for every table, with the options named above it appended after
+  `--`: `python scripts/step7_replay_batch.py --exe <EkfReplay> --root <logs>
+  --out <dir> --label <name> -- <options>`.
+- Figures are second-half means over seeds (medians for case 12 and for the
+  RMS columns); "nav > 2" counts seeds, with the worst seed in brackets.
+
+*Table A, logs as written, default tuning (no options). The new starting point.*
+
+| Case | Conv | nav /9 | att /3 | vel /3 | pos /3 | b_g /3 | b_a /3 | b_p /1 | full /16 | nav > 2 (max) | NIS pos | NIS vel | NIS baro | pos m | vel m/s | tilt ° | yaw ° |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 11 | RI | 0.89 | 0.80 | 0.66 | 0.70 | 0.77 | 0.83 | 0.86 | 0.83 | 1 (2.04) | 1.00 | 1.00 | 0.114 | 0.192 | 0.0219 | 0.144 | 1.11 |
+| 11 | LI | 0.79 | 0.51 | 0.96 | 0.90 | 0.74 | 0.52 | 0.86 | 0.76 | 0 (1.62) | 1.00 | 1.00 | 0.114 | 0.192 | 0.0219 | 0.129 | 1.24 |
+| 12 | RI | 912 | 776 | 387 | 399 | 28.8 | 7.23 | 0.0071 | 6.3e4 | 20 (1.7e8) | — | — | 0.452 | 4590 | 55.6 | 2.78 | 20.5 |
+| 12 | LI | 140 | 3.04 | 54.9 | 153 | 2.79 | 1.83 | 0.0020 | 1.8e3 | 20 (903) | — | — | 0.446 | 1820 | 25.1 | 1.04 | 7.24 |
+| 13.1 | RI | 1.22 | 1.24 | 1.11 | 0.72 | 1.00 | 1.06 | 0.76 | 4.74 | 0 (1.64) | 0.99 | 1.01 | 0.117 | 0.186 | 0.0308 | 0.135 | 0.763 |
+| 13.1 | LI | 1.21 | 1.21 | 1.66 | 0.66 | 1.01 | 1.05 | 0.76 | 4.74 | 0 (1.65) | 0.99 | 1.01 | 0.117 | 0.186 | 0.0308 | 0.135 | 0.766 |
+| 13.3 | RI | 1.50 | 1.95 | 1.60 | 1.27 | 0.58 | 1.98 | 0.91 | 4.97 | 2 (2.53) | 1.00 | 1.02 | 0.115 | 0.185 | 0.0305 | 0.182 | 0.289 |
+| 13.3 | LI | 1.51 | 1.97 | 1.57 | 0.89 | 0.57 | 1.99 | 0.91 | 4.97 | 2 (2.61) | 1.00 | 1.02 | 0.115 | 0.184 | 0.0305 | 0.188 | 0.301 |
+| 13.4 | RI | 1.89 | 3.08 | 2.85 | 2.49 | 0.62 | 3.16 | 0.91 | 5.18 | 7 (2.67) | 1.00 | 1.02 | 0.115 | 0.184 | 0.0306 | 0.240 | 0.367 |
+| 13.4 | LI | 1.89 | 3.07 | 1.58 | 0.89 | 0.62 | 3.13 | 0.91 | 5.18 | 7 (2.62) | 1.00 | 1.02 | 0.115 | 0.183 | 0.0306 | 0.239 | 0.371 |
+
+**Finding 1: the IMU stamps are one co-simulation step late.** Against the
+truth log's own `imu::f_*` and `out.{p,q,r}_rad_s`, every IMU sample matches
+the truth at `part_time_s − 0.01 s` to the sensor's white noise (residual sd
+0.050 m/s² and 0.0020 rad/s on all six axes, cases 11, 12 and 13.4, seed 2);
+at zero shift the 13.4 residual is 0.58 m/s² on accel x and 0.149 rad/s on
+gyro x. Case 11 hides it because nothing moves fast there. The same kind of
+fault as the GNSS stamp fixed in be5a19a, and Hemerion's to fix: the replay
+is not changed, `--imu-time-shift` is a diagnostic with default 0. It is the
+whole of the 13.x overconfidence: the full-state ANEES of about 5 on every
+13.x seed was accel bias x and z sitting 3σ from the drawn values with a
+matching 0.3° of pitch. With `--imu-time-shift -0.01` and nothing else, 13.x
+nav ANEES is 0.79 / 0.91 / 0.86 (13.1 / 13.3 / 13.4, RI and LI alike), full
+0.90 / 0.87 / 0.82, no seed above 1.7, tilt RMS 0.06–0.12° and velocity RMS
+0.023–0.024 m/s; case 11 does not move. To recheck on a batch flown after
+Hemerion #76, which moved the first IMU row.
+
+**Finding 2: the barometer is white at 3.0 Pa**, with no lag and no mean
+(cases 11, 13.1, 13.4 against `out.P_Pa` + drawn bias). That is 0.34 m at
+10 000 ft and 0.67 m at 30 000 ft, so a sigma in metres is right at one
+altitude only: case 12's NIS at 1 m is 0.45, not 0.115. Worth giving the
+filter the sigma in pascals; not done.
+
+**Finding 3: case 12 is not a tuning problem.** No fix in 200 s (COCOM
+limit at Mach 2), biases at their turn-on values, barometer only.
+- The process model is right: a noise-free IMU built from the truth columns,
+  no updates, drifts under 1 m in 200 s (case 11 likewise).
+- With that noise-free IMU and the barometer on, default priors still give
+  nav ANEES 149 RI / 57 LI; priors ten times tighter give 1.0 / 4.6; a
+  hundred times tighter 0.07 / 0.08. Consistency fails with the size of the
+  error, not with a Jacobian.
+- Reading, not proven further: at Mach 2 the barometer observes horizontal
+  velocity, and through it tilt and gyro bias, only by the centrifugal and
+  Coriolis coupling (about 2·10⁻⁴ s⁻¹ per m/s). An unobserved 1 mrad/s gyro
+  bias tilts the solution by degrees within a minute, and the neglected
+  second-order vertical term g θ²/2 (1.2·10⁻³ m/s² at 0.9°) is then as large
+  as that first-order signal. The filter takes it for information: tilt
+  sigma falls to 0.2–0.5° while the tilt error is 1–3°.
+- Tried over 20 seeds, both conventions, none below 100: barometer sigma
+  0.34, 3 and 10 m; accelerometer density ×4; initial sigmas 0.1°, 0.1 m/s,
+  1 m; the last with 10 m. LI is 10–1000 times less wrong than RI
+  throughout (median 140 against 912 at default), the clearest difference
+  between the conventions so far.
+
+**Tuning, in the plan's order, with the stamps corrected.**
+1. Barometer sigma 1 m → 0.34 m: NIS 0.97–1.00, baro-bias ANEES 0.95–1.17,
+   nothing else moves (nav within 0.01, RMS unchanged).
+2. Baro-bias walk: left at 0.05 m/√s. Baro-bias ANEES is in band and these
+   flights are standard-day; the non-standard-day question is still open.
+3. Bias priors to Hemerion's turn-on sigmas (`imu_noise_model.h`: 1 mrad/s
+   and 0.02 m/s²; the 20 seeds draw 0.87–1.0 mrad/s and 0.014–0.021 m/s²):
+   gyro 2 → 1 mrad/s, accel 0.05 → 0.02 m/s². Tilt RMS falls 30–40 % on
+   cases 11, 13.3 and 13.4 and the conservative blocks move up towards 1.
+4. Left alone: the IMU densities, the bias walks (the logs' biases do not
+   walk at all; the walks are an allowance for a real part) and GNSS R (NIS
+   1.00 on position and velocity with the logged accuracies; `sAcc` 0.071
+   m/s is the rms of 0.05 / 0.05 / 0.10, so the axes are not each at 1).
+
+*Table B, proposed: `--imu-time-shift -0.01 --baro-sigma 0.34
+--init-gyro-bias-sigma 1e-3 --init-accel-bias-sigma 0.02`.*
+
+| Case | Conv | nav /9 | att /3 | vel /3 | pos /3 | b_g /3 | b_a /3 | b_p /1 | full /16 | nav > 2 (max) | NIS pos | NIS vel | NIS baro | pos m | vel m/s | tilt ° | yaw ° |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 11 | RI | 0.97 | 1.06 | 0.84 | 0.87 | 0.77 | 1.06 | 1.11 | 0.88 | 1 (2.64) | 1.00 | 1.00 | 0.974 | 0.191 | 0.0216 | 0.102 | 1.03 |
+| 11 | LI | 0.94 | 0.97 | 0.94 | 0.90 | 0.76 | 1.00 | 1.11 | 0.86 | 1 (2.47) | 1.00 | 1.00 | 0.974 | 0.191 | 0.0216 | 0.101 | 1.02 |
+| 12 | RI | 8270 | 3790 | 1750 | 1900 | 117 | 390 | 0.0053 | 3.7e6 | 20 (5.1e7) | — | — | 3.88 | 8740 | 116 | 4.33 | 40.2 |
+| 12 | LI | 640 | 19.8 | 214 | 617 | 7.0 | 2.59 | 0.0055 | 1.2e4 | 20 (6160) | — | — | 3.82 | 1590 | 25.2 | 1.19 | 6.51 |
+| 13.1 | RI | 0.88 | 0.83 | 0.67 | 0.55 | 1.02 | 1.34 | 0.95 | 0.99 | 0 (1.96) | 0.99 | 0.99 | 0.997 | 0.185 | 0.0236 | 0.0634 | 0.713 |
+| 13.1 | LI | 0.87 | 0.81 | 1.15 | 0.66 | 1.02 | 1.33 | 0.95 | 0.99 | 0 (1.88) | 0.99 | 0.99 | 0.997 | 0.185 | 0.0236 | 0.0628 | 0.737 |
+| 13.3 | RI | 0.94 | 0.91 | 0.73 | 0.70 | 0.55 | 1.33 | 1.16 | 0.91 | 1 (2.24) | 1.00 | 1.00 | 0.980 | 0.183 | 0.0229 | 0.0789 | 0.303 |
+| 13.3 | LI | 0.94 | 0.92 | 1.00 | 0.88 | 0.55 | 1.35 | 1.17 | 0.91 | 1 (2.34) | 1.00 | 1.00 | 0.980 | 0.183 | 0.0229 | 0.0773 | 0.292 |
+| 13.4 | RI | 0.88 | 0.75 | 0.66 | 0.63 | 0.62 | 1.08 | 1.17 | 0.86 | 0 (1.78) | 1.00 | 1.00 | 0.980 | 0.183 | 0.0230 | 0.0678 | 0.346 |
+| 13.4 | LI | 0.88 | 0.75 | 1.01 | 0.87 | 0.62 | 1.08 | 1.17 | 0.86 | 0 (1.80) | 1.00 | 1.00 | 0.980 | 0.182 | 0.0230 | 0.0657 | 0.352 |
+
+Against Hemerion's proposed bands (0.7–1.3, no seed above 2; case 12 below 3):
+- Nav ANEES and every NIS are in band on cases 11 and 13.x, both conventions.
+- Out of band by a little: accel bias 1.33–1.35 on 13.1 and 13.3; gyro bias
+  0.55–0.62 on 13.3 and 13.4; position 0.55–0.66 on 13.x in RI only.
+- "No seed above 2" does not hold, and should not be expected to for the
+  small blocks: a bias error is one constant per run, so a consistent 1-dof
+  block exceeds 2 on 16 % of seeds and a 3-dof block on 11 %. Seen: nav
+  0–1 of 20, attitude 1, accel bias 2–4, baro bias 1–4, full state 0.
+- Case 11 against table A: position −0.5 %, velocity −1.4 %, tilt −29 %.
+- Case 12 fails on every seed (finding 3).
+
+**Weakly observable states** (table B, RI, mean second-half 1σ against the
+prior):
+- Accel bias x, y: 0.019 m/s² on case 11 against the 0.02 prior, so not
+  observable in trimmed flight (the tilt ambiguity of step 6); 0.014–0.015
+  on 13.x, still weak. Accel bias z: 0.0008–0.0011, observable everywhere.
+- Gyro bias x, y: 2–5·10⁻⁵ rad/s everywhere. Gyro bias z: 2.6·10⁻⁴ on case
+  11 and 5.7·10⁻⁴ on 13.1 (60 s), 7·10⁻⁵ on 13.3 and 13.4, where the
+  heading changes.
+- Yaw RMS follows: 1.0° on case 11 (worst seed 4°), 0.7° on 13.1, 0.30–0.35°
+  on 13.3 and 13.4.
+- Baro bias: 0.15 m with GNSS; 9 m on case 12, where nothing separates it
+  from height.
+
+**Decided by the maintainer, 2026-11-22:**
+- Case 12, degraded mode: judged on a log that has GNSS for the first
+  60–100 s and loses it after, so the outage starts with the biases
+  converged (gyro bias x, y at 2·10⁻⁵ rad/s, a tenth of 2v/R). Needs a new
+  log from Hemerion. The all-outage log stays as the record of the
+  linearisation limit, not as an acceptance case.
+- Bands: block means in 0.7–1.3 as proposed; "no seed above 2" applies to
+  the nav core and the full state only, not to the bias blocks or the
+  core's parts. Table B against that rule: full state 0 of 20 on every
+  case; nav core 1 of 20 on case 11 (2.64 RI, 2.47 LI) and on 13.3 (2.24,
+  2.34), 0 on 13.1 and 13.4. A consistent 9-dof block is expected above 2
+  on 0.7 of 20 seeds, so one seed is what the arithmetic allows, and the
+  rule read literally is still missed on those two cases.
+
+- IMU stamp: Hemerion stamps each IMU sample with its validity time, as it
+  does the GNSS fix since be5a19a. The replay keeps reading `part_time_s`
+  as written and gets no correction; `--imu-time-shift` stays a diagnostic.
+
+**Waiting on Hemerion, then to do here:**
+- [ ] A batch flown with the corrected IMU stamp (and after its #76): redo
+      the direct check (residual minimum at zero shift), then tables A and B
+      without `--imu-time-shift`.
+- [ ] The case-12 log that loses GNSS after 60–100 s, 20 seeds.
+- [ ] If table B holds on the new batch: make barometer sigma 0.34 m and
+      the bias priors 1 mrad/s and 0.02 m/s² the defaults in `Replay.h`,
+      and state the stamp convention in `LogContract.h`.
+The defaults in `Replay.h` are unchanged until then, so the step-8 golden
+vectors, which do not use them, are untouched either way.
+
 - [ ] Case 11: baseline for position, velocity, tilt and bias consistency.
 - [ ] Case 12: degraded mode (no GPS fix, barometer below its rated floor).
 - [ ] Case 13.1: barometer bias drift in the climb.
