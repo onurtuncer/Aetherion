@@ -169,3 +169,26 @@ covariance), nominal in float32.
 Prints a table per scenario and convention (ANEES, final yaw and position
 RMS, heading convergence time, failed runs) and writes
 `iekf_convention_mc.png` (yaw RMS and ANEES against time) to `--out`.
+
+---
+
+# step7_replay_batch.py
+
+## Purpose
+
+Replays a step-7 log batch (`TODO-sensor-fusion.md`, step 7) with `EkfReplay`
+in both error conventions and tabulates it over seeds: per case and
+convention, the second-half ANEES of the nav core, its three parts and each
+bias block, NIS per measurement and the RMS errors, as mean, median and
+maximum, with the number of seeds above 2. A tuning is the options after
+`--`, so the command is the record of how a table was made.
+
+## Usage
+
+    python scripts/step7_replay_batch.py --exe <EkfReplay> --root <logs> \
+        --out <dir> --label <name> [--cases 11,12,13.1,13.3,13.4] \
+        [--conventions ri,li] [--jobs 6] -- [EkfReplay options]
+
+`<logs>` holds `case<case>/seed-<n>/` directories as Hemerion's
+`step7-log-batch.yml` uploads them. Writes `<label>_runs.csv` and
+`<label>.md` to `<dir>` and prints the Markdown.

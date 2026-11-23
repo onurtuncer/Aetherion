@@ -168,6 +168,8 @@ namespace Aetherion::Estimation::Replay {
         double gnssHorizSigma_m = 1.5;                              ///< used when a fix carries no horizontal accuracy
         double gnssVertSigma_m = 3.0;                               ///< used when a fix carries no vertical accuracy
         double gnssHorizScale = 1.0;                                ///< sigma_N = sigma_E = gnssHorizScale * horizontal_accuracy_m
+        double gnssVertScale = 1.0;                                 ///< sigma_D = gnssVertScale * vertical_accuracy_m
+        double gnssVelScale = 1.0;                                  ///< sigma_v = gnssVelScale * speed_accuracy_mps
         int minFixType = LogContract::Gps::kFixType3D;              ///< Hemerion's enum (0 none, 1 2D, 2 3D); fixes below it are skipped
                                                                     /// Initial 1-sigma in physical coordinates: attitude (3, rad), velocity (3), position (3), then the bias blocks.
         Eigen::VectorXd initialSigma;
@@ -227,10 +229,12 @@ namespace Aetherion::Estimation::Replay {
         Eigen::VectorXd error;         ///< filter coordinates, navigation core + biases (truth - estimate)
         Eigen::VectorXd sigma;         ///< sqrt(diag P)
         double neesNav = 0.0;          ///< navigation core only (9 dof)
-        OptionalNees neesGyroBias;     ///< 3 dof, against the drawn gyro bias
-        OptionalNees neesAccelBias;    ///< 3 dof, against the drawn accel bias
-        OptionalNees neesBaroBias;     ///< 1 dof, against BiasTruth::baroBiasTruth_m (sensor + atmosphere)
-        OptionalNees neesFull;         ///< every block the configuration carries
+        /// The navigation core's three parts, each against its own 3x3 marginal of P, in filter coordinates.
+        double neesAttitude = 0.0, neesVelocity = 0.0, neesPosition = 0.0;
+        OptionalNees neesGyroBias;  ///< 3 dof, against the drawn gyro bias
+        OptionalNees neesAccelBias; ///< 3 dof, against the drawn accel bias
+        OptionalNees neesBaroBias;  ///< 1 dof, against BiasTruth::baroBiasTruth_m (sensor + atmosphere)
+        OptionalNees neesFull;      ///< every block the configuration carries
         BiasTruth biasTruth;
         bool hasLeak = false;                                     ///< scale/misalignment known: the two below are meaningful
         Eigen::Vector3d gyroLeak_rad_s = Eigen::Vector3d::Zero(); ///< equivalent bias of the unmodelled terms
@@ -272,6 +276,7 @@ namespace Aetherion::Estimation::Replay {
         std::size_t rejectedUpdates = 0;      ///< refused by the filter: value or covariance invalid (UpdateResult::rejected)
         double duration_s = 0.0;
         double aneesNav = 0.0;                                                        ///< mean NEES of the navigation core over the second half, / 9
+        double aneesAttitude = 0.0, aneesVelocity = 0.0, aneesPosition = 0.0;         ///< the core's parts, second half, / 3
         BlockAnees aneesGyroBias, aneesAccelBias, aneesBaroBias, aneesFull;           ///< second half, / dim; valid only with the drawn errors
         LeakSummary leak;                                                             ///< unmodelled scale and misalignment
         double posRms_m = 0.0, velRms_m_s = 0.0, tiltRms_deg = 0.0, yawRms_deg = 0.0; ///< second half
@@ -469,13 +474,16 @@ namespace Aetherion::Estimation::Replay {
             ReplaySummary& S = res.summary;
             S.duration_s = tEnd - t0;
             const double tHalf = t0 + 0.5 * S.duration_s;
-            double nees = 0.0, pos = 0.0, vel = 0.0, tilt = 0.0, yaw = 0.0;
+            double nees = 0.0, neesAtt = 0.0, neesVel = 0.0, neesPos = 0.0, pos = 0.0, vel = 0.0, tilt = 0.0, yaw = 0.0;
             std::size_t cnt = 0;
             for (const StateRow& r : res.states)
             {
                 if (r.t < tHalf)
                     continue;
                 nees += r.neesNav;
+                neesAtt += r.neesAttitude;
+                neesVel += r.neesVelocity;
+                neesPos += r.neesPosition;
                 pos += (r.estimate.X.p - r.truth.X.p).squaredNorm();
                 vel += (r.estimate.X.v - r.truth.X.v).squaredNorm();
                 tilt += r.eulerErr_rad[1] * r.eulerErr_rad[1] + r.eulerErr_rad[2] * r.eulerErr_rad[2];
@@ -486,6 +494,9 @@ namespace Aetherion::Estimation::Replay {
             {
                 const auto c = static_cast<double>(cnt);
                 S.aneesNav = nees / c / 9.0;
+                S.aneesAttitude = neesAtt / c / 3.0;
+                S.aneesVelocity = neesVel / c / 3.0;
+                S.aneesPosition = neesPos / c / 3.0;
                 S.posRms_m = std::sqrt(pos / c);
                 S.velRms_m_s = std::sqrt(vel / c);
                 S.tiltRms_deg = std::sqrt(tilt / c / 2.0) / kDeg;
@@ -732,6 +743,9 @@ namespace Aetherion::Estimation::Replay {
             row.error = ekf.state().template error<C>(cfg, row.truth);
             row.sigma = P.diagonal().cwiseSqrt();
             row.neesNav = blockNees(row.error, P, nav, 9);
+            row.neesAttitude = blockNees(row.error, P, nav + NavCoreLayout::kAttitude, 3);
+            row.neesVelocity = blockNees(row.error, P, nav + NavCoreLayout::kVelocity, 3);
+            row.neesPosition = blockNees(row.error, P, nav + NavCoreLayout::kPosition, 3);
             biasNees<C>(row, cfg, P);
 
             const Eigen::Vector3d eulerEst = eulerNedFromState(ekf.state(), t, frame);
@@ -820,7 +834,7 @@ namespace Aetherion::Estimation::Replay {
                 if (useGnssPos)
                 {
                     const double sh = (g.horizontalAccuracy_m > 0.0) ? opt.gnssHorizScale * g.horizontalAccuracy_m : opt.gnssHorizSigma_m;
-                    const double sz = (g.verticalAccuracy_m > 0.0) ? g.verticalAccuracy_m : opt.gnssVertSigma_m;
+                    const double sz = (g.verticalAccuracy_m > 0.0) ? opt.gnssVertScale * g.verticalAccuracy_m : opt.gnssVertSigma_m;
                     const Eigen::Matrix3d SigmaN = Eigen::Vector3d(sh * sh, sh * sh, sz * sz).asDiagonal();
                     const auto r = ekf.updateGnssPosition(meas.gnssPositionLci(fix, era), C_LN * SigmaN * C_LN.transpose());
                     if (r.applied)
@@ -832,7 +846,7 @@ namespace Aetherion::Estimation::Replay {
                 }
                 if (useGnssVel && g.hasVelocity)
                 {
-                    const double sv = (g.speedAccuracy_m_s > 0.0) ? g.speedAccuracy_m_s : opt.gnssVelSigma_m_s;
+                    const double sv = (g.speedAccuracy_m_s > 0.0) ? opt.gnssVelScale * g.speedAccuracy_m_s : opt.gnssVelSigma_m_s;
                     const Eigen::Matrix3d SigmaV = Eigen::Matrix3d::Identity() * sv * sv;
                     const auto r =
                         ekf.updateGnssVelocity(meas.gnssVelocityLci(fix, g.velNed_m_s, era), C_LN * SigmaV * C_LN.transpose());
@@ -1122,6 +1136,9 @@ namespace Aetherion::Estimation::Replay {
             << "second half RMS: position " << s.posRms_m << " m, velocity " << s.velRms_m_s << " m/s, tilt " << s.tiltRms_deg
             << " deg, yaw " << s.yawRms_deg << " deg\n";
         writeBiasSummary(out, s);
+        // Appended last, so readers of the earlier lines keep working.
+        out << "second half: ANEES (/3) of the nav core's parts, attitude " << s.aneesAttitude << ", velocity "
+            << s.aneesVelocity << ", position " << s.aneesPosition << '\n';
     }
 
 } // namespace Aetherion::Estimation::Replay
