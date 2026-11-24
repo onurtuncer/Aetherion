@@ -11,9 +11,24 @@
 // functor is StageResidualIRK_ProductSE3 and StepResult carries both g1
 // and x1 (the Euclidean state after the step).
 //
+// The AD tape of the stage residual
+// ---------------------------------
+// Newton needs the residual's Jacobian, which comes from a CppAD tape of the
+// residual. When the Euclidean field says which of its doubles change between
+// steps (Core::TapeParameterised, TapeParameters.h) the integrator keeps that
+// tape from one step() to the next and only sets the new start state, time,
+// step length and field parameters on it; see
+// Core::ParametricCppADResidualJacobian for when it is recorded again. A
+// field that does not take part is recorded on every step, as before.
+// The kept tape is a cache, not state: it is not copied with the integrator,
+// and a step computes the same numbers with or without it. It does make
+// step() unsafe to call on one integrator from two threads at once.
+//
 #pragma once
 
 #include <cassert>
+#include <concepts>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -51,6 +66,9 @@ namespace Aetherion::ODE::RKMK::Integrators {
         static constexpr int BlockDim = 6 + EuclidDim;
         static constexpr int NewtonDim = Stages * BlockDim;
 
+        /// True when the stage residual's tape is kept across steps.
+        static constexpr bool kKeepsTape = Core::TapeParameterised<Residual>;
+
         struct StepResult
         {
             SE3d g1;
@@ -58,6 +76,9 @@ namespace Aetherion::ODE::RKMK::Integrators {
             bool converged{ false };
             int iters{ 0 };
             double residual_norm{ 0.0 };
+            int residual_evals{ 0 }; ///< Zero-order sweeps of the stage residual's tape in this step.
+            int jacobian_evals{ 0 }; ///< Jacobians of the stage residual taken in this step.
+            int tapes_recorded{ 0 }; ///< Times the stage residual was recorded on a tape in this step.
         };
 
         explicit RadauIIA_RKMK_ProductSE3(XiField xi, FField f)
@@ -65,6 +86,14 @@ namespace Aetherion::ODE::RKMK::Integrators {
             , f_field_(std::move(f))
             , tableau_(Tableau::radau_iia_3stage_order5())
         {
+        }
+
+        /// @brief Replace the Euclidean field (its controls, gust, ... have
+        /// changed) without giving up the tape kept for it.
+        void setVectorField(const FField& f)
+            requires std::assignable_from<FField&, const FField&>
+        {
+            f_field_ = f;
         }
 
         StepResult step(
@@ -96,14 +125,31 @@ namespace Aetherion::ODE::RKMK::Integrators {
             }
 
             Residual residual(q0, p0, x0d, t0, h, tableau_, xi_field_, f_field_);
-            Core::CppADResidualJacobian<Residual> eval(residual, NewtonDim);
-            const auto newton_res = Core::NewtonSolve(eval, sol, opt);
 
             StepResult out;
-            if constexpr (requires { newton_res.converged; })
-                out.converged = newton_res.converged;
-            if constexpr (requires { newton_res.iters; })
-                out.iters = newton_res.iters;
+            Core::NewtonResult newton_res;
+            if constexpr (kKeepsTape) {
+                if (!kept_.eval) kept_.eval = std::make_unique<KeptEvaluator>(NewtonDim);
+                KeptEvaluator& eval = *kept_.eval;
+                const int residuals = eval.residual_count();
+                const int jacobians = eval.jacobian_count();
+                const int tapes = eval.tape_count();
+                eval.bind(residual);
+                eval.set_jacobian_single_sweep(opt.jacobian_single_sweep);
+                newton_res = Core::NewtonSolve(eval, sol, opt);
+                out.residual_evals = eval.residual_count() - residuals;
+                out.jacobian_evals = eval.jacobian_count() - jacobians;
+                out.tapes_recorded = eval.tape_count() - tapes;
+            } else {
+                Core::CppADResidualJacobian<Residual> eval(residual, NewtonDim);
+                eval.set_jacobian_single_sweep(opt.jacobian_single_sweep);
+                newton_res = Core::NewtonSolve(eval, sol, opt);
+                out.residual_evals = eval.residual_count();
+                out.jacobian_evals = eval.jacobian_count();
+                out.tapes_recorded = eval.tape_count();
+            }
+            out.converged = newton_res.converged;
+            out.iters = newton_res.iters;
 
             {
                 // Residual of the function itself (no tape) at the solution.
@@ -133,9 +179,42 @@ namespace Aetherion::ODE::RKMK::Integrators {
         }
 
     private:
+        // The evaluator holding the kept tape. A copy of the integrator starts
+        // without one and records its own.
+        struct NoKeptEvaluator
+        {};
+        template <class R>
+        struct KeptEvaluatorOf
+        {
+            using type = NoKeptEvaluator;
+        };
+        template <class R>
+            requires Core::TapeParameterised<R>
+        struct KeptEvaluatorOf<R>
+        {
+            using type = Core::ParametricCppADResidualJacobian<R>;
+        };
+        using KeptEvaluator = typename KeptEvaluatorOf<Residual>::type;
+
+        struct KeptTape
+        {
+            std::unique_ptr<KeptEvaluator> eval;
+
+            KeptTape() = default;
+            KeptTape(const KeptTape& /*other*/) noexcept {}
+            KeptTape& operator=(const KeptTape& other) noexcept
+            {
+                if (this != &other) eval.reset();
+                return *this;
+            }
+            KeptTape(KeptTape&&) noexcept = default;
+            KeptTape& operator=(KeptTape&&) noexcept = default;
+        };
+
         XiField xi_field_;
         FField f_field_;
         Tableau tableau_;
+        mutable KeptTape kept_;
     };
 
 } // namespace Aetherion::ODE::RKMK::Integrators

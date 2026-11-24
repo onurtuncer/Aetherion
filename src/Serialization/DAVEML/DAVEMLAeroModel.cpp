@@ -15,6 +15,7 @@
 #include <cmath>
 #include <format>
 #include <limits>
+#include <memory>
 #include <queue>
 #include <set>
 #include <sstream>
@@ -648,6 +649,14 @@ namespace Aetherion::Serialization {
     // DAVEMLAeroModel — construction
     // =============================================================================
 
+    // One parsed document per evaluation step; null where the step has no
+    // calculation. Each is the document evalMathMLStr() builds from the same
+    // string, so walking it evaluates the same operations in the same order.
+    struct DAVEMLAeroModel::ParsedMath
+    {
+        std::vector<std::unique_ptr<pugi::xml_document>> docs;
+    };
+
     DAVEMLAeroModel::DAVEMLAeroModel(const std::string& path)
     {
         pugi::xml_document doc;
@@ -665,6 +674,15 @@ namespace Aetherion::Serialization {
 
         auto sorted = topoSortVars(info);
         m_steps = buildEvalSteps(sorted, info, m_tables);
+
+        auto math = std::make_shared<ParsedMath>();
+        math->docs.resize(m_steps.size());
+        for (std::size_t k = 0; k < m_steps.size(); ++k) {
+            if (m_steps[k].mathmlXml.empty()) continue;
+            math->docs[k] = std::make_unique<pugi::xml_document>();
+            math->docs[k]->load_string(m_steps[k].mathmlXml.c_str());
+        }
+        m_math = std::move(math);
     }
 
     // =============================================================================
@@ -690,7 +708,8 @@ namespace Aetherion::Serialization {
         vars["rdr"] = in.rdr_deg;
 
         // Evaluate each step in topological order
-        for (const auto& step : m_steps) {
+        for (std::size_t k = 0; k < m_steps.size(); ++k) {
+            const auto& step = m_steps[k];
             const auto& id = step.varID;
             if (step.isInput && vars.contains(id)) {
                 // A supplied input is kept as supplied, within its variableDef
@@ -704,7 +723,7 @@ namespace Aetherion::Serialization {
             if (step.isTable)
                 vars[id] = interpolate<S>(m_tables.at(id), vars);
             else if (!step.mathmlXml.empty())
-                vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
+                vars[id] = evalNode<S>(m_math->docs[k]->first_child(), vars);
             else if (step.isConst)
                 vars[id] = S(step.constVal);
             if (!vars.contains(id)) vars[id] = S(0.0);
@@ -770,7 +789,8 @@ namespace Aetherion::Serialization {
     std::unordered_map<std::string, S>
     DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, S> vars) const
     {
-        for (const auto& step : m_steps) {
+        for (std::size_t k = 0; k < m_steps.size(); ++k) {
+            const auto& step = m_steps[k];
             const auto& id = step.varID;
             if (step.isInput && vars.contains(id)) {
                 // A supplied input is kept as supplied, within its variableDef
@@ -782,7 +802,7 @@ namespace Aetherion::Serialization {
             if (step.isTable)
                 vars[id] = interpolate<S>(m_tables.at(id), vars);
             else if (!step.mathmlXml.empty())
-                vars[id] = evalMathMLStr<S>(step.mathmlXml, vars);
+                vars[id] = evalNode<S>(m_math->docs[k]->first_child(), vars);
             else if (step.isConst)
                 vars[id] = S(step.constVal);
             if (!vars.contains(id)) vars[id] = S(0.0);
@@ -805,5 +825,14 @@ namespace Aetherion::Serialization {
 
     template std::unordered_map<std::string, CppAD::AD<double>>
         DAVEMLAeroModel::evaluateRaw(std::unordered_map<std::string, CppAD::AD<double>>) const;
+
+    // evaluate() no longer goes through evalMathMLStr (it walks the documents
+    // parsed at load), so the two instantiations it used to produce are made
+    // explicitly: the member stays callable.
+    template double
+    DAVEMLAeroModel::evalMathMLStr(const std::string&, const std::unordered_map<std::string, double>&) const;
+
+    template CppAD::AD<double>
+    DAVEMLAeroModel::evalMathMLStr(const std::string&, const std::unordered_map<std::string, CppAD::AD<double>>&) const;
 
 } // namespace Aetherion::Serialization

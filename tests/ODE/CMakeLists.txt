@@ -48,7 +48,7 @@ target_link_libraries(
 include(Catch)
 catch_discover_tests(test_se3)
 
-add_executable(test_newton test_Newton.cpp)
+add_executable(test_newton test_Newton.cpp test_NewtonEvaluations.cpp)
 
 target_compile_options(test_newton PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 
@@ -76,7 +76,7 @@ target_link_libraries(
 include(Catch)
 catch_discover_tests(test_stage_pack)
 
-add_executable(test_radauiia_se3 test_RadauIIA_SE3.cpp test_RadauBranchCrossing.cpp)
+add_executable(test_radauiia_se3 test_RadauIIA_SE3.cpp test_RadauBranchCrossing.cpp test_RadauKeptTape.cpp)
 
 target_compile_options(test_radauiia_se3 PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/utf-8>)
 

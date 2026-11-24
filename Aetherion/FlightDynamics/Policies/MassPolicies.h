@@ -24,6 +24,14 @@ namespace Aetherion::FlightDynamics {
         {
             return S(0);
         }
+
+        /// @brief Tape parameters (ODE/RKMK/Core/TapeParameters.h): none, the policy holds no data.
+        template <class Visitor>
+        void forEachTapeParameter(Visitor&& /*visit*/) const noexcept
+        {}
+
+        /// @brief Always true: there is nothing to differ in.
+        [[nodiscard]] bool tapeConstantsIdentical(const ConstantMassPolicy& /*other*/) const noexcept { return true; }
     };
 
     static_assert(MassPolicy<ConstantMassPolicy>);

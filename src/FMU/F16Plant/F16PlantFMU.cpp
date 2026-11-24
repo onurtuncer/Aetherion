@@ -31,6 +31,7 @@
 //    solver.abs_tol   Newton absolute residual tolerance [-]      def 1e-12
 //    solver.rel_tol   Newton relative residual tolerance [-]      def 1e-10
 //    solver.max_step_s Max internal integrator step      [s]      def 0.0 (= comm. step)
+//    solver.jacobian_single_sweep  Newton Jacobian in one AD sweep  [-]  def 1 (0 = one sweep per unknown)
 //    wind.north_mps   Steady wind, NED north             [m/s]    def   0.0
 //    wind.east_mps    Steady wind, NED east              [m/s]    def   0.0
 //    wind.down_mps    Steady wind, NED down              [m/s]    def   0.0
@@ -214,6 +215,12 @@ namespace {
     constexpr double kDefault_newton_abs_tol = 1.0e-12;
     constexpr double kDefault_newton_rel_tol = 1.0e-10;
     constexpr double kDefault_max_step_s = 0.0; // 0 → use the communication step directly
+    // 1 → the Newton Jacobian is taken in one first-order AD sweep carrying all
+    // 39 directions; 0 → CppAD's dense driver, one sweep per direction, as up
+    // to 0.19.0. The two give the same matrix and the same trajectory bit for
+    // bit (measured; see detail::tape_jacobian in ODE/RKMK/Core/Newton.h), the
+    // first at about an eighth of the cost.
+    constexpr double kDefault_jacobian_single_sweep = 1.0;
 
     // Environment defaults: calm air on a standard day.
     constexpr double kDefault_wind_mps = 0.0;
@@ -408,6 +415,11 @@ public:
         Aetherion::ODE::RKMK::Core::NewtonOptions newton_opts{};
         newton_opts.abs_tol = p_newton_abs_tol_;
         newton_opts.rel_tol = p_newton_rel_tol_;
+        // Nothing here reads the norm of the Newton step, so an iterate that
+        // already meets the residual tolerance is accepted without a Jacobian
+        // being taken there only to report it. The iterates are unchanged.
+        newton_opts.report_step_norm = false;
+        newton_opts.jacobian_single_sweep = (p_jacobian_single_sweep_ != 0.0);
 
         // 6. Construct the stepper with a VectorField initialised at trim values
         const double xcg_m = p_xcg_from_ac_ft_ * kFt_m;
@@ -544,6 +556,7 @@ public:
         p_newton_abs_tol_ = kDefault_newton_abs_tol;
         p_newton_rel_tol_ = kDefault_newton_rel_tol;
         p_max_step_s_ = kDefault_max_step_s;
+        p_jacobian_single_sweep_ = kDefault_jacobian_single_sweep;
 
         p_wind_north_mps_ = kDefault_wind_mps;
         p_wind_east_mps_ = kDefault_wind_mps;
@@ -627,6 +640,12 @@ private:
             .setVariability(variability_t::FIXED)
             .setInitial(initial_t::EXACT)
             .setDescription("Maximum internal integrator sub-step size [s] (0 = use communication step)");
+
+        register_real("solver.jacobian_single_sweep", &p_jacobian_single_sweep_)
+            .setCausality(causality_t::PARAMETER)
+            .setVariability(variability_t::FIXED)
+            .setInitial(initial_t::EXACT)
+            .setDescription("How the Newton Jacobian is taken from the AD tape [-]: 1 (default) = one first-order sweep carrying all directions; 0 = one sweep per unknown (CppAD dense driver, as up to 0.19.0). Same matrix and same trajectory, about an eighth of the cost.");
 
         // ── Environment ──────────────────────────────────────────────────────
         register_real("wind.north_mps", &p_wind_north_mps_)
@@ -1224,6 +1243,7 @@ private:
     double p_newton_abs_tol_{ kDefault_newton_abs_tol };
     double p_newton_rel_tol_{ kDefault_newton_rel_tol };
     double p_max_step_s_{ kDefault_max_step_s };
+    double p_jacobian_single_sweep_{ kDefault_jacobian_single_sweep };
 
     double p_wind_north_mps_{ kDefault_wind_mps };
     double p_wind_east_mps_{ kDefault_wind_mps };

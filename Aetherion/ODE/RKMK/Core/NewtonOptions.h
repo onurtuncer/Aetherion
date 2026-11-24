@@ -52,6 +52,29 @@ namespace Aetherion::ODE::RKMK::Core {
         double sufficient_decrease = 0.9; ///< Accept a damped step if @f$ \|r_\text{new}\| \leq \texttt{sufficient\_decrease} \cdot \|r_\text{old}\| @f$.
                                           ///@}
 
+        /// @name Reporting
+        ///@{
+        /// If `true` (the default), every iterate is given a Newton step, so that
+        /// `NewtonResult::dx_norm` is always reported. If `false`, an iterate that
+        /// already meets the residual criterion is accepted without a Jacobian
+        /// being evaluated there, and `dx_norm` is NaN for that solve. The
+        /// iterates, the iteration count and `converged` are the same either
+        /// way: the residual criterion alone decides in that case, and the step
+        /// was computed only to report its norm.
+        bool report_step_norm = true;
+        ///@}
+
+        /// @name Jacobian
+        ///@{
+        /// Read by the integrators that take the Jacobian from an AD tape. If
+        /// `false` (the default) the tape's Jacobian is CppAD's dense driver:
+        /// one first-order sweep of the tape per unknown. If `true` all
+        /// directions are carried through a single sweep, which costs a
+        /// fraction of the time and gives the same matrix (see
+        /// `detail::tape_jacobian` in Newton.h for what "the same" rests on).
+        bool jacobian_single_sweep = false;
+        ///@}
+
         /// @name Failure behaviour
         ///@{
         bool throw_on_fail = false; ///< If `true`, throw `std::runtime_error` when the solver does not converge within `max_iters`; if `false`, return silently with the last iterate.

@@ -26,12 +26,14 @@
 #pragma once
 
 #include <cassert>
+#include <type_traits>
 #include <utility>
 
 #include <Eigen/Dense>
 
 #include <Aetherion/ODE/RKMK/Core/StagePack.h>
 #include <Aetherion/ODE/RKMK/Core/Tableau.h>
+#include <Aetherion/ODE/RKMK/Core/TapeParameters.h>
 #include <Aetherion/ODE/RKMK/Lie/SE3.h>
 #include <Aetherion/ODE/RKMK/Core/StageResidualRadauIIASE3.h> // re-use detail helpers
 
@@ -89,10 +91,14 @@ namespace Aetherion::ODE::RKMK::Core {
             Eigen::Matrix<S, Eigen::Dynamic, 1> r(TotalDim);
             r.setZero();
 
+            // The start state, the start time and the step length are what
+            // changes from one step to the next: they are read as tape
+            // parameters (see forEachTapeParameter below).
             const auto g0 = detail::make_se3_from_qp<S>(q0_, p0_);
-            const VecE x0_S = x0_.template cast<S>();
-            const S t0s = static_cast<S>(t0_);
-            const S hs = static_cast<S>(h_);
+            VecE x0_S;
+            for (int i = 0; i < EuclidDim; ++i) x0_S(i) = TapeParameter<S>(x0_(i));
+            const S t0s = TapeParameter<S>(t0_);
+            const S hs = TapeParameter<S>(h_);
 
             // Precompute all Eta_i and Phi_i (inner product over stages)
             Eigen::Matrix<S, 6, Stages> Eta_all;
@@ -169,6 +175,36 @@ namespace Aetherion::ODE::RKMK::Core {
             }
 
             return r;
+        }
+
+        // ---------------------------------------------------------------------
+        // Tape parameters (TapeParameters.h)
+        //
+        // What one step's residual differs in from the next one's: the start
+        // pose (quaternion and position), the start Euclidean state, the start
+        // time and the step length, followed by whatever the Euclidean field
+        // declares (controls, gust, ...). Offered only when the field takes
+        // part and the kinematic field holds no data at all.
+        // ---------------------------------------------------------------------
+        template <class Visitor>
+        void forEachTapeParameter(Visitor&& visit) const
+            requires TapeParameterised<FField> && std::is_empty_v<XiField>
+        {
+            for (int i = 0; i < 4; ++i) visit(q0_.coeffs()(i));
+            for (int i = 0; i < 3; ++i) visit(p0_(i));
+            for (int i = 0; i < EuclidDim; ++i) visit(x0_(i));
+            visit(t0_);
+            visit(h_);
+            f_field_.forEachTapeParameter(visit);
+        }
+
+        /// True when everything this residual puts on a tape apart from its
+        /// tape parameters is bit for bit that of @p other: the tableau and
+        /// the constants of the Euclidean field.
+        [[nodiscard]] bool tapeConstantsIdentical(const StageResidualIRK_ProductSE3& other) const
+            requires TapeParameterised<FField> && std::is_empty_v<XiField>
+        {
+            return BitIdentical(tableau_.A, other.tableau_.A) && BitIdentical(tableau_.b, other.tableau_.b) && BitIdentical(tableau_.c, other.tableau_.c) && f_field_.tapeConstantsIdentical(other.f_field_);
         }
 
     private:
