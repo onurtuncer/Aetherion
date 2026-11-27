@@ -187,6 +187,8 @@ namespace Aetherion::ODE::RKMK::Core {
         // part and the kinematic field holds no data at all.
         // ---------------------------------------------------------------------
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
             requires TapeParameterised<FField> && std::is_empty_v<XiField>
         {

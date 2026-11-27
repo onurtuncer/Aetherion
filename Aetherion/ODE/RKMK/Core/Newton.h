@@ -45,6 +45,8 @@
 #pragma once
 
 #include <algorithm>
+#include <cstdint>
+#include <functional>
 #include <limits>
 #include <optional>
 #include <utility>
@@ -127,7 +129,7 @@ namespace Aetherion::ODE::RKMK::Core {
         }
 
         // What a line search left behind.
-        enum class LineSearchOutcome
+        enum class LineSearchOutcome : std::uint8_t
         {
             Accepted, // x is a trial point that decreased the residual; r (and J if has_J) are evaluated there
             Damped,   // no trial was accepted; x moved by the last damped step and is not evaluated
@@ -177,7 +179,7 @@ namespace Aetherion::ODE::RKMK::Core {
         }
 
         template <class VecT, class MatT, class EvalT, class MakeVec>
-        inline NewtonResult newton_loop(EvalT&& eval,
+        inline NewtonResult newton_loop(EvalT&& eval, // NOLINT(cppcoreguidelines-missing-std-forward): reused as an lvalue
             VecT& x,
             const NewtonOptions& opt,
             MakeVec make_vec)
@@ -320,8 +322,8 @@ namespace Aetherion::ODE::RKMK::Core {
         template <class Residual, class Jacobian>
         struct ResidualJacobianPair
         {
-            Residual& residual_fn;
-            Jacobian& jacobian_fn;
+            std::reference_wrapper<std::remove_reference_t<Residual>> residual_fn;
+            std::reference_wrapper<std::remove_reference_t<Jacobian>> jacobian_fn;
 
             template <class VecT>
             void residual(const VecT& x, VecT& r)
@@ -403,8 +405,8 @@ namespace Aetherion::ODE::RKMK::Core {
     }
 
     template <int N, class Residual, class Jacobian>
-    inline NewtonResult NewtonSolveRJ(Residual&& residual,
-        Jacobian&& jacobian,
+    inline NewtonResult NewtonSolveRJ(Residual&& residual, // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
+        Jacobian&& jacobian, // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
         Eigen::Matrix<double, N, 1>& x,
         const NewtonOptions& opt = {})
     {
@@ -583,8 +585,8 @@ namespace Aetherion::ODE::RKMK::Core {
     }
 
     template <class Residual, class Jacobian>
-    inline NewtonResult NewtonSolveRJ(Residual&& residual,
-        Jacobian&& jacobian,
+    inline NewtonResult NewtonSolveRJ(Residual&& residual, // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
+        Jacobian&& jacobian, // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
         Eigen::VectorXd& x,
         const NewtonOptions& opt = {})
     {
@@ -792,6 +794,15 @@ namespace Aetherion::ODE::RKMK::Core {
             return *this;
         }
 
+        ~ParametricCppADResidualJacobian() = default;
+        // Rvalues retain the cold-cache semantics of copying.
+        ParametricCppADResidualJacobian(ParametricCppADResidualJacobian&& other)
+            : ParametricCppADResidualJacobian(std::as_const(other)) {}
+        ParametricCppADResidualJacobian& operator=(ParametricCppADResidualJacobian&& other)
+        {
+            return *this = std::as_const(other);
+        }
+
         /// @brief Make @p f the functor of the solve that follows.
         ///
         /// The kept tape is given the parameter values of @p f if the
@@ -926,16 +937,16 @@ namespace Aetherion::ODE::RKMK::Core {
             return f;
         }
 
-        int n_{ 0 };
         std::optional<Functor> functor_;
         std::vector<double> params_;
+        std::vector<double> last_x_;
         CppAD::ADFun<double> tape_;
-        bool taped_{ false };
+        int n_{ 0 };
         int retapes_{ 0 };
         int tapes_{ 0 };
         int residuals_{ 0 };
         int jacobians_{ 0 };
-        std::vector<double> last_x_;
+        bool taped_{ false };
         bool single_sweep_{ false };
     };
 

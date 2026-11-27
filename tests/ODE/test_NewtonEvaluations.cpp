@@ -234,6 +234,8 @@ TEST_CASE("NewtonSolveRJ: the callbacks are called as a split evaluator", "[newt
     Eigen::VectorXd x_full = start();
     const auto res_full = Core::NewtonSolve(full, x_full, opt);
 
+    REQUIRE(res_full.converged);
+
     int residuals = 0, jacobians = 0;
     auto residual = [&](const Eigen::VectorXd& x, Eigen::VectorXd& r) {
         ++residuals;
@@ -301,6 +303,8 @@ namespace {
         }
 
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
         {
             visit(gain);
@@ -474,11 +478,13 @@ namespace {
             return f(x);
         }
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
         {
             f.forEachTapeParameter(visit);
         }
-        [[nodiscard]] bool tapeConstantsIdentical(const ForgetfulFunctor& /*other*/) const noexcept { return true; }
+        [[nodiscard]] static bool tapeConstantsIdentical(const ForgetfulFunctor& /*other*/) noexcept { return true; }
     };
 }
 
@@ -545,6 +551,8 @@ namespace {
             return r;
         }
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
         {
             f.forEachTapeParameter(visit);

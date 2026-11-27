@@ -233,6 +233,8 @@ namespace Aetherion::FlightDynamics {
         /// deflections and the six gust components. Each is read through
         /// TapeParameter in operator() and in AirRelative.h.
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
         {
             visit(m_elDeg);

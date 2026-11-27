@@ -201,6 +201,7 @@ namespace Aetherion::ODE::RKMK::Integrators {
             std::unique_ptr<KeptEvaluator> eval;
 
             KeptTape() = default;
+            ~KeptTape() = default;
             KeptTape(const KeptTape& /*other*/) noexcept {}
             KeptTape& operator=(const KeptTape& other) noexcept
             {
