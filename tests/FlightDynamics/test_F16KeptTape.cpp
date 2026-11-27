@@ -81,10 +81,7 @@ namespace {
     bool sameState(const RigidBody::StateD& a, const RigidBody::StateD& b)
     {
         using Aetherion::ODE::RKMK::Core::BitIdentical;
-        return BitIdentical(a.g.R, b.g.R)
-            && BitIdentical(a.g.p, b.g.p)
-            && BitIdentical(a.nu_B, b.nu_B)
-            && BitIdentical(a.m, b.m);
+        return BitIdentical(a.g.R, b.g.R) && BitIdentical(a.g.p, b.g.p) && BitIdentical(a.nu_B, b.nu_B) && BitIdentical(a.m, b.m);
     }
 
     std::string siblingFile(const std::string& path, const std::string& name)

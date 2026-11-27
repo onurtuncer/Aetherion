@@ -406,7 +406,7 @@ namespace Aetherion::ODE::RKMK::Core {
 
     template <int N, class Residual, class Jacobian>
     inline NewtonResult NewtonSolveRJ(Residual&& residual, // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
-        Jacobian&& jacobian, // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
+        Jacobian&& jacobian,                               // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
         Eigen::Matrix<double, N, 1>& x,
         const NewtonOptions& opt = {})
     {
@@ -586,7 +586,7 @@ namespace Aetherion::ODE::RKMK::Core {
 
     template <class Residual, class Jacobian>
     inline NewtonResult NewtonSolveRJ(Residual&& residual, // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
-        Jacobian&& jacobian, // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
+        Jacobian&& jacobian,                               // NOLINT(cppcoreguidelines-missing-std-forward): borrowed for this solve
         Eigen::VectorXd& x,
         const NewtonOptions& opt = {})
     {
@@ -770,6 +770,9 @@ namespace Aetherion::ODE::RKMK::Core {
 
     template <class Functor>
         requires TapeParameterised<Functor>
+    // Rvalues use the cold-cache copy operations. Moving the tape separately
+    // from its bound functor could invalidate recorded parameter addresses.
+    // NOLINTNEXTLINE(cppcoreguidelines-special-member-functions)
     class ParametricCppADResidualJacobian final
     {
     public:
@@ -792,15 +795,6 @@ namespace Aetherion::ODE::RKMK::Core {
                 last_x_.clear();
             }
             return *this;
-        }
-
-        ~ParametricCppADResidualJacobian() = default;
-        // Rvalues retain the cold-cache semantics of copying.
-        ParametricCppADResidualJacobian(ParametricCppADResidualJacobian&& other)
-            : ParametricCppADResidualJacobian(std::as_const(other)) {}
-        ParametricCppADResidualJacobian& operator=(ParametricCppADResidualJacobian&& other)
-        {
-            return *this = std::as_const(other);
         }
 
         /// @brief Make @p f the functor of the solve that follows.

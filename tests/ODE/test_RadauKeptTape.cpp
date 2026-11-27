@@ -168,11 +168,7 @@ namespace {
     bool sameStep(const A& a, const B& b)
     {
         using Aetherion::ODE::RKMK::Core::BitIdentical;
-        return BitIdentical(a.x1, b.x1)
-            && BitIdentical(a.g1.R, b.g1.R)
-            && BitIdentical(a.g1.p, b.g1.p)
-            && a.iters == b.iters
-            && a.converged == b.converged;
+        return BitIdentical(a.x1, b.x1) && BitIdentical(a.g1.R, b.g1.R) && BitIdentical(a.g1.p, b.g1.p) && a.iters == b.iters && a.converged == b.converged;
     }
 }
 
