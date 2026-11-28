@@ -98,7 +98,7 @@ namespace Aetherion::FlightDynamics {
 
         /// @brief Tape parameters (ODE/RKMK/Core/TapeParameters.h): none, the three constants are fixed.
         template <class Visitor>
-        void forEachTapeParameter(Visitor&& /*visit*/) const noexcept
+        void forEachTapeParameter(const Visitor& /*visit*/) const noexcept
         {}
 
         /// @brief True when @p other has the same three constants, bit for bit.

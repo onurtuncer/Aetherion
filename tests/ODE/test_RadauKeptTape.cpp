@@ -95,6 +95,8 @@ namespace {
         }
 
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
         {
             visit(drive);
@@ -129,11 +131,13 @@ namespace {
             return f(t, g, x);
         }
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
         {
             f.forEachTapeParameter(visit);
         }
-        [[nodiscard]] bool tapeConstantsIdentical(const ForgetfulField& /*other*/) const noexcept { return true; }
+        [[nodiscard]] static bool tapeConstantsIdentical(const ForgetfulField& /*other*/) noexcept { return true; }
     };
 
     using Xi = Aetherion::RigidBody::KinematicsXiField;
@@ -163,7 +167,8 @@ namespace {
     template <class A, class B>
     bool sameStep(const A& a, const B& b)
     {
-        return std::memcmp(a.x1.data(), b.x1.data(), sizeof(double) * 7) == 0 && std::memcmp(a.g1.R.data(), b.g1.R.data(), sizeof(double) * 9) == 0 && std::memcmp(a.g1.p.data(), b.g1.p.data(), sizeof(double) * 3) == 0 && a.iters == b.iters && a.converged == b.converged;
+        using Aetherion::ODE::RKMK::Core::BitIdentical;
+        return BitIdentical(a.x1, b.x1) && BitIdentical(a.g1.R, b.g1.R) && BitIdentical(a.g1.p, b.g1.p) && a.iters == b.iters && a.converged == b.converged;
     }
 }
 
@@ -269,7 +274,8 @@ TEST_CASE("RadauIIA product stepper: a copy of the stepper does not share the ke
     const Vec7 x0 = startState();
     const auto first = kept.step(0.0, g0, x0, 0.05, tight());
 
-    const KeptStepper copy(kept);
+    // Exercise the copy constructor and its independent tape cache.
+    const KeptStepper copy(kept); // NOLINT(performance-unnecessary-copy-initialization)
     const auto from_copy = copy.step(0.0, g0, x0, 0.05, tight());
     CHECK(from_copy.tapes_recorded == 1);
     CHECK(sameStep(from_copy, first));

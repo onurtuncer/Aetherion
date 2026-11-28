@@ -124,6 +124,8 @@ namespace Aetherion::FlightDynamics {
         /// @brief What changes between integration steps: the throttle and the
         /// linear gust (the propulsion model has no use for the angular one).
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
         {
             visit(pwr_pct);

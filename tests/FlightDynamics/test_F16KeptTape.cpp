@@ -80,7 +80,8 @@ namespace {
 
     bool sameState(const RigidBody::StateD& a, const RigidBody::StateD& b)
     {
-        return std::memcmp(a.g.R.data(), b.g.R.data(), sizeof(double) * 9) == 0 && std::memcmp(a.g.p.data(), b.g.p.data(), sizeof(double) * 3) == 0 && std::memcmp(a.nu_B.data(), b.nu_B.data(), sizeof(double) * 6) == 0 && std::memcmp(&a.m, &b.m, sizeof(double)) == 0;
+        using Aetherion::ODE::RKMK::Core::BitIdentical;
+        return BitIdentical(a.g.R, b.g.R) && BitIdentical(a.g.p, b.g.p) && BitIdentical(a.nu_B, b.nu_B) && BitIdentical(a.m, b.m);
     }
 
     std::string siblingFile(const std::string& path, const std::string& name)

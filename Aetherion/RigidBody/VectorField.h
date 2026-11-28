@@ -236,6 +236,8 @@ namespace Aetherion::RigidBody {
 
         /// @brief Visits the doubles of the policies that may change between steps.
         template <class Visitor>
+        // Invoke the same visitor as an lvalue throughout the traversal.
+        // NOLINTNEXTLINE(cppcoreguidelines-missing-std-forward)
         void forEachTapeParameter(Visitor&& visit) const
             requires ODE::RKMK::Core::TapeParameterised<Gravity> && ODE::RKMK::Core::TapeParameterised<Aero> && ODE::RKMK::Core::TapeParameterised<Thrust> && ODE::RKMK::Core::TapeParameterised<MassMdot>
         {

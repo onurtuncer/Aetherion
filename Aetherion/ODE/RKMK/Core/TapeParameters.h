@@ -93,6 +93,8 @@ namespace Aetherion::ODE::RKMK::Core {
         }
         ~TapeParameterScope() { detail::activeTapeParameterBinding() = m_previous; }
 
+        TapeParameterScope(TapeParameterScope&&) = delete;
+        TapeParameterScope& operator=(TapeParameterScope&&) = delete;
         TapeParameterScope(const TapeParameterScope&) = delete;
         TapeParameterScope& operator=(const TapeParameterScope&) = delete;
 
